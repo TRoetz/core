@@ -82,10 +82,6 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_milestones_workspace_external_key
 	WHERE external_key IS NOT NULL;
 
 -- Composite index supports the per-scope position ordering used by drag-and-drop
--- reorder. Kept LAST in this file on purpose: the legacy existing-install path
--- re-executes this whole file before the catalog migration that adds
--- milestones.position, so on the first boot after an upgrade this statement
--- fails ("no such column: position") and aborts the multi-statement Exec.
--- Being last, the abort skips nothing else; the 20260624_milestones_position
--- catalog migration then adds the column and this index in the same boot.
+-- reorder. Existing installs use milestones_existing.sql before catalog
+-- migrations, so this canonical fresh-install schema can include the index.
 CREATE INDEX IF NOT EXISTS idx_milestones_position ON milestones(is_global, workspace_id, category_id, position);
