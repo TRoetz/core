@@ -31,7 +31,7 @@ describe('negotiateLocale', () => {
     ['ru', 'ru'],
     ['ru-RU', 'ru'],
     ['ru_RU', 'ru'],
-    ['fr-FR', 'en'],
+    ['fr-FR', 'fr'],
   ])('maps %s to %s', (browserLocale, expected) => {
     expect(negotiateLocale(browserLocale, supportedLocales, 'en')).toBe(expected);
   });
