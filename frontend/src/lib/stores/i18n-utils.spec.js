@@ -17,6 +17,7 @@ const supportedLocales = [
   { code: 'pt-BR' },
   { code: 'ru' },
   { code: 'zh-CN' },
+  { code: 'fr' },
 ];
 
 describe('negotiateLocale', () => {
