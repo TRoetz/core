@@ -9,6 +9,7 @@
   import MobileEditorPage from './MobileEditorPage.svelte';
   import MobileConfirmSheet from './MobileConfirmSheet.svelte';
   import MobileOptionSheet from './MobileOptionSheet.svelte';
+  import { autoGrow, enterMovesFocus } from './autoGrowTextarea.js';
   import Avatar from '../components/Avatar.svelte';
   import {
     isCreateSystemFieldAutoManaged,
@@ -43,6 +44,7 @@
 
   let title = $state('');
   let description = $state('');
+  let descriptionField = $state(null);
   let workspaceId = $state(null);
   let itemTypeId = $state(null);
   let itemTypes = $state([]);
@@ -782,19 +784,23 @@
       {/if}
 
       <!-- Linear-style borderless hero fields: the title and description are
-           the form; properties live in the chip bar pinned at the bottom. -->
-      <input
+           the form; properties live in the chip bar pinned at the bottom.
+           The title textarea wraps and grows so long titles stay visible. -->
+      <textarea
         class="hero-title"
-        type="text"
         bind:value={title}
         placeholder={isPersonal ? 'Task title' : 'Issue title'}
         autocomplete="off"
+        rows={1}
         enterkeyhint="next"
+        use:autoGrow={title}
+        use:enterMovesFocus={{ next: descriptionField }}
         data-testid="create-title"
-      />
+      ></textarea>
       <textarea
         class="hero-desc"
         bind:value={description}
+        bind:this={descriptionField}
         rows={4}
         placeholder="Description…"
         data-testid="create-description"
@@ -1092,7 +1098,8 @@
   .create { display: flex; flex-direction: column; gap: 0.5rem; }
   .parent { margin: 0 0 0.25rem; font-size: 0.8125rem; color: var(--ds-text-subtle); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-  /* Linear-style borderless hero fields. */
+  /* Linear-style borderless hero fields. The title textarea wraps and grows
+     with its content (autoGrow action) so long titles stay fully visible. */
   .hero-title {
     width: 100%;
     margin: 0.75rem 0 0;
@@ -1100,9 +1107,12 @@
     border: none;
     background: transparent;
     color: var(--ds-text);
+    font-family: inherit;
     font-size: 1.35rem;
     font-weight: var(--font-semibold, 600);
     line-height: 1.25;
+    overflow: hidden;
+    resize: none;
   }
   .hero-title::placeholder { color: var(--ds-text-subtlest, var(--ds-text-subtle)); font-weight: var(--font-semibold, 600); }
   .hero-desc {

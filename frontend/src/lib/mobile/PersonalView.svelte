@@ -2,6 +2,7 @@
   import { authStore } from '../stores';
   import { api } from '../api.js';
   import { navigate } from '../router.js';
+  import { errorToast } from '../stores/toasts.svelte.js';
   import { Check, Command as CommandIcon } from '@lucide/svelte';
   import MobileHeader from './MobileHeader.svelte';
   import MobileListState from './MobileListState.svelte';
@@ -39,9 +40,12 @@
         return;
       }
       const res = await api.items.getAll({
-        ql: `workspace_id = ${personalWorkspaceId}`,
+        // A checklist: completed tasks leave the list (uncheck from the item
+        // detail). status_completed covers items whose status_id is unset.
+        ql: `workspace_id = ${personalWorkspaceId} AND status_completed = false`,
         limit: 50,
         order_by: 'updated_at',
+        sort_direction: 'desc',
       });
       if (v !== version) return;
       tasks = res?.data ?? [];
@@ -60,11 +64,18 @@
     if (toggling.has(task.id)) return;
     toggling = new Set(toggling).add(task.id);
     const target = isDone(task) ? STATUS_OPEN : STATUS_DONE;
+    const snapshot = task;
+    // Optimistic: checked-off tasks drop out of the list immediately (the
+    // query filters completed items); restored in place if the call fails.
+    tasks = tasks.filter((t) => t.id !== task.id);
     try {
-      const updated = await api.items.transition(task.id, target);
-      tasks = tasks.map((t) => (t.id === task.id ? { ...t, ...updated } : t));
+      await api.items.transition(task.id, target);
     } catch (err) {
       console.error('Failed to toggle personal task:', err);
+      const rollback = [...tasks, snapshot];
+      rollback.sort((a, b) => String(b.updated_at ?? '').localeCompare(String(a.updated_at ?? '')));
+      tasks = rollback;
+      errorToast('Could not update the task. Try again.');
     } finally {
       const next = new Set(toggling);
       next.delete(task.id);
@@ -117,14 +128,15 @@
       <div class="row" data-testid="personal-row">
         <button
           class="check"
-          class:checked={done}
           onclick={(e) => toggleDone(task, e)}
           disabled={toggling.has(task.id)}
           data-testid="personal-toggle"
           aria-label={done ? 'Mark not done' : 'Mark done'}
           type="button"
         >
-          {#if done}<Check size={14} strokeWidth={3} />{/if}
+          <span class="check-circle" class:checked={done}>
+            {#if done}<Check size={14} strokeWidth={3} />{/if}
+          </span>
         </button>
         <button class="body" onclick={() => navigate(`/m/items/${task.id}`)} type="button">
           <span class="title" class:done>{task.title}</span>
@@ -149,8 +161,23 @@
     min-height: 52px;
   }
 
+  /* 44px touch target (Apple HIG) with a visually smaller circle inside —
+     a too-small check swallowed taps on the phone and rows opened instead
+     of toggling. */
   .check {
     flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    margin: 0 -10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+  }
+
+  .check-circle {
     width: 24px;
     height: 24px;
     display: inline-flex;
@@ -160,10 +187,9 @@
     border-radius: var(--radius-full, 9999px);
     background: transparent;
     color: #fff;
-    cursor: pointer;
   }
 
-  .check.checked {
+  .check-circle.checked {
     background-color: var(--ds-success, #4cb782);
     border-color: var(--ds-success, #4cb782);
   }

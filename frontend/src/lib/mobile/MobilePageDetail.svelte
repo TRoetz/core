@@ -8,11 +8,12 @@
   import { renderMarkdown } from '../utils/render-markdown.js';
   import SafeMarkdown from '../components/SafeMarkdown.svelte';
   import MobileHeader from './MobileHeader.svelte';
+  import { autoGrow, enterMovesFocus } from './autoGrowTextarea.js';
   import { pageAncestors, pageChildren } from './mobilePagesData.js';
 
   // Phone page reader: rendered markdown, breadcrumb, and sub-page rows.
-  // Editing is a plain markdown textarea (the Milkdown rich editor stays
-  // desktop-only) guarded by the page's content hash against lost updates.
+  // Editing is a borderless full-page form (same Linear-style hero fields as
+  // the item editors) guarded by the page's content hash against lost updates.
   let { workspaceId, pageId } = $props();
 
   let page = $state(null);
@@ -23,6 +24,7 @@
   let editing = $state(false);
   let draftTitle = $state('');
   let draftContent = $state('');
+  let draftContentField = $state(null);
   let saving = $state(false);
   // Guard in-place navigation (page → sub-page) against out-of-order loads.
   let loadToken = 0;
@@ -143,20 +145,28 @@
     <button class="retry" onclick={() => load(++loadToken)} disabled={loading} type="button">Retry</button>
   </div>
 {:else if editing}
+  <!-- Borderless Linear-style editor: hero title + content, actions pinned
+       to the bottom edge. Same modality as the item create/edit pages. -->
   <div class="editor" data-testid="mobile-page-editor">
-    <input
-      class="title-input"
+    <textarea
+      class="hero-title"
       bind:value={draftTitle}
+      rows={1}
+      enterkeyhint="next"
+      placeholder="Page title"
+      use:autoGrow={draftTitle}
+      use:enterMovesFocus={{ next: draftContentField }}
       data-testid="mobile-page-title-input"
       aria-label="Page title"
-      type="text"
-    />
+    ></textarea>
     <textarea
-      class="content-input"
+      class="hero-content"
       bind:value={draftContent}
+      bind:this={draftContentField}
       data-testid="mobile-page-content-input"
       aria-label="Page content (Markdown)"
       spellcheck="false"
+      placeholder="Write something…"
     ></textarea>
     <div class="editor-actions">
       <button class="btn secondary" onclick={cancelEditing} data-testid="mobile-page-editor-cancel" type="button">Cancel</button>
@@ -341,32 +351,57 @@
   }
   .sub-row :global(.chev) { color: var(--ds-icon-subtle, var(--ds-text-subtle)); flex-shrink: 0; }
 
-  .editor { display: flex; flex-direction: column; gap: 0.6rem; padding: 0.75rem 0.875rem 2rem; }
-  .title-input {
-    min-height: 44px;
-    padding: 0.4rem 0.6rem;
-    border: 1px solid var(--ds-border);
-    border-radius: var(--radius-lg, 8px);
-    background-color: var(--ds-surface-raised);
-    font-size: 1.125rem;
+  /* Borderless editor fields — same hero treatment as the item editors. */
+  .editor {
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+    box-sizing: border-box;
+    padding: 0.75rem 1rem 0;
+    gap: 0.5rem;
+  }
+  .hero-title {
+    width: 100%;
+    margin: 0.5rem 0 0;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--ds-text);
+    font-family: inherit;
+    font-size: 1.35rem;
     font-weight: var(--font-semibold, 600);
-    color: var(--ds-text);
+    line-height: 1.25;
+    overflow: hidden;
+    resize: none;
   }
-  .content-input {
-    min-height: 55dvh;
-    padding: 0.6rem;
-    border: 1px solid var(--ds-border);
-    border-radius: var(--radius-lg, 8px);
-    background-color: var(--ds-surface-raised);
-    font-family: var(--font-mono, monospace);
-    font-size: 0.875rem;
-    line-height: 1.5;
+  .hero-title::placeholder { color: var(--ds-text-subtlest, var(--ds-text-subtle)); font-weight: var(--font-semibold, 600); }
+  .hero-content {
+    width: 100%;
+    min-height: 50dvh;
+    padding: 0;
+    border: none;
+    background: transparent;
     color: var(--ds-text);
-    resize: vertical;
+    font-family: inherit;
+    font-size: max(1rem, 16px);
+    line-height: 1.55;
+    resize: none;
   }
-  .title-input:focus,
-  .content-input:focus { outline: 2px solid var(--ds-interactive); outline-offset: -1px; }
-  .editor-actions { display: flex; gap: 0.5rem; justify-content: flex-end; }
+  .hero-content::placeholder { color: var(--ds-text-subtlest, var(--ds-text-subtle)); }
+  .hero-title:focus,
+  .hero-content:focus { outline: none; }
+
+  .editor-actions {
+    position: sticky;
+    bottom: 0;
+    z-index: 20;
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+    margin-top: auto;
+    padding: 0.6rem 0 calc(env(safe-area-inset-bottom, 0px) + 0.75rem);
+    background: linear-gradient(to top, var(--ds-surface) 65%, transparent);
+  }
   .btn {
     display: inline-flex;
     align-items: center;
@@ -380,12 +415,12 @@
     cursor: pointer;
   }
   .btn.secondary {
-    border: 1px solid var(--ds-border);
-    background: var(--ds-surface);
+    border: none;
+    background: var(--ds-background-neutral);
     color: var(--ds-text);
   }
   .btn.primary {
-    border: 1px solid var(--ds-interactive);
+    border: none;
     background: var(--ds-interactive);
     color: var(--ds-text-inverse, #fff);
   }

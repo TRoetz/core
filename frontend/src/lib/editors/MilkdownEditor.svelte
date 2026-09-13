@@ -1,7 +1,7 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
   import { useEventListener } from 'runed';
-  import { Editor, rootCtx, defaultValueCtx, editorViewOptionsCtx, editorViewCtx, serializerCtx } from '@milkdown/kit/core';
+  import { Editor, rootCtx, defaultValueCtx, editorViewOptionsCtx, editorViewCtx, serializerCtx, remarkPluginsCtx } from '@milkdown/kit/core';
   import { commonmark, toggleStrongCommand, toggleEmphasisCommand, wrapInBulletListCommand, wrapInOrderedListCommand, toggleInlineCodeCommand } from '@milkdown/kit/preset/commonmark';
   import { gfm, toggleStrikethroughCommand } from '@milkdown/kit/preset/gfm';
   import { listener, listenerCtx } from '@milkdown/kit/plugin/listener';
@@ -20,6 +20,7 @@
   import MentionPicker from '../pickers/MentionPicker.svelte';
   import { mentionDecorationPlugin } from './milkdown-mention-mark.js';
   import { linkSanitizerPlugin } from './milkdown-link-sanitizer.js';
+  import { rewriteBreakHTML } from './milkdown-hardbreak.js';
   import { excalidrawBlock } from './milkdown-excalidraw-block.svelte.js';
   import PageDiagramModal from '../features/pages/PageDiagramModal.svelte';
   import { highlightCodeBlocks } from './code-highlight.js';
@@ -458,6 +459,14 @@
         .config((ctx) => {
           ctx.set(rootCtx, editorElement);
           ctx.set(defaultValueCtx, initialContent || '');
+          // Parse `<br>`-style html as hard breaks (see milkdown-hardbreak.js).
+          // Registered through remarkPluginsCtx here — config runs before the
+          // schema step snapshots the remark processor; a `.use($remark)`
+          // plugin appends after that snapshot and never takes effect.
+          ctx.update(remarkPluginsCtx, (plugins) => [
+            ...plugins,
+            { plugin: rewriteBreakHTML, options: {} },
+          ]);
           ctx.get(listenerCtx).markdownUpdated((ctx, markdown) => {
             // Listener notifications can be delivered after a newer editor
             // transaction (for example, selecting an @ mention). Always

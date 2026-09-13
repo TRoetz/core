@@ -5,6 +5,7 @@
   import { formatItemKey } from '../utils/itemKey.js';
   import MobileEditorPage from './MobileEditorPage.svelte';
   import MobileConfirmSheet from './MobileConfirmSheet.svelte';
+  import { autoGrow, enterMovesFocus } from './autoGrowTextarea.js';
   import { Loader } from '@lucide/svelte';
 
   /**
@@ -21,6 +22,7 @@
   let loadErrored = $state(false);
   let title = $state('');
   let description = $state('');
+  let descriptionField = $state(null);
   let saving = $state(false);
   let error = $state('');
 
@@ -176,18 +178,23 @@
     </div>
   {:else}
     <div class="edit-form" data-testid="item-edit-form">
-      <!-- Linear-style borderless hero fields. -->
-      <input
+      <!-- Linear-style borderless hero fields. The title is an auto-growing
+           textarea: long titles wrap instead of scrolling out of view. -->
+      <textarea
         class="hero-title"
-        type="text"
         bind:value={title}
         placeholder="Issue title"
         autocomplete="off"
+        rows={1}
+        enterkeyhint="next"
+        use:autoGrow={title}
+        use:enterMovesFocus={{ next: descriptionField }}
         data-testid="item-edit-title"
-      />
+      ></textarea>
       <textarea
         class="hero-desc"
         bind:value={description}
+        bind:this={descriptionField}
         rows={12}
         placeholder="Description…"
         data-testid="item-edit-description"
@@ -236,7 +243,8 @@
     gap: 0.5rem;
   }
 
-  /* Linear-style borderless hero fields. */
+  /* Linear-style borderless hero fields. The title textarea wraps and grows
+     with its content (autoGrow action) so long titles stay fully visible. */
   .hero-title {
     width: 100%;
     margin: 0.75rem 0 0;
@@ -244,9 +252,12 @@
     border: none;
     background: transparent;
     color: var(--ds-text);
+    font-family: inherit;
     font-size: 1.35rem;
     font-weight: var(--font-semibold, 600);
     line-height: 1.25;
+    overflow: hidden;
+    resize: none;
   }
   .hero-title::placeholder { color: var(--ds-text-subtlest, var(--ds-text-subtle)); font-weight: var(--font-semibold, 600); }
   .hero-desc {
