@@ -106,9 +106,12 @@ html[data-color-mode="dark"],
 
   /* =================================================================
      NEUTRAL BACKGROUNDS
+     Same ink as --ds-border at lower alphas, mirroring the light theme's
+     #091e42 0f/14 ladder. Values here must stay faint: at 20%+ alpha the
+     highlight reads as a bright wash on dark surfaces.
      ================================================================= */
-  --ds-background-neutral: #a1bdd933;
-  --ds-background-neutral-hovered: #a6c5e24d;
+  --ds-background-neutral: #a1bdd914;
+  --ds-background-neutral-hovered: #a1bdd929;
   --ds-background-input: #22272b;
   --ds-background-input-hovered: #282e33;
 

@@ -153,7 +153,7 @@
           <div class="w-full rounded-full h-2" style="background-color: var(--ds-surface);">
             <div
               class="h-2 rounded-full transition-all duration-300"
-              style="width: {progressPercent}%; background: linear-gradient(90deg, #1388E7 0%, #1AB1BC 100%);"
+              style="width: {progressPercent}%; background: linear-gradient(90deg, var(--ds-gradient-start) 0%, var(--ds-gradient-end) 100%);"
             ></div>
           </div>
         </div>
@@ -164,8 +164,9 @@
           <div
             class="rounded py-3 px-4 transition-all"
             class:border-l-6={activeStep === 1}
-            class:border-l-sky-600={activeStep === 1}
-            style={activeStep === 1 ? 'background-color: rgba(19, 136, 231, 0.05);' : ''}
+            style={activeStep === 1
+              ? 'background-color: var(--ds-surface-selected); border-color: var(--ds-interactive);'
+              : ''}
           >
             {#if workspaceCount > 0}
               <!-- Completed state: strikethrough -->
@@ -192,8 +193,9 @@
           <div
             class="rounded py-3 px-4 transition-all"
             class:border-l-6={activeStep === 2}
-            class:border-l-sky-600={activeStep === 2}
-            style={activeStep === 2 ? 'background-color: rgba(19, 136, 231, 0.05);' : ''}
+            style={activeStep === 2
+              ? 'background-color: var(--ds-surface-selected); border-color: var(--ds-interactive);'
+              : ''}
           >
             {#if itemCount > 0}
               <!-- Completed state: strikethrough -->
@@ -228,7 +230,7 @@
               {#snippet children()}
                 {@const WsIcon = workspaceIconMap[workspace.icon] || Grip}
                 <div class="flex items-center gap-2">
-                  <div class="w-6 h-6 rounded flex items-center justify-center flex-shrink-0" style="background-color: {workspace.color || '#3b82f6'};">
+                  <div class="w-6 h-6 rounded flex items-center justify-center flex-shrink-0" style="background-color: {workspace.color || 'var(--color-blue-500)'};">
                     <WsIcon size={14} color="white" />
                   </div>
                   <div>
