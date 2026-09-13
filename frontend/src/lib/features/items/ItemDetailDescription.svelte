@@ -185,10 +185,7 @@
     <button
       data-testid="item-description-empty"
       onclick={startEditingDescription}
-      class="text-left w-full py-2 text-sm transition-colors cursor-pointer"
-      style="color: var(--ds-text-subtle);"
-      onmouseenter={(e) => e.currentTarget.style.color = 'var(--ds-text)'}
-      onmouseleave={(e) => e.currentTarget.style.color = 'var(--ds-text-subtle)'}
+      class="description-empty text-left w-full py-2 text-sm transition-colors cursor-pointer"
       title={t('items.clickToAddDescription')}
     >
       {t('items.noDescriptionProvided')}
@@ -270,10 +267,7 @@
           <div class="absolute left-0 top-full mt-1 z-50 min-w-[200px] rounded-md shadow-lg py-1" style="background-color: var(--ds-surface-raised); border: 1px solid var(--ds-border);">
             {#each manualActions as action}
               <button
-                class="w-full px-3 py-2 text-left text-sm flex items-center gap-2 transition-colors"
-                style="color: var(--ds-text);"
-                onmouseenter={(e) => e.currentTarget.style.backgroundColor = 'var(--ds-background-neutral-hovered)'}
-                onmouseleave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                class="manual-action w-full px-3 py-2 text-left text-sm flex items-center gap-2 transition-colors"
                 onclick={() => handleExecuteAction(action)}
               >
                 <Zap class="w-4 h-4 text-ds-accent-yellow flex-shrink-0" />
@@ -337,5 +331,20 @@
     max-width: 80px;
     opacity: 1;
     transform: translateX(0);
+  }
+  .description-empty {
+    color: var(--ds-text-subtle);
+  }
+
+  .description-empty:hover {
+    color: var(--ds-text);
+  }
+
+  .manual-action {
+    color: var(--ds-text);
+  }
+
+  .manual-action:hover {
+    background-color: var(--ds-background-neutral-hovered);
   }
 </style>

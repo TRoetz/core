@@ -78,10 +78,7 @@
   <Tooltip content="Back to Collections" placement="right">
     <a
       href="/collections"
-      class="w-10 h-10 rounded flex items-center justify-center cursor-pointer transition-colors mb-1 no-underline"
-      style="color: var(--ds-text-subtle);"
-      onmouseenter={(e) => e.currentTarget.style.cssText = 'background: var(--ds-background-neutral-hovered); color: var(--ds-text);'}
-      onmouseleave={(e) => e.currentTarget.style.cssText = 'color: var(--ds-text-subtle);'}
+      class="nav-link w-10 h-10 rounded flex items-center justify-center cursor-pointer transition-colors mb-1 no-underline"
     >
       <FolderOpen size={20} />
     </a>
@@ -89,10 +86,7 @@
   <Tooltip content="Expand sidebar" placement="right">
     <button
       onclick={() => uiStore.wsSidebarCollapsed = false}
-      class="w-10 h-10 rounded flex items-center justify-center transition-colors"
-      style="color: var(--ds-text-subtle);"
-      onmouseenter={(e) => e.currentTarget.style.cssText = 'background: var(--ds-background-neutral-hovered); color: var(--ds-text);'}
-      onmouseleave={(e) => e.currentTarget.style.cssText = 'color: var(--ds-text-subtle);'}
+      class="nav-link w-10 h-10 rounded flex items-center justify-center transition-colors"
     >
       <IconChevronRight size={20} />
     </button>
@@ -127,10 +121,8 @@
           <a
             href={getNavUrl(view.id)}
             data-testid="collection-nav-{view.id}"
-            class="w-10 h-10 rounded flex items-center justify-center transition-colors no-underline"
-            style={isActive ? 'background: var(--ds-surface-selected); color: var(--ds-text);' : 'color: var(--ds-text-subtle);'}
-            onmouseenter={(e) => { if (!isActive) e.currentTarget.style.cssText = 'background: var(--ds-background-neutral-hovered); color: var(--ds-text);'; }}
-            onmouseleave={(e) => { e.currentTarget.style.cssText = isActive ? 'background: var(--ds-surface-selected); color: var(--ds-text);' : 'color: var(--ds-text-subtle);'; }}
+            class="nav-link w-10 h-10 rounded flex items-center justify-center transition-colors no-underline"
+            class:active={isActive}
           >
             <ViewIcon size={20} />
           </a>
@@ -144,10 +136,8 @@
       <Tooltip content="Edit Collection" placement="right">
         <a
           href={`/collections/${collectionId}`}
-          class="w-10 h-10 rounded flex items-center justify-center transition-colors no-underline"
-          style={$currentRoute.view === 'collections-edit' ? 'background: var(--ds-surface-selected); color: var(--ds-text);' : 'color: var(--ds-text-subtle);'}
-          onmouseenter={(e) => { if ($currentRoute.view !== 'collections-edit') e.currentTarget.style.cssText = 'background: var(--ds-background-neutral-hovered); color: var(--ds-text);'; }}
-          onmouseleave={(e) => { e.currentTarget.style.cssText = $currentRoute.view === 'collections-edit' ? 'background: var(--ds-surface-selected); color: var(--ds-text);' : 'color: var(--ds-text-subtle);'; }}
+          class="nav-link w-10 h-10 rounded flex items-center justify-center transition-colors no-underline"
+          class:active={$currentRoute.view === 'collections-edit'}
         >
           <Pencil size={20} />
         </a>
@@ -173,10 +163,8 @@
           <a
             href={getNavUrl(view.id)}
             data-testid="collection-nav-{view.id}"
-            class="w-full text-left cursor-pointer px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 workspace-nav-item no-underline"
-            style={isActive ? 'background: var(--ds-surface-selected); color: var(--ds-text);' : 'color: var(--ds-text-subtle);'}
-            onmouseenter={(e) => { if (!isActive) e.currentTarget.style.cssText = 'background: var(--ds-background-neutral-hovered); color: var(--ds-text);'; }}
-            onmouseleave={(e) => { if (!isActive) e.currentTarget.style.cssText = isActive ? 'background: var(--ds-surface-selected); color: var(--ds-text);' : 'color: var(--ds-text-subtle);'; }}
+            class="nav-link w-full text-left cursor-pointer px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 workspace-nav-item no-underline"
+            class:active={isActive}
           >
             <ViewIcon class="w-4 h-4" />
             {view.label}
@@ -194,10 +182,7 @@
         <Tooltip content="Edit collection query and settings" placement="right">
           <a
             href={`/collections/${collectionId}`}
-            class="w-full text-left cursor-pointer px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 workspace-nav-item mt-2 no-underline"
-            style="color: var(--ds-text-subtle);"
-            onmouseenter={(e) => e.currentTarget.style.cssText = 'background: var(--ds-background-neutral-hovered); color: var(--ds-text);'}
-            onmouseleave={(e) => e.currentTarget.style.cssText = 'color: var(--ds-text-subtle);'}
+            class="nav-link w-full text-left cursor-pointer px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 workspace-nav-item mt-2 no-underline"
           >
             <Pencil class="w-4 h-4" />
             Edit Collection
@@ -209,6 +194,20 @@
 {/if}
 
 <style>
+  .nav-link {
+    color: var(--ds-text-subtle);
+  }
+
+  .nav-link:hover:not(.active) {
+    background: var(--ds-background-neutral-hovered);
+    color: var(--ds-text);
+  }
+
+  .nav-link.active {
+    background: var(--ds-surface-selected);
+    color: var(--ds-text);
+  }
+
   @media (prefers-reduced-motion: reduce) {
     nav,
     nav .border-t {

@@ -34,10 +34,8 @@
       {@const Icon = iconFor(ws.icon)}
       <li>
         <button
-          class="w-full flex items-center gap-3 p-2 rounded border transition-colors text-left"
-          style="border-color: var(--ds-border); background-color: var(--ds-surface);"
-          onmouseenter={(e) => (e.currentTarget.style.backgroundColor = 'var(--ds-background-neutral-hovered)')}
-          onmouseleave={(e) => (e.currentTarget.style.backgroundColor = 'var(--ds-surface)')}
+          class="dashboard-recent-workspace w-full flex items-center gap-3 p-2 rounded border transition-colors text-left"
+          style="border-color: var(--ds-border);"
           onclick={() => go(ws)}
         >
           {#if ws.avatar_url}
@@ -70,3 +68,13 @@
     {/each}
   </ul>
 {/if}
+
+<style>
+  .dashboard-recent-workspace {
+    background-color: var(--ds-surface);
+  }
+
+  .dashboard-recent-workspace:hover {
+    background-color: var(--ds-background-neutral-hovered);
+  }
+</style>

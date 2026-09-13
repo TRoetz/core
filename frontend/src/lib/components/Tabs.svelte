@@ -25,13 +25,11 @@
           href={tab.href}
           data-testid={tab.testid}
           class="tab-trigger flex flex-none items-center gap-2 px-4 py-3 text-sm font-medium transition-all relative border-b-2 no-underline whitespace-nowrap {tab.className || ''}"
-          style="color: {activeTab === tab.id ? 'var(--ds-interactive)' : 'var(--ds-text-subtle)'}; border-bottom-color: {activeTab === tab.id ? 'var(--ds-interactive)' : 'transparent'}; {activeTab === tab.id ? 'margin-bottom: -1px;' : ''}"
+          class:active={activeTab === tab.id}
           onclick={(e) => {
             if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
             switchTab(tab.id);
           }}
-          onmouseenter={(e) => { if (activeTab !== tab.id) /** @type {HTMLElement} */ (e.currentTarget).style.color = 'var(--ds-text)'; }}
-          onmouseleave={(e) => { if (activeTab !== tab.id) /** @type {HTMLElement} */ (e.currentTarget).style.color = 'var(--ds-text-subtle)'; }}
         >
           {#if tab.icon}
             <tab.icon class="w-4 h-4 flex-shrink-0" />
@@ -46,10 +44,8 @@
           type="button"
           data-testid={tab.testid}
           class="tab-trigger flex flex-none items-center gap-2 px-4 py-3 text-sm font-medium transition-all relative border-b-2 whitespace-nowrap {tab.className || ''}"
-          style="color: {activeTab === tab.id ? 'var(--ds-interactive)' : 'var(--ds-text-subtle)'}; border-bottom-color: {activeTab === tab.id ? 'var(--ds-interactive)' : 'transparent'}; {activeTab === tab.id ? 'margin-bottom: -1px;' : ''}"
+          class:active={activeTab === tab.id}
           onclick={() => switchTab(tab.id)}
-          onmouseenter={(e) => { if (activeTab !== tab.id) /** @type {HTMLElement} */ (e.currentTarget).style.color = 'var(--ds-text)'; }}
-          onmouseleave={(e) => { if (activeTab !== tab.id) /** @type {HTMLElement} */ (e.currentTarget).style.color = 'var(--ds-text-subtle)'; }}
         >
           {#if tab.icon}
             <tab.icon class="w-4 h-4 flex-shrink-0" />
@@ -74,5 +70,20 @@
     overflow-x: auto;
     overscroll-behavior-inline: contain;
     scrollbar-width: thin;
+  }
+
+  .tab-trigger {
+    color: var(--ds-text-subtle);
+    border-bottom-color: transparent;
+  }
+
+  .tab-trigger:hover:not(.active) {
+    color: var(--ds-text);
+  }
+
+  .tab-trigger.active {
+    color: var(--ds-interactive);
+    border-bottom-color: var(--ds-interactive);
+    margin-bottom: -1px;
   }
 </style>

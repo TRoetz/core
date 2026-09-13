@@ -452,12 +452,8 @@
               {@const isActive = activeTypeFilter === type.id}
               <button
                 onclick={() => handleTypeClick(type.id)}
-                class="px-4 py-2.5 text-sm font-medium border-b-2 transition-colors flex items-center gap-2"
-                style={isActive
-                  ? 'border-color: var(--ds-border-focused); color: var(--ds-text);'
-                  : 'border-color: transparent; color: var(--ds-text-subtle);'}
-                onmouseenter={(e) => { if (!isActive) e.currentTarget.style.color = 'var(--ds-text)'; }}
-                onmouseleave={(e) => { if (!isActive) e.currentTarget.style.color = 'var(--ds-text-subtle)'; }}
+                class="channel-tab px-4 py-2.5 text-sm font-medium border-b-2 transition-colors flex items-center gap-2"
+                class:active={isActive}
               >
                 <type.icon class="w-4 h-4" />
                 {type.label}
@@ -751,3 +747,19 @@
   channel={emailLogChannel}
   onClose={() => { showEmailLog = false; emailLogChannel = null; }}
 />
+
+<style>
+  .channel-tab {
+    border-color: transparent;
+    color: var(--ds-text-subtle);
+  }
+
+  .channel-tab:hover:not(.active) {
+    color: var(--ds-text);
+  }
+
+  .channel-tab.active {
+    border-color: var(--ds-border-focused);
+    color: var(--ds-text);
+  }
+</style>

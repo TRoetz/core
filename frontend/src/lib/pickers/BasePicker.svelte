@@ -510,9 +510,7 @@
             <span class="font-medium truncate max-w-[150px]">{getLabel(item)}</span>
           {/if}
           <button type="button" onclick={(e) => removeItem(e, getValue(item))}
-                  class="rounded p-0.5 transition-colors" {disabled}
-                  onmouseenter={(e) => e.currentTarget.style.backgroundColor = 'var(--ds-background-neutral-hovered)'}
-                  onmouseleave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
+                  class="picker-clear rounded p-0.5 transition-colors" {disabled}>
             <X class="w-3 h-3" style="color: var(--ds-text-subtle);" />
           </button>
         </div>
@@ -541,10 +539,8 @@
     <div class="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-1">
       {#if allowClear && value != null && !disabled && showSelectedInTrigger}
         <button type="button" onclick={handleClear}
-                class="p-0.5 rounded transition-colors" style="color: var(--ds-text-subtle);"
-                aria-label={t('pickers.clearSelection')}
-                onmouseenter={(e) => e.currentTarget.style.backgroundColor = 'var(--ds-background-neutral-hovered)'}
-                onmouseleave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
+                class="picker-clear p-0.5 rounded transition-colors" style="color: var(--ds-text-subtle);"
+                aria-label={t('pickers.clearSelection')}>
           <X size={14} />
         </button>
       {/if}
@@ -658,3 +654,9 @@
     </div>
   {/if}
 </div>
+
+<style>
+  .picker-clear:hover {
+    background-color: var(--ds-background-neutral-hovered);
+  }
+</style>

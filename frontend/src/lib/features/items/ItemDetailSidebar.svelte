@@ -660,9 +660,7 @@
         {#snippet children()}
           <!-- svelte-ignore a11y_no_static_element_interactions -->
           <div
-            class="w-full flex items-center justify-between px-2 py-1.5 text-sm transition-colors rounded group"
-            onmouseenter={(e) => e.currentTarget.style.backgroundColor = 'var(--ds-background-neutral-hovered)'}
-            onmouseleave={(e) => e.currentTarget.style.backgroundColor = ''}
+            class="hover-bg w-full flex items-center justify-between px-2 py-1.5 text-sm transition-colors rounded group"
           >
             <div class="flex items-center gap-2">
               <Text variant="subtle" size="sm">{t('common.status')}</Text>
@@ -725,9 +723,7 @@
           {#snippet children()}
             <!-- svelte-ignore a11y_no_static_element_interactions -->
             <div
-              class="w-full flex items-center justify-between px-2 py-1.5 text-sm transition-colors rounded group"
-              onmouseenter={(e) => e.currentTarget.style.backgroundColor = 'var(--ds-background-neutral-hovered)'}
-              onmouseleave={(e) => e.currentTarget.style.backgroundColor = ''}
+              class="hover-bg w-full flex items-center justify-between px-2 py-1.5 text-sm transition-colors rounded group"
             >
               <Text variant="subtle" size="sm">{t('common.priority')}</Text>
               <div class="flex items-center gap-2">
@@ -780,9 +776,7 @@
             {#snippet children()}
               <!-- svelte-ignore a11y_no_static_element_interactions -->
               <div
-                class="w-full flex items-center justify-between px-2 py-1.5 text-sm transition-colors rounded group"
-                onmouseenter={(e) => e.currentTarget.style.backgroundColor = 'var(--ds-background-neutral-hovered)'}
-                onmouseleave={(e) => e.currentTarget.style.backgroundColor = ''}
+                class="hover-bg w-full flex items-center justify-between px-2 py-1.5 text-sm transition-colors rounded group"
               >
                 <Text variant="subtle" size="sm">{t('items.project')}</Text>
                 <div class="flex items-center gap-2">
@@ -820,9 +814,7 @@
           {#snippet children()}
             <!-- svelte-ignore a11y_no_static_element_interactions -->
             <div
-              class="w-full flex items-center justify-between px-2 py-1.5 text-sm transition-colors rounded group"
-              onmouseenter={(e) => e.currentTarget.style.backgroundColor = 'var(--ds-background-neutral-hovered)'}
-              onmouseleave={(e) => e.currentTarget.style.backgroundColor = ''}
+              class="hover-bg w-full flex items-center justify-between px-2 py-1.5 text-sm transition-colors rounded group"
             >
               <Text variant="subtle" size="sm">{t('common.assignee')}</Text>
               <div class="flex items-center gap-2">
@@ -859,9 +851,7 @@
           {#snippet children()}
             <!-- svelte-ignore a11y_no_static_element_interactions -->
             <div
-              class="w-full flex items-center justify-between px-2 py-1.5 text-sm transition-colors rounded group"
-              onmouseenter={(e) => e.currentTarget.style.backgroundColor = 'var(--ds-background-neutral-hovered)'}
-              onmouseleave={(e) => e.currentTarget.style.backgroundColor = ''}
+              class="hover-bg w-full flex items-center justify-between px-2 py-1.5 text-sm transition-colors rounded group"
             >
               <Text variant="subtle" size="sm">{t('items.milestone')}</Text>
               <div class="flex items-center gap-1 flex-wrap justify-end">
@@ -906,9 +896,7 @@
           {#snippet children()}
             <!-- svelte-ignore a11y_no_static_element_interactions -->
             <div
-              class="w-full flex items-center justify-between px-2 py-1.5 text-sm transition-colors rounded group"
-              onmouseenter={(e) => e.currentTarget.style.backgroundColor = 'var(--ds-background-neutral-hovered)'}
-              onmouseleave={(e) => e.currentTarget.style.backgroundColor = ''}
+              class="hover-bg w-full flex items-center justify-between px-2 py-1.5 text-sm transition-colors rounded group"
             >
               <Text variant="subtle" size="sm">{t('items.iteration')}</Text>
               <div class="flex items-center gap-2">
@@ -947,9 +935,7 @@
           {:else}
             <button
               onclick={() => canEdit && isSystemFieldEditable('labels') && (editingLabels = true)}
-              class="w-full flex items-start justify-between gap-2 px-2 py-1.5 text-sm transition-colors rounded group text-left"
-              onmouseenter={(e) => e.currentTarget.style.backgroundColor = 'var(--ds-background-neutral-hovered)'}
-              onmouseleave={(e) => e.currentTarget.style.backgroundColor = ''}
+              class="hover-bg w-full flex items-start justify-between gap-2 px-2 py-1.5 text-sm transition-colors rounded group text-left"
               disabled={!canEdit || !isSystemFieldEditable('labels')}
             >
               <Text variant="subtle" size="sm" class="shrink-0">{t('items.labels') || 'Labels'}</Text>
@@ -1004,9 +990,7 @@
         {:else}
           <button
             onclick={startEditingEstimate}
-            class="w-full flex items-center justify-between px-2 py-1.5 text-sm transition-colors rounded group"
-            onmouseenter={(e) => e.currentTarget.style.backgroundColor = 'var(--ds-background-neutral-hovered)'}
-            onmouseleave={(e) => e.currentTarget.style.backgroundColor = ''}
+            class="hover-bg w-full flex items-center justify-between px-2 py-1.5 text-sm transition-colors rounded group"
             disabled={!canEdit || !isSystemFieldEditable('estimate')}
           >
             <Text variant="subtle" size="sm">{t('items.estimate') || 'Estimate'}</Text>
@@ -1048,9 +1032,7 @@
         {:else}
           <button
             onclick={startEditingStoryPoints}
-            class="w-full flex items-center justify-between px-2 py-1.5 text-sm transition-colors rounded group"
-            onmouseenter={(e) => e.currentTarget.style.backgroundColor = 'var(--ds-background-neutral-hovered)'}
-            onmouseleave={(e) => e.currentTarget.style.backgroundColor = ''}
+            class="hover-bg w-full flex items-center justify-between px-2 py-1.5 text-sm transition-colors rounded group"
             disabled={!canEdit || !isSystemFieldEditable('story_points')}
           >
             <Text variant="subtle" size="sm">{t('items.storyPoints')}</Text>
@@ -1083,14 +1065,12 @@
     <div class="mb-3">
       <div
         data-testid="item-recurrence-summary"
-        class="w-full flex items-center justify-between px-2 py-1.5 text-sm transition-colors rounded group"
+        class="hover-bg w-full flex items-center justify-between px-2 py-1.5 text-sm transition-colors rounded group"
         role="button"
         tabindex="0"
         onclick={() => oneditRecurrence?.()}
         onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); oneditRecurrence?.(); } }}
-        onmouseenter={(e) => e.currentTarget.style.background = 'var(--ds-background-neutral-hovered)'}
-        onmouseleave={(e) => e.currentTarget.style.background = ''}
-      >
+              >
         <div class="flex items-center gap-1.5">
           <Repeat class="w-3.5 h-3.5" style="color: var(--ds-icon-subtle);" />
           <Text variant="subtle" size="sm">{t('recurrence.title')}</Text>
@@ -1196,9 +1176,7 @@
                 <button
                   onclick={() => startEditingCustomField(screenField.field_identifier)}
                   data-testid={`item-custom-field-edit-${fieldDef.id}`}
-                  class="w-full flex items-center justify-between px-2 py-1.5 text-sm transition-colors rounded group"
-                  onmouseenter={(e) => e.currentTarget.style.backgroundColor = 'var(--ds-background-neutral-hovered)'}
-                  onmouseleave={(e) => e.currentTarget.style.backgroundColor = ''}
+                  class="hover-bg w-full flex items-center justify-between px-2 py-1.5 text-sm transition-colors rounded group"
                   disabled={!canEdit || !fieldEditable}
                 >
                   <Text variant="subtle" size="sm">{fieldDef.name}</Text>

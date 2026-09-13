@@ -274,10 +274,8 @@
           <!-- svelte-ignore a11y_no_static_element_interactions -->
           <div
             onclick={() => window.open(logbook.getDocumentFileUrl(doc.id), '_blank')}
-            class="group text-left rounded-xl border transition-all duration-200 hover:shadow-md cursor-pointer overflow-hidden flex flex-col"
-            style="background-color: var(--ds-surface-raised); border-color: var(--ds-border);"
-            onmouseenter={(e) => e.currentTarget.style.borderColor = 'var(--ds-border-focused)'}
-            onmouseleave={(e) => e.currentTarget.style.borderColor = 'var(--ds-border)'}
+            class="doc-card group text-left rounded-xl border transition-all duration-200 hover:shadow-md cursor-pointer overflow-hidden flex flex-col"
+            style="background-color: var(--ds-surface-raised);"
           >
             <div class="relative aspect-[210/297] w-full overflow-hidden" style="background-color: var(--ds-surface);">
               {#if doc.status === 'pending' || doc.status === 'processing'}
@@ -392,3 +390,13 @@
     {/if}
   {/if}
 </Tabs>
+
+<style>
+  .doc-card {
+    border-color: var(--ds-border);
+  }
+
+  .doc-card:hover {
+    border-color: var(--ds-border-focused);
+  }
+</style>

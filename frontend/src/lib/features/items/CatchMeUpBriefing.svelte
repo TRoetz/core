@@ -23,10 +23,7 @@
       {itemKey}
     </span>
     <button
-      class="inline-flex items-center gap-1.5 px-2 py-1 text-xs rounded transition-colors"
-      style="color: var(--ds-text-subtle);"
-      onmouseenter={(e) => e.currentTarget.style.backgroundColor = 'var(--ds-background-neutral-hovered)'}
-      onmouseleave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+      class="copy-btn inline-flex items-center gap-1.5 px-2 py-1 text-xs rounded transition-colors"
       onclick={copyToClipboard}
     >
       {#if copied}
@@ -43,3 +40,13 @@
     <MilkdownEditor content={briefing} readonly={true} showToolbar={false} compact={true} />
   </div>
 </div>
+
+<style>
+  .copy-btn {
+    color: var(--ds-text-subtle);
+  }
+
+  .copy-btn:hover {
+    background-color: var(--ds-background-neutral-hovered);
+  }
+</style>

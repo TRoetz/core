@@ -47,10 +47,7 @@
     <button
       data-testid={testId}
       onclick={() => editable && onStartEdit()}
-      class="w-full flex items-center justify-between px-2 py-1.5 text-sm transition-colors rounded group"
-      onmouseenter={(event) =>
-        (event.currentTarget.style.backgroundColor = 'var(--ds-background-neutral-hovered)')}
-      onmouseleave={(event) => (event.currentTarget.style.backgroundColor = '')}
+      class="hover-bg w-full flex items-center justify-between px-2 py-1.5 text-sm transition-colors rounded group"
       disabled={!editable}
     >
       <Text variant="subtle" size="sm">{label}</Text>

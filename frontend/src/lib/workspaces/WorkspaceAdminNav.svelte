@@ -2,7 +2,6 @@
   import { currentRoute } from '../router.js';
   import { workspacePermissions } from '../stores';
   import { workspaceSettingsItems, workspaceSettingsRoute } from '../navigation/workspaceNavigation.js';
-  import { navItemStyle, onNavMouseEnter, onNavMouseLeave } from '../navigation/navItemStyle.js';
   import { t } from '../stores/i18n.svelte.js';
 
   let { workspaceId = null } = $props();
@@ -17,12 +16,11 @@
       {@const active = $currentRoute.view === item.view}
       <a
         href={workspaceSettingsRoute(workspaceId, item.id)}
-        class="w-full text-left cursor-pointer px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 workspace-nav-item no-underline"
-        style={navItemStyle(active, item.danger)}
+        class="ws-nav-item w-full text-left cursor-pointer px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 workspace-nav-item no-underline"
+        class:active={active}
+        class:danger={item.danger}
         data-testid="workspace-admin-nav-{item.id}"
         aria-current={active ? 'page' : undefined}
-        onmouseenter={(e) => onNavMouseEnter(e, active, item.danger)}
-        onmouseleave={(e) => onNavMouseLeave(e, active, item.danger)}
       >
         <ItemIcon class="w-4 h-4" />
         {t(item.labelKey)}
@@ -30,3 +28,27 @@
     {/each}
   </nav>
 {/if}
+
+<style>
+  .ws-nav-item {
+    color: var(--ds-text-subtle);
+  }
+
+  .ws-nav-item.danger {
+    color: var(--ds-text-danger);
+  }
+
+  .ws-nav-item:hover:not(.active):not(.danger) {
+    background: var(--ds-background-neutral-hovered);
+    color: var(--ds-text);
+  }
+
+  .ws-nav-item.danger:hover:not(.active) {
+    background: var(--ds-background-neutral-hovered);
+  }
+
+  .ws-nav-item.active:not(.danger) {
+    background: var(--ds-surface-selected);
+    color: var(--ds-text);
+  }
+</style>

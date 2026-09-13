@@ -158,10 +158,8 @@
         tabindex="0"
         onclick={openSearchModal}
         onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openSearchModal(); } }}
-        class="w-full flex items-center gap-2 px-2.5 py-1.5 text-sm border rounded transition-colors cursor-pointer"
-        style="background-color: var(--ds-surface); border-color: var(--ds-border); color: var(--ds-text-subtle);"
-        onmouseenter={(e) => (e.currentTarget.style.borderColor = 'var(--ds-border-bold)')}
-        onmouseleave={(e) => (e.currentTarget.style.borderColor = 'var(--ds-border)')}
+        class="filter-open w-full flex items-center gap-2 px-2.5 py-1.5 text-sm border rounded transition-colors cursor-pointer"
+        style="background-color: var(--ds-surface); color: var(--ds-text-subtle);"
       >
         <Search class="w-4 h-4 flex-shrink-0" style="color: var(--ds-icon-subtle);" />
         {#if searchQuery}
@@ -279,3 +277,13 @@
     </div>
   </div>
 </Modal>
+
+<style>
+  .filter-open {
+    border-color: var(--ds-border);
+  }
+
+  .filter-open:hover {
+    border-color: var(--ds-border-bold);
+  }
+</style>

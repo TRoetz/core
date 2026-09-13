@@ -382,10 +382,7 @@
                   {#if msg === chatStore.messages[chatStore.messages.length - 1] && !chatStore.loading}
                     <button
                       onclick={() => chatStore.retryLastMessage()}
-                      class="mt-1.5 flex items-center gap-1 text-xs px-2 py-1 rounded transition-colors"
-                      style="color: var(--ds-text-subtle); background-color: var(--ds-surface);"
-                      onmouseenter={(e) => e.currentTarget.style.backgroundColor = 'var(--ds-background-neutral-hovered)'}
-                      onmouseleave={(e) => e.currentTarget.style.backgroundColor = 'var(--ds-surface)'}
+                      class="retry-btn mt-1.5 flex items-center gap-1 text-xs px-2 py-1 rounded transition-colors"
                     >
                       <IconRefresh size={12} stroke={1.5} />
                       Retry
@@ -466,5 +463,13 @@
   }
   .chat-message-content :global(.editor) {
     padding: 0 !important;
+  }
+  .retry-btn {
+    color: var(--ds-text-subtle);
+    background-color: var(--ds-surface);
+  }
+
+  .retry-btn:hover {
+    background-color: var(--ds-background-neutral-hovered);
   }
 </style>

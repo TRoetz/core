@@ -17,7 +17,7 @@
   import CreateModal from '../../dialogs/CreateModal.svelte';
   import Label from '../../components/Label.svelte';
   import Textarea from '../../components/Textarea.svelte';
-  import { getStatusLabel, getStatusButtonStyle } from '../../utils/statusColors.js';
+  import { getStatusLabel } from '../../utils/statusColors.js';
   import { t } from '../../stores/i18n.svelte.js';
   import DescriptionText from '../../components/DescriptionText.svelte';
   import { loadTestRunDetail } from './testRunDetailData.js';
@@ -427,10 +427,8 @@
             <button
               onclick={goBack}
               data-testid="test-execution-back"
-              class="p-1 rounded cursor-pointer flex-shrink-0"
+              class="hover-bg p-1 rounded cursor-pointer flex-shrink-0"
               style="color: var(--ds-icon);"
-              onmouseenter={(e) => e.currentTarget.style.backgroundColor = 'var(--ds-background-neutral-hovered)'}
-              onmouseleave={(e) => e.currentTarget.style.backgroundColor = ''}
             >
               <IconArrowLeft class="w-4 h-4" />
             </button>
@@ -444,11 +442,9 @@
         {/if}
         <button
           onclick={() => sidebarCollapsed = !sidebarCollapsed}
-          class="p-1 rounded cursor-pointer flex-shrink-0"
+          class="hover-bg p-1 rounded cursor-pointer flex-shrink-0"
           style="color: var(--ds-icon);"
           title={sidebarCollapsed ? t('testing.expandSidebar') : t('testing.collapseSidebar')}
-          onmouseenter={(e) => e.currentTarget.style.backgroundColor = 'var(--ds-background-neutral-hovered)'}
-          onmouseleave={(e) => e.currentTarget.style.backgroundColor = ''}
         >
           <IconChevronLeft class="w-4 h-4 transition-transform {sidebarCollapsed ? 'rotate-180' : ''}" />
         </button>
@@ -465,10 +461,8 @@
               type="button"
               data-testid={`test-execution-case-${testCase.id}`}
               data-progress={progress.percent}
-              class="appearance-none bg-transparent border-none font-[inherit] text-[inherit] text-left w-full m-0 cursor-pointer mb-2 p-1 rounded-lg transition-all"
-              style={isCollapsedActive ? 'background: var(--ds-surface); box-shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);' : ''}
-              onmouseenter={(e) => { if (!isCollapsedActive) e.currentTarget.style.background = 'var(--ds-background-neutral-hovered)'; }}
-              onmouseleave={(e) => { if (!isCollapsedActive) e.currentTarget.style.background = ''; }}
+              class="case-pill appearance-none bg-transparent border-none font-[inherit] text-[inherit] text-left w-full m-0 cursor-pointer mb-2 p-1 rounded-lg transition-all"
+              class:active={isCollapsedActive}
               onclick={() => goToCase(index)}
               title="{testCase.title} ({progress.percent}%)"
             >
@@ -489,10 +483,8 @@
               type="button"
               data-testid={`test-execution-case-${testCase.id}`}
               data-progress={progress.percent}
-              class="appearance-none bg-transparent font-[inherit] text-[inherit] text-left w-full m-0 cursor-pointer p-3 mb-2 rounded-lg border transition-all"
-              style={isExpandedActive ? 'border-color: var(--ds-interactive); background: var(--ds-surface); box-shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);' : 'border-color: var(--ds-border);'}
-              onmouseenter={(e) => { if (!isExpandedActive) e.currentTarget.style.background = 'var(--ds-background-neutral-hovered)'; }}
-              onmouseleave={(e) => { if (!isExpandedActive) e.currentTarget.style.background = ''; }}
+              class="case-card appearance-none bg-transparent font-[inherit] text-[inherit] text-left w-full m-0 cursor-pointer p-3 mb-2 rounded-lg border transition-all"
+              class:active={isExpandedActive}
               onclick={() => goToCase(index)}
             >
               <div class="font-medium text-sm mb-1 truncate" style="color: var(--ds-text);">
@@ -575,10 +567,8 @@
                 <button
                   onclick={() => goToStep(index)}
                   data-testid={`test-execution-step-${step.id}`}
-                  class="flex-1 h-2 rounded transition cursor-pointer"
-                  style="background-color: {currentStepIndex === index ? 'var(--ds-progress-fill)' : 'var(--ds-progress-track)'};"
-                  onmouseenter={(e) => { if (currentStepIndex !== index) e.currentTarget.style.backgroundColor = 'var(--ds-background-neutral-hovered)'; }}
-                  onmouseleave={(e) => { if (currentStepIndex !== index) e.currentTarget.style.backgroundColor = 'var(--ds-progress-track)'; }}
+                  class="step-seg flex-1 h-2 rounded transition cursor-pointer"
+                  class:current={currentStepIndex === index}
                   aria-label="Step {index + 1}"
                 ></button>
               {/each}
@@ -641,10 +631,9 @@
                 <button
                   onclick={() => markStepStatus(currentStep.id, 'passed')}
                   data-testid="test-execution-status-passed"
-                  class="flex items-center gap-2 px-4 py-2 rounded transition cursor-pointer"
-                  style={getStatusButtonStyle('passed', stepResults[currentStep.id]?.status === 'passed')}
-                  onmouseenter={(e) => { if (stepResults[currentStep.id]?.status !== 'passed') e.currentTarget.style.backgroundColor = 'var(--ds-status-success-bg)'; }}
-                  onmouseleave={(e) => { if (stepResults[currentStep.id]?.status !== 'passed') e.currentTarget.style.backgroundColor = 'transparent'; }}
+                  class="status-btn flex items-center gap-2 px-4 py-2 rounded transition cursor-pointer"
+                  data-status="passed"
+                  class:selected={stepResults[currentStep.id]?.status === 'passed'}
                 >
                   <IconCheck class="w-4 h-4" />
                   {t('testing.pass')}
@@ -653,10 +642,9 @@
                 <button
                   onclick={() => markStepStatus(currentStep.id, 'failed')}
                   data-testid="test-execution-status-failed"
-                  class="flex items-center gap-2 px-4 py-2 rounded transition cursor-pointer"
-                  style={getStatusButtonStyle('failed', stepResults[currentStep.id]?.status === 'failed')}
-                  onmouseenter={(e) => { if (stepResults[currentStep.id]?.status !== 'failed') e.currentTarget.style.backgroundColor = 'var(--ds-status-danger-bg)'; }}
-                  onmouseleave={(e) => { if (stepResults[currentStep.id]?.status !== 'failed') e.currentTarget.style.backgroundColor = 'transparent'; }}
+                  class="status-btn flex items-center gap-2 px-4 py-2 rounded transition cursor-pointer"
+                  data-status="failed"
+                  class:selected={stepResults[currentStep.id]?.status === 'failed'}
                 >
                   <IconX class="w-4 h-4" />
                   {t('testing.fail')}
@@ -665,10 +653,9 @@
                 <button
                   onclick={() => markStepStatus(currentStep.id, 'blocked')}
                   data-testid="test-execution-status-blocked"
-                  class="flex items-center gap-2 px-4 py-2 rounded transition cursor-pointer"
-                  style={getStatusButtonStyle('blocked', stepResults[currentStep.id]?.status === 'blocked')}
-                  onmouseenter={(e) => { if (stepResults[currentStep.id]?.status !== 'blocked') e.currentTarget.style.backgroundColor = 'var(--ds-status-warning-bg)'; }}
-                  onmouseleave={(e) => { if (stepResults[currentStep.id]?.status !== 'blocked') e.currentTarget.style.backgroundColor = 'transparent'; }}
+                  class="status-btn flex items-center gap-2 px-4 py-2 rounded transition cursor-pointer"
+                  data-status="blocked"
+                  class:selected={stepResults[currentStep.id]?.status === 'blocked'}
                 >
                   <IconBug class="w-4 h-4" />
                   {t('testing.blocked')}
@@ -677,10 +664,9 @@
                 <button
                   onclick={() => markStepStatus(currentStep.id, 'skipped')}
                   data-testid="test-execution-status-skipped"
-                  class="flex items-center gap-2 px-4 py-2 rounded transition cursor-pointer"
-                  style={getStatusButtonStyle('skipped', stepResults[currentStep.id]?.status === 'skipped')}
-                  onmouseenter={(e) => { if (stepResults[currentStep.id]?.status !== 'skipped') e.currentTarget.style.backgroundColor = 'var(--ds-status-neutral-bg)'; }}
-                  onmouseleave={(e) => { if (stepResults[currentStep.id]?.status !== 'skipped') e.currentTarget.style.backgroundColor = 'transparent'; }}
+                  class="status-btn flex items-center gap-2 px-4 py-2 rounded transition cursor-pointer"
+                  data-status="skipped"
+                  class:selected={stepResults[currentStep.id]?.status === 'skipped'}
                 >
                   <IconPlayerSkipForward class="w-4 h-4" />
                   {t('testing.skip')}
@@ -932,5 +918,100 @@
     cursor: pointer;
     border-radius: 6px;
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+  }
+  .case-pill:hover:not(.active) {
+    background: var(--ds-background-neutral-hovered);
+  }
+
+  .case-card {
+    border-color: var(--ds-border);
+  }
+
+  .case-card:hover:not(.active) {
+    background: var(--ds-background-neutral-hovered);
+  }
+
+  .case-card.active {
+    border-color: var(--ds-interactive);
+    background: var(--ds-surface);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+  }
+
+  .step-seg {
+    background-color: var(--ds-progress-track);
+  }
+
+  .step-seg.current {
+    background-color: var(--ds-progress-fill);
+  }
+
+  .step-seg:hover:not(.current) {
+    background-color: var(--ds-background-neutral-hovered);
+  }
+
+  /* Step status buttons: tint with the status background while unselected. */
+  .status-btn {
+    background-color: transparent;
+    border: 1px solid;
+  }
+
+  .status-btn[data-status='passed'] {
+    color: var(--ds-status-success-text);
+    border-color: var(--ds-status-success-border);
+  }
+
+  .status-btn[data-status='failed'] {
+    color: var(--ds-status-danger-text);
+    border-color: var(--ds-status-danger-border);
+  }
+
+  .status-btn[data-status='blocked'] {
+    color: var(--ds-status-warning-text);
+    border-color: var(--ds-status-warning-border);
+  }
+
+  .status-btn[data-status='skipped'] {
+    color: var(--ds-status-neutral-text);
+    border-color: var(--ds-status-neutral-border);
+  }
+
+  .status-btn.selected {
+    color: white;
+  }
+
+  .status-btn[data-status='passed'].selected {
+    background-color: var(--ds-status-success-solid);
+    border-color: var(--ds-status-success-solid);
+  }
+
+  .status-btn[data-status='failed'].selected {
+    background-color: var(--ds-status-danger-solid);
+    border-color: var(--ds-status-danger-solid);
+  }
+
+  .status-btn[data-status='blocked'].selected {
+    background-color: var(--ds-status-warning-solid);
+    border-color: var(--ds-status-warning-solid);
+  }
+
+  .status-btn[data-status='skipped'].selected {
+    background-color: var(--ds-status-neutral-solid);
+    border-color: var(--ds-status-neutral-solid);
+  }
+
+  .status-btn[data-status='passed']:hover:not(.selected) {
+    background-color: var(--ds-status-success-bg);
+  }
+
+  .status-btn[data-status='failed']:hover:not(.selected) {
+    background-color: var(--ds-status-danger-bg);
+  }
+
+  .status-btn[data-status='blocked']:hover:not(.selected) {
+    background-color: var(--ds-status-warning-bg);
+  }
+
+  .status-btn[data-status='skipped']:hover:not(.selected) {
+    background-color: var(--ds-status-neutral-bg);
   }
 </style>

@@ -40,16 +40,8 @@
       {@const isActive = activeCategory === category.id}
       {@const CategoryIcon = category.icon}
       <button
-        class="w-12 h-12 rounded-lg flex items-center justify-center transition-all"
-        style={isActive
-          ? 'background: var(--ds-surface-raised); color: var(--ds-text); box-shadow: var(--shadow-sm);'
-          : 'color: var(--ds-text-subtle);'}
-        onmouseenter={(event) => {
-          if (!isActive) event.currentTarget.style.cssText = 'background: var(--ds-background-neutral-hovered); color: var(--ds-text);';
-        }}
-        onmouseleave={(event) => {
-          if (!isActive) event.currentTarget.style.cssText = 'color: var(--ds-text-subtle);';
-        }}
+        class="cat-btn w-12 h-12 rounded-lg flex items-center justify-center transition-all"
+        class:active={isActive}
         onclick={() => activeCategory = category.id}
         title={category.name}
         aria-label={category.name}
@@ -74,9 +66,6 @@
           <div
             {...cardAttributes}
             class="widget-card p-3 rounded border transition-colors cursor-grab active:cursor-grabbing"
-            style="border-color: var(--ds-border); background-color: var(--ds-surface);"
-            onmouseenter={(event) => event.currentTarget.style.cssText = 'border-color: var(--ds-border-focused); background-color: var(--ds-background-neutral-hovered);'}
-            onmouseleave={(event) => event.currentTarget.style.cssText = 'border-color: var(--ds-border); background-color: var(--ds-surface);'}
             data-widget-type={widget.type}
           >
             <div class="flex items-start gap-3">
@@ -110,5 +99,27 @@
 <style>
   .widget-card {
     user-select: none;
+    border-color: var(--ds-border);
+    background-color: var(--ds-surface);
+  }
+
+  .widget-card:hover {
+    border-color: var(--ds-border-focused);
+    background-color: var(--ds-background-neutral-hovered);
+  }
+
+  .cat-btn {
+    color: var(--ds-text-subtle);
+  }
+
+  .cat-btn:hover:not(.active) {
+    background: var(--ds-background-neutral-hovered);
+    color: var(--ds-text);
+  }
+
+  .cat-btn.active {
+    background: var(--ds-surface-raised);
+    color: var(--ds-text);
+    box-shadow: var(--shadow-sm);
   }
 </style>

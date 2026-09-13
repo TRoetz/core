@@ -973,10 +973,7 @@
       {#each filteredAvailableFields as field (field.identifier)}
         <button
           onclick={() => pickField(field)}
-          class="w-full flex items-center justify-between gap-2 px-3 py-2 text-left transition-colors"
-          style="color: var(--ds-text);"
-          onmouseenter={(e) => e.currentTarget.style.backgroundColor = 'var(--ds-background-neutral-hovered)'}
-          onmouseleave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+          class="field-option w-full flex items-center justify-between gap-2 px-3 py-2 text-left transition-colors"
         >
           <span class="text-sm font-medium truncate">{field.name}</span>
           <span
@@ -1096,3 +1093,13 @@
     </div>
   </PortalModal>
 {/if}
+
+<style>
+  .field-option {
+    color: var(--ds-text);
+  }
+
+  .field-option:hover {
+    background-color: var(--ds-background-neutral-hovered);
+  }
+</style>

@@ -30,9 +30,7 @@
   data-item-key={itemKey}
   data-density={density}
   class="dashboard-item-row w-full flex items-center justify-between gap-3 {rowPadding} rounded border text-left transition-colors"
-  style="border-color: var(--ds-border); background-color: var(--ds-surface);"
-  onmouseenter={(e) => (e.currentTarget.style.backgroundColor = 'var(--ds-background-neutral-hovered)')}
-  onmouseleave={(e) => (e.currentTarget.style.backgroundColor = 'var(--ds-surface)')}
+  style="border-color: var(--ds-border);"
   {onclick}
 >
   <div class="flex items-center gap-1.5 min-w-0 flex-1">
@@ -67,6 +65,14 @@
 </button>
 
 <style>
+  .dashboard-item-row {
+    background-color: var(--ds-surface);
+  }
+
+  .dashboard-item-row:hover {
+    background-color: var(--ds-background-neutral-hovered);
+  }
+
   /* Container-query drop order: the widget body (WidgetWrapper .widget-content)
      establishes the `widget` container. Less valuable columns drop first so the
      title is the last thing to truncate. */

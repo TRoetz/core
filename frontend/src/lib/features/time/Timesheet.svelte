@@ -486,10 +486,9 @@
               {#each weekDays as day}
                 {@const minutes = row.days.get(day) || 0}
                 <td
-                  class="text-center px-3 py-2.5 border-b cursor-pointer transition-colors"
-                  style="border-color: var(--ds-border); {isToday(day) ? 'background-color: var(--ds-surface-selected);' : ''}"
-                  onmouseenter={(e) => e.currentTarget.style.backgroundColor = 'var(--ds-background-neutral-hovered)'}
-                  onmouseleave={(e) => e.currentTarget.style.backgroundColor = isToday(day) ? 'var(--ds-surface-selected)' : ''}
+                  class="timesheet-cell text-center px-3 py-2.5 border-b cursor-pointer transition-colors"
+                  class:today={isToday(day)}
+                  style="border-color: var(--ds-border);"
                   onclick={() => handleCellClick(row.projectId, row.itemId, day)}
                   role="button"
                   tabindex="0"
@@ -548,3 +547,14 @@
     oncancel={handleModalCancel}
   />
 {/if}
+
+<style>
+  .timesheet-cell:hover {
+    background-color: var(--ds-background-neutral-hovered);
+  }
+
+  .timesheet-cell.today,
+  .timesheet-cell.today:hover {
+    background-color: var(--ds-surface-selected);
+  }
+</style>

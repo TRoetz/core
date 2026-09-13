@@ -27,10 +27,7 @@
       <div class="mb-4">
         <a
           href="/admin/channels"
-          class="inline-flex items-center gap-1 text-sm transition-colors"
-          style="color: var(--ds-text-subtle);"
-          onmouseenter={(e) => e.currentTarget.style.color = 'var(--ds-text)'}
-          onmouseleave={(e) => e.currentTarget.style.color = 'var(--ds-text-subtle)'}
+          class="admin-back inline-flex items-center gap-1 text-sm transition-colors"
         >
           <IconArrowLeft class="w-4 h-4" />
           {t('channels.title')}
@@ -88,3 +85,13 @@
 
   {@render after?.()}
 {/if}
+
+<style>
+  .admin-back {
+    color: var(--ds-text-subtle);
+  }
+
+  .admin-back:hover {
+    color: var(--ds-text);
+  }
+</style>

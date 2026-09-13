@@ -172,10 +172,7 @@
     <div class="mb-6">
       <a
         href={doc?.bucket_id ? `/logbook/bucket/${doc.bucket_id}` : '/logbook'}
-        class="flex items-center gap-2 text-sm mb-4 cursor-pointer transition-colors no-underline"
-        style="color: var(--ds-text-subtle);"
-        onmouseenter={(e) => e.currentTarget.style.color = 'var(--ds-text)'}
-        onmouseleave={(e) => e.currentTarget.style.color = 'var(--ds-text-subtle)'}
+        class="back-link flex items-center gap-2 text-sm mb-4 cursor-pointer transition-colors no-underline"
       >
         <ArrowLeft class="w-4 h-4" />
         {t('logbook.back')}
@@ -367,3 +364,13 @@
     </div>
   {/if}
 </div>
+
+<style>
+  .back-link {
+    color: var(--ds-text-subtle);
+  }
+
+  .back-link:hover {
+    color: var(--ds-text);
+  }
+</style>

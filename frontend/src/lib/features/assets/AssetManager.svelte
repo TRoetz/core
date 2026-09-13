@@ -767,10 +767,7 @@
                 {#if category.has_children}
                   <button
                     onclick={() => toggleCategory(category.id)}
-                    class="p-1 rounded"
-                    style="background: transparent;"
-                    onmouseenter={(e) => e.currentTarget.style.background = 'var(--ds-background-neutral-hovered)'}
-                    onmouseleave={(e) => e.currentTarget.style.background = 'transparent'}
+                    class="hover-bg p-1 rounded"
                   >
                     {#if expandedCategories.has(category.id)}
                       <IconChevronDown class="w-4 h-4" style="color: var(--ds-icon);" />

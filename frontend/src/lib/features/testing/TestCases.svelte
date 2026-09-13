@@ -844,10 +844,9 @@
           <button
             data-testid="test-folder-all"
             onclick={() => selectFolder(null)}
-            class="w-full flex items-center py-2 pr-3 text-sm font-medium transition-all cursor-pointer rounded-lg"
-            style={selectedFolder === null ? 'background: var(--ds-background-selected); color: var(--ds-text); padding-left: 12px;' : 'color: var(--ds-text-subtle); padding-left: 12px;'}
-            onmouseenter={(e) => { if (selectedFolder !== null) e.currentTarget.style.cssText = 'background: var(--ds-background-neutral-hovered); color: var(--ds-text); padding-left: 12px;'; }}
-            onmouseleave={(e) => { if (selectedFolder !== null) e.currentTarget.style.cssText = 'color: var(--ds-text-subtle); padding-left: 12px;'; }}
+            class="folder-btn w-full flex items-center py-2 pr-3 text-sm font-medium transition-all cursor-pointer rounded-lg"
+            class:active={selectedFolder === null}
+            style="padding-left: 12px;"
           >
             <span class="inline-block w-5 mr-1"></span>
             <IconListCheck size="16" class="mr-2 flex-shrink-0" data-testid="test-folder-all-icon" />
@@ -865,10 +864,9 @@
             <button
               data-testid={`test-folder-${folder.id}`}
               onclick={() => selectFolder(folder.id)}
-              class="w-full flex items-center py-2 pr-3 text-sm font-medium transition-all cursor-pointer rounded-lg"
-              style={isFolderActive ? `background: var(--ds-background-selected); color: var(--ds-text); padding-left: ${getFolderIndent(depth)};` : `color: var(--ds-text-subtle); padding-left: ${getFolderIndent(depth)};`}
-              onmouseenter={(e) => { if (!isFolderActive) e.currentTarget.style.cssText = `background: var(--ds-background-neutral-hovered); color: var(--ds-text); padding-left: ${getFolderIndent(depth)};`; }}
-              onmouseleave={(e) => { if (!isFolderActive) e.currentTarget.style.cssText = `color: var(--ds-text-subtle); padding-left: ${getFolderIndent(depth)};`; }}
+              class="folder-btn w-full flex items-center py-2 pr-3 text-sm font-medium transition-all cursor-pointer rounded-lg"
+              class:active={isFolderActive}
+              style={`padding-left: ${getFolderIndent(depth)};`}
               use:makeDropTarget={{ folderId: folder.id }}
             >
               {#if folder.children && folder.children.length > 0}
@@ -906,25 +904,19 @@
                 {#if selectedFolder === folder.id}
                   <div
                     onclick={(e) => { e.stopPropagation(); showEditFolderForm(folder); }}
-                    class="p-1 cursor-pointer rounded"
-                    style="color: var(--ds-icon-subtle);"
+                    class="folder-action-edit p-1 cursor-pointer rounded"
                     role="button"
                     tabindex="0"
                     onkeydown={(e) => e.key === 'Enter' && showEditFolderForm(folder)}
-                    onmouseenter={(e) => e.currentTarget.style.color = 'var(--ds-interactive)'}
-                    onmouseleave={(e) => e.currentTarget.style.color = 'var(--ds-icon-subtle)'}
                   >
                     <IconEdit size="12" />
                   </div>
                   <div
                     onclick={(e) => { e.stopPropagation(); deleteFolder(folder.id); }}
-                    class="p-1 cursor-pointer rounded"
-                    style="color: var(--ds-icon-subtle);"
+                    class="folder-action-danger p-1 cursor-pointer rounded"
                     role="button"
                     tabindex="0"
                     onkeydown={(e) => e.key === 'Enter' && deleteFolder(folder.id)}
-                    onmouseenter={(e) => e.currentTarget.style.color = 'var(--ds-danger)'}
-                    onmouseleave={(e) => e.currentTarget.style.color = 'var(--ds-icon-subtle)'}
                   >
                     <IconTrash size="12" />
                   </div>
@@ -1026,10 +1018,7 @@
                     <a
                       href={`/workspaces/${workspaceId}/tests/cases/${testCase.id}/steps`}
                       data-testid={`test-case-steps-${testCase.id}`}
-                      class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded transition-colors"
-                      style="background-color: var(--ds-background-neutral); color: var(--ds-text);"
-                      onmouseenter={(e) => e.currentTarget.style.backgroundColor = 'var(--ds-background-neutral-hovered)'}
-                      onmouseleave={(e) => e.currentTarget.style.backgroundColor = 'var(--ds-background-neutral)'}
+                      class="steps-chip inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded transition-colors"
                     >
                       {t('testing.steps')}
                       <kbd
@@ -1416,3 +1405,44 @@
     </DialogFooter>
   </div>
 </Modal>
+
+<style>
+  .folder-btn {
+    color: var(--ds-text-subtle);
+  }
+
+  .folder-btn:hover:not(.active) {
+    background: var(--ds-background-neutral-hovered);
+    color: var(--ds-text);
+  }
+
+  .folder-btn.active {
+    background: var(--ds-background-selected);
+    color: var(--ds-text);
+  }
+
+  .folder-action-edit {
+    color: var(--ds-icon-subtle);
+  }
+
+  .folder-action-edit:hover {
+    color: var(--ds-interactive);
+  }
+
+  .folder-action-danger {
+    color: var(--ds-icon-subtle);
+  }
+
+  .folder-action-danger:hover {
+    color: var(--ds-danger);
+  }
+
+  .steps-chip {
+    background-color: var(--ds-background-neutral);
+    color: var(--ds-text);
+  }
+
+  .steps-chip:hover {
+    background-color: var(--ds-background-neutral-hovered);
+  }
+</style>

@@ -19,9 +19,6 @@
 
   // Styles use --ctx-* CSS vars cascaded from parent collection view
   const containerStyle = 'background-color: var(--ctx-surface, var(--ds-background-neutral)); backdrop-filter: var(--ctx-backdrop, none);';
-  const activeButtonStyle = 'color: var(--ds-text); background-color: var(--ctx-surface-raised, var(--ds-surface-raised));';
-  const inactiveButtonStyle = 'color: var(--ds-text);';
-  const hoverBgStyle = 'var(--ctx-surface, var(--ds-background-neutral-hovered))';
 
   // Navigation functions
   function goToBoard() {
@@ -49,11 +46,9 @@
 <div class="flex rounded p-1" style={containerStyle}>
   <!-- Board Button -->
   <button
-    class="px-3 py-1.5 text-sm font-medium rounded transition-colors"
+    class="view-btn px-3 py-1.5 text-sm font-medium rounded transition-colors"
     class:shadow-sm={activeView === 'board'}
-    style={activeView === 'board' ? activeButtonStyle : inactiveButtonStyle}
-    onmouseenter={(e) => activeView !== 'board' && (e.currentTarget.style.backgroundColor = hoverBgStyle)}
-    onmouseleave={(e) => activeView !== 'board' && (e.currentTarget.style.backgroundColor = '')}
+    class:active={activeView === 'board'}
     onclick={activeView !== 'board' ? goToBoard : undefined}
   >
     <div class="flex items-center gap-2">
@@ -64,11 +59,9 @@
 
   <!-- Backlog Button -->
   <button
-    class="px-3 py-1.5 text-sm font-medium rounded transition-colors"
+    class="view-btn px-3 py-1.5 text-sm font-medium rounded transition-colors"
     class:shadow-sm={activeView === 'backlog'}
-    style={activeView === 'backlog' ? activeButtonStyle : inactiveButtonStyle}
-    onmouseenter={(e) => activeView !== 'backlog' && (e.currentTarget.style.backgroundColor = hoverBgStyle)}
-    onmouseleave={(e) => activeView !== 'backlog' && (e.currentTarget.style.backgroundColor = '')}
+    class:active={activeView === 'backlog'}
     onclick={activeView !== 'backlog' ? goToBacklog : undefined}
   >
     <div class="flex items-center gap-2">
@@ -80,11 +73,9 @@
   <!-- Configure Button -->
   {#if canConfigure}
     <button
-      class="px-3 py-1.5 text-sm font-medium rounded transition-colors"
+      class="view-btn px-3 py-1.5 text-sm font-medium rounded transition-colors"
       class:shadow-sm={activeView === 'configure'}
-      style={activeView === 'configure' ? activeButtonStyle : inactiveButtonStyle}
-      onmouseenter={(e) => activeView !== 'configure' && (e.currentTarget.style.backgroundColor = hoverBgStyle)}
-      onmouseleave={(e) => activeView !== 'configure' && (e.currentTarget.style.backgroundColor = '')}
+      class:active={activeView === 'configure'}
       onclick={activeView !== 'configure' ? goToConfigure : undefined}
     >
       <div class="flex items-center gap-2">
@@ -99,12 +90,9 @@
       href="/board/{publicSlug}"
       target="_blank"
       rel="noopener noreferrer"
-      class="px-3 py-1.5 text-sm font-medium rounded transition-colors"
-      style={inactiveButtonStyle}
+      class="view-btn px-3 py-1.5 text-sm font-medium rounded transition-colors"
       title={t('collections.publicBoard')}
       onclick={(e) => { e.stopPropagation(); window.open(`/board/${publicSlug}`, '_blank'); e.preventDefault(); }}
-      onmouseenter={(e) => e.currentTarget.style.backgroundColor = hoverBgStyle}
-      onmouseleave={(e) => e.currentTarget.style.backgroundColor = ''}
     >
       <div class="flex items-center gap-2">
         <Globe class="w-4 h-4" />
@@ -113,3 +101,17 @@
     </a>
   {/if}
 </div>
+
+<style>
+  .view-btn {
+    color: var(--ds-text);
+  }
+
+  .view-btn:hover:not(.active) {
+    background-color: var(--ctx-surface, var(--ds-background-neutral-hovered));
+  }
+
+  .view-btn.active {
+    background-color: var(--ctx-surface-raised, var(--ds-surface-raised));
+  }
+</style>

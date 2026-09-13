@@ -195,11 +195,10 @@
         <tbody class={tbodyClass} style="--tw-divide-opacity: 1; border-color: var(--ds-border);">
           {#each displayData as item (item[keyField])}
             <tr
-              class="{trClass} {onRowClick ? 'cursor-pointer' : ''}"
-              style="border-color: var(--ds-border); {item[keyField] === selectedItemId ? 'background-color: var(--ds-surface-selected);' : ''}"
+              class="data-row {trClass} {onRowClick ? 'cursor-pointer' : ''}"
+              class:selected={item[keyField] === selectedItemId}
+              style="border-color: var(--ds-border);"
               onclick={(e) => handleRowClick(item, e)}
-              onmouseenter={(e) => e.currentTarget.style.backgroundColor = 'var(--ds-surface-raised-hovered)'}
-              onmouseleave={(e) => e.currentTarget.style.backgroundColor = item[keyField] === selectedItemId ? 'var(--ds-surface-selected)' : ''}
               {...rowAttrs ? rowAttrs(item) : {}}
             >
               {#each columns as column, colIndex}
@@ -270,3 +269,17 @@
     {/if}
   {/if}
 </div>
+
+<style>
+  .data-row {
+    border-color: var(--ds-border);
+  }
+
+  .data-row:hover:not(.selected) {
+    background-color: var(--ds-surface-raised-hovered);
+  }
+
+  .data-row.selected {
+    background-color: var(--ds-surface-selected);
+  }
+</style>

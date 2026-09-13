@@ -263,10 +263,7 @@
         <button
           type="button"
           data-testid="add-link-button"
-          class="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded transition-colors cursor-pointer"
-          style="color: var(--ds-text-subtle);"
-          onmouseenter={(e) => { e.currentTarget.style.backgroundColor = 'var(--ds-background-neutral-hovered)'; e.currentTarget.style.color = 'var(--ds-text)'; }}
-          onmouseleave={(e) => { e.currentTarget.style.backgroundColor = ''; e.currentTarget.style.color = 'var(--ds-text-subtle)'; }}
+          class="add-link-btn inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded transition-colors cursor-pointer"
           onclick={() => handleShowLinkModal()}
         >
           <Plus class="w-3 h-3" />
@@ -362,10 +359,7 @@
               {/if}
               <button
                 data-testid="linked-item-delete"
-                class="p-1 rounded hidden group-hover:flex cursor-pointer delete-button"
-                style="color: var(--ds-text-subtle);"
-                onmouseenter={(e) => e.currentTarget.style.color = 'var(--ds-text-danger)'}
-                onmouseleave={(e) => e.currentTarget.style.color = 'var(--ds-text-subtle)'}
+                class="delete-button p-1 rounded hidden group-hover:flex cursor-pointer"
                 onclick={() => removeLink(link.id)}
                 title={t('items.removeLink')}
               >
@@ -393,10 +387,7 @@
           <button
             type="button"
             data-testid="add-page-link-button"
-            class="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded transition-colors cursor-pointer"
-            style="color: var(--ds-text-subtle);"
-            onmouseenter={(e) => { e.currentTarget.style.backgroundColor = 'var(--ds-background-neutral-hovered)'; e.currentTarget.style.color = 'var(--ds-text)'; }}
-            onmouseleave={(e) => { e.currentTarget.style.backgroundColor = ''; e.currentTarget.style.color = 'var(--ds-text-subtle)'; }}
+            class="add-link-btn inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded transition-colors cursor-pointer"
             onclick={() => handleShowLinkModal(pageLinkTypeId)}
           >
             <Plus class="w-3 h-3" />
@@ -438,10 +429,7 @@
             <div class="flex items-center gap-2 flex-shrink-0">
               <button
                 data-testid="linked-page-delete"
-                class="p-1 rounded hidden group-hover:flex cursor-pointer delete-button"
-                style="color: var(--ds-text-subtle);"
-                onmouseenter={(e) => e.currentTarget.style.color = 'var(--ds-text-danger)'}
-                onmouseleave={(e) => e.currentTarget.style.color = 'var(--ds-text-subtle)'}
+                class="delete-button p-1 rounded hidden group-hover:flex cursor-pointer"
                 onclick={() => removeLink(link.id)}
                 title={t('items.removeLink')}
               >
@@ -527,6 +515,20 @@
 <style>
   .delete-button {
     animation: fadeIn 150ms ease-out;
+    color: var(--ds-text-subtle);
+  }
+
+  .delete-button:hover {
+    color: var(--ds-text-danger);
+  }
+
+  .add-link-btn {
+    color: var(--ds-text-subtle);
+  }
+
+  .add-link-btn:hover {
+    background-color: var(--ds-background-neutral-hovered);
+    color: var(--ds-text);
   }
 
   @keyframes fadeIn {

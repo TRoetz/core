@@ -42,10 +42,9 @@
     {#each workspaces.slice(0, 8) as workspace (workspace.id)}
       {@const Icon = iconFor(workspace.icon)}
       <button
-        class="flex items-center gap-2 p-2 rounded border transition-colors text-left"
-        style="border-color: var(--ds-border); background-color: var(--ds-surface);"
-        onmouseenter={(e) => (e.currentTarget.style.backgroundColor = 'var(--ds-background-neutral-hovered)')}
-        onmouseleave={(e) => (e.currentTarget.style.backgroundColor = 'var(--ds-surface)')}
+        data-testid="dashboard-quick-access-tile"
+        class="dashboard-quick-tile flex items-center gap-2 p-2 rounded border transition-colors text-left"
+        style="border-color: var(--ds-border);"
         onclick={() => go(workspace)}
       >
         {#if workspace.avatar_url}
@@ -71,3 +70,13 @@
     {/each}
   </div>
 {/if}
+
+<style>
+  .dashboard-quick-tile {
+    background-color: var(--ds-surface);
+  }
+
+  .dashboard-quick-tile:hover {
+    background-color: var(--ds-background-neutral-hovered);
+  }
+</style>

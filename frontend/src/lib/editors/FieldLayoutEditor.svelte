@@ -305,10 +305,7 @@
               <!-- svelte-ignore a11y_no_static_element_interactions -->
               <div
                 data-available-field-editor={JSON.stringify({ ...field, identifier })}
-                class="group flex items-center gap-3 px-3 py-2 rounded border transition-all duration-200 cursor-grab hover:border-ds-border-focused active:cursor-grabbing"
-                style="border-color: var(--ds-border); background-color: var(--ds-background-input); user-select: none; -webkit-user-select: none;"
-                onmouseenter={(e) => e.currentTarget.style.background = 'var(--ds-background-neutral-hovered)'}
-                onmouseleave={(e) => e.currentTarget.style.background = 'var(--ds-background-input)'}
+                class="available-field-row group flex items-center gap-3 px-3 py-2 rounded border transition-all duration-200 cursor-grab hover:border-ds-border-focused active:cursor-grabbing"
               >
                 <!-- Drag Handle -->
                 <div class="flex-shrink-0">
@@ -412,5 +409,16 @@
 <style>
   :global(.remove-field-btn:hover) {
     background: color-mix(in srgb, currentColor 10%, transparent);
+  }
+
+  .available-field-row {
+    border-color: var(--ds-border);
+    background-color: var(--ds-background-input);
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  .available-field-row:hover {
+    background-color: var(--ds-background-neutral-hovered);
   }
 </style>

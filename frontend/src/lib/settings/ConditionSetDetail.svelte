@@ -748,12 +748,9 @@
                                   <Label color="default" class="text-xs">{t('conditionSets.script')}</Label>
                                   <button
                                     type="button"
-                                    class="p-0.5 rounded transition-colors"
-                                    style="color: var(--ds-text-subtle);"
+                                    class="script-help-btn p-0.5 rounded transition-colors"
                                     onclick={() => showScriptHelp = true}
                                     title={t('conditionSets.scriptReference')}
-                                    onmouseenter={(e) => e.currentTarget.style.color = 'var(--ds-text)'}
-                                    onmouseleave={(e) => e.currentTarget.style.color = 'var(--ds-text-subtle)'}
                                   >
                                     <HelpCircle class="w-3.5 h-3.5" />
                                   </button>
@@ -900,3 +897,13 @@
     </div>
   </div>
 </Modal>
+
+<style>
+  .script-help-btn {
+    color: var(--ds-text-subtle);
+  }
+
+  .script-help-btn:hover {
+    color: var(--ds-text);
+  }
+</style>

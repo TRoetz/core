@@ -672,10 +672,8 @@
                             <button
                               data-testid="map-drill-down-{backboneItem.id}"
                               onclick={() => drillDown(backboneItem.id)}
-                              class="p-1.5 rounded-full transition-colors group"
+                              class="hover-bg p-1.5 rounded-full transition-colors group"
                               style="color: var(--ds-interactive);"
-                              onmouseenter={(e) => e.currentTarget.style.background = 'var(--ds-background-neutral-hovered)'}
-                              onmouseleave={(e) => e.currentTarget.style.background = ''}
                             >
                               <ChevronDown class="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
                             </button>
@@ -766,16 +764,8 @@
                     <button
                       data-testid="map-add-card-{backboneItem.id}"
                       onclick={() => initQuickAdd(backboneItem.id)}
-                      class="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium rounded border-2 border-dashed transition-colors "
-                      style="border-color: var(--ctx-border, var(--ds-border)); background-color: transparent; color: var(--ds-text-subtle);"
-                      onmouseenter={(e) => {
-                        e.currentTarget.style.borderColor = 'var(--ds-border-focused)';
-                        e.currentTarget.style.color = 'var(--ds-interactive)';
-                      }}
-                      onmouseleave={(e) => {
-                        e.currentTarget.style.borderColor = 'var(--ctx-border, var(--ds-border))';
-                        e.currentTarget.style.color = 'var(--ds-text-subtle)';
-                      }}
+                      class="map-add-card w-full flex items-center gap-2 px-3 py-2 text-sm font-medium rounded border-2 border-dashed transition-colors "
+                      style="background-color: transparent; color: var(--ds-text-subtle);"
                     >
                       <Plus class="w-4 h-4" />
                       {t('collections.addCard')}
@@ -788,16 +778,8 @@
                       <button
                         data-testid="map-add-card-{backboneItem.id}"
                         onclick={() => initQuickAdd(backboneItem.id)}
-                        class="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium rounded border-2 border-dashed transition-colors"
-                        style="border-color: var(--ctx-border, var(--ds-border)); background-color: transparent; color: var(--ds-text-subtle);"
-                        onmouseenter={(e) => {
-                          e.currentTarget.style.borderColor = 'var(--ds-border-focused)';
-                          e.currentTarget.style.color = 'var(--ds-interactive)';
-                        }}
-                        onmouseleave={(e) => {
-                          e.currentTarget.style.borderColor = 'var(--ctx-border, var(--ds-border))';
-                          e.currentTarget.style.color = 'var(--ds-text-subtle)';
-                        }}
+                        class="map-add-card w-full flex items-center gap-2 px-3 py-2 text-sm font-medium rounded border-2 border-dashed transition-colors"
+                        style="background-color: transparent; color: var(--ds-text-subtle);"
                       >
                         <Plus class="w-4 h-4" />
                         {t('collections.addCard')}
@@ -864,6 +846,15 @@
   [data-testid^="drop-zone"]:hover {
     border-color: var(--ds-border-focused);
     background-color: var(--ds-background-selected);
+  }
+  /* Dashed add-card button; resting border follows the row's --ctx-border. */
+  .map-add-card {
+    border-color: var(--ctx-border, var(--ds-border));
+  }
+
+  .map-add-card:hover {
+    border-color: var(--ds-border-focused);
+    color: var(--ds-interactive);
   }
 </style>
 

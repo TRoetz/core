@@ -58,10 +58,7 @@
       {#each items.slice(0, 6) as item (item.item_id)}
         <li>
           <button
-            class="w-full text-left px-2 py-1.5 rounded flex items-start gap-2 transition-colors"
-            onmouseenter={(e) =>
-              (e.currentTarget.style.backgroundColor = 'var(--ds-background-neutral-hovered)')}
-            onmouseleave={(e) => (e.currentTarget.style.backgroundColor = '')}
+            class="dashboard-activity-row w-full text-left px-2 py-1.5 rounded flex items-start gap-2 transition-colors"
             onclick={() => open(item)}
           >
             <div class="min-w-0 flex-1">
@@ -79,3 +76,9 @@
     </ul>
   {/if}
 </div>
+
+<style>
+  .dashboard-activity-row:hover {
+    background-color: var(--ds-background-neutral-hovered);
+  }
+</style>

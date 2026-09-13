@@ -191,10 +191,7 @@
               type="button"
               onclick={() => selectWorkspace(ws.id)}
               data-testid={`quick-add-workspace-option-${ws.id}`}
-              class="w-full px-3 py-2 text-left text-sm flex items-center gap-2 transition-colors"
-              style="color: var(--ds-text);"
-              onmouseenter={(e) => e.currentTarget.style.backgroundColor = 'var(--ds-background-selected)'}
-              onmouseleave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+              class="quick-add-option w-full px-3 py-2 text-left text-sm flex items-center gap-2 transition-colors"
             >
               {#if ws.avatar_url}
                 <img src={ws.avatar_url} alt="" class="w-5 h-5 rounded object-cover" />
@@ -281,10 +278,7 @@
                 type="button"
                 onclick={() => selectItemType(itemType.id)}
                 data-testid={`quick-add-type-option-${itemType.id}`}
-                class="w-full px-3 py-2 text-left text-sm flex items-center gap-2 transition-colors"
-                style="color: var(--ds-text);"
-                onmouseenter={(e) => e.currentTarget.style.backgroundColor = 'var(--ds-background-selected)'}
-                onmouseleave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                class="quick-add-option w-full px-3 py-2 text-left text-sm flex items-center gap-2 transition-colors"
               >
                 <ItemTypeIcon {itemType} />
                 <span class="truncate">{itemType.name}</span>
@@ -362,3 +356,13 @@
     </div>
   {/if}
 </div>
+
+<style>
+  .quick-add-option {
+    color: var(--ds-text);
+  }
+
+  .quick-add-option:hover {
+    background-color: var(--ds-background-selected);
+  }
+</style>

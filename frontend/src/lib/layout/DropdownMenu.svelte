@@ -288,10 +288,7 @@
             role="menuitem"
             aria-expanded={accordionExpanded}
             onclick={(e) => { e.stopPropagation(); toggleAccordion(itemData.id); }}
-            class="flex items-center w-full px-4 py-3 text-sm transition-all duration-200 cursor-pointer"
-            style="color: var(--ds-text);"
-            onmouseenter={(e) => e.currentTarget.style.backgroundColor = 'var(--ds-surface-raised-hovered)'}
-            onmouseleave={(e) => e.currentTarget.style.backgroundColor = ''}
+            class="menu-item flex items-center w-full px-4 py-3 text-sm transition-all duration-200 cursor-pointer"
           >
             {#if itemData.icon}
               {#if itemData.iconColor}
@@ -325,10 +322,8 @@
                 role="menuitemradio"
                 aria-checked={!!subItem.selected}
                 onclick={(e) => handleItemClick(subItem, e)}
-                class="flex items-center w-full pl-14 pr-4 py-2 text-sm transition-all duration-200 cursor-pointer"
+                class="menu-item flex items-center w-full pl-14 pr-4 py-2 text-sm transition-all duration-200 cursor-pointer"
                 style="color: var(--ds-text); {subItem.selected ? 'background-color: var(--ds-background-selected);' : ''}"
-                onmouseenter={(e) => { if (!subItem.selected) e.currentTarget.style.backgroundColor = 'var(--ds-surface-raised-hovered)'; }}
-                onmouseleave={(e) => e.currentTarget.style.backgroundColor = subItem.selected ? 'var(--ds-background-selected)' : ''}
               >
                 {#if subItem.icon}
                   {@const SubIcon = subItem.icon}
@@ -353,10 +348,8 @@
               role="menuitem"
               tabindex="0"
               onclick={(e) => handleItemClick(groupItem, e)}
-              class="flex items-center w-full px-4 py-3 text-sm transition-all duration-200 cursor-pointer {groupItem.class || 'group'}"
+              class="menu-item flex items-center w-full px-4 py-3 text-sm transition-all duration-200 cursor-pointer {groupItem.class || 'group'}"
               style="color: {groupItem.color || 'var(--ds-text)'};"
-              onmouseenter={(e) => e.currentTarget.style.backgroundColor = 'var(--ds-surface-raised-hovered)'}
-              onmouseleave={(e) => e.currentTarget.style.backgroundColor = ''}
             >
               {#if groupItem.type === 'checkbox'}
                 <div class="mr-3 pointer-events-none">
@@ -410,10 +403,8 @@
             role="menuitem"
             tabindex="0"
             onclick={(e) => handleItemClick(itemData, e)}
-            class="flex items-center w-full px-4 py-3 text-sm transition-all duration-200 cursor-pointer {itemData.class || ''}"
+            class="menu-item flex items-center w-full px-4 py-3 text-sm transition-all duration-200 cursor-pointer {itemData.class || ''}"
             style="color: {itemData.color || 'var(--ds-text)'}; {itemData.style || ''}"
-            onmouseenter={(e) => { if (!itemData.style) e.currentTarget.style.backgroundColor = 'var(--ds-surface-raised-hovered)'; }}
-            onmouseleave={(e) => { if (!itemData.style) e.currentTarget.style.backgroundColor = ''; }}
           >
             {#if itemData.type === 'checkbox'}
               <div class="mr-3 pointer-events-none">
@@ -465,3 +456,14 @@
     </div>
   </div>
 {/if}
+
+<style>
+  .menu-item:hover {
+    background-color: var(--ds-surface-raised-hovered);
+  }
+
+  /* Radio-checked items keep their selected background instead of the hover. */
+  .menu-item[aria-checked='true']:hover {
+    background-color: var(--ds-background-selected);
+  }
+</style>

@@ -79,10 +79,8 @@
         {@const isTypeActive = activeTypeFilter === type.id}
         <button
           onclick={() => handleTypeClick(type.id)}
-          class="w-full text-left cursor-pointer px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-3"
-          style={isTypeActive ? 'background: var(--ds-surface-selected); color: var(--ds-text);' : 'color: var(--ds-text-subtle);'}
-          onmouseenter={(e) => { if (!isTypeActive) e.currentTarget.style.cssText = 'background: var(--ds-background-neutral-hovered); color: var(--ds-text);'; }}
-          onmouseleave={(e) => { if (!isTypeActive) e.currentTarget.style.cssText = 'color: var(--ds-text-subtle);'; }}
+          class="nav-link w-full text-left cursor-pointer px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-3"
+          class:active={isTypeActive}
         >
           <div class="w-4 h-4 rounded bg-gradient-to-br {type.navColor} flex-shrink-0 flex items-center justify-center">
             <type.icon class="w-2.5 h-2.5 text-white" />
@@ -100,10 +98,8 @@
       <!-- All Channels -->
       <button
         onclick={() => handleCategoryClick(null)}
-        class="w-full text-left cursor-pointer px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-3"
-        style={isAllCategoriesActive ? 'background: var(--ds-surface-selected); color: var(--ds-text);' : 'color: var(--ds-text-subtle);'}
-        onmouseenter={(e) => { if (!isAllCategoriesActive) e.currentTarget.style.cssText = 'background: var(--ds-background-neutral-hovered); color: var(--ds-text);'; }}
-        onmouseleave={(e) => { if (!isAllCategoriesActive) e.currentTarget.style.cssText = 'color: var(--ds-text-subtle);'; }}
+        class="nav-link w-full text-left cursor-pointer px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-3"
+        class:active={isAllCategoriesActive}
       >
         <div class="w-4 h-4 rounded bg-gradient-to-br from-blue-400 to-blue-600 flex-shrink-0"></div>
         <span>{t('channels.allChannels')}</span>
@@ -114,10 +110,8 @@
         {@const isCatActive = activeCategoryId === category.id.toString()}
         <button
           onclick={() => handleCategoryClick(category.id)}
-          class="w-full text-left cursor-pointer px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-3"
-          style={isCatActive ? 'background: var(--ds-surface-selected); color: var(--ds-text);' : 'color: var(--ds-text-subtle);'}
-          onmouseenter={(e) => { if (!isCatActive) e.currentTarget.style.cssText = 'background: var(--ds-background-neutral-hovered); color: var(--ds-text);'; }}
-          onmouseleave={(e) => { if (!isCatActive) e.currentTarget.style.cssText = 'color: var(--ds-text-subtle);'; }}
+          class="nav-link w-full text-left cursor-pointer px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-3"
+          class:active={isCatActive}
           title={category.description || category.name}
         >
           <div
@@ -131,3 +125,20 @@
   </nav>
 
 </NavigationSidebar>
+
+
+<style>
+  .nav-link {
+    color: var(--ds-text-subtle);
+  }
+
+  .nav-link:hover:not(.active) {
+    background: var(--ds-background-neutral-hovered);
+    color: var(--ds-text);
+  }
+
+  .nav-link.active {
+    background: var(--ds-surface-selected);
+    color: var(--ds-text);
+  }
+</style>

@@ -325,10 +325,7 @@
         {#if searchQuery}
           <button
             onclick={clearSearch}
-            class="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 transition-colors"
-            style="color: var(--ds-icon-subtle);"
-            onmouseenter={(e) => e.currentTarget.style.color = 'var(--ds-icon)'}
-            onmouseleave={(e) => e.currentTarget.style.color = 'var(--ds-icon-subtle)'}
+            class="admin-clear-btn absolute right-2 top-1/2 transform -translate-y-1/2 p-1 transition-colors"
             aria-label={t('search.clearSearch')}
           >
             <IconX size={12} stroke={1.5} aria-hidden="true" />
@@ -388,10 +385,7 @@
                   active={isItemActive}
                   onClick={() => closeAdminNavigation()}
                   onkeydown={(e) => handleNavKeydown(e, buttonIndex)}
-                  class="w-full group flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all cursor-pointer"
-                  style={isItemActive ? 'background: var(--ds-surface-selected); color: var(--ds-text);' : 'color: var(--ds-text-subtle);'}
-                  onmouseenter={(e) => { if (!isItemActive) e.currentTarget.style.cssText = 'background: var(--ds-background-neutral-hovered); color: var(--ds-text);'; }}
-                  onmouseleave={(e) => { if (!isItemActive) e.currentTarget.style.cssText = 'color: var(--ds-text-subtle);'; }}
+                  class="admin-nav-item w-full group flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all cursor-pointer {isItemActive ? 'active' : ''}"
                 >
                   {@const ItemIcon = item.icon}
                   <ItemIcon size={16} stroke={1.5} class="flex-shrink-0 -ml-1 mr-3" aria-hidden="true" />
@@ -407,10 +401,7 @@
             <p class="text-sm" style="color: var(--ds-text-subtle);">{t('search.noSearchResults')}</p>
             <button
               onclick={clearSearch}
-              class="text-xs mt-1"
-              style="color: var(--ds-link);"
-              onmouseenter={(e) => e.currentTarget.style.color = 'var(--ds-link-pressed)'}
-              onmouseleave={(e) => e.currentTarget.style.color = 'var(--ds-link)'}
+              class="clear-link text-xs mt-1"
             >
               {t('search.clearSearch')}
             </button>
@@ -479,6 +470,38 @@
 <PluginModalContainer />
 
 <style>
+  .admin-clear-btn {
+    color: var(--ds-icon-subtle);
+  }
+
+  .admin-clear-btn:hover {
+    color: var(--ds-icon);
+  }
+
+  /* Rendered inside the Link component, so the rules must be global. */
+  :global(.admin-nav-item) {
+    color: var(--ds-text-subtle);
+  }
+
+  :global(.admin-nav-item:hover:not(.active)) {
+    background: var(--ds-background-neutral-hovered);
+    color: var(--ds-text);
+  }
+
+  :global(.admin-nav-item.active) {
+    background: var(--ds-surface-selected);
+    color: var(--ds-text);
+  }
+
+  .clear-link {
+    color: var(--ds-link);
+  }
+
+  .clear-link:hover {
+    color: var(--ds-link-pressed);
+  }
+
+
   .admin-shell {
     position: relative;
     width: 100%;

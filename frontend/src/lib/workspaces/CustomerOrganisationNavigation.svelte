@@ -24,15 +24,6 @@
     )
   );
 
-  function getButtonStyle(orgId, isActive, isDragOver) {
-    if (isDragOver) {
-      return 'background: rgba(59, 130, 246, 0.1); color: var(--ds-text); ring: 2px solid rgba(59, 130, 246, 0.5);';
-    }
-    if (isActive) {
-      return 'background: var(--ds-surface-selected); color: var(--ds-text);';
-    }
-    return 'color: var(--ds-text-subtle);';
-  }
 </script>
 
 {#snippet sidebarHeader()}
@@ -74,10 +65,9 @@
       data-org-id="null"
       data-testid="customer-organization-unassigned"
       onclick={() => onSelect(null)}
-      class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-3 {dragOverOrgId === null ? 'ring-2 ring-blue-400' : ''}"
-      style={getButtonStyle(null, selectedOrgId === null, dragOverOrgId === null)}
-      onmouseenter={(e) => { if (selectedOrgId !== null && dragOverOrgId !== null) e.currentTarget.style.cssText = 'background: var(--ds-background-neutral-hovered); color: var(--ds-text);'; }}
-      onmouseleave={(e) => { if (selectedOrgId !== null && dragOverOrgId !== null) e.currentTarget.style.cssText = 'color: var(--ds-text-subtle);'; }}
+      class="org-nav-btn w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-3 {dragOverOrgId === null ? 'ring-2 ring-blue-400' : ''}"
+      class:active={selectedOrgId === null}
+      class:drag-over={dragOverOrgId === null}
     >
       <div class="w-6 h-6 flex items-center justify-center flex-shrink-0">
         <Users class="w-4 h-4" />
@@ -94,10 +84,9 @@
         data-org-id={org.id}
         data-testid="customer-organization"
         onclick={() => onSelect(org.id)}
-        class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-3 {isDragOver ? 'ring-2 ring-blue-400' : ''}"
-        style={getButtonStyle(org.id, isActive, isDragOver)}
-        onmouseenter={(e) => { if (!isActive && !isDragOver) e.currentTarget.style.cssText = 'background: var(--ds-background-neutral-hovered); color: var(--ds-text);'; }}
-        onmouseleave={(e) => { if (!isActive && !isDragOver) e.currentTarget.style.cssText = 'color: var(--ds-text-subtle);'; }}
+        class="org-nav-btn w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-3 {isDragOver ? 'ring-2 ring-blue-400' : ''}"
+        class:active={isActive}
+        class:drag-over={isDragOver}
       >
         <Avatar
           src={org.avatar_url}
@@ -125,3 +114,24 @@
   </nav>
 
 </NavigationSidebar>
+
+<style>
+  .org-nav-btn {
+    color: var(--ds-text-subtle);
+  }
+
+  .org-nav-btn:hover:not(.active):not(.drag-over) {
+    background: var(--ds-background-neutral-hovered);
+    color: var(--ds-text);
+  }
+
+  .org-nav-btn.active {
+    background: var(--ds-surface-selected);
+    color: var(--ds-text);
+  }
+
+  .org-nav-btn.drag-over {
+    background: rgba(59, 130, 246, 0.1);
+    color: var(--ds-text);
+  }
+</style>

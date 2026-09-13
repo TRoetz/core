@@ -784,10 +784,7 @@
               {#if isEditMode}
                 <div class="flex items-center gap-2">
                   <button
-                    class="p-2 rounded"
-                    style="color: var(--ds-text-subtle); transition: color 0.15s;"
-                    onmouseenter={(e) => e.currentTarget.style.color = 'var(--ds-interactive)'}
-                    onmouseleave={(e) => e.currentTarget.style.color = 'var(--ds-text-subtle)'}
+                    class="section-edit p-2 rounded"
                     onclick={() => startEditingSection(section)}
                     title={t('dashboard.sections.rename')}
                   >
@@ -953,5 +950,14 @@
     :global(.workspace-welcome) {
       animation: none;
     }
+  }
+
+  .section-edit {
+    color: var(--ds-text-subtle);
+    transition: color 0.15s;
+  }
+
+  .section-edit:hover {
+    color: var(--ds-interactive);
   }
 </style>

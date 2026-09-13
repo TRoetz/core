@@ -126,10 +126,7 @@
       <div class="px-6 py-3 border-t flex justify-end gap-2" style="border-color: var(--ds-border);">
         <button
           onclick={close}
-          class="px-4 py-2 text-sm font-medium rounded-md transition-colors"
-          style="color: var(--ds-text); background-color: var(--ds-surface); border: 1px solid var(--ds-border);"
-          onmouseenter={(e) => e.currentTarget.style.backgroundColor = 'var(--ds-background-neutral-hovered)'}
-          onmouseleave={(e) => e.currentTarget.style.backgroundColor = 'var(--ds-surface)'}
+          class="secondary-btn px-4 py-2 text-sm font-medium rounded-md transition-colors"
         >
           Cancel
         </button>
@@ -147,10 +144,7 @@
       <div class="px-6 py-3 border-t flex justify-end" style="border-color: var(--ds-border);">
         <button
           onclick={close}
-          class="px-4 py-2 text-sm font-medium rounded-md transition-colors"
-          style="color: var(--ds-text); background-color: var(--ds-surface); border: 1px solid var(--ds-border);"
-          onmouseenter={(e) => e.currentTarget.style.backgroundColor = 'var(--ds-background-neutral-hovered)'}
-          onmouseleave={(e) => e.currentTarget.style.backgroundColor = 'var(--ds-surface)'}
+          class="secondary-btn px-4 py-2 text-sm font-medium rounded-md transition-colors"
         >
           Close
         </button>
@@ -158,3 +152,16 @@
     {/if}
   {/snippet}
 </AIModalShell>
+
+<style>
+  /* Secondary modal action: neutral surface that lifts on hover. */
+  .secondary-btn {
+    color: var(--ds-text);
+    background-color: var(--ds-surface);
+    border: 1px solid var(--ds-border);
+  }
+
+  .secondary-btn:hover {
+    background-color: var(--ds-background-neutral-hovered);
+  }
+</style>

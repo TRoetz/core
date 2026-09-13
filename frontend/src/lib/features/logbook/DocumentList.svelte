@@ -218,10 +218,8 @@
         <a
           href={`/logbook/documents/${doc.id}`}
           data-testid={`logbook-document-${doc.id}`}
-          class="group text-left rounded-xl border transition-all duration-200 hover:shadow-md cursor-pointer overflow-hidden flex flex-col no-underline"
-          style="background-color: var(--ds-surface-raised); border-color: var(--ds-border); color: inherit;"
-          onmouseenter={(e) => e.currentTarget.style.borderColor = 'var(--ds-border-focused)'}
-          onmouseleave={(e) => e.currentTarget.style.borderColor = 'var(--ds-border)'}
+          class="doc-card group text-left rounded-xl border transition-all duration-200 hover:shadow-md cursor-pointer overflow-hidden flex flex-col no-underline"
+          style="background-color: var(--ds-surface-raised); color: inherit;"
         >
           <div class="relative aspect-[210/297] w-full overflow-hidden" style="background-color: var(--ds-surface);">
             {#if doc.status === 'pending' || doc.status === 'processing'}
@@ -403,5 +401,12 @@
   @keyframes shimmer-pulse {
     0% { background-position: 200% 0; }
     100% { background-position: -200% 0; }
+  }
+  .doc-card {
+    border-color: var(--ds-border);
+  }
+
+  .doc-card:hover {
+    border-color: var(--ds-border-focused);
   }
 </style>

@@ -1349,10 +1349,7 @@ import NativeSelect from '../../components/NativeSelect.svelte';
               </button>
               <button
                 onclick={closeModal}
-                class="p-2 rounded transition-colors"
-                style="color: var(--ds-text-subtle);"
-                onmouseenter={(e) => { e.currentTarget.style.color = 'var(--ds-text)'; e.currentTarget.style.backgroundColor = 'var(--ds-background-neutral-hovered)'; }}
-                onmouseleave={(e) => { e.currentTarget.style.color = 'var(--ds-text-subtle)'; e.currentTarget.style.backgroundColor = ''; }}
+                class="modal-close p-2 rounded transition-colors"
                 title="Close"
               >
                 <X class="w-5 h-5" />
@@ -1566,3 +1563,14 @@ import NativeSelect from '../../components/NativeSelect.svelte';
     />
   </FormModal>
 {/if}
+
+<style>
+  .modal-close {
+    color: var(--ds-text-subtle);
+  }
+
+  .modal-close:hover {
+    color: var(--ds-text);
+    background-color: var(--ds-background-neutral-hovered);
+  }
+</style>

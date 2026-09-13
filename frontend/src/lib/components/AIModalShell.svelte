@@ -39,10 +39,7 @@
         </div>
         <button
           onclick={close}
-          class="p-1.5 rounded transition-colors"
-          style="color: var(--ds-text-subtle);"
-          onmouseenter={(e) => { e.currentTarget.style.color = 'var(--ds-text)'; e.currentTarget.style.backgroundColor = 'var(--ds-background-neutral-hovered)'; }}
-          onmouseleave={(e) => { e.currentTarget.style.color = 'var(--ds-text-subtle)'; e.currentTarget.style.backgroundColor = 'transparent'; }}
+          class="modal-close p-1.5 rounded transition-colors"
           aria-label="Close"
         >
           <X class="w-5 h-5" />
@@ -72,10 +69,7 @@
         <div class="px-6 py-3 border-t flex justify-end" style="border-color: var(--ds-border);">
           <button
             onclick={close}
-            class="px-4 py-2 text-sm font-medium rounded-md transition-colors"
-            style="color: var(--ds-text); background-color: var(--ds-surface); border: 1px solid var(--ds-border);"
-            onmouseenter={(e) => e.currentTarget.style.backgroundColor = 'var(--ds-background-neutral-hovered)'}
-            onmouseleave={(e) => e.currentTarget.style.backgroundColor = 'var(--ds-surface)'}
+            class="secondary-btn px-4 py-2 text-sm font-medium rounded-md transition-colors"
           >
             Close
           </button>
@@ -83,3 +77,25 @@
       {/if}
     </div>
 </ModalBackdrop>
+
+<style>
+  .modal-close {
+    color: var(--ds-text-subtle);
+  }
+
+  .modal-close:hover {
+    color: var(--ds-text);
+    background-color: var(--ds-background-neutral-hovered);
+  }
+
+  /* Secondary modal action: neutral surface that lifts on hover. */
+  .secondary-btn {
+    color: var(--ds-text);
+    background-color: var(--ds-surface);
+    border: 1px solid var(--ds-border);
+  }
+
+  .secondary-btn:hover {
+    background-color: var(--ds-background-neutral-hovered);
+  }
+</style>

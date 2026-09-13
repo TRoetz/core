@@ -117,11 +117,8 @@
                 data-testid="whats-new-entry"
                 data-entry-id={e.id}
                 data-read={e.read}
-                class="w-full text-left p-2 flex items-start gap-2 rounded border transition-colors"
-                style="border-color: var(--ds-border); background-color: var(--ds-surface); color: var(--ds-text);"
-                onmouseenter={(e2) =>
-                  (e2.currentTarget.style.backgroundColor = 'var(--ds-background-neutral-hovered)')}
-                onmouseleave={(e2) => (e2.currentTarget.style.backgroundColor = 'var(--ds-surface)')}
+                class="whats-new-entry w-full text-left p-2 flex items-start gap-2 rounded border transition-colors"
+                style="border-color: var(--ds-border); color: var(--ds-text);"
                 onclick={() => open(e)}
               >
                 {#if e.source === 'watched'}
@@ -160,3 +157,13 @@
     {/each}
   </div>
 {/if}
+
+<style>
+  .whats-new-entry {
+    background-color: var(--ds-surface);
+  }
+
+  .whats-new-entry:hover {
+    background-color: var(--ds-background-neutral-hovered);
+  }
+</style>

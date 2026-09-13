@@ -15,7 +15,6 @@
     IconPencil as Pencil,
   } from '@tabler/icons-svelte-runes';
   import { workspaceViewItems, workspaceOnlyViews, testNavigationItems, workspaceSettingsItems, workspaceSettingsViews, workspaceSettingsRoute } from '../navigation/workspaceNavigation.js';
-  import { navItemStyle, onNavMouseEnter, onNavMouseLeave } from '../navigation/navItemStyle.js';
   import { navigate, currentRoute } from '../router.js';
   import { currentWorkspace, workspacePermissions } from '../stores';
   import { moduleSettings } from '../stores/moduleSettings.js';
@@ -396,10 +395,8 @@
     <a
       href={item.href}
       data-testid={item.testId}
-      class="w-full text-left cursor-pointer px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 workspace-nav-item no-underline"
-      style={navItemStyle(item.isActive)}
-      onmouseenter={(e) => onNavMouseEnter(e, item.isActive)}
-      onmouseleave={(e) => onNavMouseLeave(e, item.isActive)}
+      class="ws-nav-item w-full text-left cursor-pointer px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 workspace-nav-item no-underline"
+      class:active={item.isActive}
     >
       <ItemIcon class="w-4 h-4" />
       {item.label}
@@ -413,10 +410,8 @@
     <a
       href={item.href}
       data-testid={item.testId}
-      class="w-10 h-10 rounded flex items-center justify-center transition-colors no-underline"
-      style={navItemStyle(item.isActive)}
-      onmouseenter={(e) => onNavMouseEnter(e, item.isActive)}
-      onmouseleave={(e) => onNavMouseLeave(e, item.isActive)}
+      class="ws-nav-item w-10 h-10 rounded flex items-center justify-center transition-colors no-underline"
+      class:active={item.isActive}
     >
       <ItemIcon size={20} />
     </a>
@@ -508,10 +503,7 @@
     <button
       type="button"
       onclick={() => uiStore.wsSidebarCollapsed = false}
-      class="w-10 h-10 rounded flex items-center justify-center transition-colors"
-      style="color: var(--ds-text-subtle);"
-      onmouseenter={(e) => e.currentTarget.style.cssText = 'background: var(--ds-background-neutral-hovered); color: var(--ds-text);'}
-      onmouseleave={(e) => e.currentTarget.style.cssText = 'color: var(--ds-text-subtle);'}
+      class="nav-link w-10 h-10 rounded flex items-center justify-center transition-colors"
     >
       <IconChevronRight size={20} />
     </button>
@@ -607,13 +599,10 @@
         <div class="mt-4 pt-4 border-t space-y-1" style="border-color: var(--ds-border);">
           <button
             type="button"
-            class="w-full flex items-center justify-between text-xs font-semibold uppercase tracking-wide transition-colors"
-            style="color: var(--ds-text-subtle);"
+            class="section-toggle w-full flex items-center justify-between text-xs font-semibold uppercase tracking-wide transition-colors"
             aria-controls="workspace-tests-navigation"
             aria-expanded={testsExpanded}
             data-testid="workspace-tests-toggle"
-            onmouseenter={(e) => e.currentTarget.style.color = 'var(--ds-text)'}
-            onmouseleave={(e) => e.currentTarget.style.color = 'var(--ds-text-subtle)'}
             onclick={toggleTestsSection}
           >
             <span>{t('commandPalette.commands.tests.label')}</span>
@@ -633,10 +622,7 @@
       <div class="mt-4 pt-4 border-t" style="border-color: var(--ds-border);">
         <button
           type="button"
-          class="w-full flex items-center justify-between text-xs font-semibold uppercase tracking-wide mb-2 transition-colors"
-          style="color: var(--ds-text-subtle);"
-          onmouseenter={(e) => e.currentTarget.style.color = 'var(--ds-text)'}
-          onmouseleave={(e) => e.currentTarget.style.color = 'var(--ds-text-subtle)'}
+          class="section-toggle w-full flex items-center justify-between text-xs font-semibold uppercase tracking-wide mb-2 transition-colors"
           onclick={toggleWorkspaceToolsSection}
         >
           <span>{t('actions.config.tools')}</span>
@@ -738,5 +724,36 @@
     nav .border-t {
       animation: none;
     }
+  }
+
+  .nav-link {
+    color: var(--ds-text-subtle);
+  }
+
+  .nav-link:hover {
+    background: var(--ds-background-neutral-hovered);
+    color: var(--ds-text);
+  }
+
+  .section-toggle {
+    color: var(--ds-text-subtle);
+  }
+
+  .section-toggle:hover {
+    color: var(--ds-text);
+  }
+
+  .ws-nav-item {
+    color: var(--ds-text-subtle);
+  }
+
+  .ws-nav-item:hover:not(.active) {
+    background: var(--ds-background-neutral-hovered);
+    color: var(--ds-text);
+  }
+
+  .ws-nav-item.active {
+    background: var(--ds-surface-selected);
+    color: var(--ds-text);
   }
 </style>

@@ -59,10 +59,7 @@
               {/if}
             </div>
             <button
-              class="flex-shrink-0 p-1.5 rounded transition-colors"
-              style="color: var(--ds-text-subtle);"
-              onmouseenter={(e) => { e.currentTarget.style.color = 'var(--ds-text)'; e.currentTarget.style.backgroundColor = 'var(--ds-background-neutral-hovered)'; }}
-              onmouseleave={(e) => { e.currentTarget.style.color = 'var(--ds-text-subtle)'; e.currentTarget.style.backgroundColor = 'transparent'; }}
+              class="result-open flex-shrink-0 p-1.5 rounded transition-colors"
               onclick={() => handleNavigate(item)}
               title="Open item"
             >
@@ -74,3 +71,14 @@
     </div>
   {/if}
 </div>
+
+<style>
+  .result-open {
+    color: var(--ds-text-subtle);
+  }
+
+  .result-open:hover {
+    color: var(--ds-text);
+    background-color: var(--ds-background-neutral-hovered);
+  }
+</style>

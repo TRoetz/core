@@ -916,10 +916,7 @@
                 <!-- svelte-ignore a11y_no_static_element_interactions -->
                 <div
                   data-available-status={JSON.stringify({ id: status.id, name: status.name, color: status.category_color })}
-                  class="group flex items-center gap-2 px-2 py-1.5 rounded border transition-all duration-200 cursor-grab hover:border-ds-border-focused active:cursor-grabbing"
-                  style="border-color: var(--ds-border); background-color: var(--ds-background-input); user-select: none; -webkit-user-select: none;"
-                  onmouseenter={(e) => e.currentTarget.style.background = 'var(--ds-background-neutral-hovered)'}
-                  onmouseleave={(e) => e.currentTarget.style.background = 'var(--ds-background-input)'}
+                  class="available-status-row group flex items-center gap-2 px-2 py-1.5 rounded border transition-all duration-200 cursor-grab hover:border-ds-border-focused active:cursor-grabbing"
                 >
                   <!-- 6-dot drag handle -->
                   <div class="flex-shrink-0">
@@ -995,10 +992,7 @@
 
                     <button
                       onclick={() => removeColumn(colIndex)}
-                      class="p-1 rounded transition-colors flex-shrink-0"
-                      style="color: var(--ds-text-danger);"
-                      onmouseenter={(e) => e.currentTarget.style.backgroundColor = 'var(--ds-danger-subtle)'}
-                      onmouseleave={(e) => e.currentTarget.style.backgroundColor = ''}
+                      class="danger-ghost-btn p-1 rounded transition-colors flex-shrink-0"
                       title={t('common.delete')}
                     >
                       <X class="w-4 h-4" />
@@ -1057,10 +1051,7 @@
                         <!-- Remove button -->
                         <button
                           onclick={() => removeStatusFromColumn(colIndex, statusId)}
-                          class="opacity-0 group-hover:opacity-100 p-0.5 rounded transition-all flex-shrink-0"
-                          style="color: var(--ds-text-subtle);"
-                          onmouseenter={(e) => e.currentTarget.style.color = 'var(--ds-text-danger)'}
-                          onmouseleave={(e) => e.currentTarget.style.color = 'var(--ds-text-subtle)'}
+                          class="remove-btn opacity-0 group-hover:opacity-100 p-0.5 rounded transition-all flex-shrink-0"
                           title={t('common.remove')}
                         >
                           <X class="w-3.5 h-3.5" />
@@ -1179,10 +1170,7 @@
                     <span class="text-xs px-1.5 py-0.5 rounded" style="background: var(--ds-surface); color: var(--ds-text-subtle);">{field.field_type}</span>
                     <button
                       onclick={() => removeCardField(field.field_identifier)}
-                      class="p-0.5 rounded transition-colors flex-shrink-0"
-                      style="color: var(--ds-text-subtle);"
-                      onmouseenter={(e) => e.currentTarget.style.color = 'var(--ds-text-danger)'}
-                      onmouseleave={(e) => e.currentTarget.style.color = 'var(--ds-text-subtle)'}
+                      class="remove-btn p-0.5 rounded transition-colors flex-shrink-0"
                       title={t('common.remove')}
                     >
                       <X class="w-4 h-4" />
@@ -1214,10 +1202,7 @@
                     {#each availableSystemFields as sf}
                       <button
                         onclick={() => addCardField(sf.identifier, 'system')}
-                        class="px-3 py-1.5 text-xs rounded-full border transition-colors"
-                        style="border-color: var(--ds-border); color: var(--ds-text); background: var(--ds-surface);"
-                        onmouseenter={(e) => { e.currentTarget.style.borderColor = 'var(--ds-interactive)'; e.currentTarget.style.color = 'var(--ds-interactive)'; }}
-                        onmouseleave={(e) => { e.currentTarget.style.borderColor = 'var(--ds-border)'; e.currentTarget.style.color = 'var(--ds-text)'; }}
+                        class="add-field-chip px-3 py-1.5 text-xs rounded-full border transition-colors"
                       >
                         <Plus class="w-3 h-3 inline mr-1" />{sf.label}
                       </button>
@@ -1278,10 +1263,7 @@
                         <button
                           data-testid={`board-card-field-add-custom-${cf.id}`}
                           onclick={() => addCardField(`custom_field_${cf.id}`, 'custom')}
-                          class="px-3 py-1.5 text-xs rounded-full border transition-colors"
-                          style="border-color: var(--ds-border); color: var(--ds-text); background: var(--ds-surface);"
-                          onmouseenter={(e) => { e.currentTarget.style.borderColor = 'var(--ds-interactive)'; e.currentTarget.style.color = 'var(--ds-interactive)'; }}
-                          onmouseleave={(e) => { e.currentTarget.style.borderColor = 'var(--ds-border)'; e.currentTarget.style.color = 'var(--ds-text)'; }}
+                          class="add-field-chip px-3 py-1.5 text-xs rounded-full border transition-colors"
                         >
                           <Plus class="w-3 h-3 inline mr-1" />{cf.name}
                         </button>
@@ -1299,10 +1281,7 @@
         <div class="flex items-center justify-between border-t pt-6" style="border-color: var(--ds-border);">
           <button
             onclick={resetToDefault}
-            class="px-4 py-2 text-sm rounded transition-colors"
-            style="color: var(--ds-text-danger);"
-            onmouseenter={(e) => e.currentTarget.style.backgroundColor = 'var(--ds-danger-subtle)'}
-            onmouseleave={(e) => e.currentTarget.style.backgroundColor = ''}
+            class="danger-ghost-btn px-4 py-2 text-sm rounded transition-colors"
             disabled={!canConfigure || (!boardConfig && columns.length === 0)}
             title={!canConfigure ? t('workspaceSettings.accessDeniedDescription') : ''}
           >
@@ -1335,3 +1314,44 @@
     </div>
   </div>
 {/if}
+
+<style>
+  .available-status-row {
+    border-color: var(--ds-border);
+    background-color: var(--ds-background-input);
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  .available-status-row:hover {
+    background-color: var(--ds-background-neutral-hovered);
+  }
+
+  /* Danger-texted button that tints its background on hover. */
+  .danger-ghost-btn {
+    color: var(--ds-text-danger);
+  }
+
+  .danger-ghost-btn:hover:not(:disabled) {
+    background-color: var(--ds-danger-subtle);
+  }
+
+  .remove-btn {
+    color: var(--ds-text-subtle);
+  }
+
+  .remove-btn:hover {
+    color: var(--ds-text-danger);
+  }
+
+  .add-field-chip {
+    border-color: var(--ds-border);
+    color: var(--ds-text);
+    background: var(--ds-surface);
+  }
+
+  .add-field-chip:hover {
+    border-color: var(--ds-interactive);
+    color: var(--ds-interactive);
+  }
+</style>

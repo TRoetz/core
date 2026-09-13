@@ -197,10 +197,8 @@
 
       {#if !readonly && !disabled}
         <button
-          class="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs cursor-pointer transition-colors"
+          class="linking-add inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs cursor-pointer transition-colors"
           style="color: var(--ds-text-subtle); border: 1px dashed var(--ds-border);"
-          onmouseenter={(e) => e.currentTarget.style.backgroundColor = 'var(--ds-background-neutral-hovered)'}
-          onmouseleave={(e) => e.currentTarget.style.backgroundColor = ''}
           onclick={() => { showSearch = !showSearch; }}
         >
           <Plus class="w-3 h-3" />
@@ -233,10 +231,8 @@
           <div class="max-h-48 overflow-y-auto">
             {#each searchResults as result}
               <button
-                class="w-full flex items-center gap-2 px-3 py-2 text-sm text-left cursor-pointer transition-colors"
+                class="linking-result w-full flex items-center gap-2 px-3 py-2 text-sm text-left cursor-pointer transition-colors"
                 style="color: var(--ds-text);"
-                onmouseenter={(e) => e.currentTarget.style.backgroundColor = 'var(--ds-background-neutral-hovered)'}
-                onmouseleave={(e) => e.currentTarget.style.backgroundColor = ''}
                 onclick={() => addLink(result)}
               >
                 <Link2 class="w-3.5 h-3.5 flex-shrink-0" style="color: var(--ds-text-subtle);" />
@@ -260,3 +256,10 @@
     {/if}
   {/if}
 </div>
+
+<style>
+  .linking-add:hover,
+  .linking-result:hover {
+    background-color: var(--ds-background-neutral-hovered);
+  }
+</style>

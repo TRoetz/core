@@ -283,10 +283,8 @@
             <div
               role="button"
               tabindex="0"
-              class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm transition-colors"
-              style="background-color: var(--ds-surface); border: 1px solid var(--ds-border); color: {store.formData.priority_id ? 'var(--ds-text)' : 'var(--ds-text-subtle)'};"
-              onmouseenter={(e) => e.currentTarget.style.backgroundColor = 'var(--ds-background-neutral-hovered)'}
-              onmouseleave={(e) => e.currentTarget.style.backgroundColor = 'var(--ds-surface)'}
+              class="chip inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm transition-colors"
+              style="color: {store.formData.priority_id ? 'var(--ds-text)' : 'var(--ds-text-subtle)'};"
             >
               <Flag size={14} style="color: var(--ds-text-subtle); flex-shrink: 0;" />
               <span class="truncate max-w-[120px]">{selectedPriorityObj?.name || t('createModal.priority')}</span>
@@ -319,10 +317,8 @@
           <div
             role="button"
             tabindex="0"
-            class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm transition-colors"
-            style="background-color: var(--ds-surface); border: 1px solid var(--ds-border); color: {store.formData.assignee_id ? 'var(--ds-text)' : 'var(--ds-text-subtle)'};"
-            onmouseenter={(e) => e.currentTarget.style.backgroundColor = 'var(--ds-background-neutral-hovered)'}
-            onmouseleave={(e) => e.currentTarget.style.backgroundColor = 'var(--ds-surface)'}
+            class="chip inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm transition-colors"
+            style="color: {store.formData.assignee_id ? 'var(--ds-text)' : 'var(--ds-text-subtle)'};"
           >
             <User size={14} style="color: var(--ds-text-subtle); flex-shrink: 0;" />
             <span class="truncate max-w-[120px]">{store.selectedAssignee?.name || store.selectedAssignee?.email || t('createModal.assignee')}</span>
@@ -338,10 +334,8 @@
         use:melt={$dueDateTrigger}
         data-testid="create-due-date-chip"
         data-value={store.formData.due_date}
-        class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm transition-colors"
-        style="background-color: var(--ds-surface); border: 1px solid var(--ds-border); color: {store.formData.due_date ? 'var(--ds-text)' : 'var(--ds-text-subtle)'};"
-        onmouseenter={(e) => e.currentTarget.style.backgroundColor = 'var(--ds-background-neutral-hovered)'}
-        onmouseleave={(e) => e.currentTarget.style.backgroundColor = 'var(--ds-surface)'}
+        class="chip inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm transition-colors"
+        style="color: {store.formData.due_date ? 'var(--ds-text)' : 'var(--ds-text-subtle)'};"
       >
         <Calendar size={14} style="color: var(--ds-text-subtle); flex-shrink: 0;" />
         <span class="truncate max-w-[120px]">{store.formData.due_date ? formatDueDate(store.formData.due_date) : t('createModal.dueDate')}</span>
@@ -372,10 +366,8 @@
       <button
         use:melt={$startDateTrigger}
         data-testid="create-start-date-chip"
-        class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm transition-colors"
-        style="background-color: var(--ds-surface); border: 1px solid var(--ds-border); color: {store.formData.start_date ? 'var(--ds-text)' : 'var(--ds-text-subtle)'};"
-        onmouseenter={(e) => e.currentTarget.style.backgroundColor = 'var(--ds-background-neutral-hovered)'}
-        onmouseleave={(e) => e.currentTarget.style.backgroundColor = 'var(--ds-surface)'}
+        class="chip inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm transition-colors"
+        style="color: {store.formData.start_date ? 'var(--ds-text)' : 'var(--ds-text-subtle)'};"
       >
         <Calendar size={14} style="color: var(--ds-text-subtle); flex-shrink: 0;" />
         <span class="truncate max-w-[120px]">{store.formData.start_date ? formatDateOnly(store.formData.start_date) : t('common.startDate')}</span>
@@ -406,10 +398,8 @@
       <button
         use:melt={$endDateTrigger}
         data-testid="create-end-date-chip"
-        class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm transition-colors"
-        style="background-color: var(--ds-surface); border: 1px solid var(--ds-border); color: {store.formData.end_date ? 'var(--ds-text)' : 'var(--ds-text-subtle)'};"
-        onmouseenter={(e) => e.currentTarget.style.backgroundColor = 'var(--ds-background-neutral-hovered)'}
-        onmouseleave={(e) => e.currentTarget.style.backgroundColor = 'var(--ds-surface)'}
+        class="chip inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm transition-colors"
+        style="color: {store.formData.end_date ? 'var(--ds-text)' : 'var(--ds-text-subtle)'};"
       >
         <Calendar size={14} style="color: var(--ds-text-subtle); flex-shrink: 0;" />
         <span class="truncate max-w-[120px]">{store.formData.end_date ? formatDateOnly(store.formData.end_date) : t('common.endDate')}</span>
@@ -468,8 +458,8 @@
     <!-- Story Points Chip -->
     {#if store.isFieldConfigured('story_points') && !store.isFieldRequired('story_points')}
       <label
-        class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm transition-colors"
-        style="background-color: var(--ds-surface); border: 1px solid var(--ds-border); color: var(--ds-text-subtle);"
+        class="chip inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm transition-colors"
+        style="color: var(--ds-text-subtle);"
       >
         <Hash size={14} style="flex-shrink: 0;" />
         <Input
@@ -489,8 +479,8 @@
     <!-- Estimate Chip -->
     {#if store.isFieldConfigured('estimate') && !store.isFieldRequired('estimate')}
       <label
-        class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm transition-colors"
-        style="background-color: var(--ds-surface); border: 1px solid var(--ds-border); color: var(--ds-text-subtle);"
+        class="chip inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm transition-colors"
+        style="color: var(--ds-text-subtle);"
       >
         <Clock size={14} style="flex-shrink: 0;" />
         <Input
@@ -523,10 +513,8 @@
             role="button"
             tabindex="0"
             data-testid="create-milestone-chip"
-            class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm transition-colors"
-            style="background-color: var(--ds-surface); border: 1px solid var(--ds-border); color: {selectedIds.length > 0 ? 'var(--ds-text)' : 'var(--ds-text-subtle)'};"
-            onmouseenter={(e) => e.currentTarget.style.backgroundColor = 'var(--ds-background-neutral-hovered)'}
-            onmouseleave={(e) => e.currentTarget.style.backgroundColor = 'var(--ds-surface)'}
+            class="chip inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm transition-colors"
+            style="color: {selectedIds.length > 0 ? 'var(--ds-text)' : 'var(--ds-text-subtle)'};"
           >
             {#if selectedIds.length === 1 && selected[0]?.category_color}
               <div class="w-2 h-2 rounded-full flex-shrink-0" style="background-color: {selected[0].category_color};"></div>
@@ -789,3 +777,15 @@
     </div>
   {/if}
 </div>
+
+<style>
+  /* Form chips: neutral surface chip that lifts on hover. */
+  .chip {
+    background-color: var(--ds-surface);
+    border: 1px solid var(--ds-border);
+  }
+
+  .chip:hover {
+    background-color: var(--ds-background-neutral-hovered);
+  }
+</style>
