@@ -6,7 +6,8 @@
    * Generic "pick one of N" bottom sheet — the mobile replacement for desktop
    * BasePicker/UserPicker dropdowns on /m. Big tappable rows, a check on the
    * current selection, optional search (auto-shown for long lists), and an
-   * optional clear row. Selecting a row closes the sheet.
+   * optional clear row. Single mode closes on selection; multiple mode keeps
+   * the sheet open for toggling and closes via Done / scrim / back.
    *
    * @type {{
    *   isOpen?: boolean,
@@ -15,6 +16,8 @@
    *   getValue?: (option: any) => any,
    *   getLabel?: (option: any) => string,
    *   selectedValue?: any,
+   *   selectedValues?: Array<any>,
+   *   multiple?: boolean,
    *   allowClear?: boolean,
    *   clearLabel?: string,
    *   searchable?: boolean | null,  // null = auto (show search above 8 rows)
@@ -23,6 +26,7 @@
    *   dataTestid?: string,
    *   row?: import('svelte').Snippet<[any]> | null,
    *   onSelect?: (option: any) => void,
+   *   onToggle?: (option: any) => void,
    *   onClear?: () => void,
    *   onclose?: (() => void) | null,
    * }}
@@ -34,6 +38,8 @@
     getValue = (option) => option?.id,
     getLabel = (option) => option?.name ?? String(option),
     selectedValue = null,
+    selectedValues = [],
+    multiple = false,
     allowClear = false,
     clearLabel = 'None',
     searchable = null,
@@ -42,6 +48,7 @@
     dataTestid = undefined,
     row = null,
     onSelect = () => {},
+    onToggle = () => {},
     onClear = () => {},
     onclose = null,
   } = $props();
@@ -63,7 +70,16 @@
     );
   });
 
+  function isSelected(value) {
+    return multiple ? selectedValues.includes(value) : value === selectedValue;
+  }
+
   function choose(option) {
+    if (multiple) {
+      // Multi-select toggles in place; the sheet stays open until dismissed.
+      onToggle(option);
+      return;
+    }
     isOpen = false;
     onSelect(option);
   }
@@ -100,7 +116,7 @@
         <li>
           <button class="option clear" onclick={clear} type="button" data-testid="mobile-sheet-clear">
             <span>{clearLabel}</span>
-            {#if selectedValue == null}<span class="check-wrap"><Check size={18} aria-hidden="true" /></span>{/if}
+            {#if selectedValue == null && (!multiple || selectedValues.length === 0)}<span class="check-wrap"><Check size={18} aria-hidden="true" /></span>{/if}
           </button>
         </li>
       {/if}
@@ -108,11 +124,11 @@
         <li>
           <button
             class="option"
-            class:selected={getValue(option) === selectedValue}
+            class:selected={isSelected(getValue(option))}
             onclick={() => choose(option)}
             type="button"
             role="option"
-            aria-selected={getValue(option) === selectedValue}
+            aria-selected={isSelected(getValue(option))}
             data-testid={`mobile-sheet-option-${getValue(option)}`}
           >
             {#if row}
@@ -120,13 +136,19 @@
             {:else}
               <span class="label">{getLabel(option)}</span>
             {/if}
-            {#if getValue(option) === selectedValue}
+            {#if isSelected(getValue(option))}
               <span class="check-wrap"><Check size={18} aria-hidden="true" /></span>
             {/if}
           </button>
         </li>
       {/each}
     </ul>
+  {/if}
+
+  {#if multiple}
+    <div class="done-row">
+      <button class="done-btn" onclick={() => (isOpen = false)} type="button" data-testid="mobile-sheet-done">Done</button>
+    </div>
   {/if}
 </MobileSheet>
 
@@ -194,6 +216,21 @@
     display: inline-flex;
     flex-shrink: 0;
     color: var(--ds-interactive);
+  }
+
+  .done-row {
+    padding: 0.25rem 1rem 0.75rem;
+  }
+  .done-btn {
+    width: 100%;
+    min-height: 48px;
+    border: none;
+    border-radius: var(--radius-lg, 8px);
+    background: var(--ds-interactive);
+    color: var(--ds-text-inverse, #fff);
+    font-size: 1rem;
+    font-weight: var(--font-semibold, 600);
+    cursor: pointer;
   }
 
   .state {

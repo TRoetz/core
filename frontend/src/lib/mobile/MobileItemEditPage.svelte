@@ -1,6 +1,6 @@
 <script>
   import { api } from '../api.js';
-  import { currentRoute, navigate } from '../router.js';
+  import { currentRoute, navigate, setNavigationInterceptor } from '../router.js';
   import { errorToast, successToast } from '../stores/toasts.svelte.js';
   import { formatItemKey } from '../utils/itemKey.js';
   import MobileEditorPage from './MobileEditorPage.svelte';
@@ -24,11 +24,62 @@
   let saving = $state(false);
   let error = $state('');
 
-  // Unsaved-input guard: leaving with changes asks for confirmation.
+  // Unsaved-input guard: leaving with changes asks for confirmation — via
+  // the header Cancel and via the back gesture (router interceptor).
   let confirmDiscardOpen = $state(false);
   const isDirty = $derived(
     !!item && (title !== (item.title ?? '') || description !== (item.description ?? ''))
   );
+
+  $effect(() => {
+    setNavigationInterceptor(() => {
+      if (!isDirty) return false;
+      confirmDiscardOpen = true;
+      return true;
+    });
+    return () => setNavigationInterceptor(null);
+  });
+
+  // Draft persistence (sessionStorage): edits survive a reload or app kill;
+  // cleared on save and on explicit discard.
+  const draftKey = $derived(`ws-draft:m-edit:${itemId}`);
+  let draftRetired = false;
+  $effect(() => {
+    if (!item) return;
+    try {
+      const raw = sessionStorage.getItem(draftKey);
+      if (!raw) return;
+      const draft = JSON.parse(raw);
+      if (typeof draft?.title === 'string') title = draft.title;
+      if (typeof draft?.description === 'string') description = draft.description;
+    } catch {
+      /* corrupt draft — use server values */
+    }
+  });
+  $effect(() => {
+    if (!item || saving || draftRetired) return;
+    try {
+      if (isDirty) {
+        sessionStorage.setItem(draftKey, JSON.stringify({ title, description }));
+      } else {
+        sessionStorage.removeItem(draftKey);
+      }
+    } catch {
+      /* storage unavailable — drafts are best-effort */
+    }
+  });
+
+  function clearDraft() {
+    // Retire the write-back effect first: when `saving` flips to false in
+    // save's finally, the effect must not resurrect the draft before the
+    // page unmounts.
+    draftRetired = true;
+    try {
+      sessionStorage.removeItem(draftKey);
+    } catch {
+      /* ignore */
+    }
+  }
 
   const pageTitle = $derived(formatItemKey(item) || 'Edit item');
   const canSave = $derived(title.trim() !== '' && !saving && isDirty);
@@ -69,6 +120,7 @@
         title: title.trim(),
         description: description.trim(),
       });
+      clearDraft();
       successToast('Item updated.');
       // Replace so back from the detail doesn't return to the editor.
       navigate(`/m/items/${itemId}`, { replace: true });
@@ -78,6 +130,17 @@
     } finally {
       saving = false;
     }
+  }
+
+  // Discard: leave the editor. The confirm sheet pushes no history sentinel
+  // here (the navigation interceptor already owns the back gesture), so a
+  // plain replace is deterministic — including when the editor was reached
+  // via deep link and has no sensible entry to pop back to.
+  function discardAndLeave() {
+    clearDraft();
+    setNavigationInterceptor(null);
+    confirmDiscardOpen = false;
+    navigate(`/m/items/${itemId}`, { replace: true });
   }
 
   function requestCancel() {
@@ -113,31 +176,29 @@
     </div>
   {:else}
     <div class="edit-form" data-testid="item-edit-form">
-      <label class="field">
-        <span>Title</span>
-        <input
-          type="text"
-          bind:value={title}
-          placeholder="What needs doing?"
-          autocomplete="off"
-          data-testid="item-edit-title"
-        />
-      </label>
-
-      <label class="field">
-        <span>Description <em>(Markdown)</em></span>
-        <textarea
-          bind:value={description}
-          rows={12}
-          placeholder="Add detail…"
-          data-testid="item-edit-description"
-        ></textarea>
-      </label>
+      <!-- Linear-style borderless hero fields. -->
+      <input
+        class="hero-title"
+        type="text"
+        bind:value={title}
+        placeholder="Issue title"
+        autocomplete="off"
+        data-testid="item-edit-title"
+      />
+      <textarea
+        class="hero-desc"
+        bind:value={description}
+        rows={12}
+        placeholder="Description…"
+        data-testid="item-edit-description"
+      ></textarea>
     </div>
   {/if}
 </MobileEditorPage>
 
-<!-- Discard changes? Shown when cancelling with unsaved edits. -->
+<!-- Discard changes? Shown when cancelling (or pressing back) with
+     unsaved edits. The sheet pushes no history sentinel: the navigation
+     interceptor owns the back gesture on this page. -->
 <MobileConfirmSheet
   bind:isOpen={confirmDiscardOpen}
   title="Discard changes?"
@@ -145,7 +206,8 @@
   confirmLabel="Discard"
   cancelLabel="Keep editing"
   destructive
-  onconfirm={leave}
+  pushHistory={false}
+  onconfirm={discardAndLeave}
   dataTestid="item-edit-discard-sheet"
 />
 
@@ -171,42 +233,35 @@
   .edit-form {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: 0.5rem;
   }
-  .field {
-    display: flex;
-    flex-direction: column;
-    gap: 0.3rem;
-    font-size: 0.75rem;
-    color: var(--ds-text-subtle);
-  }
-  .field em {
-    font-style: normal;
-    opacity: 0.7;
-  }
-  .field input,
-  .field textarea {
-    padding: 0.6rem;
-    border: 1px solid var(--ds-border);
-    border-radius: var(--radius-md, 6px);
-    background-color: var(--ds-background-input, var(--ds-surface));
+
+  /* Linear-style borderless hero fields. */
+  .hero-title {
+    width: 100%;
+    margin: 0.75rem 0 0;
+    padding: 0;
+    border: none;
+    background: transparent;
     color: var(--ds-text);
-    /* >=16px avoids iOS zoom-on-focus (WI-1325). */
-    font-size: max(1rem, 16px);
-    font-family: inherit;
-  }
-  .field input {
-    font-size: max(1.125rem, 18px);
+    font-size: 1.35rem;
     font-weight: var(--font-semibold, 600);
+    line-height: 1.25;
   }
-  .field textarea {
-    resize: vertical;
-    min-height: 12rem;
+  .hero-title::placeholder { color: var(--ds-text-subtlest, var(--ds-text-subtle)); font-weight: var(--font-semibold, 600); }
+  .hero-desc {
+    width: 100%;
+    min-height: 14rem;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--ds-text);
+    font-family: inherit;
+    font-size: max(1rem, 16px);
     line-height: 1.5;
+    resize: vertical;
   }
-  .field input:focus,
-  .field textarea:focus {
-    outline: none;
-    border-color: var(--ds-border-focused, var(--ds-interactive));
-  }
+  .hero-desc::placeholder { color: var(--ds-text-subtlest, var(--ds-text-subtle)); }
+  .hero-title:focus,
+  .hero-desc:focus { outline: none; }
 </style>

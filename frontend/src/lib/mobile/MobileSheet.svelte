@@ -13,6 +13,7 @@
    *   title?: string,
    *   onclose?: (() => void) | null,
    *   preventClose?: boolean,
+   *   pushHistory?: boolean,
    *   dataTestid?: string,
    *   children?: import('svelte').Snippet,
    * }}
@@ -22,10 +23,14 @@
     title = '',
     onclose = null,
     preventClose = false,
+    pushHistory = true,
     dataTestid = undefined,
     children,
   } = $props();
 
+  // Vitest/jsdom cannot complete WAAPI/JS outros (no rendering loop); zero
+  // durations under test keep close() synchronous so suites can assert DOM.
+  const T = import.meta.env.MODE === 'test' ? 0 : 1;
   let sheetEl = $state(null);
   // Drag-to-dismiss state: offset while dragging (px, >=0), whether a drag is
   // active. Applied to the inner card so it never fights the fly transition.
@@ -54,12 +59,16 @@
   // the sheet instead of navigating away. Explicit closes consume the sentinel
   // so the next back still leaves the page. The router's own popstate listener
   // re-derives the same route and is a no-op for that entry.
+  // Sheets can opt out (pushHistory=false) when another layer already owns
+  // the back gesture — e.g. the editor pages' navigation interceptor.
   $effect(() => {
     if (!isOpen) return;
     previouslyFocused = document.activeElement;
-    sheetHistoryId = { mobileSheet: Date.now() + Math.random() };
-    window.history.pushState(sheetHistoryId, '');
-    window.addEventListener('popstate', onHistoryPop);
+    if (pushHistory) {
+      sheetHistoryId = { mobileSheet: Date.now() + Math.random() };
+      window.history.pushState(sheetHistoryId, '');
+      window.addEventListener('popstate', onHistoryPop);
+    }
     const focusTimer = setTimeout(() => sheetEl?.focus(), 50);
     return () => {
       window.removeEventListener('popstate', onHistoryPop);
@@ -124,7 +133,7 @@
     use:portal
     class="sheet-layer"
     data-testid={dataTestid}
-    transition:fade={{ duration: 150 }}
+    transition:fade={{ duration: 150 * T }}
   >
     <!-- Scrim: tap to dismiss -->
     <button
@@ -144,7 +153,7 @@
       aria-label={title || 'Dialog'}
       tabindex="-1"
       style:transform={dragY > 0 ? `translateY(${dragY}px)` : ''}
-      transition:fly={{ y: 320, duration: 260, opacity: 1 }}
+      transition:fly={{ y: 320, duration: 260 * T, opacity: 1 }}
     >
       <!-- Grabber zone: drag down to dismiss (pointer-only enhancement;
            dismissal also works via scrim tap, Escape, and back gesture). -->

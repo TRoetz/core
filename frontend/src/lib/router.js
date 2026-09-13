@@ -312,6 +312,8 @@ function updateRoute() {
       query: parseQuery(search),
     })
   );
+  currentLocationKey = window.location.pathname + window.location.search;
+  currentHistoryState = window.history.state;
 }
 
 // Guards against double-binding of the global popstate and click listeners
@@ -319,6 +321,26 @@ function updateRoute() {
 // Without this, every re-init stacked another listener that would never be
 // removed and would re-trigger updateRoute / navigate for every event.
 let routerInitialized = false;
+
+// Track the current history entry (URL key + state) so a popstate handler can
+// tell same-document pops (sheet sentinels, hash changes) from real route
+// changes, and can veto one. Updated at the end of every updateRoute().
+let currentLocationKey = '';
+let currentHistoryState = null;
+
+// Navigation interceptor for editor pages: when set, a popstate that would
+// change the route consults it first. Returning true vetoes the pop — the
+// router restores the current entry (e.g. to show an unsaved-changes confirm
+// on the Android back gesture); returning false lets the navigation proceed.
+let navigationInterceptor = null;
+
+/**
+ * Register/unregister the popstate veto callback. Pass null to clear.
+ * @param {(() => boolean) | null} fn
+ */
+export function setNavigationInterceptor(fn) {
+  navigationInterceptor = fn;
+}
 
 // Initialize router
 export function initRouter() {
@@ -329,7 +351,16 @@ export function initRouter() {
   routerInitialized = true;
 
   // Handle browser back/forward buttons
-  window.addEventListener('popstate', () => {
+  window.addEventListener('popstate', (_e) => {
+    const beforeUrl = currentLocationKey;
+    const beforeState = currentHistoryState;
+    const afterUrl = window.location.pathname + window.location.search;
+    if (beforeUrl !== afterUrl && navigationInterceptor?.()) {
+      // Vetoed: push the entry we just left back on top so the URL and stack
+      // match the vetoed navigation (the page shows its confirm instead).
+      window.history.pushState(beforeState ?? {}, '', beforeUrl);
+      return;
+    }
     withMobileViewTransition('pop', updateRoute);
   });
 

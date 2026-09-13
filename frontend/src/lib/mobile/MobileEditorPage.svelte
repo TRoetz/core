@@ -3,10 +3,11 @@
 
   /**
    * Full-screen editor layout for /m composition flows (create item, edit
-   * title/description): sticky Cancel/Save header, scrollable body. The page
-   * renders inside the shell's scroll surface (`.mobile-scroll`), which owns
-   * scrolling — the header sticks to it. Pages own their state and dirty
-   * guard; this component only renders the chrome.
+   * title/description): sticky Cancel/Save header, scrollable body, optional
+   * footer (property chip bar) pinned to the bottom edge. The page renders
+   * inside the shell's scroll surface (`.mobile-scroll`), which owns
+   * scrolling. Pages own their state and dirty guard; this component only
+   * renders the chrome.
    *
    * @type {{
    *   title?: string,
@@ -19,6 +20,7 @@
    *   oncancel?: () => void,
    *   dataTestid?: string,
    *   children?: import('svelte').Snippet,
+   *   footer?: import('svelte').Snippet,
    * }}
    */
   let {
@@ -32,6 +34,7 @@
     oncancel = () => {},
     dataTestid = undefined,
     children,
+    footer,
   } = $props();
 </script>
 
@@ -68,9 +71,22 @@
       <p class="error" data-testid="editor-error">{error}</p>
     {/if}
   </div>
+
+  {#if footer}
+    <div class="editor-footer">{@render footer()}</div>
+  {/if}
 </div>
 
 <style>
+  .editor-page {
+    display: flex;
+    flex-direction: column;
+    /* Fill the shell's scroll surface when content is short so the footer
+       pins to the bottom edge (Linear-style property bar). */
+    min-height: 100%;
+    box-sizing: border-box;
+  }
+
   .editor-header {
     position: sticky;
     top: 0;
@@ -130,7 +146,18 @@
   }
 
   .editor-body {
-    padding: 1rem 1rem calc(env(safe-area-inset-bottom, 0px) + 2rem);
+    flex: 1 0 auto;
+    padding: 0 1rem 1rem;
+  }
+
+  .editor-footer {
+    position: sticky;
+    bottom: 0;
+    z-index: 20;
+    flex-shrink: 0;
+    margin-top: auto;
+    padding: 0.5rem 1rem calc(env(safe-area-inset-bottom, 0px) + 0.75rem);
+    background: linear-gradient(to top, var(--ds-surface) 65%, transparent);
   }
 
   .error {
