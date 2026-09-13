@@ -98,12 +98,6 @@ type WriteBatcher[T any] struct {
 	maxFlushDurationNS   int64
 }
 
-// NewWriteBatcher creates a FIFO batcher. Use NewCoalescingWriteBatcher for
-// high-rate updates where multiple writes to a stable key can be merged.
-func NewWriteBatcher[T any](config WriteBatcherConfig, flushFn func(context.Context, []T) error) *WriteBatcher[T] {
-	return newWriteBatcher(config, nil, flushFn)
-}
-
 // NewCoalescingWriteBatcher creates a batcher that stores at most one pending
 // entry per key. merge must preserve the workload semantics (for example,
 // latest timestamp plus summed count for activity updates).

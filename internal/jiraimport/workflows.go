@@ -4,17 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 
 	"windshift/internal/models"
 	"windshift/internal/repository"
 )
-
-type WorkflowGroup struct {
-	StatusIDs   []int
-	ItemTypeIDs []int
-	TypeNames   []string
-}
 
 type WorkflowEdge struct {
 	FromStatusID *int
@@ -215,95 +208,4 @@ func (s *Service) AssignConfigurationScreens(
 
 func (s *Service) WorkspaceConfigurationSetID(workspaceID int) (*int, error) {
 	return repository.NewConfigurationSetRepository(s.db).GetWorkspaceConfigSetID(workspaceID)
-}
-
-func (s *Service) CreateWorkflowConfiguration(
-	ctx context.Context,
-	jobID, projectKey string,
-	workspaceID int,
-	groups []*WorkflowGroup,
-) (int, error) {
-	newStatusIDs := make(map[int]bool)
-	allStatusIDs := make([]int, 0)
-	seenStatusIDs := make(map[int]struct{})
-	for _, group := range groups {
-		for _, statusID := range group.StatusIDs {
-			if _, seen := seenStatusIDs[statusID]; !seen {
-				allStatusIDs = append(allStatusIDs, statusID)
-				seenStatusIDs[statusID] = struct{}{}
-			}
-		}
-	}
-	categoryIDs, err := s.statuses.CategoryIDs(allStatusIDs)
-	if err != nil {
-		return 0, err
-	}
-	for statusID, categoryID := range categoryIDs {
-		newStatusIDs[statusID] = categoryID == 1
-	}
-	type createdWorkflow struct {
-		id          int
-		itemTypeIDs []int
-	}
-	multiple := len(groups) > 1
-	workflows := make([]createdWorkflow, 0, len(groups))
-	for _, group := range groups {
-		name := projectKey + " Workflow"
-		if multiple {
-			name = projectKey + " - " + strings.Join(group.TypeNames, ", ") + " Workflow"
-		}
-		workflowID, err := s.workflows.CreateImported(name, group.StatusIDs, newStatusIDs)
-		if err != nil {
-			return 0, fmt.Errorf("create workflow: %w", err)
-		}
-		if err := s.RecordMapping(jobID, "workflow", fmt.Sprintf("wf-%s-%d", projectKey, workflowID), name, workflowID, nil); err != nil {
-			return 0, err
-		}
-		workflows = append(workflows, createdWorkflow{id: workflowID, itemTypeIDs: group.ItemTypeIDs})
-	}
-	defaultIndex := 0
-	for index := range workflows {
-		if len(workflows[index].itemTypeIDs) > len(workflows[defaultIndex].itemTypeIDs) {
-			defaultIndex = index
-		}
-	}
-	defaultWorkflowID := workflows[defaultIndex].id
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return 0, fmt.Errorf("begin configuration transaction: %w", err)
-	}
-	defer func() { _ = tx.Rollback() }()
-	name := projectKey + " Configuration"
-	repo := repository.NewConfigurationSetRepository(s.db)
-	configSetID64, err := repo.Create(tx, &models.ConfigurationSet{
-		Name: name, WorkflowID: &defaultWorkflowID, DifferentiateByItemType: multiple,
-	})
-	if err != nil {
-		return 0, err
-	}
-	configSetID := int(configSetID64)
-	var configs []models.ItemTypeConfig
-	for _, workflow := range workflows {
-		for _, itemTypeID := range workflow.itemTypeIDs {
-			config := models.ItemTypeConfig{ItemTypeID: itemTypeID}
-			if workflow.id != defaultWorkflowID {
-				id := workflow.id
-				config.WorkflowID = &id
-			}
-			configs = append(configs, config)
-		}
-	}
-	if err := repo.SaveItemTypeConfigs(tx, configSetID, configs); err != nil {
-		return 0, err
-	}
-	if err := repo.SaveWorkspaceAssignments(tx, configSetID, []int{workspaceID}); err != nil {
-		return 0, err
-	}
-	if err := tx.Commit(); err != nil {
-		return 0, err
-	}
-	if err := s.RecordMapping(jobID, "configuration_set", "cs-"+projectKey, name, configSetID, nil); err != nil {
-		return 0, err
-	}
-	return configSetID, nil
 }

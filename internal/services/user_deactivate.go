@@ -103,16 +103,6 @@ func ActiveSystemAdminIDs(db database.Database) ([]int, error) {
 	return ids, nil
 }
 
-// DeactivateOwnedAgentsAndTokens propagates an owner's deactivation to their
-// agents and revokes every API token held by the owner or their agents. The
-// owner's own `users.is_active` row is expected to already be flipped by the
-// caller; this function only handles the cascade onto dependents.
-//
-// Runs in a single transaction so a partial cascade cannot leak live tokens.
-func DeactivateOwnedAgentsAndTokens(db database.Database, ownerID int) (AgentDeactivationResult, error) {
-	return deactivateUserAndOwnedAgentsAndTokens(db, ownerID, false)
-}
-
 func deactivateUserAndOwnedAgentsAndTokens(
 	db database.Database,
 	ownerID int,

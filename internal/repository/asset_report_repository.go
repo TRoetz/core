@@ -161,22 +161,6 @@ func (r *AssetReportRepository) GetNameForChannel(id, channelID int) (string, er
 	return name, nil
 }
 
-// GetItemTypeAndWorkspace returns item_type_id and workspace_id for an
-// asset_report (both nullable). Returns ErrNotFound when missing.
-func (r *AssetReportRepository) GetItemTypeAndWorkspace(id int) (itemTypeID, workspaceID *int, err error) {
-	err = r.db.QueryRow(
-		"SELECT item_type_id, workspace_id FROM asset_reports WHERE id = ?",
-		id,
-	).Scan(&itemTypeID, &workspaceID)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, nil, ErrNotFound
-	}
-	if err != nil {
-		return nil, nil, fmt.Errorf("get asset_report %d itemtype/workspace: %w", id, err)
-	}
-	return itemTypeID, workspaceID, nil
-}
-
 // AssetSetExists is an FK-style validator the handler runs before insert/update.
 func (r *AssetReportRepository) AssetSetExists(id int) (bool, error) {
 	var ok bool

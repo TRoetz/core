@@ -348,36 +348,3 @@ func ValidateAndSeparateRequestFields(ctx context.Context, db database.Database,
 
 	return result, nil
 }
-
-// StoreCustomFieldValues stores custom field values for an item.
-// The component parameter is used for log attribution (e.g. "forms", "portal").
-func StoreCustomFieldValues(ctx context.Context, db database.Database, component string, itemID int64, customFields map[string]any) error {
-	_ = component
-	if len(customFields) == 0 {
-		return nil
-	}
-	if err := validation.ValidateAndNormalizeCustomFieldValues(db, customFields); err != nil {
-		return err
-	}
-
-	customFieldsJSON, err := json.Marshal(customFields)
-	if err != nil {
-		return fmt.Errorf("marshal custom field values: %w", err)
-	}
-	return repository.NewItemRepository(db).SetCustomFieldValuesRaw(ctx, int(itemID), string(customFieldsJSON))
-}
-
-// StoreVirtualFieldValues stores virtual field values for an item.
-// The component parameter is used for log attribution (e.g. "forms", "portal").
-func StoreVirtualFieldValues(ctx context.Context, db database.Database, component string, itemID int64, virtualFields map[string]any) error {
-	_ = component
-	if len(virtualFields) == 0 {
-		return nil
-	}
-
-	virtualFieldsJSON, err := json.Marshal(virtualFields)
-	if err != nil {
-		return fmt.Errorf("marshal virtual field values: %w", err)
-	}
-	return repository.NewItemRepository(db).SetVirtualFieldDataRaw(ctx, int(itemID), string(virtualFieldsJSON))
-}

@@ -128,7 +128,3 @@ func OneDark() Palette {
 		blue: "#61afef", brightBlue: "#61afef", magenta: "#c678dd", cyan: "#56b6c2",
 	})
 }
-
-// WindshiftDark preserves source compatibility while old persisted theme
-// names are migrated to Catppuccin Mocha by ByName.
-func WindshiftDark() Palette { return CatppuccinMocha() }

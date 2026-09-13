@@ -213,15 +213,6 @@ func (b *routeBuilder) JSON[Request, Response any](method, path string, status i
 	})
 }
 
-func (b *routeBuilder) Raw(method, path string, auth AuthClass, scopes []string, handler Handler) {
-	metadata := b.metadata(method, path, auth, scopes)
-	metadata.ResponseShape = ResponseRaw
-	b.routes = append(b.routes, route{
-		Route:   metadata,
-		handler: handler,
-	})
-}
-
 // RawResponse registers a handler that writes a direct response without the
 // standard data envelope while retaining its public contract metadata.
 func (b *routeBuilder) RawResponse[Response any](method, path string, status int, mediaType string, auth AuthClass, scopes []string, handler Handler) {

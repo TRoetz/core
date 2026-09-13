@@ -42,7 +42,7 @@ func (h *JiraImportHandler) Readiness(w http.ResponseWriter, r *http.Request) {
 }
 
 // analyzeReadiness is the I/O-driving core, split out so tests can inject a
-// fake jira.Client (the same seam executeImportWithClient uses).
+// fake jira.Client (the same seam executeImportWithClientContext uses).
 func (h *JiraImportHandler) analyzeReadiness(ctx context.Context, client jira.Client, req JiraReadinessRequest) JiraReadinessReport {
 	sampleSize := req.SampleSize
 	if sampleSize <= 0 {

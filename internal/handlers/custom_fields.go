@@ -26,27 +26,6 @@ type CustomFieldHandler struct {
 	systemSettings *repository.SystemSettingRepository
 }
 
-type assetTypeUsage struct {
-	AssetTypeName string `json:"asset_type_name"`
-	SetName       string `json:"set_name"`
-}
-
-type customFieldWithUsage struct {
-	models.CustomFieldDefinition
-	AssetTypeUsages []assetTypeUsage             `json:"asset_type_usages"`
-	Indexed         *models.CustomFieldIndexInfo `json:"indexed,omitempty"`
-}
-
-type indexCountInfo struct {
-	Current int `json:"current"`
-	Max     int `json:"max"`
-}
-
-type customFieldsResponse struct {
-	Data        []customFieldWithUsage    `json:"data"`
-	IndexCounts map[string]indexCountInfo `json:"index_counts"`
-}
-
 // indexable field types that benefit from B-tree indexes
 var indexableFieldTypes = map[string]bool{
 	"number": true,
@@ -80,79 +59,6 @@ func NewCustomFieldHandler(db database.Database) *CustomFieldHandler {
 		linkTypeRepo:   repository.NewLinkTypeRepository(db),
 		systemSettings: repository.NewSystemSettingRepository(db),
 	}
-}
-
-func (h *CustomFieldHandler) GetAll(w http.ResponseWriter, r *http.Request) {
-	fields, err := h.repo.List()
-	if err != nil {
-		h.logAndRespondDatabaseError(w, r, err)
-		return
-	}
-	usages, err := h.repo.ListAssetTypeUsages()
-	if err != nil {
-		h.logAndRespondDatabaseError(w, r, err)
-		return
-	}
-	usageByField := make(map[int][]assetTypeUsage)
-	for _, usage := range usages {
-		usageByField[usage.CustomFieldID] = append(usageByField[usage.CustomFieldID], assetTypeUsage{
-			AssetTypeName: usage.AssetTypeName, SetName: usage.SetName,
-		})
-	}
-	indexes, err := h.repo.ListIndexes()
-	if err != nil {
-		h.logAndRespondDatabaseError(w, r, err)
-		return
-	}
-	indexByField := make(map[int]*models.CustomFieldIndexInfo)
-	counts := map[string]int{"items": 0, "assets": 0}
-	for _, index := range indexes {
-		if indexByField[index.CustomFieldID] == nil {
-			indexByField[index.CustomFieldID] = &models.CustomFieldIndexInfo{}
-		}
-		switch index.TargetTable {
-		case "items":
-			indexByField[index.CustomFieldID].Items = true
-			counts["items"]++
-		case "assets":
-			indexByField[index.CustomFieldID].Assets = true
-			counts["assets"]++
-		}
-	}
-	result := make([]customFieldWithUsage, len(fields))
-	for i, field := range fields {
-		fieldUsages := usageByField[field.ID]
-		if fieldUsages == nil {
-			fieldUsages = []assetTypeUsage{}
-		}
-		result[i] = customFieldWithUsage{CustomFieldDefinition: field, AssetTypeUsages: fieldUsages}
-		if indexed, ok := indexByField[field.ID]; ok {
-			result[i].Indexed = indexed
-		} else if indexableFieldTypes[field.FieldType] {
-			result[i].Indexed = &models.CustomFieldIndexInfo{}
-		}
-	}
-	limit := h.maxIndexesPerTable()
-	respondJSONOK(w, customFieldsResponse{Data: result, IndexCounts: map[string]indexCountInfo{
-		"items": {Current: counts["items"], Max: limit}, "assets": {Current: counts["assets"], Max: limit},
-	}})
-}
-
-func (h *CustomFieldHandler) Get(w http.ResponseWriter, r *http.Request) {
-	id, ok := requireIDParam(w, r, "id")
-	if !ok {
-		return
-	}
-	field, err := h.repo.FindByID(id)
-	if errors.Is(err, repository.ErrNotFound) {
-		respondNotFound(w, r, "custom_field")
-		return
-	}
-	if err != nil {
-		respondInternalError(w, r, err)
-		return
-	}
-	respondJSONOK(w, field)
 }
 
 // validateAndNormalizeCustomField runs the name + field-type + per-type option

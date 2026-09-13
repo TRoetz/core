@@ -67,17 +67,6 @@ func ParseGlobalRank(value string) (GlobalRank, error) {
 	return GlobalRank{Bucket: bucket, Fraction: fraction}, nil
 }
 
-// WithGlobalRankBucket changes only the generation prefix while preserving
-// the fractional payload and therefore the item's position within a migrated
-// bucket. It is used by the online rebalance worker.
-func WithGlobalRankBucket(value string, bucket GlobalRankBucket) (string, error) {
-	rank, err := ParseGlobalRank(value)
-	if err != nil {
-		return "", err
-	}
-	return EncodeGlobalRank(bucket, rank.Fraction)
-}
-
 // GlobalRankBucketTransition returns the next empty bucket and migration
 // direction for a full normalization cycle. 0→1 and 1→2 migrate the high end
 // downward because the new bucket sorts after the old bucket. 2→0 migrates

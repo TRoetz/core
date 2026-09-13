@@ -10,8 +10,6 @@ import (
 	"windshift/internal/database"
 	"windshift/internal/repository"
 	"windshift/internal/services"
-
-	"uuid"
 )
 
 type Service struct {
@@ -209,53 +207,6 @@ func (s *Service) Workspaces(jobID string) []ImportedWorkspace {
 		return nil
 	}
 	return workspaces
-}
-
-func (s *Service) CreateJob(input CreateJobInput) (string, error) {
-	jobID := uuid.New().String()
-	_, err := s.db.ExecWrite(`
-		INSERT INTO jira_import_jobs (id, connection_id, status, scope, config_json, created_by)
-		VALUES (?, ?, 'queued', 'work_items', ?, ?)
-	`, jobID, input.ConnectionID, string(input.ConfigJSON), input.CreatedBy)
-	if err != nil {
-		return "", err
-	}
-	return jobID, nil
-}
-
-func (s *Service) Conflicts(connectionID string, projectKeys []string) ([]Conflict, error) {
-	requested := projectKeySet(projectKeys)
-	if len(requested) == 0 || connectionID == "" {
-		return nil, nil
-	}
-	rows, err := s.db.Query(`
-		SELECT id, status, config_json, created_at, completed_at
-		FROM jira_import_jobs
-		WHERE connection_id = ? AND scope = 'work_items' AND status <> 'data_deleted'
-		ORDER BY created_at DESC
-	`, connectionID)
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = rows.Close() }()
-	var conflicts []Conflict
-	for rows.Next() {
-		var conflict Conflict
-		var configJSON string
-		var completedAt sql.NullTime
-		if err := rows.Scan(&conflict.JobID, &conflict.Status, &configJSON, &conflict.CreatedAt, &completedAt); err != nil {
-			return nil, err
-		}
-		conflict.ProjectKeys = ProjectKeys(configJSON)
-		if !projectKeysOverlap(requested, conflict.ProjectKeys) {
-			continue
-		}
-		if completedAt.Valid {
-			conflict.CompletedAt = &completedAt.Time
-		}
-		conflicts = append(conflicts, conflict)
-	}
-	return conflicts, rows.Err()
 }
 
 func (s *Service) PreviousImports(projectKeys []string) ([]PreviousImport, error) {

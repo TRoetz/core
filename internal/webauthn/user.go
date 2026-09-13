@@ -95,12 +95,6 @@ func (wc *WebAuthnCredential) ToWebAuthnCredential() (webauthn.Credential, error
 	return credentialRecordFromWebAuthnCredential(wc).ToWebAuthnCredential()
 }
 
-// FromWebAuthnCredential creates a WebAuthnCredential from webauthn.Credential
-func FromWebAuthnCredential(userID int, name string, cred *webauthn.Credential) *WebAuthnCredential {
-	credential := webAuthnCredentialFromRecord(persistence.FromWebAuthnCredential(userID, name, cred))
-	return &credential
-}
-
 func webAuthnCredentialFromRecord(record persistence.CredentialRecord) WebAuthnCredential {
 	return WebAuthnCredential{
 		UserID:               record.OwnerID,

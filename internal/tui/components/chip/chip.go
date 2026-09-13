@@ -124,9 +124,3 @@ func Priority(s *styles.Styles, name, hex string) string {
 		Foreground(s.Palette.OnPrimary).
 		Render(name)
 }
-
-// LegacyStatus colors a free-text status when the work item has no ID-based
-// status. Kept for back-compat with older payloads.
-func LegacyStatus(s *styles.Styles, status string) string {
-	return Status(s, status, "")
-}

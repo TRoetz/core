@@ -59,12 +59,6 @@ func (e *Evaluator) EvaluateToSQL(cqlQuery string) (string, []any, error) { //no
 	return evaluateQL(cqlQuery, e.sqlGenerator)
 }
 
-// EvaluateToSQLAt converts a QL query using a caller-provided evaluation time.
-// It is useful for deterministic tests and does not mutate the evaluator.
-func (e *Evaluator) EvaluateToSQLAt(cqlQuery string, evaluationTime time.Time) (string, []any, error) { //nolint:gocritic // unnamedResult
-	return evaluateQLAt(cqlQuery, e.sqlGenerator, evaluationTime)
-}
-
 // AssetEvaluator evaluates QL queries for assets
 type AssetEvaluator struct {
 	sqlGenerator *SQLGenerator
@@ -147,12 +141,4 @@ func (e *AssetEvaluator) EvaluateToSQL(cqlQuery string) (string, []any, error) {
 	local := *e.sqlGenerator
 	local.workspaceMap = e.workspaceMap
 	return evaluateQL(cqlQuery, &local)
-}
-
-// EvaluateToSQLAt converts an asset query using a caller-provided evaluation
-// time without mutating the evaluator's temporal state.
-func (e *AssetEvaluator) EvaluateToSQLAt(cqlQuery string, evaluationTime time.Time) (string, []any, error) { //nolint:gocritic // unnamedResult
-	local := *e.sqlGenerator
-	local.workspaceMap = e.workspaceMap
-	return evaluateQLAt(cqlQuery, &local, evaluationTime)
 }

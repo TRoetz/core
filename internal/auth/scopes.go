@@ -324,17 +324,6 @@ var DefaultCodingAgentPrivateTestScopes = []string{
 	ScopeMCPAccess,
 }
 
-// AdminScopes returns the set of scopes that require system admin role.
-func AdminScopes() []string {
-	out := make([]string, 0, 9)
-	for _, s := range scopeCatalog {
-		if s.Admin {
-			out = append(out, s.Scope)
-		}
-	}
-	return out
-}
-
 // NonAdminScopes returns every scope that does not require the system admin
 // role. Used by the OAuth surfaces to cap what a dynamically registered client
 // may ever be granted.

@@ -82,16 +82,6 @@ func (h *JiraImportHandler) executeImport(jobID string, req StartImportRequest) 
 	h.executeImportWithClientContext(ctx, jobID, req, client, createdByID)
 }
 
-// executeImportWithClient runs the import using the provided Jira client.
-// Extracted from executeImport to allow testing with a mock client.
-// createdByUserID is the ID of the user who initiated the import (0 if unknown),
-// used to grant workspace admin access on imported workspaces.
-//
-//nolint:unused // Kept for importer tests that inject a mock Jira client.
-func (h *JiraImportHandler) executeImportWithClient(jobID string, req StartImportRequest, client jira.Client, createdByUserID int) {
-	h.executeImportWithClientContext(context.Background(), jobID, req, client, createdByUserID)
-}
-
 func jiraIssueImportJQL(projectKey string, openIssuesOnly, rankOrdered bool) string {
 	statusClause := ""
 	if openIssuesOnly {

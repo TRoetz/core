@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -591,18 +590,4 @@ func (h *PersonalLabelHandler) respondItemPersonalLabels(w http.ResponseWriter, 
 	}
 
 	respondJSONOK(w, labels)
-}
-
-// LoadPersonalLabelsForItems bulk-loads personal labels for a slice of items
-// in a single query, attaching them to each item's PersonalLabels field.
-// The viewing user determines visibility: a user only sees their own personal
-// labels plus any shared (user_id IS NULL) labels.
-func LoadPersonalLabelsForItems(db database.Database, items []models.Item, viewingUserID int) error {
-	return services.LoadPersonalLabelsForItems(context.Background(), db, items, viewingUserID)
-}
-
-// LoadPersonalLabelsForItemsContext is the request-aware form of
-// LoadPersonalLabelsForItems.
-func LoadPersonalLabelsForItemsContext(ctx context.Context, db database.Database, items []models.Item, viewingUserID int) error {
-	return services.LoadPersonalLabelsForItems(ctx, db, items, viewingUserID)
 }

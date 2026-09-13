@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -240,5 +239,3 @@ func (s *ItemLinkService) ListFieldLinks(userID, itemID, fieldID int) ([]models.
 	}
 	return s.FilterLinksForUser(userID, links), nil
 }
-
-func IsQLLinkError(err error) bool { return errors.Is(err, ErrQLQuery) }

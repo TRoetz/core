@@ -383,12 +383,6 @@ func (as *AssetActionService) matchesTrigger(action *models.AssetAction, event *
 	return true
 }
 
-//nolint:unused // retained as the error-only compatibility surface for white-box callers
-func (as *AssetActionService) executeAction(action *models.AssetAction, event *models.AssetActionEvent, chain *ExecutionChain) error {
-	_, err := as.executeActionWithResult(action, event, chain)
-	return err
-}
-
 func (as *AssetActionService) executeActionWithResult(action *models.AssetAction, event *models.AssetActionEvent, chain *ExecutionChain) (*AssetActionExecutionResult, error) {
 	return as.executeActionWithResultForEvent(context.Background(), action, event, chain, "")
 }

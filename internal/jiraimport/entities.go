@@ -585,10 +585,6 @@ func (s *Service) TimeProjectCustomerID(projectID int) (int64, error) {
 	return *info.CustomerID, nil
 }
 
-func (s *Service) CreateImportedWorklog(input repository.ImportedWorklog) (int64, error) {
-	return s.worklogs.CreateImported(input)
-}
-
 func (s *Service) UpsertImportedWorklog(input repository.ImportedWorklog, previous *PreviousMapping) (int64, error) {
 	if previous != nil {
 		result, err := s.db.ExecWrite(`

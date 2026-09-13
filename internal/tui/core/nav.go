@@ -25,11 +25,6 @@ func Pop() tea.Cmd {
 	return func() tea.Msg { return PopMsg{} }
 }
 
-// Replace returns a command that replaces the top screen with s.
-func Replace(s Screen) tea.Cmd {
-	return func() tea.Msg { return ReplaceMsg{Screen: s} }
-}
-
 // NoticeKind classifies a transient status-bar notice.
 type NoticeKind int
 

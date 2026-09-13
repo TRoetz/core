@@ -33,13 +33,6 @@ type contextKey string
 // so tool dispatch can enforce per-tool token scopes (see tools_registry.go).
 const contextKeyAPIToken contextKey = "apiToken"
 
-// bearerAuthMiddleware retains the original unit-test and PAT-facing helper.
-//
-//nolint:unused // exercised by the private test overlay and kept for PAT-mode coverage
-func bearerAuthMiddleware(tokenManager *auth.TokenManager, next http.Handler) http.Handler {
-	return bearerAuthMiddlewareWithConfig(tokenManager, AuthConfig{}, next)
-}
-
 // bearerAuthMiddlewareWithConfig validates Bearer tokens, enforces the MCP
 // resource audience for OAuth-issued tokens, and emits standards-compliant
 // discovery and incremental-scope challenges.

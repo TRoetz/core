@@ -40,13 +40,3 @@ func ByName(name string) Theme {
 	}
 	return Themes()[0]
 }
-
-func Next(current string) Theme {
-	themes := Themes()
-	for i, theme := range themes {
-		if theme.Name == current {
-			return themes[(i+1)%len(themes)]
-		}
-	}
-	return themes[0]
-}

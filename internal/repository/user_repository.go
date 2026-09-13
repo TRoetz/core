@@ -25,17 +25,6 @@ func NewUserRepository(db database.Database) *UserRepository {
 	return &UserRepository{db: db}
 }
 
-// Exists reports whether a user row with the given id exists. Used by the
-// leave-period handler's substitute-user check (and any other "is this user
-// real?" gate).
-func (r *UserRepository) Exists(id int) (bool, error) {
-	var ok bool
-	if err := r.db.QueryRow("SELECT EXISTS(SELECT 1 FROM users WHERE id = ?)", id).Scan(&ok); err != nil {
-		return false, fmt.Errorf("check user %d: %w", id, err)
-	}
-	return ok, nil
-}
-
 // ActiveExists reports whether an active user row with the given id exists.
 // It is intentionally separate from Exists: administrative workflows may
 // need to reference inactive users, while assigning an inactive user as a

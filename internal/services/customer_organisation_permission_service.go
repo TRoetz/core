@@ -46,18 +46,6 @@ func (s *CustomerOrganisationPermissionService) HasMembers(customerOrgID int) (b
 	return count > 0, nil
 }
 
-// HasManagers reports whether any manager rows exist for the org.
-func (s *CustomerOrganisationPermissionService) HasManagers(customerOrgID int) (bool, error) {
-	var count int
-	err := s.db.QueryRow(`
-		SELECT COUNT(*) FROM customer_organisation_managers WHERE customer_organisation_id = ?
-	`, customerOrgID).Scan(&count)
-	if err != nil {
-		return false, fmt.Errorf("error checking customer organisation managers: %w", err)
-	}
-	return count > 0, nil
-}
-
 // IsManager reports whether the user manages this org (direct or via group).
 // Holders of customers.manage are always considered managers.
 func (s *CustomerOrganisationPermissionService) IsManager(userID, customerOrgID int) (bool, error) {

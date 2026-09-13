@@ -2,8 +2,6 @@
 package handlers
 
 import (
-	"context"
-	"fmt"
 	"net/http"
 
 	"windshift/internal/database"
@@ -165,31 +163,6 @@ func CheckItemPermissionAsActor(w http.ResponseWriter, r *http.Request, itemRepo
 	return false
 }
 
-// userCanViewItemAsActor is the boolean-returning sibling of
-// CheckItemPermissionAsActor for callers that need to make their own response
-// decision. Returns true if the user has workspace item.view OR is an active
-// approver on the item. See CheckItemPermissionAsActor for the security model.
-//
-// approvalService may be nil; in that case only the workspace-permission
-// branch is consulted.
-func userCanViewItemAsActor(ctx context.Context, userID, itemID, workspaceID int,
-	permService *services.PermissionService, approvalService *services.ApprovalService) (bool, error) {
-	if permService == nil {
-		return false, nil
-	}
-	hasView, err := permService.HasWorkspacePermission(userID, workspaceID, models.PermissionItemView)
-	if err != nil {
-		return false, err
-	}
-	if hasView {
-		return true, nil
-	}
-	if approvalService == nil {
-		return false, nil
-	}
-	return approvalService.UserHasActivePoolMembershipOnItem(ctx, userID, itemID, nil)
-}
-
 // GetAccessibleWorkspaceIDs returns IDs of active workspaces the user can view.
 func GetAccessibleWorkspaceIDs(user *models.User, db database.Database,
 	permService *services.PermissionService) ([]int, error) {
@@ -197,21 +170,4 @@ func GetAccessibleWorkspaceIDs(user *models.User, db database.Database,
 		return []int{}, nil
 	}
 	return permService.AccessibleWorkspaceIDs(user.ID)
-}
-
-// GetAccessibleWorkspaceKeys returns a set of workspace keys the user can view.
-func GetAccessibleWorkspaceKeys(user *models.User, db database.Database,
-	permService *services.PermissionService) (map[string]bool, error) {
-	if user == nil || permService == nil {
-		return map[string]bool{}, nil
-	}
-	pairs, err := permService.AccessibleWorkspaceIDKeys(user.ID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to query workspaces: %w", err)
-	}
-	keys := make(map[string]bool)
-	for _, pair := range pairs {
-		keys[pair.Key] = true
-	}
-	return keys, nil
 }

@@ -482,13 +482,6 @@ func (s *PortalService) GetRequestTypeForm(ctx context.Context, requestTypeID in
 	return fields, definitions, nil
 }
 
-// GetCustomFieldsForRequestType returns only the definitions consumed by one
-// public request form.
-func (s *PortalService) GetCustomFieldsForRequestType(ctx context.Context, requestTypeID int) ([]models.CustomFieldDefinition, error) {
-	_, definitions, err := s.GetRequestTypeForm(ctx, requestTypeID)
-	return definitions, err
-}
-
 func (s *PortalService) getCustomFieldDefinitions(ctx context.Context, cfIDs map[int]struct{}) ([]models.CustomFieldDefinition, error) {
 	if len(cfIDs) == 0 {
 		return []models.CustomFieldDefinition{}, nil

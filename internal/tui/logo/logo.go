@@ -78,19 +78,3 @@ func Full(opts Opts) string {
 	}
 	return strings.Join(rows, "\n")
 }
-
-// Small renders a single-line compact mark for the header bar.
-// Returns "◐ Windshift" with the dot+name colored across the gradient.
-func Small(from, to color.Color) string {
-	if from == nil {
-		from = lipgloss.Color("#3b82f6")
-	}
-	if to == nil {
-		to = lipgloss.Color("#8b5cf6")
-	}
-	return styles.ApplyForegroundGrad(
-		lipgloss.NewStyle().Bold(true),
-		"◐ Windshift",
-		from, to,
-	)
-}

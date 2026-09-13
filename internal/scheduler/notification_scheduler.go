@@ -183,13 +183,6 @@ func (ns *NotificationScheduler) schedulerLoop(ctx context.Context, ticker *time
 	}
 }
 
-// processPendingNotifications finds unread notifications and sends them in batches
-//
-//nolint:unused // focused overlay tests invoke a deterministic tick directly
-func (ns *NotificationScheduler) processPendingNotifications() {
-	ns.processPendingNotificationsContext(context.Background())
-}
-
 func (ns *NotificationScheduler) processPendingNotificationsContext(ctx context.Context) {
 	start := ns.now()
 	var batchesProcessed int

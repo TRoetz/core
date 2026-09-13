@@ -76,37 +76,30 @@ func (s *UserPreferencesService) saveData(userID int, prefs models.UserPreferenc
 	return s.prefsRepo.UpsertJSON(userID, string(prefsBytes), time.Now())
 }
 
-// Get returns a user's preferences with resolved theme details when present.
-func (s *UserPreferencesService) Get(userID int) (models.UserPreferencesResponse, error) {
-	prefs, err := s.loadData(userID)
-	if err != nil {
-		return models.UserPreferencesResponse{}, err
-	}
-
-	response := models.UserPreferencesResponse{ThemeID: prefs.ThemeID, ColorMode: prefs.ColorMode}
-	if response.ColorMode == "" {
-		response.ColorMode = "system"
-	}
-	if prefs.ThemeID != nil {
-		if theme, err := s.themeRepo.GetByID(*prefs.ThemeID); err == nil {
-			response.Theme = &theme
-		}
-	}
-	return response, nil
-}
-
 func (s *UserPreferencesService) GetSnapshot(userID int) (UserPreferencesSnapshot, error) {
-	preferences, err := s.Get(userID)
+	prefs, err := s.loadData(userID)
 	if err != nil {
 		return UserPreferencesSnapshot{}, err
 	}
+
+	colorMode := prefs.ColorMode
+	if colorMode == "" {
+		colorMode = "system"
+	}
+	var theme *models.Theme
+	if prefs.ThemeID != nil {
+		if resolved, err := s.themeRepo.GetByID(*prefs.ThemeID); err == nil {
+			theme = &resolved
+		}
+	}
+
 	tui, err := s.GetTUI(userID)
 	if err != nil {
 		return UserPreferencesSnapshot{}, err
 	}
 	return UserPreferencesSnapshot{
-		ColorMode: preferences.ColorMode, ThemeID: preferences.ThemeID,
-		Theme: preferences.Theme, TUI: tui,
+		ColorMode: colorMode, ThemeID: prefs.ThemeID,
+		Theme: theme, TUI: tui,
 	}, nil
 }
 
@@ -152,35 +145,6 @@ func (s *UserPreferencesService) UpdateSnapshot(userID int, patch UserPreference
 		return UserPreferencesSnapshot{}, err
 	}
 	return s.GetSnapshot(userID)
-}
-
-// Update applies a partial preference update and returns the updated preferences.
-func (s *UserPreferencesService) Update(userID int, req models.UserPreferencesRequest) (models.UserPreferencesResponse, error) {
-	if req.ColorMode != "" && req.ColorMode != "light" && req.ColorMode != "dark" && req.ColorMode != "system" {
-		return models.UserPreferencesResponse{}, ErrInvalidColorMode
-	}
-	if req.ThemeID != nil {
-		if _, err := s.themeRepo.GetByID(*req.ThemeID); err != nil {
-			return models.UserPreferencesResponse{}, err
-		}
-	}
-
-	prefs, err := s.loadData(userID)
-	if err != nil {
-		return models.UserPreferencesResponse{}, err
-	}
-
-	if req.ThemeID != nil {
-		prefs.ThemeID = req.ThemeID
-	}
-	if req.ColorMode != "" {
-		prefs.ColorMode = req.ColorMode
-	}
-
-	if err := s.saveData(userID, prefs); err != nil {
-		return models.UserPreferencesResponse{}, err
-	}
-	return s.Get(userID)
 }
 
 // GetDashboardLayout returns the user's dashboard layout or an empty layout.

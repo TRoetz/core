@@ -1470,7 +1470,6 @@ func (s *Server) initialize() error {
 			RequestType:           requestTypeHandler,
 			Actions:               actionsHandler,
 			ActionCredentials:     actionCredentialsHandler,
-			ActionTemplates:       handlers.NewActionTemplatesHandler(services.NewActionTemplateService(s.db), s.actionService, workspaceKeyCache, logger.NewAuditor(s.db)),
 			Analytics:             handlers.NewAnalyticsHandler(services.NewAnalyticsService(s.db), permService, workspaceKeyCache),
 			AgentBinding:          agentBindingHandler,
 			RunnerControl:         runnerControlHandler,
@@ -2341,15 +2340,6 @@ func logDatabaseCapacityBudget(budget repository.DatabaseCapacityBudget) {
 		return
 	}
 	slog.Info("PostgreSQL connection capacity budget", args...)
-}
-
-// BaseURL returns the server's base URL.
-// deadcode-keep: called by core-tests/tests/helpers.go
-func (s *Server) BaseURL() string {
-	if s.actualPort == 0 {
-		return fmt.Sprintf("http://localhost:%s%s", s.config.Port, s.config.ContextPath)
-	}
-	return fmt.Sprintf("http://localhost:%d%s", s.actualPort, s.config.ContextPath)
 }
 
 // Port returns the actual port the server is listening on.

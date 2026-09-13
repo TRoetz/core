@@ -87,35 +87,6 @@ func (r *ItemChangeRepository) StableCurrentWatermark(accessibleWorkspaceIDs []i
 	return watermark.Int64, nil
 }
 
-// QuerySince returns grouped item changes after the given watermark, capped by limit.
-func (r *ItemChangeRepository) QuerySince(accessibleWorkspaceIDs []int, workspaceID int, since int64, limit int) ([]ItemChangeRow, error) {
-	where, args := itemChangeScopeWhere(accessibleWorkspaceIDs, workspaceID, since)
-	rows, err := r.db.Query(`
-		SELECT item_id, MAX(CASE WHEN change_type = 'delete' THEN 1 ELSE 0 END) AS deleted
-		FROM item_change_log
-		`+where+`
-		GROUP BY item_id
-		ORDER BY MAX(id) ASC
-		LIMIT ?
-	`, append(args, limit)...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	changes := []ItemChangeRow{}
-	for rows.Next() {
-		var change ItemChangeRow
-		var deleted int
-		if err := rows.Scan(&change.ItemID, &deleted); err != nil {
-			return nil, err
-		}
-		change.Deleted = deleted > 0
-		changes = append(changes, change)
-	}
-	return changes, rows.Err()
-}
-
 // QueryPage returns ordered changes in the fixed (after, through] watermark
 // window. Callers can page without incorporating changes committed after the
 // first page's watermark.

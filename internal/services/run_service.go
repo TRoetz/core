@@ -73,14 +73,6 @@ type Runner interface {
 	Run(ctx context.Context, input RunInput, emit EventSink) RunnerResult
 }
 
-// RunnerFunc adapts a plain function to the Runner interface.
-type RunnerFunc func(ctx context.Context, input RunInput, emit EventSink) RunnerResult
-
-// Run implements Runner for RunnerFunc.
-func (f RunnerFunc) Run(ctx context.Context, input RunInput, emit EventSink) RunnerResult {
-	return f(ctx, input, emit)
-}
-
 // BindingID is the optional id stamped on PostRunInfo so the hook can
 // look the binding up without re-running the assignee match. The binding
 // trigger sets it; manual run starts leave it 0.
@@ -202,12 +194,6 @@ type RunInputs struct {
 type PostRunHook interface {
 	AfterRun(ctx context.Context, info PostRunInfo)
 }
-
-// PostRunHookFunc adapts a plain function to PostRunHook.
-type PostRunHookFunc func(ctx context.Context, info PostRunInfo)
-
-// AfterRun implements PostRunHook for PostRunHookFunc.
-func (f PostRunHookFunc) AfterRun(ctx context.Context, info PostRunInfo) { f(ctx, info) }
 
 const defaultGlobalCap = 8
 

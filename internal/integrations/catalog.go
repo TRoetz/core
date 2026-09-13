@@ -54,13 +54,6 @@ func Capabilities(providerType models.IntegrationProviderType) (ProviderCapabili
 	return capabilities, ok
 }
 
-// IsKnown reports whether a provider type is registered with the integration
-// core.
-func IsKnown(providerType models.IntegrationProviderType) bool {
-	_, ok := Capabilities(providerType)
-	return ok
-}
-
 // SupportsAdminProviderCRUD reports whether the generic provider settings API
 // owns the provider row.
 func SupportsAdminProviderCRUD(providerType models.IntegrationProviderType) bool {

@@ -115,7 +115,6 @@ type WorkspaceHandlers struct {
 	RequestType           *handlers.RequestTypeHandler
 	Actions               *handlers.ActionsHandler
 	ActionCredentials     *handlers.ActionCredentialsHandler
-	ActionTemplates       *handlers.ActionTemplatesHandler
 	Analytics             *handlers.AnalyticsHandler
 	AgentBinding          *handlers.WorkspaceAgentBindingHandler
 	RunnerControl         *handlers.RunnerControlHandler

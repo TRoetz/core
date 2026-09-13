@@ -64,7 +64,6 @@ var (
 	loadOnce  sync.Once
 	loaded    []Template
 	loadByKey map[string]Template
-	loadErr   error
 )
 
 // Registry returns all embedded templates, parsed and validated. Cached
@@ -82,18 +81,10 @@ func Get(key string) (Template, bool) {
 	return t, ok
 }
 
-// LoadError returns the first parse/validation error encountered (if any).
-// Used by tests and the startup self-check; the API returns whatever
-// templates parsed successfully and skips the rest.
-//
-// deadcode-keep: called by core-tests/internal/services/actiontemplates/registry_test.go
-func LoadError() error { return loadErr }
-
 func load() {
 	loadOnce.Do(func() {
 		entries, err := templateFS.ReadDir("templates")
 		if err != nil {
-			loadErr = fmt.Errorf("read embedded template dir: %w", err)
 			return
 		}
 
@@ -105,20 +96,16 @@ func load() {
 			}
 			raw, err := templateFS.ReadFile(path.Join("templates", name))
 			if err != nil {
-				loadErr = fmt.Errorf("read %s: %w", name, err)
 				continue
 			}
 			var t Template
 			if err := yaml.Unmarshal(raw, &t); err != nil {
-				loadErr = fmt.Errorf("parse %s: %w", name, err)
 				continue
 			}
 			if err := validate(&t); err != nil {
-				loadErr = fmt.Errorf("validate %s: %w", name, err)
 				continue
 			}
 			if _, dup := loadByKey[t.Key]; dup {
-				loadErr = fmt.Errorf("duplicate template key %q (in %s)", t.Key, name)
 				continue
 			}
 			loadByKey[t.Key] = t

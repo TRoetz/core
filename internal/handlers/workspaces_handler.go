@@ -1,9 +1,7 @@
 package handlers
 
 import (
-	"errors"
 	"log/slog"
-	"net/http"
 
 	"windshift/internal/authz"
 	"windshift/internal/database"
@@ -39,57 +37,6 @@ func NewWorkspaceHandler(db database.Database, permissionService *services.Permi
 		keyCache:          keyCache,
 		cacheInvalidator:  cacheInvalidator,
 	}
-}
-
-func (h *WorkspaceHandler) GetAll(w http.ResponseWriter, r *http.Request) {
-	user, ok := RequireAuth(w, r)
-	if !ok {
-		return
-	}
-	workspaces, err := h.repo.FindAll(user.ID, r.URL.Query().Get("is_personal") == "true")
-	if err != nil {
-		respondInternalError(w, r, err)
-		return
-	}
-	visible := make([]models.Workspace, 0, len(workspaces))
-	for _, workspace := range workspaces {
-		var allowed bool
-		if workspace.Active {
-			allowed, err = h.canViewWorkspace(user.ID, workspace.ID)
-		} else {
-			allowed, err = h.authz.HasWorkspacePermission(user.ID, workspace.ID, models.PermissionWorkspaceAdmin)
-		}
-		if err != nil {
-			respondInternalError(w, r, err)
-			return
-		}
-		if allowed {
-			visible = append(visible, workspace)
-		}
-	}
-	respondJSONOK(w, visible)
-}
-
-func (h *WorkspaceHandler) Get(w http.ResponseWriter, r *http.Request) {
-	user, ok := RequireAuth(w, r)
-	if !ok {
-		return
-	}
-	id, ok := requireWorkspaceIDParam(w, r, h.keyCache, "id")
-	if !ok {
-		return
-	}
-	workspace, err := h.loadWorkspaceForUser(user, id)
-	if errors.Is(err, repository.ErrNotFound) {
-		respondNotFound(w, r, "workspace")
-		return
-	}
-	if err != nil {
-		respondInternalError(w, r, err)
-		return
-	}
-	h.trackWorkspaceVisit(user.ID, workspace.ID)
-	respondJSONOK(w, workspace)
 }
 
 // loadWorkspaceForUser resolves a workspace and masks access denials as not found.

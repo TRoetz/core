@@ -74,13 +74,6 @@ func (wc *Credential) ToWebAuthnCredential() (webauthn.Credential, error) {
 	return credentialRecordFromPortalCredential(wc).ToWebAuthnCredential()
 }
 
-// FromWebAuthnCredential builds a database row from a go-webauthn credential.
-func FromWebAuthnCredential(portalCustomerID int, name string, cred *webauthn.Credential) *Credential {
-	record := persistence.FromWebAuthnCredential(portalCustomerID, name, cred)
-	credential := portalCredentialFromRecord(record)
-	return &credential
-}
-
 func portalCredentialFromRecord(record persistence.CredentialRecord) Credential {
 	return Credential{
 		PortalCustomerID:     record.OwnerID,

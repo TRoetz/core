@@ -1,8 +1,6 @@
 package portalwebauthn
 
 import (
-	"encoding/base64"
-
 	"github.com/go-webauthn/webauthn/webauthn"
 
 	"windshift/internal/webauthn/persistence"
@@ -28,11 +26,6 @@ func (cs *CredentialStore) SaveCredential(portalCustomerID int, credentialName s
 // GetCustomerCredentials retrieves credentials in go-webauthn format.
 func (cs *CredentialStore) GetCustomerCredentials(portalCustomerID int) ([]webauthn.Credential, error) {
 	return cs.store.GetCredentials(portalCustomerID)
-}
-
-// LookupCustomerByCredentialID returns the customer that owns a credential.
-func (cs *CredentialStore) LookupCustomerByCredentialID(credentialID []byte) (int, error) {
-	return cs.store.LookupOwnerByCredentialID(base64.RawURLEncoding.EncodeToString(credentialID))
 }
 
 // UpdateCredentialCounter persists the post-login sign count and clone flag.
@@ -61,10 +54,4 @@ func (cs *CredentialStore) GetCustomerCredentialsList(portalCustomerID int) ([]C
 // CheckCredentialExists reports whether a credential ID is already stored.
 func (cs *CredentialStore) CheckCredentialExists(credentialID []byte) (bool, error) {
 	return cs.store.CheckCredentialExists(credentialID)
-}
-
-// CountCustomerCredentials returns the number of passkeys registered for a
-// customer.
-func (cs *CredentialStore) CountCustomerCredentials(portalCustomerID int) (int, error) {
-	return cs.store.CountCredentials(portalCustomerID)
 }

@@ -20,13 +20,6 @@ type Handler interface {
 	Handle(context.Context, Event) error
 }
 
-// HandlerFunc adapts a function to Handler.
-type HandlerFunc func(context.Context, Event) error
-
-func (f HandlerFunc) Handle(ctx context.Context, event Event) error {
-	return f(ctx, event)
-}
-
 // Config controls bounded worker behavior.
 type Config struct {
 	WorkerCount                int

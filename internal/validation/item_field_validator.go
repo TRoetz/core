@@ -3,8 +3,6 @@
 package validation
 
 import (
-	"database/sql"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -717,23 +715,6 @@ func relatedWorkItemNotFoundError() *ValidationError {
 		Field:   "related_work_item_id",
 		Message: "Related work item not found or access denied",
 	}
-}
-
-// ConvertCustomFieldValuesToJSON converts custom field values map to JSON for database storage
-func ConvertCustomFieldValuesToJSON(customFieldValues map[string]any) (sql.NullString, error) {
-	if len(customFieldValues) == 0 {
-		return sql.NullString{Valid: false}, nil
-	}
-
-	customFieldValuesBytes, err := json.Marshal(customFieldValues)
-	if err != nil {
-		return sql.NullString{}, &ValidationError{
-			Field:   "custom_field_values",
-			Message: "Invalid custom field values",
-		}
-	}
-
-	return sql.NullString{String: string(customFieldValuesBytes), Valid: true}, nil
 }
 
 // ValidateCreateRequest validates required fields for item creation

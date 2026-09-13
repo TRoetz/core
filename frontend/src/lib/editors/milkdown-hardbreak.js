@@ -17,16 +17,13 @@ const BLOCK_PARENTS = new Set(['root', 'blockquote', 'listItem']);
 
 function isBreakHTML(node) {
   return (
-    node?.type === 'html' &&
-    typeof node.value === 'string' &&
-    BREAK_HTML.test(node.value.trim())
+    node?.type === 'html' && typeof node.value === 'string' && BREAK_HTML.test(node.value.trim())
   );
 }
 
 function replacementFor(parent) {
   if (INLINE_PARENTS.has(parent.type)) return { type: 'break' };
-  if (BLOCK_PARENTS.has(parent.type))
-    return { type: 'paragraph', children: [{ type: 'break' }] };
+  if (BLOCK_PARENTS.has(parent.type)) return { type: 'paragraph', children: [{ type: 'break' }] };
   return null;
 }
 

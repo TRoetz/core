@@ -32,13 +32,6 @@ func NewAnalyticsService(db database.Database) *AnalyticsService {
 	}
 }
 
-// GetCollectionWorkspaceID returns the workspace_id stored on the given
-// collection. Used by the analytics handler to enforce that a caller cannot
-// fetch analytics for a collection outside the path workspace.
-func (s *AnalyticsService) GetCollectionWorkspaceID(collectionID int) (int, error) {
-	return s.GetCollectionWorkspaceIDContext(context.Background(), collectionID)
-}
-
 // GetCollectionWorkspaceIDContext is the request-aware collection ownership lookup.
 func (s *AnalyticsService) GetCollectionWorkspaceIDContext(ctx context.Context, collectionID int) (int, error) {
 	var workspaceID sql.NullInt64
@@ -106,11 +99,6 @@ type AnalyticsResult struct {
 	AgingWIP      AgingWIPResult        `json:"aging_wip"`
 	DeliveryTime  DeliveryTimeResult    `json:"delivery_time"`
 	Capabilities  AnalyticsCapabilities `json:"capabilities"`
-}
-
-// GetAnalytics computes analytics without an external request context.
-func (s *AnalyticsService) GetAnalytics(params ResolveDatasetParams) (*AnalyticsResult, error) {
-	return s.GetAnalyticsContext(context.Background(), params)
 }
 
 func (s *AnalyticsService) resolveDataset(ctx context.Context, params ResolveDatasetParams) (*dataset, error) {

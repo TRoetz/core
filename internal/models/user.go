@@ -122,19 +122,6 @@ type UserTUIPreferences struct {
 	LastWorkspaceID *int     `json:"last_workspace_id,omitempty"`
 }
 
-// UserPreferencesRequest represents the API request for updating preferences
-type UserPreferencesRequest struct {
-	ColorMode string `json:"color_mode,omitempty"`
-	ThemeID   *int   `json:"theme_id,omitempty"`
-}
-
-// UserPreferencesResponse represents the API response with resolved data
-type UserPreferencesResponse struct {
-	ColorMode string `json:"color_mode"`
-	ThemeID   *int   `json:"theme_id,omitempty"`
-	Theme     *Theme `json:"theme,omitempty"` // Resolved theme if theme_id is set
-}
-
 // UserDashboardSection represents a section on the user's personal dashboard
 type UserDashboardSection struct {
 	ID           string   `json:"id"`

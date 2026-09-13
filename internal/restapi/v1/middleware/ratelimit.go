@@ -25,7 +25,6 @@ type RateLimiter struct {
 
 	sweepTicker *time.Ticker
 	stopChan    chan struct{}
-	stopOnce    sync.Once
 }
 
 type tokenBucket struct {
@@ -78,22 +77,6 @@ func (rl *RateLimiter) evictIdle(now time.Time) {
 			rl.limiters.Delete(key)
 		}
 		return true
-	})
-}
-
-// Stop halts the sweep goroutine. Safe to call multiple times; not currently
-// wired into server shutdown since the limiter lives for the process lifetime,
-// but exposed so future shutdown paths and tests can release it cleanly.
-//
-// deadcode-keep: called by core-tests/internal/restapi/v1/middleware/ratelimit_test.go
-func (rl *RateLimiter) Stop() {
-	rl.stopOnce.Do(func() {
-		if rl.sweepTicker != nil {
-			rl.sweepTicker.Stop()
-		}
-		if rl.stopChan != nil {
-			close(rl.stopChan)
-		}
 	})
 }
 

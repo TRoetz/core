@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"strconv"
 	"time"
 
 	"windshift/internal/models"
@@ -76,28 +75,6 @@ func (h *WorkspaceHandler) loadWorkspaceStatuses(workspaceID int, itemTypeID *in
 		})
 	}
 	return statuses, nil
-}
-
-func (h *WorkspaceHandler) GetStatuses(w http.ResponseWriter, r *http.Request) {
-	workspaceID, ok := requireWorkspaceIDParam(w, r, h.keyCache, "id")
-	if !ok || !h.requireWorkspacePermission(w, r, workspaceID, models.PermissionItemView) {
-		return
-	}
-	var itemTypeID *int
-	if raw := r.URL.Query().Get("item_type_id"); raw != "" {
-		id, err := strconv.Atoi(raw)
-		if err != nil {
-			respondBadRequest(w, r, "invalid item_type_id")
-			return
-		}
-		itemTypeID = &id
-	}
-	statuses, err := h.loadWorkspaceStatuses(workspaceID, itemTypeID)
-	if err != nil {
-		respondInternalError(w, r, err)
-		return
-	}
-	respondJSONOK(w, statuses)
 }
 
 // requireWorkspacePermission checks authentication and workspace-level permission in one step.

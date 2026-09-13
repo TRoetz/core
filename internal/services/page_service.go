@@ -928,32 +928,6 @@ func (s *PageService) SearchByKeyword(workspaceID int, query string, limit int) 
 	return s.pages.SearchByKeyword(workspaceID, query, limit)
 }
 
-// BuildPageTree turns a flat ordered page list (typically from ListTree)
-// into a nested PageNode tree suitable for direct rendering in internal tools.
-func BuildPageTree(pages []models.Page) []*models.PageNode {
-	byID := make(map[int]*models.PageNode, len(pages))
-	for i := range pages {
-		node := &models.PageNode{Page: pages[i]}
-		byID[pages[i].ID] = node
-	}
-	var roots []*models.PageNode
-	for i := range pages {
-		node := byID[pages[i].ID]
-		if pages[i].ParentID == nil {
-			roots = append(roots, node)
-			continue
-		}
-		parent, ok := byID[*pages[i].ParentID]
-		if !ok {
-			// Promote orphans so callers do not silently drop visible pages.
-			roots = append(roots, node)
-			continue
-		}
-		parent.Children = append(parent.Children, node)
-	}
-	return roots
-}
-
 // ListChildren returns direct children of the given parent (root pages when
 // parentID is nil), ordered by frac_index/rank/title.
 func (s *PageService) ListChildren(workspaceID int, parentID *int) ([]models.Page, error) {

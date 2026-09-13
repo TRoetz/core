@@ -589,29 +589,6 @@ func (r *ItemRepository) GetCustomFieldValuesRawTx(ctx context.Context, tx datab
 	return data, nil
 }
 
-func (r *ItemRepository) SetCustomFieldValuesRaw(ctx context.Context, itemID int, raw string) error {
-	// An emptied cfv comes through as "". Write NULL rather than the empty
-	// string: the column treats empty/NULL identically, but on Postgres the
-	// JSONB column rejects '' ("invalid input syntax for type json").
-	if raw == "" {
-		if _, err := r.db.ExecWriteContext(ctx, `UPDATE items SET custom_field_values = NULL WHERE id = ?`, itemID); err != nil {
-			return fmt.Errorf("set custom field values: %w", err)
-		}
-		return nil
-	}
-	if _, err := r.db.ExecWriteContext(ctx, `UPDATE items SET custom_field_values = ? WHERE id = ?`, raw, itemID); err != nil {
-		return fmt.Errorf("set custom field values: %w", err)
-	}
-	return nil
-}
-
-func (r *ItemRepository) SetVirtualFieldDataRaw(ctx context.Context, itemID int, raw string) error {
-	if _, err := r.db.ExecWriteContext(ctx, `UPDATE items SET virtual_field_data = ? WHERE id = ?`, raw, itemID); err != nil {
-		return fmt.Errorf("set virtual field data: %w", err)
-	}
-	return nil
-}
-
 // UpdateDescription replaces only an item's description. Import workflows use
 // this after attachment mappings make rich-text media links resolvable.
 func (r *ItemRepository) UpdateDescription(itemID int, description string) error {

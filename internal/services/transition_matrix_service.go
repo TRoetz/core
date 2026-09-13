@@ -303,16 +303,6 @@ func (s *TransitionMatrixService) observeMatrix(matrix *WorkspaceTransitionMatri
 	s.counters.lastWorkflowCount.Store(int64(matrix.WorkflowCount))
 }
 
-func (s *TransitionMatrixService) ObserveResponseSize(size int) {
-	s.counters.lastResponseBytes.Store(int64(size))
-	for {
-		current := s.counters.maxResponseBytes.Load()
-		if int64(size) <= current || s.counters.maxResponseBytes.CompareAndSwap(current, int64(size)) {
-			return
-		}
-	}
-}
-
 func (s *TransitionMatrixService) Stats() TransitionMatrixStats {
 	return TransitionMatrixStats{
 		PersistentCacheEnabled: false,

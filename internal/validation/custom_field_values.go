@@ -169,28 +169,6 @@ func ValidateCheckboxValue(fieldID string, raw any) (bool, error) {
 	return value, nil
 }
 
-// SanitizeCustomFieldTextValues sanitizes text fields for prevalidated writes.
-func SanitizeCustomFieldTextValues(db database.Database, cfv map[string]any) error {
-	if len(cfv) == 0 {
-		return nil
-	}
-	fields, err := loadFieldsForCFV(db, cfv)
-	if err != nil {
-		return fmt.Errorf("load custom fields for sanitization: %w", err)
-	}
-	for fieldKey, raw := range cfv {
-		def, ok := fields[fieldKey]
-		if !ok {
-			continue
-		}
-		switch def.FieldType {
-		case "text", "textarea":
-			cfv[fieldKey] = sanitizeTextValue(def.FieldType, raw)
-		}
-	}
-	return nil
-}
-
 // CustomFieldTypes bulk-resolves field types for known numeric CFV keys.
 func CustomFieldTypes(db database.Database, cfv map[string]any) (map[string]string, error) {
 	fields, err := loadFieldsForCFV(db, cfv)

@@ -247,13 +247,6 @@ func (r *AgentConversationRepository) ArchiveOwnedStandard(ctx context.Context, 
 	return n > 0, err
 }
 
-func (r *AgentConversationRepository) ListMessagesForParticipant(ctx context.Context, sessionID, userID, beforeID, limit int) ([]models.AgentMessage, error) {
-	if _, err := r.GetForParticipant(ctx, sessionID, userID); err != nil {
-		return nil, err
-	}
-	return r.listMessages(ctx, sessionID, 0, beforeID, limit)
-}
-
 func (r *AgentConversationRepository) ListMessagesForParticipantAfter(ctx context.Context, sessionID, userID, afterID, beforeID, limit int) ([]models.AgentMessage, error) {
 	if _, err := r.GetForParticipant(ctx, sessionID, userID); err != nil {
 		return nil, err

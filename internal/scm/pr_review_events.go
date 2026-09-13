@@ -2,9 +2,7 @@ package scm
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log/slog"
 	"sort"
@@ -364,8 +362,4 @@ func (s *SyncService) processPRReviewInbox(ctx context.Context, provider Provide
 
 func isRecentFirstSight(event IssueComment, now time.Time) bool {
 	return !event.CreatedAt.IsZero() && !event.CreatedAt.Before(now.Add(-prReviewFirstSightWindow))
-}
-
-func isNoRows(err error) bool { //nolint:unused // retained for the in-progress review-event persistence path
-	return errors.Is(err, sql.ErrNoRows)
 }
