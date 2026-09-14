@@ -39,3 +39,38 @@ export async function loadCustomFieldsOverview(apiClient) {
       : [],
   };
 }
+
+/**
+ * Build the options payload for saving a linking field. A mirror field is
+ * configured through its primary field, so its stored options pass through
+ * unchanged — renaming a mirror must never require a link type or drop the
+ * mirror linkage.
+ */
+export function linkingFieldOptions({
+  editingOptions = null,
+  linkTypeId = null,
+  allowedItemTypeIds = [],
+  allowedEntityTypes = ['item'],
+  multi = true,
+  mirrorName = '',
+  mirrorAllowedItemTypeIds = [],
+}) {
+  if (editingOptions?.mirror_of_field_id) {
+    return editingOptions;
+  }
+  const options = {
+    link_type_id: parseInt(linkTypeId, 10),
+    allowed_entity_types: allowedEntityTypes,
+    multi,
+  };
+  if (allowedItemTypeIds.length > 0) {
+    options.allowed_item_type_ids = allowedItemTypeIds.map(Number);
+  }
+  if (mirrorName.trim()) {
+    options.mirror_name = mirrorName.trim();
+    if (mirrorAllowedItemTypeIds.length > 0) {
+      options.mirror_allowed_item_type_ids = mirrorAllowedItemTypeIds.map(Number);
+    }
+  }
+  return options;
+}

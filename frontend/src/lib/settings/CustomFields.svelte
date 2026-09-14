@@ -28,7 +28,7 @@
   import { fieldOptionsObject, parseFieldOptions, serializeOptions } from '../utils/optionUtils.js';
   import { X as XIcon } from '@lucide/svelte';
   import DescriptionText from '../components/DescriptionText.svelte';
-  import { customFieldFormData, loadCustomFieldsOverview } from './customFieldsData.js';
+  import { customFieldFormData, linkingFieldOptions, loadCustomFieldsOverview } from './customFieldsData.js';
   import { BOOLEAN_CUSTOM_FIELD_TYPE, canonicalCustomFieldType, isBooleanCustomFieldType } from '../utils/customFieldTypes.js';
   import { workspaceDataStore } from '../stores/workspaceDataStore.svelte.js';
 	import TextField from '../components/TextField.svelte';
@@ -349,21 +349,21 @@
       config.ql_query = assetQlQuery || '';
       config.multi = assetMulti;
     } else if (formData.field_type === 'linking') {
-      if (!linkingLinkTypeId) {
+      // Mirrors are configured through their primary field, so editing a
+      // mirror only renames it and keeps the stored options.
+      const editingLinkingOptions = isLinkingMirror ? fieldOptionsObject(editingField?.options) : null;
+      if (!isLinkingMirror && !linkingLinkTypeId) {
         throw new Error('Linking fields require a link type');
       }
-      config.link_type_id = parseInt(linkingLinkTypeId);
-      config.allowed_entity_types = linkingAllowedEntityTypes;
-      config.multi = linkingMulti;
-      if (linkingAllowedItemTypeIds.length > 0) {
-        config.allowed_item_type_ids = linkingAllowedItemTypeIds.map(Number);
-      }
-      if (linkingMirrorName.trim()) {
-        config.mirror_name = linkingMirrorName.trim();
-        if (linkingMirrorAllowedItemTypeIds.length > 0) {
-          config.mirror_allowed_item_type_ids = linkingMirrorAllowedItemTypeIds.map(Number);
-        }
-      }
+      config.linkingOptions = linkingFieldOptions({
+        editingOptions: editingLinkingOptions,
+        linkTypeId: linkingLinkTypeId,
+        allowedItemTypeIds: linkingAllowedItemTypeIds,
+        allowedEntityTypes: linkingAllowedEntityTypes,
+        multi: linkingMulti,
+        mirrorName: linkingMirrorName,
+        mirrorAllowedItemTypeIds: linkingMirrorAllowedItemTypeIds,
+      });
     }
 
     return config;
@@ -394,21 +394,7 @@
           multi: processedConfig.multi
         });
       } else if (formData.field_type === 'linking') {
-        const linkOpts = {
-          link_type_id: processedConfig.link_type_id,
-          allowed_entity_types: processedConfig.allowed_entity_types,
-          multi: processedConfig.multi
-        };
-        if (processedConfig.allowed_item_type_ids) {
-          linkOpts.allowed_item_type_ids = processedConfig.allowed_item_type_ids;
-        }
-        if (processedConfig.mirror_name) {
-          linkOpts.mirror_name = processedConfig.mirror_name;
-          if (processedConfig.mirror_allowed_item_type_ids) {
-            linkOpts.mirror_allowed_item_type_ids = processedConfig.mirror_allowed_item_type_ids;
-          }
-        }
-        data.options = JSON.stringify(linkOpts);
+        data.options = JSON.stringify(processedConfig.linkingOptions);
       }
 
       let saveResult = null;
