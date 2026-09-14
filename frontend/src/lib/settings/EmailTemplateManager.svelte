@@ -17,6 +17,7 @@
   import Textarea from '../components/Textarea.svelte';
   import { Mail, Edit, Eye } from '@lucide/svelte';
 	import TextField from '../components/TextField.svelte';
+	import TextareaField from '../components/TextareaField.svelte';
 
   // Per-template variable hints shown in the editor sidebar so admins know
   // which {{.Variables}} are available for each row. Mirrors the data
@@ -229,8 +230,12 @@
       </div>
 
       <div>
-        <Label color="default" class="mb-2">{t('settings.emailTemplates.adminNotes')}</Label>
-        <Textarea bind:value={formData.description} rows={2} />
+        <TextareaField
+          label={t('settings.emailTemplates.adminNotes')}
+          labelColor="default"
+          rows={2}
+          bind:value={formData.description}
+        />
       </div>
 
       <div>

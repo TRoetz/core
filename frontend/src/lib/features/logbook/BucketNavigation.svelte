@@ -14,6 +14,8 @@
   import Textarea from '../../components/Textarea.svelte';
   import { IconPlus as Plus, IconFolderOpen as FolderOpen } from '@tabler/icons-svelte-runes';
   import NavigationSidebar from '../../layout/NavigationSidebar.svelte';
+	import TextareaField from '../../components/TextareaField.svelte';
+	import TextField from '../../components/TextField.svelte';
 
   let { activeBucketId = null } = $props();
 
@@ -111,24 +113,24 @@
     <form onsubmit={(e) => { e.preventDefault(); createBucket(); }}>
       <div class="space-y-4">
         <div>
-          <Label for="bucket-name" required class="mb-2">{t('logbook.bucketName')}</Label>
-          <Input
+          <TextField
+            label={t('logbook.bucketName')}
             id="bucket-name"
+            required
             dataTestid="logbook-bucket-name"
             type="text"
-            bind:value={formData.name}
             placeholder={t('logbook.bucketNamePlaceholder')}
-            required
+            bind:value={formData.name}
           />
         </div>
 
         <div>
-          <Label for="bucket-description" class="mb-2">{t('logbook.bucketDescription')}</Label>
-          <Textarea
+          <TextareaField
+            label={t('logbook.bucketDescription')}
             id="bucket-description"
-            bind:value={formData.description}
             rows={3}
             placeholder={t('logbook.bucketDescriptionPlaceholder')}
+            bind:value={formData.description}
           />
         </div>
       </div>

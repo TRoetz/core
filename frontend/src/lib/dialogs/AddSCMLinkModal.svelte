@@ -186,12 +186,14 @@
 
         <!-- External ID -->
         <div>
-          <Label color="default" required class="mb-1.5">{getIdLabel(linkType)}</Label>
-          <Input
+          <TextField
+            label={getIdLabel(linkType)}
+            required
+            labelColor="default"
             type="text"
-            bind:value={externalId}
             placeholder={getPlaceholder(linkType)}
             size="small"
+            bind:value={externalId}
           />
         </div>
 

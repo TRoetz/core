@@ -31,6 +31,8 @@
   import { permissionStore, isSystemAdmin } from '../../stores';
   import { fetchAssetCategories, flattenCategories } from './shared/assetSetUtils.js';
 	import TextField from '../../components/TextField.svelte';
+	import SelectField from '../../components/SelectField.svelte';
+	import TextareaField from '../../components/TextareaField.svelte';
 
   // State for asset sets
   let assetSets = $state([]);
@@ -889,11 +891,12 @@
         />
       </div>
       <div>
-        <Label color="default" class="mb-1">{t('common.description')}</Label>
-        <Textarea
-          bind:value={setFormData.description}
+        <TextareaField
+          label={t('common.description')}
+          labelColor="default"
           rows={3}
           size="small"
+          bind:value={setFormData.description}
         />
       </div>
       <Checkbox bind:checked={setFormData.is_default} label={t('assets.default')} />
@@ -927,11 +930,12 @@
         />
       </div>
       <div>
-        <Label color="default" class="mb-1">{t('common.description')}</Label>
-        <Textarea
-          bind:value={typeFormData.description}
+        <TextareaField
+          label={t('common.description')}
+          labelColor="default"
           rows={2}
           size="small"
+          bind:value={typeFormData.description}
         />
       </div>
       <div>
@@ -968,16 +972,21 @@
         />
       </div>
       <div>
-        <Label color="default" class="mb-1">{t('common.description')}</Label>
-        <Textarea
-          bind:value={categoryFormData.description}
+        <TextareaField
+          label={t('common.description')}
+          labelColor="default"
           rows={2}
           size="small"
+          bind:value={categoryFormData.description}
         />
       </div>
       <div>
-        <Label color="default" class="mb-1">{t('assets.parentCategory')}</Label>
-        <Select bind:value={categoryFormData.parent_id} options={[{ value: null, label: t('assets.noParent') }, ...flatCategories.filter(c => c.id !== editingCategory?.id).map(cat => ({ value: cat.id, label: '  '.repeat(cat.level) + cat.name }))]} />
+        <SelectField
+          label={t('assets.parentCategory')}
+          labelColor="default"
+          options={[{ value: null, label: t('assets.noParent') }, ...flatCategories.filter(c => c.id !== editingCategory?.id).map(cat => ({ value: cat.id, label: '  '.repeat(cat.level) + cat.name }))]}
+          bind:value={categoryFormData.parent_id}
+        />
       </div>
     </div>
     <DialogFooter
@@ -1023,20 +1032,35 @@
       <!-- User/Group Select -->
       {#if roleFormData.type === 'user'}
         <div>
-          <Label color="default" class="mb-1">{t('common.user')}</Label>
-          <Select bind:value={roleFormData.user_id} required options={[{ value: null, label: t('pickers.selectUser') }, ...availableUsers.map(user => ({ value: user.id, label: `${user.display_name || user.username} (${user.email})` }))]} />
+          <SelectField
+            label={t('common.user')}
+            required
+            labelColor="default"
+            options={[{ value: null, label: t('pickers.selectUser') }, ...availableUsers.map(user => ({ value: user.id, label: `${user.display_name || user.username} (${user.email})` }))]}
+            bind:value={roleFormData.user_id}
+          />
         </div>
       {:else}
         <div>
-          <Label color="default" class="mb-1">{t('common.group')}</Label>
-          <Select bind:value={roleFormData.group_id} required options={[{ value: null, label: t('pickers.selectGroup') }, ...availableGroups.map(group => ({ value: group.id, label: group.name }))]} />
+          <SelectField
+            label={t('common.group')}
+            required
+            labelColor="default"
+            options={[{ value: null, label: t('pickers.selectGroup') }, ...availableGroups.map(group => ({ value: group.id, label: group.name }))]}
+            bind:value={roleFormData.group_id}
+          />
         </div>
       {/if}
 
       <!-- Role Select -->
       <div>
-        <Label color="default" class="mb-1">{t('assets.role')}</Label>
-        <Select bind:value={roleFormData.role_id} required options={assetRoles.map(role => ({ value: role.id, label: role.name + (role.description ? ` - ${role.description}` : '') }))} />
+        <SelectField
+          label={t('assets.role')}
+          required
+          labelColor="default"
+          options={assetRoles.map(role => ({ value: role.id, label: role.name + (role.description ? ` - ${role.description}` : '') }))}
+          bind:value={roleFormData.role_id}
+        />
       </div>
     </div>
     <DialogFooter

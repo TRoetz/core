@@ -1,5 +1,6 @@
 <script>
   import { onMount } from 'svelte';
+  import Spinner from '../components/Spinner.svelte';
   import StateDisplay from '../components/StateDisplay.svelte';
   import { api } from '../api.js';
   import Button from '../components/Button.svelte';
@@ -8,7 +9,7 @@
   import NativeSelect from '../components/NativeSelect.svelte';
   import Modal from './Modal.svelte';
   import ModalHeader from './ModalHeader.svelte';
-  import { Search, ExternalLink, Loader2 } from '@lucide/svelte';
+  import { Search, ExternalLink } from '@lucide/svelte';
   import EmptyState from '../components/EmptyState.svelte';
   import { t } from '../stores/i18n.svelte.js';
   import { successToast, errorToast } from '../stores/toasts.svelte.js';
@@ -172,7 +173,7 @@
                 size="small"
               />
               {#if searching}
-                <Loader2 class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin" style="color: var(--ds-text-subtle);" />
+                <Spinner size="sm" class="absolute right-3 top-1/2 -translate-y-1/2" />
               {/if}
             </div>
           </div>
@@ -200,7 +201,7 @@
                     </span>
                   </div>
                   {#if linking === result.external_id}
-                    <Loader2 class="w-4 h-4 animate-spin flex-shrink-0" style="color: var(--ds-text-subtle);" />
+                    <Spinner size="sm" class="flex-shrink-0" />
                   {/if}
                 </button>
               {/each}

@@ -1,5 +1,6 @@
 <script>
   import { onMount } from 'svelte';
+  import Spinner from '../../components/Spinner.svelte';
   import StateDisplay from '../../components/StateDisplay.svelte';
   import { api } from '../../api.js';
   import { successToast, errorToast } from '../../stores/toasts.svelte.js';
@@ -9,7 +10,7 @@
   import Textarea from '../../components/Textarea.svelte';
   import DialogFooter from '../../dialogs/DialogFooter.svelte';
   import BasePicker from '../../pickers/BasePicker.svelte';
-  import { IconTag as Tag, IconLoader as Loader2, IconSparkles as Sparkles } from '@tabler/icons-svelte-runes';
+  import { IconTag as Tag, IconSparkles as Sparkles } from '@tabler/icons-svelte-runes';
   import AlertBox from '../../components/AlertBox.svelte';
   import { loadMilestoneReleaseConnections } from './milestoneReleaseData.js';
 	import TextField from '../../components/TextField.svelte';
@@ -252,10 +253,7 @@
         <div>
           <Label>Repository</Label>
           {#if loadingRepos}
-            <div class="flex items-center gap-2 text-sm py-2" style="color: var(--ds-text-subtle);">
-              <Loader2 class="w-4 h-4 animate-spin" />
-              Loading repositories…
-            </div>
+            <StateDisplay type="loading" inline message="Loading repositories…" class="py-2 text-sm" />
           {:else if repositories.length === 0}
             <p class="text-sm py-2" style="color: var(--ds-text-subtle);">No linked repositories found for this connection.</p>
           {:else}
@@ -297,10 +295,7 @@
       <Label required>{releaseMode === 'attach' ? 'Existing tag or release' : 'Tag Name'}</Label>
       {#if releaseMode === 'attach'}
         {#if loadingCandidates}
-          <div class="flex items-center gap-2 text-sm py-2" style="color: var(--ds-text-subtle);">
-            <Loader2 class="w-4 h-4 animate-spin" />
-            Loading tags and releases…
-          </div>
+          <StateDisplay type="loading" inline message="Loading tags and releases…" class="py-2 text-sm" />
         {:else if releaseCandidates.length === 0}
           <p class="text-sm py-2" style="color: var(--ds-text-subtle);">No tags or releases were found in this repository.</p>
         {:else}
@@ -348,7 +343,7 @@
             title="Generate release notes with AI"
           >
             {#if generatingNotes}
-              <Loader2 class="w-3 h-3 animate-spin" />
+              <Spinner size="sm" />
             {:else}
               <Sparkles class="w-3 h-3" />
             {/if}

@@ -26,6 +26,8 @@
   import EmptyState from '../components/EmptyState.svelte';
   import AlertBox from '../components/AlertBox.svelte';
   import LocalizedObjectFields from './LocalizedObjectFields.svelte';
+	import TextareaField from '../components/TextareaField.svelte';
+	import TextField from '../components/TextField.svelte';
 
   let notificationSettings = $state([]);
   let availableEvents = $state([]);
@@ -336,24 +338,26 @@
         {:else}
         <div class="grid grid-cols-1 gap-4">
           <div>
-            <Label for="name" color="default" required class="mb-1">{t('settings.notifications.name')}</Label>
-            <Input
+            <TextField
+              label={t('settings.notifications.name')}
               id="name"
-              type="text"
-              bind:value={formData.name}
-              placeholder={t('settings.notifications.namePlaceholder')}
               required
+              labelColor="default"
+              type="text"
+              placeholder={t('settings.notifications.namePlaceholder')}
               size="small"
+              bind:value={formData.name}
             />
           </div>
 
           <div>
-            <Label for="description" color="default" class="mb-1">{t('settings.notifications.description')}</Label>
-            <Textarea
+            <TextareaField
+              label={t('settings.notifications.description')}
               id="description"
-              bind:value={formData.description}
+              labelColor="default"
               placeholder={t('settings.notifications.descriptionPlaceholder')}
               rows={3}
+              bind:value={formData.description}
             />
           </div>
 

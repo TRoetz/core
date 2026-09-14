@@ -8,6 +8,8 @@
   import Checkbox from '../components/Checkbox.svelte';
   import { t } from '../stores/i18n.svelte.js';
   import LocalizedObjectFields from '../settings/LocalizedObjectFields.svelte';
+	import TextareaField from '../components/TextareaField.svelte';
+	import TextField from '../components/TextField.svelte';
 
   let {
     isOpen = false,
@@ -66,13 +68,13 @@
         {/key}
       {:else}
         <div class="mb-6">
-          <Label required class="mb-2">{t('common.name')}</Label>
-          <Input
-            type="text"
-            bind:value={formData.name}
-            placeholder={t('statusCategory.namePlaceholder')}
+          <TextField
+            label={t('common.name')}
             required
+            type="text"
+            placeholder={t('statusCategory.namePlaceholder')}
             size="medium"
+            bind:value={formData.name}
           />
         </div>
       {/if}
@@ -84,10 +86,10 @@
 
       {#if !isEditing}
         <div class="mb-6">
-          <Label class="mb-2">{t('common.description')}</Label>
-          <Textarea
-            bind:value={formData.description}
+          <TextareaField
+            label={t('common.description')}
             rows={2}
+            bind:value={formData.description}
           />
         </div>
       {/if}

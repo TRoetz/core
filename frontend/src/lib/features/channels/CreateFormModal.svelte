@@ -10,6 +10,7 @@
   import DialogFooter from '../../dialogs/DialogFooter.svelte';
   import BasePicker from '../../pickers/BasePicker.svelte';
   import DescriptionText from '../../components/DescriptionText.svelte';
+	import TextField from '../../components/TextField.svelte';
 
   let {
     isOpen = $bindable(false),
@@ -141,12 +142,13 @@
     <!-- Content -->
     <div class="p-6 space-y-4">
       <div>
-        <Label for="form-name" required color="default" class="mb-2">{t('forms.formName')}</Label>
-        <Input
+        <TextField
+          label={t('forms.formName')}
           id="form-name"
-          bind:value={formData.name}
           required
+          labelColor="default"
           placeholder={t('forms.formNamePlaceholder')}
+          bind:value={formData.name}
         />
         <DescriptionText>
           The public-facing name people use to choose this form.

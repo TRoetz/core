@@ -310,12 +310,14 @@
 
     <!-- Description -->
     <div>
-      <Label color="default" required class="mb-2">{t('common.description')}</Label>
-      <Input
+      <TextField
+        label={t('common.description')}
         id="time-log-description"
-        bind:value={formData.description}
+        required
+        labelColor="default"
         placeholder={t('time.whatDidYouWorkOn')}
         size="small"
+        bind:value={formData.description}
       />
     </div>
 
@@ -324,37 +326,41 @@
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
       <!-- Start Time -->
       <div>
-        <Label color="default" class="mb-2">{t('time.start')}</Label>
-        <Input
+        <TextField
+          label={t('time.start')}
           id="time-log-start-time"
+          labelColor="default"
           type="time"
-          bind:value={formData.start_time}
           oninput={onStartTimeChange}
           size="small"
+          bind:value={formData.start_time}
         />
       </div>
 
       <!-- Duration -->
       <div>
-        <Label color="default" required class="mb-2">{t('time.duration')}</Label>
-        <Input
+        <TextField
+          label={t('time.duration')}
           id="time-log-duration"
-          bind:value={formData.duration}
+          required
+          labelColor="default"
           oninput={onDurationChange}
           placeholder="2h"
           size="small"
+          bind:value={formData.duration}
         />
       </div>
 
       <!-- End Time -->
       <div>
-        <Label color="default" class="mb-2">{t('time.end')}</Label>
-        <Input
+        <TextField
+          label={t('time.end')}
           id="time-log-end-time"
+          labelColor="default"
           type="time"
-          bind:value={formData.end_time}
           oninput={onEndTimeChange}
           size="small"
+          bind:value={formData.end_time}
         />
       </div>
 

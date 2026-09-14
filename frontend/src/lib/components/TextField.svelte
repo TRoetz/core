@@ -16,11 +16,23 @@
    *   min?: any,
    *   max?: any,
    *   step?: any,
+   *   name?: string,
+   *   autocomplete?: string,
+   *   pattern?: string,
+   *   readonly?: boolean,
+   *   minlength?: number,
+   *   maxlength?: number,
+   *   title?: string,
    *   labelColor?: 'default' | 'subtle',
    *   labelClass?: string,
    *   dataTestid?: string,
    *   inputRef?: any,
    *   oninput?: (e?: any) => void,
+   *   onchange?: (e?: any) => void,
+   *   onfocus?: (e?: any) => void,
+   *   onblur?: (e?: any) => void,
+   *   onkeydown?: (e?: any) => void,
+   *   onkeyup?: (e?: any) => void,
    *   class?: string,
    * }}
    */
@@ -37,11 +49,23 @@
     min = undefined,
     max = undefined,
     step = undefined,
+    name = undefined,
+    autocomplete = undefined,
+    pattern = undefined,
+    readonly = false,
+    minlength = undefined,
+    maxlength = undefined,
+    title = undefined,
     labelColor = 'subtle', // 'default' | 'subtle'
     labelClass = 'mb-2',
     dataTestid = undefined,
     inputRef = $bindable(null),
     oninput = undefined,
+    onchange = undefined,
+    onfocus = undefined,
+    onblur = undefined,
+    onkeydown = undefined,
+    onkeyup = undefined,
     class: className = ''
   } = $props();
 </script>
@@ -63,7 +87,19 @@
     {min}
     {max}
     {step}
+    {name}
+    {autocomplete}
+    {pattern}
+    {readonly}
+    {minlength}
+    {maxlength}
+    {title}
     {dataTestid}
     {oninput}
+    {onchange}
+    {onfocus}
+    {onblur}
+    {onkeydown}
+    {onkeyup}
   />
 </div>

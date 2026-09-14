@@ -12,6 +12,7 @@
   import { t } from '../stores/i18n.svelte.js';
   import { errorToast, warningToast } from '../stores/toasts.svelte.js';
 	import TextField from '../components/TextField.svelte';
+	import TextareaField from '../components/TextareaField.svelte';
 
   // Props
   let {
@@ -199,8 +200,11 @@
       </div>
 
       <div class="mt-6">
-        <Label class="mb-2">{t('common.description')}</Label>
-        <Textarea bind:value={formData.description} rows={3} />
+        <TextareaField
+          label={t('common.description')}
+          rows={3}
+          bind:value={formData.description}
+        />
       </div>
 
       <div class="mt-6">

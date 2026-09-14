@@ -32,6 +32,8 @@
   import { BOOLEAN_CUSTOM_FIELD_TYPE, canonicalCustomFieldType, isBooleanCustomFieldType } from '../utils/customFieldTypes.js';
   import { workspaceDataStore } from '../stores/workspaceDataStore.svelte.js';
 	import TextField from '../components/TextField.svelte';
+	import SelectField from '../components/SelectField.svelte';
+	import TextareaField from '../components/TextareaField.svelte';
 
   const entityTypeOptions = [
     { id: 'item', name: 'Items' },
@@ -827,13 +829,13 @@
 
       {#if needsMaxLength}
         <div class="mt-6">
-          <Label for="field-max-length" class="mb-2">Maximum Length (optional)</Label>
-          <Input
+          <TextField
+            label={"Maximum Length (optional)"}
             id="field-max-length"
             type="number"
-            bind:value={formData.field_config.max_length}
             min={1}
             placeholder="Leave empty for no limit"
+            bind:value={formData.field_config.max_length}
           />
         </div>
       {/if}
@@ -881,8 +883,13 @@
 
       {#if isAssetField}
         <div class="mt-6">
-          <Label for="asset-set" required class="mb-2">Asset Set</Label>
-          <Select id="asset-set" bind:value={assetSetId} required options={[{ value: null, label: 'Select asset set...' }, ...assetSets.map(set => ({ value: set.id, label: set.name }))]} />
+          <SelectField
+            label={"Asset Set"}
+            id="asset-set"
+            required
+            options={[{ value: null, label: 'Select asset set...' }, ...assetSets.map(set => ({ value: set.id, label: set.name }))]}
+            bind:value={assetSetId}
+          />
         </div>
 
         <div class="mt-4 flex items-center gap-4">
@@ -894,12 +901,12 @@
         </div>
 
         <div class="mt-4">
-          <Label for="asset-ql" class="mb-2">Filter Query (QL)</Label>
-          <Textarea
+          <TextareaField
+            label={"Filter Query (QL)"}
             id="asset-ql"
-            bind:value={assetQlQuery}
             rows={3}
-            placeholder='e.g., type = "Laptop" AND status = "Active"'
+            placeholder="e.g., type = &quot;Laptop&quot; AND status = &quot;Active&quot;"
+            bind:value={assetQlQuery}
           />
           <p class="text-sm mt-1" style="color: var(--ds-text-subtle);">
             Optional: Filter assets shown to users. Leave empty to show all assets in the set.
@@ -915,8 +922,13 @@
             </p>
           {:else}
             <div>
-              <Label for="linking-link-type" required class="mb-2">Link Type</Label>
-              <Select id="linking-link-type" bind:value={linkingLinkTypeId} required options={[{ value: null, label: 'Select link type...' }, ...linkTypes.filter(lt => lt.active !== false).map(lt => ({ value: lt.id, label: `${lt.name} (${lt.forward_label} / ${lt.reverse_label})` }))]} />
+              <SelectField
+                label={"Link Type"}
+                id="linking-link-type"
+                required
+                options={[{ value: null, label: 'Select link type...' }, ...linkTypes.filter(lt => lt.active !== false).map(lt => ({ value: lt.id, label: `${lt.name} (${lt.forward_label} / ${lt.reverse_label})` }))]}
+                bind:value={linkingLinkTypeId}
+              />
             </div>
 
             <div>
@@ -1034,13 +1046,13 @@
 <Modal isOpen={showSettingsModal} onclose={() => showSettingsModal = false} maxWidth="max-w-md">
   <ModalHeader title={t('fields.indexSettings')} showCloseButton={false} />
   <div class="px-6 py-4">
-    <Label for="max-indexes" class="mb-2">Maximum indexes per table</Label>
-    <Input
+    <TextField
+      label={"Maximum indexes per table"}
       id="max-indexes"
       type="number"
-      bind:value={settingsMaxIndexes}
       min={1}
       max={100}
+      bind:value={settingsMaxIndexes}
     />
     <p class="text-xs mt-2" style="color: var(--ds-text-subtle);">
       Controls how many custom field indexes can be created per table (items, assets). Higher values allow more indexed fields but may impact write performance. Currently using {indexCounts.items?.current || 0} on items and {indexCounts.assets?.current || 0} on assets.

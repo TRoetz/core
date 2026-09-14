@@ -1,5 +1,6 @@
 <script>
 	import { onMount } from 'svelte';
+	import Avatar from '../components/Avatar.svelte';
 	import { api } from '../api.js';
 	import { authStore } from '../stores';
 	import { Plus, Edit, Trash2, RotateCcw, Circle, CheckCircle, Key, Users, UserCheck, UserX, AlertTriangle, Send, Link } from '@lucide/svelte';
@@ -649,14 +650,15 @@
 
 				{#if !generateRandomPassword}
 					<div class="ml-6">
-						<Label for="new-password" color="default" class="mb-1">{t('auth.newPassword')}</Label>
-						<Input
+						<TextField
+							label={t('auth.newPassword')}
 							id="new-password"
+							required
+							labelColor="default"
 							type="password"
-							bind:value={newPassword}
-							required={!generateRandomPassword}
 							placeholder={t('placeholders.enterNewPassword')}
 							size="small"
+							bind:value={newPassword}
 						/>
 					</div>
 				{/if}
@@ -728,15 +730,11 @@
 		>
 			{#snippet name(user)}
 				<div class="flex items-center">
-					{#if user.avatar_url}
-						<img class="h-10 w-10 rounded-full" src={user.avatar_url} alt="" />
-					{:else}
-						<div class="h-10 w-10 rounded-full flex items-center justify-center" style="background-color: var(--ds-background-neutral)">
-							<span class="text-sm font-medium" style="color: var(--ds-text)">
-								{user.first_name.charAt(0)}{user.last_name.charAt(0)}
-							</span>
-						</div>
-					{/if}
+					<Avatar
+						src={user.avatar_url}
+						name={[user.first_name, user.last_name].filter(Boolean).join(' ')}
+						size="lg"
+					/>
 					<div class="ml-4">
 						<div class="text-sm font-medium flex items-center gap-2" style="color: var(--ds-text)">
 							{user.full_name}

@@ -1,5 +1,6 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
+  import ColorDot from '../components/ColorDot.svelte';
   import TabStrip from '../components/TabStrip.svelte';
   import { draggable, dropTargetForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
   import { attachClosestEdge, extractClosestEdge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge';
@@ -900,7 +901,7 @@
                     <DragHandleDots class="w-4 h-4 group-hover:text-ds-interactive" />
                   </div>
                   <!-- Color dot -->
-                  <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background-color: {status.category_color || '#6b7280'};"></span>
+                  <ColorDot size="md" color={status.category_color || '#6b7280'} class="flex-shrink-0" />
                   <!-- Status name -->
                   <span class="text-sm truncate" style="color: var(--ds-text);">{objectDisplayName(status, 'status')}</span>
                 </div>

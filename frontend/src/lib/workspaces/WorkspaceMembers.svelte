@@ -20,6 +20,7 @@
   import { t } from '../stores/i18n.svelte.js';
   import { toHotkeyString } from '../utils/keyboardShortcuts.js';
   import { objectDisplayDescription, objectDisplayName } from '../utils/systemLabels.js';
+	import SelectField from '../components/SelectField.svelte';
 
   let { workspaceId } = $props();
 
@@ -562,11 +563,13 @@
       </div>
 
       <div>
-        <Label color="default" required class="mb-2">{t('workspaceMembers.role')}</Label>
-        <Select
-          bind:value={selectedRoleId}
+        <SelectField
+          label={t('workspaceMembers.role')}
+          required
+          labelColor="default"
           onchange={(value) => selectedRoleId = value ? Number(value) : null}
           options={[{ value: null, label: t('workspaceMembers.selectRole') }, ...roles.map(role => ({ value: role.id, label: `${getRoleName(role)} — ${getRoleDescription(role)}` }))]}
+          bind:value={selectedRoleId}
         />
       </div>
     </div>
@@ -616,11 +619,13 @@
       </div>
 
       <div>
-        <Label color="default" required class="mb-2">{t('workspaceMembers.role')}</Label>
-        <Select
-          bind:value={selectedGroupRoleId}
+        <SelectField
+          label={t('workspaceMembers.role')}
+          required
+          labelColor="default"
           onchange={(value) => selectedGroupRoleId = value ? Number(value) : null}
           options={[{ value: null, label: t('workspaceMembers.selectRole') }, ...roles.map(role => ({ value: role.id, label: `${getRoleName(role)} — ${getRoleDescription(role)}` }))]}
+          bind:value={selectedGroupRoleId}
         />
       </div>
     </div>

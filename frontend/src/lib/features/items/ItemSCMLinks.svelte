@@ -1,8 +1,9 @@
 <script>
   import { onDestroy, onMount } from 'svelte';
+  import Spinner from '../../components/Spinner.svelte';
   import { useEventListener } from 'runed';
   import { api } from '../../api.js';
-  import { GitMerge, GitBranch, GitCommit, ExternalLink, Plus, RefreshCw, Trash2, ChevronDown, ChevronRight, Loader2, GitBranchPlus, Link2 } from '@lucide/svelte';
+  import { GitMerge, GitBranch, GitCommit, ExternalLink, Plus, RefreshCw, Trash2, ChevronDown, ChevronRight, GitBranchPlus, Link2 } from '@lucide/svelte';
   import Button from '../../components/Button.svelte';
   import Text from '../../components/Text.svelte';
   import { t } from '../../stores/i18n.svelte.js';
@@ -267,7 +268,7 @@
     <div class="space-y-2 mt-1">
       {#if checkingConnection || loading}
         <div class="flex items-center justify-center py-3">
-          <Loader2 class="w-4 h-4 animate-spin" style="color: var(--ds-text-subtle);" />
+          <Spinner size="sm" />
         </div>
       {:else if !connectionStatus?.has_repositories}
         <!-- No SCM repositories configured for this workspace -->

@@ -18,6 +18,8 @@
   import RolePicker from '../pickers/RolePicker.svelte';
   import DescriptionText from '../components/DescriptionText.svelte';
   import TransitionOverrideWarning from '../components/TransitionOverrideWarning.svelte';
+	import TextareaField from '../components/TextareaField.svelte';
+	import TextField from '../components/TextField.svelte';
 
   let conditionSetId = $state(null);
   let isNewMode = $state(false);
@@ -465,20 +467,23 @@
           <h3 class="text-base font-medium mb-4" style="color: var(--ds-text);">{t('conditionSets.general')}</h3>
           <div class="space-y-4">
             <div>
-              <Label color="default" required class="mb-1">{t('conditionSets.name')}</Label>
-              <Input
+              <TextField
+                label={t('conditionSets.name')}
+                required
+                labelColor="default"
                 type="text"
-                bind:value={formData.name}
                 placeholder={t('conditionSets.namePlaceholder')}
                 size="small"
+                bind:value={formData.name}
               />
             </div>
             <div>
-              <Label color="default" class="mb-1">{t('conditionSets.description')}</Label>
-              <Textarea
-                bind:value={formData.description}
+              <TextareaField
+                label={t('conditionSets.description')}
+                labelColor="default"
                 rows={2}
                 placeholder={t('conditionSets.descriptionPlaceholder')}
+                bind:value={formData.description}
               />
             </div>
             <div>

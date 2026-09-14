@@ -8,6 +8,8 @@
   import { t } from '../stores/i18n.svelte.js';
   import DescriptionText from '../components/DescriptionText.svelte';
 	import TextField from '../components/TextField.svelte';
+	import TextareaField from '../components/TextareaField.svelte';
+	import SelectField from '../components/SelectField.svelte';
 
   // Props
   let {
@@ -59,18 +61,27 @@
     </div>
 
     <div>
-      <Label class="mb-2">{t('timeProject.status')}</Label>
-      <Select bind:value={formData.status} options={statusOptions.map(status => ({ value: status, label: status }))} />
+      <SelectField
+        label={t('timeProject.status')}
+        options={statusOptions.map(status => ({ value: status, label: status }))}
+        bind:value={formData.status}
+      />
     </div>
 
     <div>
-      <Label class="mb-2">{t('timeProject.customerOptional')}</Label>
-      <Select bind:value={formData.customer_id} options={[{ value: '', label: t('timeProject.none') }, ...customers.filter(c => c.active).map(customer => ({ value: customer.id, label: customer.name }))]} />
+      <SelectField
+        label={t('timeProject.customerOptional')}
+        options={[{ value: '', label: t('timeProject.none') }, ...customers.filter(c => c.active).map(customer => ({ value: customer.id, label: customer.name }))]}
+        bind:value={formData.customer_id}
+      />
     </div>
 
     <div>
-      <Label class="mb-2">{t('timeProject.categoryOptional')}</Label>
-      <Select bind:value={formData.category_id} options={[{ value: '', label: t('timeProject.none') }, ...categories.map(category => ({ value: category.id, label: category.name }))]} />
+      <SelectField
+        label={t('timeProject.categoryOptional')}
+        options={[{ value: '', label: t('timeProject.none') }, ...categories.map(category => ({ value: category.id, label: category.name }))]}
+        bind:value={formData.category_id}
+      />
     </div>
   </div>
 
@@ -85,8 +96,14 @@
   </div>
 
   <div class="mt-6">
-    <Label class="mb-2">{t('timeProject.maxHours')}</Label>
-    <Input type="number" bind:value={formData.settings.max_hours} min="0" step="0.5" placeholder={t('timeProject.maxHoursPlaceholder')} />
+    <TextField
+      label={t('timeProject.maxHours')}
+      type="number"
+      min="0"
+      step="0.5"
+      placeholder={t('timeProject.maxHoursPlaceholder')}
+      bind:value={formData.settings.max_hours}
+    />
     <DescriptionText as="div">
       {t('timeProject.maxHoursHint')}
     </DescriptionText>
@@ -111,7 +128,11 @@
   </div>
 
   <div class="mt-6">
-    <Label class="mb-2">{t('common.description')}</Label>
-    <Textarea id="time-project-description" bind:value={formData.description} rows={3} />
+    <TextareaField
+      label={t('common.description')}
+      id="time-project-description"
+      rows={3}
+      bind:value={formData.description}
+    />
   </div>
 </FormModal>

@@ -5,6 +5,8 @@
   import Textarea from '../components/Textarea.svelte';
   import Label from '../components/Label.svelte';
   import { t } from '../stores/i18n.svelte.js';
+	import TextareaField from '../components/TextareaField.svelte';
+	import TextField from '../components/TextField.svelte';
 
   // Props
   let {
@@ -42,20 +44,20 @@
 
       <div class="space-y-4">
         <div>
-          <Label required class="mb-2">{t('timeProjectCategory.categoryName')}</Label>
-          <Input
-            bind:value={formData.name}
-            placeholder={t('timeProjectCategory.categoryNamePlaceholder')}
+          <TextField
+            label={t('timeProjectCategory.categoryName')}
             required
+            placeholder={t('timeProjectCategory.categoryNamePlaceholder')}
+            bind:value={formData.name}
           />
         </div>
 
         <div>
-          <Label class="mb-2">{t('common.description')}</Label>
-          <Textarea
-            bind:value={formData.description}
+          <TextareaField
+            label={t('common.description')}
             rows={3}
             placeholder={t('timeProjectCategory.optionalDescription')}
+            bind:value={formData.description}
           />
         </div>
       </div>

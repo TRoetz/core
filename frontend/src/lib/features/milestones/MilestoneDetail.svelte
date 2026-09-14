@@ -26,6 +26,7 @@
   import DialogFooter from '../../dialogs/DialogFooter.svelte';
   import MilestoneReleaseModal from './MilestoneReleaseModal.svelte';
 	import TextField from '../../components/TextField.svelte';
+	import TextareaField from '../../components/TextareaField.svelte';
 
   let { milestoneId, workspaceId = null } = $props();
 
@@ -380,13 +381,13 @@
     <form onsubmit={(e) => { e.preventDefault(); saveMilestone(); }}>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <Label for="milestone-name" required class="mb-2">{t('milestones.milestoneName')}</Label>
-          <Input
+          <TextField
+            label={t('milestones.milestoneName')}
             id="milestone-name"
-            type="text"
-            bind:value={formData.name}
-            placeholder={t('milestones.milestoneNamePlaceholder')}
             required
+            type="text"
+            placeholder={t('milestones.milestoneNamePlaceholder')}
+            bind:value={formData.name}
           />
         </div>
 
@@ -411,12 +412,12 @@
         </div>
 
         <div class="md:col-span-2">
-          <Label for="milestone-description" class="mb-2">{t('common.description')}</Label>
-          <Textarea
+          <TextareaField
+            label={t('common.description')}
             id="milestone-description"
-            bind:value={formData.description}
             rows={3}
             placeholder={t('milestones.descriptionPlaceholder')}
+            bind:value={formData.description}
           />
         </div>
       </div>

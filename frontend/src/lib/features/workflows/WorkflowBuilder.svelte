@@ -22,6 +22,7 @@
   import { toHotkeyString } from '../../utils/keyboardShortcuts.js';
   import { objectDisplayValue } from '../../utils/systemLabels.js';
   import LocalizedObjectFields from '../../settings/LocalizedObjectFields.svelte';
+	import TextareaField from '../../components/TextareaField.svelte';
 
   let workflows = $state([]);
   let searchQuery = $state('');
@@ -327,11 +328,12 @@
         </div>
 
         <div>
-          <Label color="default" class="mb-2">{t('common.description')}</Label>
-          <Textarea
-            bind:value={newWorkflow.description}
+          <TextareaField
+            label={t('common.description')}
+            labelColor="default"
             placeholder={t('workflows.descriptionPlaceholder')}
             rows={2}
+            bind:value={newWorkflow.description}
           />
         </div>
 

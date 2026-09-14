@@ -13,6 +13,7 @@
   import Toggle from '../components/Toggle.svelte';
   import { i18n, SUPPORTED_LOCALES, t } from '../stores/i18n.svelte.js';
 	import TextField from '../components/TextField.svelte';
+	import SelectField from '../components/SelectField.svelte';
 
   let {
     isOpen = $bindable(true),
@@ -213,13 +214,14 @@
           </div>
 
           <div class="max-w-sm mx-auto">
-            <Label for="setup-language" color="default" class="mb-2">{t('setup.language')}</Label>
-            <Select
+            <SelectField
+              label={t('setup.language')}
               id="setup-language"
-              bind:value={selectedLanguage}
+              labelColor="default"
               options={languageOptions}
               onchange={handleLanguageChange}
               ariaLabel={t('setup.language')}
+              bind:value={selectedLanguage}
             />
           </div>
         </div>
@@ -238,50 +240,54 @@
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label for="first_name" color="default" required class="mb-2">{t('setup.firstName')}</Label>
-              <Input
+              <TextField
+                label={t('setup.firstName')}
                 id="first_name"
-                type="text"
-                bind:value={adminUser.first_name}
-                placeholder={t('setup.firstName')}
                 required
+                labelColor="default"
+                type="text"
+                placeholder={t('setup.firstName')}
                 size="small"
+                bind:value={adminUser.first_name}
               />
             </div>
 
             <div>
-              <Label for="last_name" color="default" required class="mb-2">{t('setup.lastName')}</Label>
-              <Input
+              <TextField
+                label={t('setup.lastName')}
                 id="last_name"
-                type="text"
-                bind:value={adminUser.last_name}
-                placeholder={t('setup.lastName')}
                 required
+                labelColor="default"
+                type="text"
+                placeholder={t('setup.lastName')}
                 size="small"
+                bind:value={adminUser.last_name}
               />
             </div>
           </div>
 
           <div>
-            <Label for="email" color="default" required class="mb-2">{t('setup.emailAddress')}</Label>
-            <Input
+            <TextField
+              label={t('setup.emailAddress')}
               id="email"
-              type="email"
-              bind:value={adminUser.email}
-              placeholder={t('setup.emailAddress')}
               required
+              labelColor="default"
+              type="email"
+              placeholder={t('setup.emailAddress')}
               size="small"
+              bind:value={adminUser.email}
             />
           </div>
 
           <div>
-            <Label for="username" color="default" class="mb-2">{t('setup.username')}</Label>
-            <Input
+            <TextField
+              label={t('setup.username')}
               id="username"
+              labelColor="default"
               type="text"
-              bind:value={adminUser.username}
               placeholder={t('setup.username')}
               size="small"
+              bind:value={adminUser.username}
             />
           </div>
 

@@ -351,7 +351,7 @@
           {@const selectedCategory = selectedCategoryId !== null ? categories.find(c => c.id === selectedCategoryId) : null}
           <div class="flex items-center gap-2 px-4 py-2 rounded text-sm font-medium border cursor-pointer" style="background-color: var(--ds-surface-raised); border-color: var(--ds-border);">
             {#if selectedCategory}
-              <div class="w-2.5 h-2.5 rounded-full" style="background-color: {selectedCategory.color};"></div>
+              <ColorDot size="md" color={selectedCategory.color} />
             {/if}
             <DropdownMenu
               items={categoryDropdownItems}
@@ -401,7 +401,7 @@
       {#if project.category_name}
         <div class="flex items-center gap-2">
           {#if project.category_color}
-            <div class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background-color: {project.category_color};"></div>
+            <ColorDot size="md" color={project.category_color} class="flex-shrink-0" />
           {/if}
           <span class="text-sm" style="color: var(--ds-text);">{project.category_name}</span>
         </div>

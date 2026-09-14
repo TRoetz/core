@@ -23,6 +23,9 @@
   import ChannelFormConfig from '../features/channels/ChannelFormConfig.svelte';
   import FormBuilder from '../features/channels/FormBuilder.svelte';
   import { formatAuthenticatedDateTime } from '../utils/authenticatedDateFormatter.js';
+	import TextareaField from '../components/TextareaField.svelte';
+	import SelectField from '../components/SelectField.svelte';
+	import TextField from '../components/TextField.svelte';
 
   let {
     isOpen = false,
@@ -568,17 +571,33 @@
             <div class="space-y-4">
               <div class="grid grid-cols-2 gap-4">
                 <div>
-                  <Label color="default" class="mb-2">{t('channel.name')}</Label>
-                  <Input bind:value={channelFormData.name} placeholder={t('channel.channelName')} disabled={isPluginOwned(channel)} />
+                  <TextField
+                    label={t('channel.name')}
+                    labelColor="default"
+                    placeholder={t('channel.channelName')}
+                    disabled={isPluginOwned(channel)}
+                    bind:value={channelFormData.name}
+                  />
                 </div>
                 <div>
-                  <Label color="default" class="mb-2">{t('channel.category')}</Label>
-                  <Select bind:value={channelFormData.category_id} disabled={isPluginOwned(channel)} options={[{ value: null, label: t('channel.noCategory') }, ...$channelCategoriesStore.map(category => ({ value: category.id, label: category.name }))]} />
+                  <SelectField
+                    label={t('channel.category')}
+                    labelColor="default"
+                    disabled={isPluginOwned(channel)}
+                    options={[{ value: null, label: t('channel.noCategory') }, ...$channelCategoriesStore.map(category => ({ value: category.id, label: category.name }))]}
+                    bind:value={channelFormData.category_id}
+                  />
                 </div>
               </div>
               <div>
-                <Label color="default" class="mb-2">{t('channel.description')}</Label>
-                <Textarea bind:value={channelFormData.description} rows={2} placeholder={t('channel.briefDescription')} disabled={isPluginOwned(channel)} />
+                <TextareaField
+                  label={t('channel.description')}
+                  labelColor="default"
+                  rows={2}
+                  placeholder={t('channel.briefDescription')}
+                  disabled={isPluginOwned(channel)}
+                  bind:value={channelFormData.description}
+                />
               </div>
             </div>
           </div>

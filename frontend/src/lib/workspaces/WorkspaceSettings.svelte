@@ -28,6 +28,9 @@
   import { successToast, errorToast } from '../stores/toasts.svelte.js';
   import { t } from '../stores/i18n.svelte.js';
   import DescriptionText from '../components/DescriptionText.svelte';
+	import SelectField from '../components/SelectField.svelte';
+	import TextareaField from '../components/TextareaField.svelte';
+	import TextField from '../components/TextField.svelte';
 
   let { workspaceId = null, activeTab = $bindable('general') } = $props();
 
@@ -314,23 +317,23 @@
         <div class="space-y-6">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <Label for="workspace-name" required class="mb-2">{t('workspaceSettings.workspaceName')}</Label>
-            <Input
+            <TextField
+              label={t('workspaceSettings.workspaceName')}
               id="workspace-name"
-              bind:value={formData.name}
-              placeholder={t('workspaceSettings.workspaceNamePlaceholder')}
               required
+              placeholder={t('workspaceSettings.workspaceNamePlaceholder')}
+              bind:value={formData.name}
             />
           </div>
 
           <div>
-            <Label for="workspace-key" class="mb-2">{t('workspaceSettings.workspaceKey')}</Label>
-            <Input
+            <TextField
+              label={t('workspaceSettings.workspaceKey')}
               id="workspace-key"
-              bind:value={formData.key}
               placeholder={t('workspaceSettings.workspaceKeyPlaceholder')}
               disabled
               dataTestid="workspace-key-input"
+              bind:value={formData.key}
             />
             <DescriptionText>
               {t('workspaceSettings.workspaceKeyImmutable')}
@@ -339,22 +342,22 @@
         </div>
 
         <div>
-          <Label for="workspace-description" class="mb-2">{t('workspaceSettings.description')}</Label>
-          <Textarea
+          <TextareaField
+            label={t('workspaceSettings.description')}
             id="workspace-description"
-            bind:value={formData.description}
             rows={3}
             placeholder={t('workspaceSettings.descriptionPlaceholder')}
+            bind:value={formData.description}
           />
         </div>
 
         {#if $moduleSettings.time_tracking_enabled}
           <div>
-            <Label for="workspace-project" class="mb-2">{t('workspaceSettings.defaultTimeProject')}</Label>
-            <Select
+            <SelectField
+              label={t('workspaceSettings.defaultTimeProject')}
               id="workspace-project"
-              bind:value={formData.time_project_id}
               options={[{ value: null, label: t('workspaceSettings.noDefaultProject') }, ...timeProjects.map(project => ({ value: project.id, label: `${project.name} (${project.customer_name})` }))]}
+              bind:value={formData.time_project_id}
             />
             <DescriptionText>
               {t('workspaceSettings.defaultTimeProjectHelp')}
@@ -363,18 +366,18 @@
         {/if}
 
         <div>
-          <Label for="workspace-view" class="mb-2">{t('workspaceSettings.defaultView')}</Label>
-          <Select
+          <SelectField
+            label={t('workspaceSettings.defaultView')}
             id="workspace-view"
-            bind:value={formData.default_view}
             options={[
-              { value: 'board', label: t('workspaceSettings.views.board') },
-              { value: 'backlog', label: t('workspaceSettings.views.backlog') },
-              { value: 'list', label: t('workspaceSettings.views.list') },
-              { value: 'tree', label: t('workspaceSettings.views.tree') },
-              { value: 'map', label: t('workspaceSettings.views.map') },
-              { value: 'overview', label: t('workspaceSettings.views.overview') },
+            { value: 'board', label: t('workspaceSettings.views.board') },
+            { value: 'backlog', label: t('workspaceSettings.views.backlog') },
+            { value: 'list', label: t('workspaceSettings.views.list') },
+            { value: 'tree', label: t('workspaceSettings.views.tree') },
+            { value: 'map', label: t('workspaceSettings.views.map') },
+            { value: 'overview', label: t('workspaceSettings.views.overview') },
             ]}
+            bind:value={formData.default_view}
           />
           <DescriptionText>
             {t('workspaceSettings.defaultViewHelp')}

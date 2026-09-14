@@ -11,6 +11,7 @@
   import Toggle from '../../components/Toggle.svelte';
   import { isSystemAdmin } from '../../stores/permissions.svelte.js';
 	import TextField from '../../components/TextField.svelte';
+	import SelectField from '../../components/SelectField.svelte';
 
   let {
     channelId,
@@ -139,16 +140,17 @@
       </div>
 
       <div>
-        <Label color="default" class="mb-2">{t('channel.smtpEncryption')}</Label>
-        <Select
+        <SelectField
+          label={t('channel.smtpEncryption')}
           id="smtp-encryption"
-          bind:value={formData.encryption}
+          labelColor="default"
           ariaLabel={t('channel.smtpEncryption')}
           options={[
-            { value: 'tls', label: 'STARTTLS (Port 587)' },
-            { value: 'ssl', label: 'Implicit TLS (Port 465)' },
-            { value: 'none', label: t('channel.noEncryption') }
+          { value: 'tls', label: 'STARTTLS (Port 587)' },
+          { value: 'ssl', label: 'Implicit TLS (Port 465)' },
+          { value: 'none', label: t('channel.noEncryption') }
           ]}
+          bind:value={formData.encryption}
         />
       </div>
 
@@ -175,12 +177,24 @@
         <h5 class="text-sm font-semibold mb-3" style="color: var(--ds-text);">{t('channel.authentication')}</h5>
         <div class="space-y-4">
           <div>
-            <Label color="default" class="mb-2">{t('channel.smtpUsername')}</Label>
-            <Input type="text" bind:value={formData.username} placeholder={t('channel.smtpUsernamePlaceholder')} dataTestid="smtp-username" />
+            <TextField
+              label={t('channel.smtpUsername')}
+              labelColor="default"
+              type="text"
+              placeholder={t('channel.smtpUsernamePlaceholder')}
+              dataTestid="smtp-username"
+              bind:value={formData.username}
+            />
           </div>
           <div>
-            <Label color="default" class="mb-2">{t('channel.smtpPassword')}</Label>
-            <Input type="password" bind:value={formData.password} placeholder={t('channel.secretPlaceholder')} dataTestid="smtp-password" />
+            <TextField
+              label={t('channel.smtpPassword')}
+              labelColor="default"
+              type="password"
+              placeholder={t('channel.secretPlaceholder')}
+              dataTestid="smtp-password"
+              bind:value={formData.password}
+            />
             <DescriptionText>
               {t('channel.leaveBlankPassword')}
             </DescriptionText>
@@ -204,8 +218,13 @@
           />
         </div>
         <div>
-          <Label color="default" class="mb-2">{t('channel.smtpFromName')}</Label>
-          <Input type="text" bind:value={formData.from_name} placeholder={t('channel.smtpFromNamePlaceholder')} />
+          <TextField
+            label={t('channel.smtpFromName')}
+            labelColor="default"
+            type="text"
+            placeholder={t('channel.smtpFromNamePlaceholder')}
+            bind:value={formData.from_name}
+          />
         </div>
       </div>
     </div>
@@ -231,8 +250,13 @@
       <h5 class="text-sm font-semibold mb-4" style="color: var(--ds-text);">{t('channel.testSmtp')}</h5>
       <div class="space-y-4">
         <div>
-          <Label color="default" class="mb-2">{t('channel.testEmailAddress')}</Label>
-          <Input type="email" bind:value={testEmail} placeholder={t('channel.testEmailPlaceholder')} />
+          <TextField
+            label={t('channel.testEmailAddress')}
+            labelColor="default"
+            type="email"
+            placeholder={t('channel.testEmailPlaceholder')}
+            bind:value={testEmail}
+          />
         </div>
         <Button onclick={testSmtpSettings} variant="secondary" disabled={!formData.host || !formData.from_email || loading}>
           {t('channel.sendTestEmail')}

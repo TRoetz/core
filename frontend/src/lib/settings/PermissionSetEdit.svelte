@@ -15,6 +15,8 @@
   import Label from '../components/Label.svelte';
   import Chip from '../components/Chip.svelte';
   import { confirm } from '../composables/useConfirm.js';
+	import TextareaField from '../components/TextareaField.svelte';
+	import TextField from '../components/TextField.svelte';
 
   let permissionSetId = $state(null);
   let permissionSet = $state(null);
@@ -300,21 +302,24 @@
         <h2 class="text-lg font-semibold mb-4" style="color: var(--ds-text);">{t('settings.permissionSets.basicInfo')}</h2>
         <div class="space-y-4">
           <div>
-            <Label color="default" required class="mb-1">{t('common.name')}</Label>
-            <Input
+            <TextField
+              label={t('common.name')}
+              required
+              labelColor="default"
               type="text"
-              bind:value={formData.name}
               placeholder={t('settings.permissionSets.namePlaceholder')}
               size="small"
+              bind:value={formData.name}
             />
           </div>
 
           <div>
-            <Label color="default" class="mb-1">{t('common.description')}</Label>
-            <Textarea
-              bind:value={formData.description}
+            <TextareaField
+              label={t('common.description')}
+              labelColor="default"
               rows={3}
               placeholder={t('settings.permissionSets.descriptionPlaceholder')}
+              bind:value={formData.description}
             />
           </div>
 

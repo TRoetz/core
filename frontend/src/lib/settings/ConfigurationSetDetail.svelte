@@ -23,6 +23,8 @@
   import DescriptionText from '../components/DescriptionText.svelte';
   import MigrationAssistant from '../pages/MigrationAssistant.svelte';
   import LocalizedObjectFields from './LocalizedObjectFields.svelte';
+	import TextareaField from '../components/TextareaField.svelte';
+	import TextField from '../components/TextField.svelte';
 
   // Tab configuration
   let activeTab = $state('general');
@@ -388,21 +390,24 @@
                   <div class="space-y-4">
                     {#if isNewMode}
                       <div>
-                        <Label color="default" required class="mb-1">{t('settings.configSets.name')}</Label>
-                        <Input
+                        <TextField
+                          label={t('settings.configSets.name')}
+                          required
+                          labelColor="default"
                           type="text"
-                          bind:value={formData.name}
                           placeholder={t('settings.configSets.namePlaceholder')}
                           size="small"
+                          bind:value={formData.name}
                         />
                       </div>
 
                       <div>
-                        <Label color="default" class="mb-1">{t('settings.configSets.description')}</Label>
-                        <Textarea
-                          bind:value={formData.description}
+                        <TextareaField
+                          label={t('settings.configSets.description')}
+                          labelColor="default"
                           rows={3}
                           placeholder={t('settings.configSets.description')}
+                          bind:value={formData.description}
                         />
                       </div>
                     {:else if configSet}

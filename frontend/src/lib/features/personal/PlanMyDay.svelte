@@ -1,5 +1,6 @@
 <script>
   import { onMount } from 'svelte';
+  import ColorDot from '../../components/ColorDot.svelte';
   import { api, fetchAPI } from '../../api.js';
   import { Sparkles, CalendarPlus, RotateCcw, CheckCircle, AlertCircle } from '@lucide/svelte';
   import { authStore } from '../../stores';
@@ -201,7 +202,7 @@
 
                 <!-- Divider line -->
                 <div class="flex flex-col items-center flex-shrink-0 pt-1">
-                  <div class="w-2.5 h-2.5 rounded-full" style="background-color: var(--ds-icon-accent);"></div>
+                  <ColorDot size="md" color="var(--ds-icon-accent)" />
                   {#if i < plan.activities.length - 1}
                     <div class="w-px flex-1 mt-1" style="background-color: var(--ds-border); min-height: 24px;"></div>
                   {/if}

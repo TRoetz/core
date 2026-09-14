@@ -11,6 +11,7 @@
   import Label from '../../components/Label.svelte';
   import Textarea from '../../components/Textarea.svelte';
 	import TextField from '../../components/TextField.svelte';
+	import TextareaField from '../../components/TextareaField.svelte';
 
   let {
     isOpen = $bindable(false),
@@ -82,13 +83,13 @@
       <form onsubmit={(event) => { event.preventDefault(); submit(); }}>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <Label for="milestone-name" required class="mb-2">{t('milestones.milestoneName')}</Label>
-            <Input
+            <TextField
+              label={t('milestones.milestoneName')}
               id="milestone-name"
-              type="text"
-              bind:value={formData.name}
-              placeholder={t('milestones.milestoneNamePlaceholder')}
               required
+              type="text"
+              placeholder={t('milestones.milestoneNamePlaceholder')}
+              bind:value={formData.name}
             />
           </div>
 
@@ -161,12 +162,12 @@
           {/if}
 
           <div class="md:col-span-2">
-            <Label for="milestone-description" class="mb-2">{t('common.description')}</Label>
-            <Textarea
+            <TextareaField
+              label={t('common.description')}
               id="milestone-description"
-              bind:value={formData.description}
               rows={3}
               placeholder={t('milestones.descriptionPlaceholder')}
+              bind:value={formData.description}
             />
           </div>
         </div>

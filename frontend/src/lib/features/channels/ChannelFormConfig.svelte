@@ -5,6 +5,7 @@
   import Label from '../../components/Label.svelte';
   import DescriptionText from '../../components/DescriptionText.svelte';
 	import TextField from '../../components/TextField.svelte';
+	import TextareaField from '../../components/TextareaField.svelte';
 
   let {
     formData = $bindable({
@@ -132,11 +133,12 @@
     </div>
 
     <div>
-      <Label color="default" class="mb-2">{t('channel.formSuccessMessage')}</Label>
-      <Textarea
-        bind:value={formData.success_message}
+      <TextareaField
+        label={t('channel.formSuccessMessage')}
+        labelColor="default"
         placeholder={t('channel.formSuccessMessagePlaceholder')}
         rows={2}
+        bind:value={formData.success_message}
       />
     </div>
 

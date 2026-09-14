@@ -1,5 +1,6 @@
 <script>
   import { onMount } from 'svelte';
+  import Spinner from '../components/Spinner.svelte';
   import StateDisplay from '../components/StateDisplay.svelte';
   import { useDebounce } from 'runed';
   import { api } from '../api.js';
@@ -8,7 +9,7 @@
   import EmptyState from '../components/EmptyState.svelte';
   import ModalBackdrop from '../components/ModalBackdrop.svelte';
   import DialogFooter from '../dialogs/DialogFooter.svelte';
-  import { X, Search, Loader2, Check, GitBranch, Lock, Globe } from '@lucide/svelte';
+  import { X, Search, Check, GitBranch, Lock, Globe } from '@lucide/svelte';
   import { t } from '../stores/i18n.svelte.js';
 
   let { workspaceId, connection, onclose, onlinked } = $props();
@@ -284,7 +285,7 @@
         {#if hasMore}
           <div class="flex justify-center py-4">
             {#if loading}
-              <Loader2 class="w-5 h-5 animate-spin" style="color: var(--ds-text-subtle);" />
+              <Spinner size="sm" />
             {:else}
               <Button size="sm" variant="secondary" onclick={loadMore}>
                 {t('common.loadMore')}

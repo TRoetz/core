@@ -6,6 +6,9 @@
   import Select from '../../components/Select.svelte';
   import Textarea from '../../components/Textarea.svelte';
   import Label from '../../components/Label.svelte';
+	import TextareaField from '../../components/TextareaField.svelte';
+	import SelectField from '../../components/SelectField.svelte';
+	import TextField from '../../components/TextField.svelte';
 
   let {
     channelFormData = $bindable({
@@ -25,23 +28,33 @@
     <div class="space-y-4">
       <div class="grid grid-cols-2 gap-4">
         <div>
-          <Label color="default" class="mb-2">{t('channel.name')}</Label>
-          <Input bind:value={channelFormData.name} placeholder={t('channel.channelName')} />
+          <TextField
+            label={t('channel.name')}
+            labelColor="default"
+            placeholder={t('channel.channelName')}
+            bind:value={channelFormData.name}
+          />
         </div>
         <div>
-          <Label color="default" class="mb-2">{t('channel.category')}</Label>
-          <Select
-            bind:value={channelFormData.category_id}
+          <SelectField
+            label={t('channel.category')}
+            labelColor="default"
             options={[
-              { value: null, label: t('channel.noCategory') },
-              ...$channelCategoriesStore.map(c => ({ value: c.id, label: c.name })),
+            { value: null, label: t('channel.noCategory') },
+            ...$channelCategoriesStore.map(c => ({ value: c.id, label: c.name })),
             ]}
+            bind:value={channelFormData.category_id}
           />
         </div>
       </div>
       <div>
-        <Label color="default" class="mb-2">{t('channel.description')}</Label>
-        <Textarea bind:value={channelFormData.description} rows={2} placeholder={t('channel.briefDescription')} />
+        <TextareaField
+          label={t('channel.description')}
+          labelColor="default"
+          rows={2}
+          placeholder={t('channel.briefDescription')}
+          bind:value={channelFormData.description}
+        />
       </div>
     </div>
   </div>

@@ -1,7 +1,8 @@
 <script>
   import { onDestroy, onMount } from 'svelte';
+  import Spinner from '../../components/Spinner.svelte';
   import { api } from '../../api.js';
-  import { ExternalLink, Plus, RefreshCw, Trash2, ChevronDown, ChevronRight, Loader2, Link2 } from '@lucide/svelte';
+  import { ExternalLink, Plus, RefreshCw, Trash2, ChevronDown, ChevronRight, Link2 } from '@lucide/svelte';
   import Button from '../../components/Button.svelte';
   import Text from '../../components/Text.svelte';
   import { t } from '../../stores/i18n.svelte.js';
@@ -162,7 +163,7 @@
     <div class="space-y-2 mt-1">
       {#if checkingStatus || loading}
         <div class="flex items-center justify-center py-3">
-          <Loader2 class="w-4 h-4 animate-spin" style="color: var(--ds-text-subtle);" />
+          <Spinner size="sm" />
         </div>
       {:else if !hasConnection && hasProviders}
         <div class="py-3 px-3 rounded-md" style="background-color: var(--ds-background-neutral);">
@@ -224,7 +225,7 @@
                 disabled={refreshingId === link.id}
               >
                 {#if refreshingId === link.id}
-                  <Loader2 class="w-3.5 h-3.5 animate-spin" style="color: var(--ds-text-subtle);" />
+                  <Spinner size="sm" />
                 {:else}
                   <RefreshCw class="w-3.5 h-3.5" style="color: var(--ds-text-subtle);" />
                 {/if}

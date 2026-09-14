@@ -1,7 +1,8 @@
 <script>
   import { onMount } from 'svelte';
+  import Spinner from '../components/Spinner.svelte';
   import StateDisplay from '../components/StateDisplay.svelte';
-  import { Loader2 } from '@lucide/svelte';
+  import {  } from '@lucide/svelte';
   import { api } from '../api.js';
   import { t } from '../stores/i18n.svelte.js';
   import { errorToast, successToast } from '../stores/toasts.svelte.js';
@@ -169,7 +170,7 @@
 
           <div class="flex items-center gap-2 shrink-0">
             {#if saving}
-              <Loader2 class="w-4 h-4 animate-spin" style="color: var(--ds-text-subtle);" />
+              <Spinner size="sm" />
             {/if}
             <Select
               value={mode}

@@ -1,7 +1,8 @@
 <script>
   import { onMount } from 'svelte';
+  import Spinner from '../components/Spinner.svelte';
   import StateDisplay from '../components/StateDisplay.svelte';
-  import { Shield, Calendar, Image as ImageIcon, Loader2, Terminal, Key, Users, UserCog, AlertTriangle, ChevronDown, ChevronUp } from '@lucide/svelte';
+  import { Shield, Calendar, Image as ImageIcon, Terminal, Key, Users, UserCog, AlertTriangle, ChevronDown, ChevronUp } from '@lucide/svelte';
   import { agentSecurity, getSecuritySettings, updateSecuritySettings, authPolicy } from '../api.js';
   import AgentSecurityAllowlistEditor from './AgentSecurityAllowlistEditor.svelte';
   import Toggle from '../components/Toggle.svelte';
@@ -464,7 +465,7 @@
                 </p>
               </div>
               {#if loadingAgentCentralized}
-                <Loader2 class="w-5 h-5 animate-spin" style="color: var(--ds-icon-subtle);" />
+                <Spinner size="sm" />
               {:else}
                 <Toggle
                   bind:checked={allowCentralizedAgentUsers}

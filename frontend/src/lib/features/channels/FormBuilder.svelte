@@ -27,6 +27,7 @@
   import FormFieldPalette from './FormFieldPalette.svelte';
   import FormPreviewModal from './FormPreviewModal.svelte';
 	import TextField from '../../components/TextField.svelte';
+	import TextareaField from '../../components/TextareaField.svelte';
 
   let {
     channelId,
@@ -457,13 +458,24 @@
             </DescriptionText>
 
             <div>
-              <Label color="default" required class="mb-2">{t('forms.formName')}</Label>
-              <Input id="form-routing-name" bind:value={formBuilderStore.routingMeta.name} placeholder={t('forms.formNamePlaceholder')} />
+              <TextField
+                label={t('forms.formName')}
+                id="form-routing-name"
+                required
+                labelColor="default"
+                placeholder={t('forms.formNamePlaceholder')}
+                bind:value={formBuilderStore.routingMeta.name}
+              />
             </div>
 
             <div>
-              <Label color="default" class="mb-2">{t('forms.formDescription')}</Label>
-              <Textarea bind:value={formBuilderStore.routingMeta.description} rows={2} placeholder={t('forms.formDescriptionPlaceholder')} />
+              <TextareaField
+                label={t('forms.formDescription')}
+                labelColor="default"
+                rows={2}
+                placeholder={t('forms.formDescriptionPlaceholder')}
+                bind:value={formBuilderStore.routingMeta.description}
+              />
             </div>
 
             <div>
@@ -547,8 +559,12 @@
             </div>
 
             <div>
-              <Label color="default" class="mb-2">{t('forms.settings.successMessage')}</Label>
-              <Input bind:value={formBuilderStore.formConfig.success_message} placeholder={t('forms.settings.successMessagePlaceholder')} />
+              <TextField
+                label={t('forms.settings.successMessage')}
+                labelColor="default"
+                placeholder={t('forms.settings.successMessagePlaceholder')}
+                bind:value={formBuilderStore.formConfig.success_message}
+              />
               <DescriptionText>Shown after a response is accepted.</DescriptionText>
             </div>
 

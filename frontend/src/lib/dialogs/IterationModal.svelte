@@ -10,6 +10,9 @@
   import Label from '../components/Label.svelte';
   import { t } from '../stores/i18n.svelte.js';
   import { canChangePlanningScope } from '../utils/planningScope.js';
+	import SelectField from '../components/SelectField.svelte';
+	import TextareaField from '../components/TextareaField.svelte';
+	import TextField from '../components/TextField.svelte';
 
   let {
     iteration = null,
@@ -169,22 +172,24 @@
 
       <!-- Name -->
       <div>
-        <Label color="default" required class="mb-1.5">{t('common.name')}</Label>
-        <Input
+        <TextField
+          label={t('common.name')}
           id="iteration-name-input"
-          bind:value={formData.name}
-          placeholder={t('iterations.iterationNamePlaceholder')}
           required
+          labelColor="default"
+          placeholder={t('iterations.iterationNamePlaceholder')}
+          bind:value={formData.name}
         />
       </div>
 
       <!-- Description -->
       <div>
-        <Label color="default" class="mb-1.5">{t('common.description')}</Label>
-        <Textarea
-          bind:value={formData.description}
+        <TextareaField
+          label={t('common.description')}
+          labelColor="default"
           placeholder={t('iterations.iterationDescriptionPlaceholder')}
           rows={3}
+          bind:value={formData.description}
         />
       </div>
 
@@ -218,8 +223,13 @@
 
       <!-- Status -->
       <div>
-        <Label color="default" class="mb-1.5">{t('common.status')}</Label>
-        <Select id="iteration-status-select" bind:value={formData.status} options={statusOptions.map(status => ({ value: status.value, label: status.label }))} />
+        <SelectField
+          label={t('common.status')}
+          id="iteration-status-select"
+          labelColor="default"
+          options={statusOptions.map(status => ({ value: status.value, label: status.label }))}
+          bind:value={formData.status}
+        />
       </div>
 
     </form>

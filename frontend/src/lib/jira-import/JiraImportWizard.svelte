@@ -1,5 +1,6 @@
 <script>
   import { jiraImport } from './JiraImportStore.svelte.js';
+  import ColorDot from '../components/ColorDot.svelte';
   import StateDisplay from '../components/StateDisplay.svelte';
   import Modal from '../dialogs/Modal.svelte';
   import DialogFooter from '../dialogs/DialogFooter.svelte';
@@ -830,7 +831,7 @@
                      class="px-3 py-1.5 rounded-lg border inline-flex items-center gap-2"
                      style="border-color: var(--ds-border); background: var(--ds-surface);">
                   {#if mapping.color}
-                    <div class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background: {mapping.color};"></div>
+                    <ColorDot size="md" color={mapping.color} class="flex-shrink-0" />
                   {/if}
                   <span class="text-sm" style="color: var(--ds-text);">{mapping.jiraName}</span>
                   <span class="text-xs px-1 py-0.5 rounded"

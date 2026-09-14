@@ -32,6 +32,8 @@
   import { formatDateSimple } from '../../utils/dateFormatter.js';
   import { fetchAssetCategories, fetchAssetStatuses, flattenCategories } from './shared/assetSetUtils.js';
 	import TextField from '../../components/TextField.svelte';
+	import SelectField from '../../components/SelectField.svelte';
+	import TextareaField from '../../components/TextareaField.svelte';
 
   // Props for detail view
   let { assetId = null } = $props();
@@ -940,11 +942,12 @@
         />
       </div>
       <div>
-        <Label color="default" class="mb-1">Description</Label>
-        <Textarea
-          bind:value={assetFormData.description}
+        <TextareaField
+          label={"Description"}
+          labelColor="default"
           rows={3}
           size="small"
+          bind:value={assetFormData.description}
         />
       </div>
       <div>
@@ -958,16 +961,29 @@
         />
       </div>
       <div>
-        <Label color="default" class="mb-1">Asset Type</Label>
-        <Select id="asset-type-select" bind:value={assetFormData.asset_type_id} options={[{ value: null, label: 'No Type' }, ...assetTypes.map(type => ({ value: type.id, label: type.name }))]} />
+        <SelectField
+          label={"Asset Type"}
+          id="asset-type-select"
+          labelColor="default"
+          options={[{ value: null, label: 'No Type' }, ...assetTypes.map(type => ({ value: type.id, label: type.name }))]}
+          bind:value={assetFormData.asset_type_id}
+        />
       </div>
       <div>
-        <Label color="default" class="mb-1">Category</Label>
-        <Select bind:value={assetFormData.category_id} options={[{ value: null, label: 'No Category' }, ...flatCategories.map(cat => ({ value: cat.id, label: '  '.repeat(cat.level) + cat.name }))]} />
+        <SelectField
+          label={"Category"}
+          labelColor="default"
+          options={[{ value: null, label: 'No Category' }, ...flatCategories.map(cat => ({ value: cat.id, label: '  '.repeat(cat.level) + cat.name }))]}
+          bind:value={assetFormData.category_id}
+        />
       </div>
       <div>
-        <Label color="default" class="mb-1">Status</Label>
-        <Select bind:value={assetFormData.status_id} options={statuses.map(status => ({ value: status.id, label: status.name }))} />
+        <SelectField
+          label={"Status"}
+          labelColor="default"
+          options={statuses.map(status => ({ value: status.id, label: status.name }))}
+          bind:value={assetFormData.status_id}
+        />
       </div>
       {#if selectedTypeFields.length > 0}
         <div class="border-t pt-4 mt-4" style="border-color: var(--ds-border);">

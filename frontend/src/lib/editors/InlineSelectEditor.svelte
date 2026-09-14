@@ -1,6 +1,7 @@
 <script>
   import { tick } from 'svelte';
-  import { ChevronDown, Check, X, Loader2 } from '@lucide/svelte';
+  import Spinner from '../components/Spinner.svelte';
+  import { ChevronDown, Check, X } from '@lucide/svelte';
   import { t } from '../stores/i18n.svelte.js';
   import Select from '../components/Select.svelte';
 
@@ -130,7 +131,7 @@
 
     <div class="flex items-center gap-1">
       {#if saving}
-        <Loader2 class="w-4 h-4 animate-spin" style="color: var(--ds-text-subtle);" />
+        <Spinner size="sm" />
       {:else}
         <button
           type="button"

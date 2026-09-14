@@ -1,5 +1,6 @@
 <script>
   import Chart from '../../widgets/Chart.svelte';
+  import NativeSelect from '../../components/NativeSelect.svelte';
   import { t } from '../../stores/i18n.svelte.js';
   let { data } = $props();
   let metric = $state('items');
@@ -13,11 +14,15 @@
   <div class="rounded-xl border p-6 mb-6" style="background-color: var(--ds-surface-raised); border-color: var(--ds-border);">
     <div class="flex items-center justify-between gap-4 mb-4">
       <h3 class="text-sm font-semibold" style="color: var(--ds-text);">{t('iterations.burndownChart')}</h3>
-      <select data-testid="iteration-burndown-metric" aria-label={t('iterations.burndownChart')} bind:value={metric}
-        class="rounded-md border px-3 py-2 text-sm" style="background: var(--ds-surface); color: var(--ds-text); border-color: var(--ds-border);">
-        <option value="items">{t('iterations.totalItems')}</option>
-        <option value="points">{t('items.storyPoints')}</option>
-      </select>
+      <NativeSelect
+        dataTestid="iteration-burndown-metric"
+        ariaLabel={t('iterations.burndownChart')}
+        bind:value={metric}
+        options={[
+          { value: 'items', label: t('iterations.totalItems') },
+          { value: 'points', label: t('items.storyPoints') }
+        ]}
+      />
     </div>
     <Chart
       type="line"

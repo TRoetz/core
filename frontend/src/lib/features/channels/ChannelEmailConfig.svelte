@@ -13,6 +13,7 @@
   import { publicBaseURL } from '../../runtime/contextPath.js';
   import { isSystemAdmin } from '../../stores/permissions.svelte.js';
 	import TextField from '../../components/TextField.svelte';
+	import SelectField from '../../components/SelectField.svelte';
 
   let {
     channelId,
@@ -233,11 +234,13 @@
             />
           </div>
           <div>
-            <Label color="default" required class="mb-2">{t('channel.clientSecret')}</Label>
-            <Input
+            <TextField
+              label={t('channel.clientSecret')}
+              required
+              labelColor="default"
               type="password"
-              bind:value={formData.oauth_client_secret}
               placeholder={oauthIsConnected ? t('channel.leaveBlankToKeep') : 'Client secret value'}
+              bind:value={formData.oauth_client_secret}
             />
           </div>
         </div>
@@ -324,8 +327,12 @@
               />
             </div>
             <div>
-              <Label color="default" class="mb-2">{t('channel.encryption')}</Label>
-              <Select bind:value={formData.imap_encryption} options={[{ value: 'ssl', label: 'SSL/TLS (implicit)' }, { value: 'starttls', label: 'STARTTLS' }]} />
+              <SelectField
+                label={t('channel.encryption')}
+                labelColor="default"
+                options={[{ value: 'ssl', label: 'SSL/TLS (implicit)' }, { value: 'starttls', label: 'STARTTLS' }]}
+                bind:value={formData.imap_encryption}
+              />
             </div>
           </div>
         </div>
@@ -373,8 +380,14 @@
           />
         </div>
         <div>
-          <Label color="default" required class="mb-2">{t('channel.itemType')}</Label>
-          <Select bind:value={formData.item_type_id} disabled={!formData.workspace_id} options={[{ value: null, label: t('channel.selectItemType') }, ...itemTypes.map(type => ({ value: type.id, label: type.name }))]} />
+          <SelectField
+            label={t('channel.itemType')}
+            required
+            labelColor="default"
+            disabled={!formData.workspace_id}
+            options={[{ value: null, label: t('channel.selectItemType') }, ...itemTypes.map(type => ({ value: type.id, label: type.name }))]}
+            bind:value={formData.item_type_id}
+          />
           {#if !formData.workspace_id}
             <DescriptionText>{t('channel.selectWorkspaceFirst')}</DescriptionText>
           {/if}

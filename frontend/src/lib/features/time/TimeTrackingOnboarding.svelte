@@ -1,5 +1,6 @@
 <script>
   import { api } from '../../api.js';
+  import Progress from '../../components/Progress.svelte';
   import { Clock, Briefcase, User, X } from '@lucide/svelte';
   import Button from '../../components/Button.svelte';
   import Input from '../../components/Input.svelte';
@@ -9,6 +10,8 @@
   import Label from '../../components/Label.svelte';
   import { t } from '../../stores/i18n.svelte.js';
   import DescriptionText from '../../components/DescriptionText.svelte';
+	import TextareaField from '../../components/TextareaField.svelte';
+	import TextField from '../../components/TextField.svelte';
 
   let { oncancel, oncompleted } = $props();
 
@@ -176,12 +179,7 @@
           <span class="text-sm font-medium" style="color: var(--ds-text-subtle);">{t('time.onboarding.setupProgress')}</span>
           <span class="text-sm" style="color: var(--ds-text-subtlest);">{t('time.onboarding.stepOf', { current: currentStep, total: totalSteps })}</span>
         </div>
-        <div class="w-full rounded-full h-2" style="background-color: var(--ds-background-neutral);">
-          <div
-            class="bg-ds-interactive h-2 rounded-full transition-all duration-300"
-            style="width: {progressPercentage}%"
-          ></div>
-        </div>
+        <Progress value={progressPercentage} />
       </div>
 
       <!-- Error Message -->
@@ -204,36 +202,36 @@
 
           <div class="space-y-4">
             <div>
-              <Label for="customer_name" required class="mb-2">{t('time.organizations.name')}</Label>
-              <Input
+              <TextField
+                label={t('time.organizations.name')}
                 id="customer_name"
+                required
                 type="text"
-                bind:value={customerData.name}
                 size="small"
                 placeholder={t('time.onboarding.organizationNamePlaceholder')}
-                required
+                bind:value={customerData.name}
               />
             </div>
 
             <div>
-              <Label for="customer_email" class="mb-2">{t('time.organizations.emailOptional')}</Label>
-              <Input
+              <TextField
+                label={t('time.organizations.emailOptional')}
                 id="customer_email"
                 type="email"
-                bind:value={customerData.email}
                 size="small"
                 placeholder={t('time.onboarding.emailPlaceholder')}
+                bind:value={customerData.email}
               />
             </div>
 
             <div>
-              <Label for="contact_person" class="mb-2">{t('time.organizations.contactPersonOptional')}</Label>
-              <Input
+              <TextField
+                label={t('time.organizations.contactPersonOptional')}
                 id="contact_person"
                 type="text"
-                bind:value={customerData.contact_person}
                 size="small"
                 placeholder={t('time.onboarding.contactPersonPlaceholder')}
+                bind:value={customerData.contact_person}
               />
             </div>
           </div>
@@ -258,24 +256,24 @@
 
           <div class="space-y-4">
             <div>
-              <Label for="project_name" required class="mb-2">{t('time.projects.projectName')}</Label>
-              <Input
+              <TextField
+                label={t('time.projects.projectName')}
                 id="project_name"
+                required
                 type="text"
-                bind:value={projectData.name}
                 size="small"
                 placeholder={t('time.onboarding.projectNamePlaceholder')}
-                required
+                bind:value={projectData.name}
               />
             </div>
 
             <div>
-              <Label for="project_description" class="mb-2">{t('time.projects.descriptionOptional')}</Label>
-              <Textarea
+              <TextareaField
+                label={t('time.projects.descriptionOptional')}
                 id="project_description"
-                bind:value={projectData.description}
                 rows={3}
                 placeholder={t('time.onboarding.projectDescriptionPlaceholder')}
+                bind:value={projectData.description}
               />
             </div>
 

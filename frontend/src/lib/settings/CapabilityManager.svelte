@@ -604,7 +604,8 @@
     <div>
       <div class="flex items-center justify-between mb-1">
         <div class="block text-xs font-medium" style="color: var(--ds-text-subtle);">{t('settings.actionCapabilities.docker.envVars')}</div>
-        <button class="text-xs font-medium px-2 py-0.5 rounded" style="color: var(--ds-link);" onclick={addEnvVar}>+ {t('settings.actionCapabilities.docker.addEnvVar')}</button>
+        <!-- shortcut-guard-exempt: inline add-row affordance inside a capability form; no global create shortcut owns it -->
+        <Button variant="link" size="small" onclick={addEnvVar}>{t('settings.actionCapabilities.docker.addEnvVar')}</Button>
       </div>
       {#each form.docker_env_vars as envVar, i}
         <div class="flex gap-2 mb-1">
@@ -670,7 +671,8 @@
     <div>
       <div class="flex items-center justify-between mb-1">
         <div class="block text-xs font-medium" style="color: var(--ds-text-subtle);">{t('settings.actionCapabilities.http.allowedPatterns')}</div>
-        <button class="text-xs font-medium px-2 py-0.5 rounded" style="color: var(--ds-link);" onclick={addPattern}>+ {t('settings.actionCapabilities.http.addPattern')}</button>
+        <!-- shortcut-guard-exempt: inline add-row affordance inside a capability form; no global create shortcut owns it -->
+        <Button variant="link" size="small" onclick={addPattern}>{t('settings.actionCapabilities.http.addPattern')}</Button>
       </div>
       {#each form.http_allowed_patterns as pattern, i}
         <div class="flex gap-2 mb-1">
@@ -692,7 +694,8 @@
     <div>
       <div class="flex items-center justify-between mb-1">
         <div class="block text-xs font-medium" style="color: var(--ds-text-subtle);">{t('settings.actionCapabilities.http.defaultHeaders')}</div>
-        <button class="text-xs font-medium px-2 py-0.5 rounded" style="color: var(--ds-link);" onclick={addHeader}>+ {t('settings.actionCapabilities.http.addHeader')}</button>
+        <!-- shortcut-guard-exempt: inline add-row affordance inside a capability form; no global create shortcut owns it -->
+        <Button variant="link" size="small" onclick={addHeader}>{t('settings.actionCapabilities.http.addHeader')}</Button>
       </div>
       <p class="text-xs mb-1" style="color: var(--ds-text-subtle);">
         {t('settings.adminOperations.actionCapabilities.defaultHeadersHelp')}
@@ -770,7 +773,8 @@
     <div>
       <div class="flex items-center justify-between mb-1">
         <div class="block text-xs font-medium" style="color: var(--ds-text-subtle);">{t('settings.adminOperations.actionCapabilities.additionalHeaders')}</div>
-        <button class="text-xs font-medium px-2 py-0.5 rounded" style="color: var(--ds-link);" onclick={addSecretHeaderRef}>+ {t('settings.adminOperations.actionCapabilities.addSecretHeader')}</button>
+        <!-- shortcut-guard-exempt: inline add-row affordance inside a capability form; no global create shortcut owns it -->
+        <Button variant="link" size="small" onclick={addSecretHeaderRef}>{t('settings.adminOperations.actionCapabilities.addSecretHeader')}</Button>
       </div>
       <p class="text-xs mb-1" style="color: var(--ds-text-subtle);">
         {t('settings.adminOperations.actionCapabilities.additionalHeadersHelp')}

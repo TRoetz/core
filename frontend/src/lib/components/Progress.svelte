@@ -18,12 +18,18 @@
     lg: 'h-3'
   }[size] || 'h-2');
 
-  const colorToken = $derived({
-    primary: '--ds-interactive',
-    success: '--ds-success',
-    warning: '--ds-warning',
-    danger: '--ds-danger'
-  }[color] || '--ds-interactive');
+  const colorToken = $derived(
+    color.startsWith('var(')
+      ? color.slice(4, -1)
+      : color.startsWith('--')
+        ? color
+        : ({
+            primary: '--ds-interactive',
+            success: '--ds-success',
+            warning: '--ds-warning',
+            danger: '--ds-danger'
+          }[color] || '--ds-interactive')
+  );
 
   // Circular variant dimensions
   const circleSize = $derived({

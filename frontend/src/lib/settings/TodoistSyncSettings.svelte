@@ -1,7 +1,9 @@
 <script>
 	import { onMount } from 'svelte';
+	import StateDisplay from '../components/StateDisplay.svelte';
+	import Spinner from '../components/Spinner.svelte';
 	import { api } from '../api.js';
-	import { Loader2, RefreshCw } from '@lucide/svelte';
+	import { RefreshCw } from '@lucide/svelte';
 	import Button from '../components/Button.svelte';
 	import Checkbox from '../components/Checkbox.svelte';
 	import NativeSelect from '../components/NativeSelect.svelte';
@@ -133,10 +135,7 @@
 	data-testid="todoist-sync-settings"
 >
 	{#if loading}
-		<div class="flex items-center gap-2 text-sm" style="color: var(--ds-text-subtle);">
-			<Loader2 class="w-4 h-4 animate-spin" />
-			Loading sync settings…
-		</div>
+		<StateDisplay type="loading" inline message="Loading sync settings…" />
 	{:else}
 		<div class="flex items-center justify-between gap-3">
 			<div class="min-w-0">
@@ -174,7 +173,7 @@
 
 					{#if scopeMode === 'project'}
 						{#if loadingProjects}
-							<Loader2 class="w-4 h-4 animate-spin" style="color: var(--ds-text-subtle);" />
+							<Spinner size="sm" />
 						{:else}
 							<NativeSelect
 								bind:value={projectId}
@@ -194,16 +193,11 @@
 						variant="secondary"
 						size="small"
 						onclick={runNow}
-						disabled={syncing}
+						loading={syncing}
+						icon={RefreshCw}
 						dataTestid="todoist-sync-now"
 					>
-						{#if syncing}
-							<Loader2 class="w-4 h-4 animate-spin mr-1" />
-							Syncing…
-						{:else}
-							<RefreshCw class="w-4 h-4 mr-1" />
-							Sync now
-						{/if}
+						{syncing ? 'Syncing…' : 'Sync now'}
 					</Button>
 					<span class="text-xs" style="color: var(--ds-text-subtlest);" data-testid="todoist-sync-status">
 						{#if lastSyncedAt}

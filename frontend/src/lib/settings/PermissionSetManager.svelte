@@ -14,6 +14,8 @@
   import Label from '../components/Label.svelte';
   import { confirm } from '../composables/useConfirm.js';
   import { toHotkeyString } from '../utils/keyboardShortcuts.js';
+	import TextareaField from '../components/TextareaField.svelte';
+	import TextField from '../components/TextField.svelte';
 
   let permissionSets = $state([]);
   let loading = $state(true);
@@ -166,23 +168,26 @@
       <h3 class="text-lg font-semibold mb-4" style="color: var(--ds-text)">{t('settings.permissionSets.createPermissionSet')}</h3>
       <div class="space-y-4">
           <div>
-            <Label for="permset-name" color="default" required class="mb-1">{t('common.name')}</Label>
-            <Input
-              type="text"
+            <TextField
+              label={t('common.name')}
               id="permset-name"
-              bind:value={formData.name}
+              required
+              labelColor="default"
+              type="text"
               placeholder={t('settings.permissionSets.namePlaceholder')}
               size="small"
+              bind:value={formData.name}
             />
           </div>
 
           <div>
-            <Label for="permset-description" color="default" class="mb-1">{t('common.description')}</Label>
-            <Textarea
+            <TextareaField
+              label={t('common.description')}
               id="permset-description"
-              bind:value={formData.description}
+              labelColor="default"
               rows={2}
               placeholder={t('settings.permissionSets.descriptionPlaceholder')}
+              bind:value={formData.description}
             />
           </div>
         </div>

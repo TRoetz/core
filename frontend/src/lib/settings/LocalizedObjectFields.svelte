@@ -10,6 +10,7 @@
   import { i18n, t } from '../stores/i18n.svelte.js';
   import { isSystemAdmin } from '../stores/permissions.svelte.js';
 	import TextField from '../components/TextField.svelte';
+	import TextareaField from '../components/TextareaField.svelte';
 
   let {
     objectType,
@@ -259,8 +260,11 @@
     </div>
     {#if includesDescription}
       <div>
-        <Label>{t('settings.localizedObjects.baseDescription')}</Label>
-        <Textarea bind:value={canonicalDescription} rows={2} />
+        <TextareaField
+          label={t('settings.localizedObjects.baseDescription')}
+          rows={2}
+          bind:value={canonicalDescription}
+        />
       </div>
     {/if}
   </div>
@@ -391,8 +395,12 @@
         </div>
         {#if includesDescription}
           <div>
-            <Label>{t('settings.localizedObjects.baseDescription')}</Label>
-            <Textarea bind:value={canonicalDescription} rows={2} data-testid="localized-object-canonical-description" />
+            <TextareaField
+              label={t('settings.localizedObjects.baseDescription')}
+              rows={2}
+              dataTestid="localized-object-canonical-description"
+              bind:value={canonicalDescription}
+            />
           </div>
         {/if}
         {#if canonicalChanged && hasTranslations}

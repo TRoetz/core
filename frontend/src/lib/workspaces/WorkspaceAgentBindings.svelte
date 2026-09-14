@@ -7,8 +7,9 @@
   // candidates endpoint just keeps the picker honest.
 
   import { onDestroy, onMount, untrack } from 'svelte';
+  import Spinner from '../components/Spinner.svelte';
   import StateDisplay from '../components/StateDisplay.svelte';
-  import { ChevronDown, FlaskConical, Loader2, Orbit, Pencil, Plus, Trash2 } from '@lucide/svelte';
+  import { ChevronDown, FlaskConical, Orbit, Pencil, Plus, Trash2 } from '@lucide/svelte';
   import { agentBindings, agentRuns, agentSkills, api } from '../api.js';
   import Panel from '../components/Panel.svelte';
   import Button from '../components/Button.svelte';
@@ -29,6 +30,7 @@
   import { errorToast, successToast } from '../stores/toasts.svelte.js';
   import { toHotkeyString } from '../utils/keyboardShortcuts.js';
 	import TextField from '../components/TextField.svelte';
+	import SelectField from '../components/SelectField.svelte';
 
   // skillsVersion: bumped by the parent when the skills panel below this one
   // creates/edits/deletes a skill, so the attach-pickers here don't go stale.
@@ -779,7 +781,7 @@
                           {testRunStatusLabel(testResults[b.id].status)}
                         </span>
                         {#if !isTerminalTestStatus(testResults[b.id].status)}
-                          <Loader2 class="w-3 h-3 animate-spin" />
+                          <Spinner size="sm" />
                         {/if}
                       </div>
                       {#if testResults[b.id].lines?.length}
@@ -875,8 +877,13 @@
             </div>
           {/if}
           <div>
-            <Label for="binding-llm" required class="mb-1">LLM connection</Label>
-            <Select id="binding-llm" bind:value={formLLMConnectionId} options={llmOptions} />
+            <SelectField
+              label={"LLM connection"}
+              id="binding-llm"
+              required
+              options={llmOptions}
+              bind:value={formLLMConnectionId}
+            />
             {#if llmConnections.length === 0}
               <p class="text-xs mt-1" style="color: var(--ds-text-danger);">No enabled LLM connections. Ask a global admin to add one under Admin → AI Connections.</p>
             {:else if selectedLLMIsDirectAnthropic}
@@ -1003,7 +1010,7 @@
             >
               {#if standardPromptLoading}
                 <div class="flex items-center gap-2 text-xs" style="color: var(--ds-text-subtle);">
-                  <Loader2 class="w-3.5 h-3.5 animate-spin" /> Loading standard prompt…
+                  <Spinner size="sm" /> Loading standard prompt…
                 </div>
               {:else if standardPromptError}
                 <p class="text-xs" style="color: var(--ds-text-danger);">{standardPromptError}</p>

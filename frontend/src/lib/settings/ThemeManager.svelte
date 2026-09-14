@@ -19,6 +19,7 @@
   import { objectDisplayValue } from '../utils/systemLabels.js';
   import LocalizedObjectFields from './LocalizedObjectFields.svelte';
   import LogoUploader from '../components/LogoUploader.svelte';
+	import TextField from '../components/TextField.svelte';
 
   // State management
   let themes = $state([]);
@@ -263,25 +264,27 @@
     <form onsubmit={(e) => { e.preventDefault(); createTheme(); }}>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         <div>
-          <Label for="name" color="default" class="mb-2">{t('common.name')}</Label>
-          <Input
-            type="text"
+          <TextField
+            label={t('common.name')}
             id="name"
-            bind:value={newTheme.name}
-            placeholder={t('common.name')}
             required
+            labelColor="default"
+            type="text"
+            placeholder={t('common.name')}
             size="small"
+            bind:value={newTheme.name}
           />
         </div>
 
         <div>
-          <Label for="description" color="default" class="mb-2">{t('common.description')}</Label>
-          <Input
-            type="text"
+          <TextField
+            label={t('common.description')}
             id="description"
-            bind:value={newTheme.description}
+            labelColor="default"
+            type="text"
             placeholder={t('placeholders.optionalDescription')}
             size="small"
+            bind:value={newTheme.description}
           />
         </div>
       </div>

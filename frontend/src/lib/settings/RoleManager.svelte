@@ -24,6 +24,8 @@
     objectDisplayName,
   } from '../utils/systemLabels.js';
   import LocalizedObjectFields from './LocalizedObjectFields.svelte';
+	import TextareaField from '../components/TextareaField.svelte';
+	import TextField from '../components/TextField.svelte';
 
   let roles = $state([]);
   let loading = $state(true);
@@ -286,21 +288,22 @@
         </AlertBox>
 
         <div>
-          <Label required>{t('roles.roleName')}</Label>
-          <Input
+          <TextField
+            label={t('roles.roleName')}
+            required
             type="text"
             size="small"
             placeholder={t('settings.workspaceRoles.namePlaceholder')}
-            bind:value={newName}
             dataTestid="workspace-role-name"
+            bind:value={newName}
           />
         </div>
         <div>
-          <Label>{t('common.description')}</Label>
-          <Textarea
+          <TextareaField
+            label={t('common.description')}
             placeholder={t('settings.workspaceRoles.descriptionPlaceholder')}
-            bind:value={newDescription}
             rows={2}
+            bind:value={newDescription}
           />
         </div>
       </div>

@@ -27,6 +27,7 @@ import { FileStack, Pencil, Plus, Trash2 } from '@lucide/svelte';
   import { t } from '../stores/i18n.svelte.js';
   import { toHotkeyString } from '../utils/keyboardShortcuts.js';
 	import TextField from '../components/TextField.svelte';
+	import SelectField from '../components/SelectField.svelte';
 
   let { workspaceId } = $props();
 
@@ -252,8 +253,12 @@ import { FileStack, Pencil, Plus, Trash2 } from '@lucide/svelte';
           />
         </div>
         <div>
-          <Label for="item-template-mode" class="mb-1">{t('workspaceTemplates.modeLabel')}</Label>
-          <Select id="item-template-mode" bind:value={formMode} options={MODE_OPTIONS} />
+          <SelectField
+            label={t('workspaceTemplates.modeLabel')}
+            id="item-template-mode"
+            options={MODE_OPTIONS}
+            bind:value={formMode}
+          />
         </div>
       </div>
 

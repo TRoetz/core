@@ -22,6 +22,8 @@
   import DescriptionText from '../components/DescriptionText.svelte';
   import { objectDisplayValue } from '../utils/systemLabels.js';
   import LocalizedObjectFields from './LocalizedObjectFields.svelte';
+	import TextareaField from '../components/TextareaField.svelte';
+	import TextField from '../components/TextField.svelte';
 
   const linkTypes = writable([]);
 
@@ -257,13 +259,14 @@
       {:else}
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div>
-            <Label color="default" class="mb-2">{t('settings.linkTypes.name')}</Label>
-            <Input
-              type="text"
-              bind:value={formData.name}
+            <TextField
+              label={t('settings.linkTypes.name')}
               required
+              labelColor="default"
+              type="text"
               placeholder={t('settings.linkTypes.namePlaceholder')}
               size="small"
+              bind:value={formData.name}
             />
           </div>
           <div>
@@ -279,24 +282,26 @@
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         <div>
-          <Label color="default" class="mb-2">{t('settings.linkTypes.forwardLabel')}</Label>
-          <Input
-            type="text"
-            bind:value={formData.forward_label}
+          <TextField
+            label={t('settings.linkTypes.forwardLabel')}
             required
+            labelColor="default"
+            type="text"
             placeholder={t('settings.linkTypes.forwardPlaceholder')}
             size="small"
+            bind:value={formData.forward_label}
           />
           <DescriptionText>{t('settings.linkTypes.forwardHint')}</DescriptionText>
         </div>
         <div>
-          <Label color="default" class="mb-2">{t('settings.linkTypes.reverseLabel')}</Label>
-          <Input
-            type="text"
-            bind:value={formData.reverse_label}
+          <TextField
+            label={t('settings.linkTypes.reverseLabel')}
             required
+            labelColor="default"
+            type="text"
             placeholder={t('settings.linkTypes.reversePlaceholder')}
             size="small"
+            bind:value={formData.reverse_label}
           />
           <DescriptionText>{t('settings.linkTypes.reverseHint')}</DescriptionText>
         </div>
@@ -304,11 +309,12 @@
 
       {#if !editingLinkType}
         <div class="mb-4">
-          <Label color="default" class="mb-2">{t('settings.linkTypes.description')}</Label>
-          <Textarea
-            bind:value={formData.description}
+          <TextareaField
+            label={t('settings.linkTypes.description')}
+            labelColor="default"
             rows={3}
             placeholder={t('settings.linkTypes.descriptionPlaceholder')}
+            bind:value={formData.description}
           />
         </div>
       {/if}

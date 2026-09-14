@@ -1,5 +1,6 @@
 <script>
-  import { Check, X, Loader2 } from '@lucide/svelte';
+  import { Check, X } from '@lucide/svelte';
+  import Spinner from '../components/Spinner.svelte';
   import { t } from '../stores/i18n.svelte.js';
 
   let {
@@ -121,7 +122,7 @@
 
     <div class="flex items-center gap-1">
       {#if saving}
-        <Loader2 class="w-4 h-4 animate-spin" style="color: var(--ds-text-subtle);" />
+        <Spinner size="sm" />
       {:else}
         <button
           type="button"

@@ -1,5 +1,6 @@
 <script>
 	import { onMount, onDestroy, tick } from 'svelte';
+	import ColorDot from '../../components/ColorDot.svelte';
 	import { api } from '../../api.js';
 	import { authStore } from '../../stores';
 	import { subscribeToNewNotifications } from '../../stores/notifications.js';
@@ -444,7 +445,7 @@
 					style="background: var(--ds-info-bg, #dbeafe); color: var(--ds-info-text, #1e40af);"
 					title={t('common.close')}
 				>
-					<span class="w-1.5 h-1.5 rounded-full" style="background: currentColor;"></span>
+					<ColorDot size="xs" color="currentColor" />
 					{t('comments.newCommentsAvailable', { count: newCount })}
 				</button>
 			{/if}

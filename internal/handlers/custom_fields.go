@@ -222,6 +222,14 @@ func (h *CustomFieldHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// System-default fields are system-owned and read-only, matching Delete.
+	// Otherwise option edits could enqueue scrubbing of item/asset values on
+	// system data.
+	if oldCF.SystemDefault {
+		respondForbidden(w, r)
+		return
+	}
+
 	req, ok := decodeJSON[updateRequest](w, r)
 	if !ok {
 		return

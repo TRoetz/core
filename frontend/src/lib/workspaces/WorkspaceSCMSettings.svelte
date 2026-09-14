@@ -1,10 +1,11 @@
 <script>
   import { onMount } from 'svelte';
+  import Spinner from '../components/Spinner.svelte';
   import StateDisplay from '../components/StateDisplay.svelte';
   import { SvelteSet } from 'svelte/reactivity';
   import { api } from '../api.js';
   import Button from '../components/Button.svelte';
-  import { GitMerge, Plus, Trash2, ExternalLink, ChevronDown, ChevronRight, Loader2, Check, X, KeyRound, AlertTriangle, Settings, Webhook, RotateCw } from '@lucide/svelte';
+  import { GitMerge, Plus, Trash2, ExternalLink, ChevronDown, ChevronRight, Check, X, KeyRound, AlertTriangle, Settings, Webhook, RotateCw } from '@lucide/svelte';
   import RepositorySelector from '../pickers/RepositorySelector.svelte';
   import { successToast, errorToast } from '../stores/toasts.svelte.js';
   import { t } from '../stores/i18n.svelte.js';
@@ -444,7 +445,7 @@
                                 onclick={() => loadWebhookConfig(repo.id)}
                               >
                                 {#if loadingWebhooks.has(repo.id)}
-                                  <Loader2 class="w-4 h-4 animate-spin" />
+                                  <Spinner size="sm" />
                                 {:else}
                                   <Webhook class="w-4 h-4" />
                                 {/if}

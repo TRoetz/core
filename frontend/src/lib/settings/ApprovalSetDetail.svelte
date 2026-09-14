@@ -19,6 +19,7 @@
   import TransitionOverrideWarning from '../components/TransitionOverrideWarning.svelte';
   import { toHotkeyString } from '../utils/keyboardShortcuts.js';
 	import TextField from '../components/TextField.svelte';
+	import TextareaField from '../components/TextareaField.svelte';
 
   // Vocabulary mirrored from internal/models/configuration.go.
   const STEP_MODES = [
@@ -409,21 +410,22 @@
       <h2 class="text-lg font-medium mb-3" style="color: var(--ds-text);">{t('approvalSets.general')}</h2>
       <div class="space-y-4">
         <div>
-          <Label required>{t('approvalSets.name')}</Label>
-          <Input
+          <TextField
+            label={t('approvalSets.name')}
+            required
             type="text"
             placeholder={t('approvalSets.namePlaceholder')}
-            bind:value={formData.name}
             dataTestid="approval-set-name"
             size="small"
+            bind:value={formData.name}
           />
         </div>
         <div>
-          <Label>{t('approvalSets.description')}</Label>
-          <Textarea
+          <TextareaField
+            label={t('approvalSets.description')}
             placeholder={t('approvalSets.descriptionPlaceholder')}
-            bind:value={formData.description}
             rows={2}
+            bind:value={formData.description}
           />
         </div>
         <div>
@@ -609,12 +611,13 @@
                         {#if stepExpanded}
                           <div class="p-3 border-t space-y-3" style="border-color: var(--ds-border);">
                             <div>
-                              <Label required>{t('approvalSets.stepName')}</Label>
-                              <Input
+                              <TextField
+                                label={t('approvalSets.stepName')}
+                                required
                                 type="text"
                                 placeholder={t('approvalSets.stepNamePlaceholder')}
-                                bind:value={step.name}
                                 size="small"
+                                bind:value={step.name}
                               />
                             </div>
 

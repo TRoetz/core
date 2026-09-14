@@ -173,8 +173,13 @@
         </div>
 
         <div>
-          <Label color="default" class="mb-2">{t('channel.secretOptional')}</Label>
-          <Input type="password" bind:value={formData.secret} placeholder={t('channel.secretPlaceholder')} />
+          <TextField
+            label={t('channel.secretOptional')}
+            labelColor="default"
+            type="password"
+            placeholder={t('channel.secretPlaceholder')}
+            bind:value={formData.secret}
+          />
           <DescriptionText>
             {t('channel.secretHelp')}
           </DescriptionText>

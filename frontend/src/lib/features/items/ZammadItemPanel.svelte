@@ -1,16 +1,7 @@
 <script>
   import { useEventListener } from 'runed';
   import Spinner from '../../components/Spinner.svelte';
-  import {
-    TicketCheck,
-    Plus,
-    RefreshCw,
-    Loader2,
-    ExternalLink,
-    AlertTriangle,
-    Edit2,
-    Trash2,
-  } from '@lucide/svelte';
+  import { TicketCheck, Plus, RefreshCw, ExternalLink, AlertTriangle, Edit2, Trash2 } from '@lucide/svelte';
   import { api } from '../../api.js';
   import Button from '../../components/Button.svelte';
   import Text from '../../components/Text.svelte';
@@ -557,11 +548,11 @@
                         <Edit2 class="w-4 h-4" />
                       </button>
                       <button class="p-1 rounded" onclick={() => refresh(link)} disabled={refreshingId === link.id} title={t('zammad.refreshTicket')}>
-                        {#if refreshingId === link.id}<Loader2 class="w-4 h-4 animate-spin" />{:else}<RefreshCw class="w-4 h-4" />{/if}
+                        {#if refreshingId === link.id}<Spinner size="sm" />{:else}<RefreshCw class="w-4 h-4" />{/if}
                       </button>
                     {/if}
                     <button class="p-1 rounded" onclick={() => removeLink(link)} disabled={removingId === link.id} title={t('zammad.removeTicketLink')}>
-                      {#if removingId === link.id}<Loader2 class="w-4 h-4 animate-spin" />{:else}<Trash2 class="w-4 h-4" />{/if}
+                      {#if removingId === link.id}<Spinner size="sm" />{:else}<Trash2 class="w-4 h-4" />{/if}
                     </button>
                   </div>
                 {/if}
@@ -602,7 +593,7 @@
     {#if dialogMode === 'create'}
       <FormField label={t('zammad.group')} required>
         {#if loadingMetadata}
-          <Loader2 class="w-4 h-4 animate-spin" />
+          <Spinner size="sm" />
         {:else}
           <NativeSelect
             bind:value={selectedGroupId}
@@ -620,12 +611,12 @@
       <Button variant="ghost" onclick={closeCreateDialog} disabled={creating || linking}>{t('common.cancel')}</Button>
       {#if dialogMode === 'create'}
         <Button variant="primary" onclick={createTicket} disabled={creating || loadingMetadata || !selectedConnectionId || !selectedGroupId}>
-          {#if creating}<Loader2 class="w-4 h-4 animate-spin" />{/if}
+          {#if creating}<Spinner size="sm" />{/if}
           {t('zammad.createTicket')}
         </Button>
       {:else}
         <Button variant="primary" onclick={linkExistingTicket} disabled={linking || !selectedConnectionId || !ticketNumber.trim()}>
-          {#if linking}<Loader2 class="w-4 h-4 animate-spin" />{/if}
+          {#if linking}<Spinner size="sm" />{/if}
           {t('zammad.linkExistingTicket')}
         </Button>
       {/if}
@@ -660,7 +651,7 @@
       </FormField>
       <FormField label={t('zammad.owner')}>
         {#if loadingEditOwners}
-          <Loader2 class="w-4 h-4 animate-spin" />
+          <Spinner size="sm" />
         {:else}
           <NativeSelect
             bind:value={selectedEditOwnerId}
@@ -673,7 +664,7 @@
     <div class="flex justify-end gap-2">
       <Button variant="ghost" onclick={closeEditDialog} disabled={savingEdit}>{t('common.cancel')}</Button>
       <Button variant="primary" onclick={saveEdit} disabled={savingEdit || loadingEditMetadata || loadingEditOwners || !editPayloadAvailable}>
-        {#if savingEdit}<Loader2 class="w-4 h-4 animate-spin" />{/if}
+        {#if savingEdit}<Spinner size="sm" />{/if}
         {t('common.save')}
       </Button>
     </div>

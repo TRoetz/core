@@ -30,6 +30,8 @@
   import DialogFooter from '../../dialogs/DialogFooter.svelte';
   import { isSystemAdmin } from '../../stores/permissions.svelte.js';
 	import TextField from '../../components/TextField.svelte';
+	import TextareaField from '../../components/TextareaField.svelte';
+	import SelectField from '../../components/SelectField.svelte';
 
   // Props
   let { embedded = false } = $props();
@@ -691,17 +693,23 @@
 
       {#if channelFormData.type !== 'form'}
         <div>
-          <Label for="channelCategory" color="default" class="mb-2">Category</Label>
-          <Select id="channelCategory" bind:value={channelFormData.category_id} options={[{ value: null, label: 'No Category' }, ...$channelCategoriesStore.map(c => ({ value: c.id, label: c.name }))]} />
+          <SelectField
+            label={"Category"}
+            id="channelCategory"
+            labelColor="default"
+            options={[{ value: null, label: 'No Category' }, ...$channelCategoriesStore.map(c => ({ value: c.id, label: c.name }))]}
+            bind:value={channelFormData.category_id}
+          />
         </div>
 
         <div>
-          <Label for="channelDescription" color="default" class="mb-2">Description</Label>
-          <Textarea
+          <TextareaField
+            label={"Description"}
             id="channelDescription"
-            bind:value={channelFormData.description}
+            labelColor="default"
             rows={3}
             placeholder="Brief description of this channel's purpose"
+            bind:value={channelFormData.description}
           />
         </div>
       {/if}

@@ -9,6 +9,8 @@
   import { successToast, errorToast } from '../stores/toasts.svelte.js';
   import { t } from '../stores/i18n.svelte.js';
   import DescriptionText from '../components/DescriptionText.svelte';
+	import TextareaField from '../components/TextareaField.svelte';
+	import TextField from '../components/TextField.svelte';
 
   let { branchLink, itemKey = '', itemTitle = '', oncreated, onclose } = $props();
 
@@ -73,23 +75,25 @@
     <div class="px-6 py-4 space-y-4">
       <!-- PR Title -->
       <div>
-        <Label color="default" class="mb-1.5">{t('scm.prTitle')}</Label>
-        <Input
+        <TextField
+          label={t('scm.prTitle')}
+          labelColor="default"
           type="text"
-          bind:value={prTitle}
           placeholder={itemKey ? `${itemKey}: ${itemTitle}` : 'Pull request title'}
           size="small"
+          bind:value={prTitle}
         />
       </div>
 
       <!-- PR Body -->
       <div>
-        <Label color="default" class="mb-1.5">{t('scm.description')}</Label>
-        <Textarea
-          bind:value={prBody}
+        <TextareaField
+          label={t('scm.description')}
+          labelColor="default"
           placeholder={itemKey ? `Linked to ${itemKey}` : 'Pull request description'}
           rows={3}
           size="small"
+          bind:value={prBody}
         />
       </div>
 
