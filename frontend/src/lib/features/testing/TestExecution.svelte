@@ -1,5 +1,6 @@
 <script>
   import { onMount } from 'svelte';
+  import ModalBackdrop from '../../components/ModalBackdrop.svelte';
   import { currentRoute, navigate } from '../../router.js';
   import { api } from '../../api.js';
   import { IconCheck, IconX, IconBug, IconArrowLeft, IconChevronRight, IconChevronLeft, IconPlus, IconLink, IconPlayerSkipForward } from '@tabler/icons-svelte-runes';
@@ -898,17 +899,12 @@
 
 
 <!-- Image Preview Modal -->
-{#if previewImage}
-  <!-- svelte-ignore a11y_click_events_have_key_events -->
-  <div class="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4"
-       role="presentation"
-       onclick={() => previewImage = null}>
-    <div class="relative max-w-4xl max-h-full">
-      <img src={previewImage.src} alt={previewImage.alt} class="max-w-full max-h-[90vh] object-contain rounded" />
-      <p class="text-white text-center mt-2 text-sm">{previewImage.alt}</p>
-    </div>
+<ModalBackdrop opacity={0.8} blur={0} bind:show={previewImage} onclose={() => (previewImage = null)}>
+  <div class="relative max-w-4xl max-h-full">
+    <img src={previewImage?.src} alt={previewImage?.alt} class="max-w-full max-h-[90vh] object-contain rounded" />
+    <p class="text-white text-center mt-2 text-sm">{previewImage?.alt}</p>
   </div>
-{/if}
+</ModalBackdrop>
 
 <style>
   :global(.test-step-rendered img) {

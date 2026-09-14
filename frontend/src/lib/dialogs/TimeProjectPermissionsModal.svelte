@@ -1,10 +1,11 @@
 <script>
   import Modal from './Modal.svelte';
+  import StateDisplay from '../components/StateDisplay.svelte';
   import ModalHeader from './ModalHeader.svelte';
   import { confirm } from '../composables/useConfirm.js';
   import AssigneePicker from '../pickers/AssigneePicker.svelte';
   import Button from '../components/Button.svelte';
-  import Spinner from '../components/Spinner.svelte';
+  import TabStrip from '../components/TabStrip.svelte';
   import ActionButton from '../layout/ActionButton.svelte';
   import { api } from '../api.js';
   import { t } from '../stores/i18n.svelte.js';
@@ -128,22 +129,15 @@
 
   <div class="p-6">
     <!-- Tabs -->
-    <div class="flex border-b mb-6" style="border-color: var(--ds-border);">
-      <button
-        class="px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px {activeTab === 'managers' ? '' : 'border-transparent'}"
-        style="{activeTab === 'managers' ? 'border-color: var(--ds-interactive); color: var(--ds-interactive);' : 'color: var(--ds-text-subtle);'}"
-        onclick={() => { activeTab = 'managers'; showAddForm = false; resetAddForm(); }}
-      >
-        {t('time.permissions.managers')} ({managers.length})
-      </button>
-      <button
-        class="px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px {activeTab === 'members' ? '' : 'border-transparent'}"
-        style="{activeTab === 'members' ? 'border-color: var(--ds-interactive); color: var(--ds-interactive);' : 'color: var(--ds-text-subtle);'}"
-        onclick={() => { activeTab = 'members'; showAddForm = false; resetAddForm(); }}
-      >
-        {t('time.permissions.members')} ({members.length})
-      </button>
-    </div>
+    <TabStrip
+      class="mb-6"
+      tabs={[
+        { id: 'managers', label: t('time.permissions.managers'), count: managers.length },
+        { id: 'members', label: t('time.permissions.members'), count: members.length }
+      ]}
+      bind:activeTab
+      onTabChange={() => { showAddForm = false; resetAddForm(); }}
+    />
 
     <!-- Add Button -->
     <div class="flex justify-end mb-4">
@@ -183,9 +177,7 @@
     <!-- List -->
     <div class="space-y-2">
       {#if loading}
-        <div class="flex items-center justify-center py-12">
-          <Spinner />
-        </div>
+        <StateDisplay type="loading" />
       {:else if activeTab === 'managers'}
         {#if managers.length === 0}
           <div

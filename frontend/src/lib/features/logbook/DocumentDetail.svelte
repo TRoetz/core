@@ -1,5 +1,6 @@
 <script>
   import { onMount } from 'svelte';
+  import TabStrip from '../../components/TabStrip.svelte';
   import { navigate, currentRoute } from '../../router.js';
   import { logbookStore } from '../../stores/logbook.svelte.js';
   import { t } from '../../stores/i18n.svelte.js';
@@ -284,37 +285,15 @@
     {/if}
 
     <!-- Tab Navigation -->
-    <div class="flex border-b mb-6 gap-1" style="border-color: var(--ds-border);">
-      <button
-        onclick={() => activeTab = 'article'}
-        class="px-4 py-2 text-sm font-medium transition-colors cursor-pointer -mb-px"
-        style={activeTab === 'article'
-          ? 'color: var(--ds-text); border-bottom: 2px solid var(--ds-interactive);'
-          : 'color: var(--ds-text-subtle); border-bottom: 2px solid transparent;'}
-      >
-        {t('logbook.article')}
-      </button>
-      {#if !isNote}
-        <button
-          onclick={() => activeTab = 'raw'}
-          class="px-4 py-2 text-sm font-medium transition-colors cursor-pointer -mb-px"
-          style={activeTab === 'raw'
-            ? 'color: var(--ds-text); border-bottom: 2px solid var(--ds-interactive);'
-            : 'color: var(--ds-text-subtle); border-bottom: 2px solid transparent;'}
-        >
-          {t('logbook.rawContent')}
-        </button>
-      {/if}
-      <button
-        onclick={() => activeTab = 'info'}
-        class="px-4 py-2 text-sm font-medium transition-colors cursor-pointer -mb-px"
-        style={activeTab === 'info'
-          ? 'color: var(--ds-text); border-bottom: 2px solid var(--ds-interactive);'
-          : 'color: var(--ds-text-subtle); border-bottom: 2px solid transparent;'}
-      >
-        {t('logbook.info')}
-      </button>
-    </div>
+    <TabStrip
+      class="mb-6"
+      tabs={[
+        { id: 'article', label: t('logbook.article') },
+        ...(!isNote ? [{ id: 'raw', label: t('logbook.rawContent') }] : []),
+        { id: 'info', label: t('logbook.info') }
+      ]}
+      bind:activeTab
+    />
 
     <!-- Tab Content -->
     {#if activeTab === 'article'}

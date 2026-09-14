@@ -6,6 +6,7 @@
   import Button from '../components/Button.svelte';
   import Input from '../components/Input.svelte';
   import EmptyState from '../components/EmptyState.svelte';
+  import ModalBackdrop from '../components/ModalBackdrop.svelte';
   import DialogFooter from '../dialogs/DialogFooter.svelte';
   import { X, Search, Loader2, Check, GitBranch, Lock, Globe } from '@lucide/svelte';
   import { t } from '../stores/i18n.svelte.js';
@@ -155,16 +156,8 @@
 </script>
 
 <!-- Modal Backdrop -->
-<div
-  class="fixed inset-0 flex items-center justify-center p-4 z-50"
-  style="background-color: rgba(0, 0, 0, 0.3); backdrop-filter: blur(2px);"
-  onclick={(e) => e.target === e.currentTarget && close()}
-  onkeypress={(e) => e.key === 'Escape' && close()}
-  role="dialog"
-  aria-modal="true"
-  aria-labelledby="repo-selector-title"
-  tabindex="-1"
->
+<!-- shortcut-guard-exempt: picker confirms via its explicit footer button; no submit shortcut owned -->
+<ModalBackdrop show={true} onclose={close} ariaLabelledBy="repo-selector-title">
   <div
     class="w-full max-w-2xl max-h-[80vh] flex flex-col rounded-lg shadow-xl border overflow-hidden"
     style="background-color: var(--ds-surface-raised); border-color: var(--ds-border);"
@@ -318,4 +311,4 @@
       {/snippet}
     </DialogFooter>
   </div>
-</div>
+</ModalBackdrop>

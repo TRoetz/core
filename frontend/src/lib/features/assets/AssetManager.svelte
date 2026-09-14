@@ -1,5 +1,6 @@
 <script>
   import { onMount } from 'svelte';
+  import TabStrip from '../../components/TabStrip.svelte';
   import { api } from '../../api.js';
   import Button from '../../components/Button.svelte';
   import PageHeader from '../../layout/PageHeader.svelte';
@@ -29,6 +30,7 @@
   import { toHotkeyString } from '../../utils/keyboardShortcuts.js';
   import { permissionStore, isSystemAdmin } from '../../stores';
   import { fetchAssetCategories, flattenCategories } from './shared/assetSetUtils.js';
+	import TextField from '../../components/TextField.svelte';
 
   // State for asset sets
   let assetSets = $state([]);
@@ -632,43 +634,20 @@
     </div>
 
     <!-- Tabs -->
-    <div class="mb-6" style="border-bottom: 1px solid var(--ds-border);">
-      <nav class="flex gap-4">
-        <button
-          class="pb-2 px-1 border-b-2 transition-colors {activeTab === 'types' ? 'asset-tab-active' : 'border-transparent asset-tab-inactive'}"
-          data-testid="asset-manager-types-tab"
-          onclick={() => activeTab = 'types'}
-        >
-          <IconSettings class="w-4 h-4 inline mr-1" />
-          {t('assets.types')}
-        </button>
-        <button
-          class="pb-2 px-1 border-b-2 transition-colors {activeTab === 'categories' ? 'asset-tab-active' : 'border-transparent asset-tab-inactive'}"
-          data-testid="asset-manager-categories-tab"
-          onclick={() => activeTab = 'categories'}
-        >
-          <IconListTree class="w-4 h-4 inline mr-1" />
-          {t('assets.categories')}
-        </button>
-        {#if isSetAdmin}
-          <button
-            class="pb-2 px-1 border-b-2 transition-colors {activeTab === 'permissions' ? 'asset-tab-active' : 'border-transparent asset-tab-inactive'}"
-            data-testid="asset-manager-permissions-tab"
-            onclick={() => activeTab = 'permissions'}
-          >
-            <IconUsers class="w-4 h-4 inline mr-1" />
-            {t('assets.permissions')}
-          </button>
-          <button
-            data-testid="asset-automations-tab"
-            class="pb-2 px-1 border-b-2 transition-colors {activeTab === 'automations' ? 'asset-tab-active' : 'border-transparent asset-tab-inactive'}"
-            onclick={() => activeTab = 'automations'}
-          >
-            <IconBolt class="w-4 h-4 inline mr-1" />
-            {t('assets.automations') || 'Automations'}
-          </button>
-        {/if}
-      </nav>
+    <div class="mb-6">
+      <TabStrip
+        tabs={[
+          { id: 'types', label: t('assets.types'), icon: IconSettings, testid: 'asset-manager-types-tab' },
+          { id: 'categories', label: t('assets.categories'), icon: IconListTree, testid: 'asset-manager-categories-tab' },
+          ...(isSetAdmin
+            ? [
+                { id: 'permissions', label: t('assets.permissions'), icon: IconUsers, testid: 'asset-manager-permissions-tab' },
+                { id: 'automations', label: t('assets.automations') || 'Automations', icon: IconBolt, testid: 'asset-automations-tab' }
+              ]
+            : [])
+        ]}
+        bind:activeTab
+      />
     </div>
 
     <!-- Types Tab -->
@@ -900,12 +879,13 @@
     <ModalHeader title={editingSet ? t('assets.editSet') : t('assets.createAssetSet')} onClose={closeSetForm} />
     <div class="p-6 space-y-4" inert={savingConfiguration}>
       <div>
-        <Label color="default" class="mb-1">{t('common.name')}</Label>
-        <Input
-          type="text"
-          bind:value={setFormData.name}
+        <TextField
+          label={t('common.name')}
           required
+          labelColor="default"
+          type="text"
           size="small"
+          bind:value={setFormData.name}
         />
       </div>
       <div>
@@ -936,13 +916,14 @@
     <ModalHeader title={editingType ? t('assets.editType') : t('assets.createType')} onClose={closeTypeForm} />
     <div class="p-6 space-y-4" inert={savingConfiguration}>
       <div>
-        <Label color="default" class="mb-1">{t('common.name')}</Label>
-        <Input
+        <TextField
+          label={t('common.name')}
+          required
+          labelColor="default"
           type="text"
           dataTestid="asset-manager-type-name"
-          bind:value={typeFormData.name}
-          required
           size="small"
+          bind:value={typeFormData.name}
         />
       </div>
       <div>
@@ -976,13 +957,14 @@
     <ModalHeader title={editingCategory ? t('assets.editCategory') : t('assets.createCategory')} onClose={closeCategoryForm} />
     <div class="p-6 space-y-4" inert={savingConfiguration}>
       <div>
-        <Label color="default" class="mb-1">{t('common.name')}</Label>
-        <Input
+        <TextField
+          label={t('common.name')}
+          required
+          labelColor="default"
           type="text"
           dataTestid="asset-manager-category-name"
-          bind:value={categoryFormData.name}
-          required
           size="small"
+          bind:value={categoryFormData.name}
         />
       </div>
       <div>
@@ -1084,18 +1066,7 @@
   onCancel={handleFieldsCancel}
 />
 
-<style>
-  .asset-tab-active {
-    border-color: var(--ds-interactive);
-    color: var(--ds-interactive);
-  }
-  .asset-tab-inactive {
-    color: var(--ds-text-subtle);
-  }
-  .asset-tab-inactive:hover {
-    color: var(--ds-text);
-  }
-  .role-toggle-inactive {
+<style>  .role-toggle-inactive {
     border-color: var(--ds-border);
     color: var(--ds-text-subtle);
   }

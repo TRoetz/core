@@ -1,11 +1,12 @@
 <script>
   import { api } from '../api.js';
-  import Spinner from '../components/Spinner.svelte';
+  import StateDisplay from '../components/StateDisplay.svelte';
   import Button from '../components/Button.svelte';
   import BasePicker from '../pickers/BasePicker.svelte';
   import Modal from '../dialogs/Modal.svelte';
   import AlertBox from '../components/AlertBox.svelte';
   import Badge from '../components/Badge.svelte';
+  import TabStrip from '../components/TabStrip.svelte';
   import Input from '../components/Input.svelte';
   import { X, ArrowRight, Type, FileText, Flag, Activity } from '@lucide/svelte';
   import DialogFooter from '../dialogs/DialogFooter.svelte';
@@ -463,10 +464,7 @@
       {/if}
 
       {#if isAnalyzing}
-        <div class="flex items-center justify-center py-8">
-          <Spinner />
-          <span class="ml-3" style="color: var(--ds-text-subtle);">{t('migrationAssistant.analyzingMigration')}</span>
-        </div>
+        <StateDisplay type="loading" message={t('migrationAssistant.analyzingMigration')} />
       {:else if analysisError}
         <AlertBox variant="error" message="{t('migrationAssistant.analysisFailed')}: {analysisError}" />
       {:else if migrationAnalysis}
@@ -478,68 +476,15 @@
 
             {#if comprehensive}
               <!-- Tabs for each dimension -->
-              <div class="flex border-b" style="border-color: var(--ds-border);">
-                <button
-                  data-testid="migration-tab-item-types"
-                  class="px-4 py-2 text-sm font-medium flex items-center gap-2 border-b-2 -mb-px transition-colors"
-                  class:border-ds-interactive={activeTab === 'itemType'}
-                  class:text-ds-interactive={activeTab === 'itemType'}
-                  class:border-transparent={activeTab !== 'itemType'}
-                  style={activeTab !== 'itemType' ? 'color: var(--ds-text-subtle);' : ''}
-                  onclick={() => activeTab = 'itemType'}
-                >
-                  <Type size={16} />
-                  {t('migrationAssistant.itemTypes')}
-                  {#if itemTypeCount > 0}
-                    <span class="px-1.5 py-0.5 text-xs rounded-full bg-ds-accent-yellow-subtle text-ds-text-accent-yellow">{itemTypeCount}</span>
-                  {/if}
-                </button>
-                <button
-                  data-testid="migration-tab-fields"
-                  class="px-4 py-2 text-sm font-medium flex items-center gap-2 border-b-2 -mb-px transition-colors"
-                  class:border-ds-interactive={activeTab === 'fields'}
-                  class:text-ds-interactive={activeTab === 'fields'}
-                  class:border-transparent={activeTab !== 'fields'}
-                  style={activeTab !== 'fields' ? 'color: var(--ds-text-subtle);' : ''}
-                  onclick={() => activeTab = 'fields'}
-                >
-                  <FileText size={16} />
-                  {t('migrationAssistant.fields')}
-                  {#if fieldCount > 0}
-                    <span class="px-1.5 py-0.5 text-xs rounded-full bg-ds-accent-yellow-subtle text-ds-text-accent-yellow">{fieldCount}</span>
-                  {/if}
-                </button>
-                <button
-                  data-testid="migration-tab-status"
-                  class="px-4 py-2 text-sm font-medium flex items-center gap-2 border-b-2 -mb-px transition-colors"
-                  class:border-ds-interactive={activeTab === 'status'}
-                  class:text-ds-interactive={activeTab === 'status'}
-                  class:border-transparent={activeTab !== 'status'}
-                  style={activeTab !== 'status' ? 'color: var(--ds-text-subtle);' : ''}
-                  onclick={() => activeTab = 'status'}
-                >
-                  <Activity size={16} />
-                  {t('migrationAssistant.status')}
-                  {#if statusCount > 0}
-                    <span class="px-1.5 py-0.5 text-xs rounded-full bg-ds-accent-yellow-subtle text-ds-text-accent-yellow">{statusCount}</span>
-                  {/if}
-                </button>
-                <button
-                  data-testid="migration-tab-priority"
-                  class="px-4 py-2 text-sm font-medium flex items-center gap-2 border-b-2 -mb-px transition-colors"
-                  class:border-ds-interactive={activeTab === 'priority'}
-                  class:text-ds-interactive={activeTab === 'priority'}
-                  class:border-transparent={activeTab !== 'priority'}
-                  style={activeTab !== 'priority' ? 'color: var(--ds-text-subtle);' : ''}
-                  onclick={() => activeTab = 'priority'}
-                >
-                  <Flag size={16} />
-                  {t('migrationAssistant.priority')}
-                  {#if priorityCount > 0}
-                    <span class="px-1.5 py-0.5 text-xs rounded-full bg-ds-accent-yellow-subtle text-ds-text-accent-yellow">{priorityCount}</span>
-                  {/if}
-                </button>
-              </div>
+              <TabStrip
+                tabs={[
+                  { id: 'itemType', label: t('migrationAssistant.itemTypes'), count: itemTypeCount, countVariant: 'warning', icon: Type, testid: 'migration-tab-item-types' },
+                  { id: 'fields', label: t('migrationAssistant.fields'), count: fieldCount, countVariant: 'warning', icon: FileText, testid: 'migration-tab-fields' },
+                  { id: 'status', label: t('migrationAssistant.status'), count: statusCount, countVariant: 'warning', icon: Activity, testid: 'migration-tab-status' },
+                  { id: 'priority', label: t('migrationAssistant.priority'), count: priorityCount, countVariant: 'warning', icon: Flag, testid: 'migration-tab-priority' }
+                ]}
+                bind:activeTab
+              />
             {/if}
 
             <!-- Item Type Migrations -->

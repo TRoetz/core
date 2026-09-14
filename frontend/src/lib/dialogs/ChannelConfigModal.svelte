@@ -1,5 +1,6 @@
 <script>
   import { LifeBuoy, Settings, Webhook, ExternalLink, Users, Globe, Mail, Send, ClipboardList } from '@lucide/svelte';
+  import TabStrip from '../components/TabStrip.svelte';
   import { api } from '../api.js';
   import { channelCategoriesStore } from '../stores/channelCategories.js';
   import { t } from '../stores/i18n.svelte.js';
@@ -547,63 +548,15 @@
       </div>
 
       <!-- Tab Navigation -->
-      <div class="px-6 border-b" style="border-color: var(--ds-border);">
-        <nav class="flex gap-6">
-          <button
-            onclick={() => activeTab = 'configuration'}
-            class="relative py-3 text-sm font-medium transition-colors {
-              activeTab === 'configuration'
-                ? 'text-[var(--ds-interactive)]'
-                : 'text-[var(--ds-text-subtle)] hover:text-[var(--ds-text)]'
-            }"
-          >
-            <div class="flex items-center gap-2">
-              <Settings class="w-4 h-4" />
-              <span>{t('channel.configuration')}</span>
-            </div>
-            {#if activeTab === 'configuration'}
-              <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-[var(--ds-interactive)]"></div>
-            {/if}
-          </button>
-
-          {#if channel.type === 'form'}
-            <button
-              onclick={() => activeTab = 'forms'}
-              class="relative py-3 text-sm font-medium transition-colors {
-                activeTab === 'forms'
-                  ? 'text-[var(--ds-interactive)]'
-                  : 'text-[var(--ds-text-subtle)] hover:text-[var(--ds-text)]'
-              }"
-            >
-              <div class="flex items-center gap-2">
-                <ClipboardList class="w-4 h-4" />
-                <span>{t('forms.title')}</span>
-              </div>
-              {#if activeTab === 'forms'}
-                <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-[var(--ds-interactive)]"></div>
-              {/if}
-            </button>
-          {/if}
-
-          {#if $isSystemAdmin && !isPluginOwned(channel)}
-            <button
-              onclick={() => activeTab = 'managers'}
-              class="relative py-3 text-sm font-medium transition-colors {
-                activeTab === 'managers'
-                  ? 'text-[var(--ds-interactive)]'
-                  : 'text-[var(--ds-text-subtle)] hover:text-[var(--ds-text)]'
-              }"
-            >
-              <div class="flex items-center gap-2">
-                <Users class="w-4 h-4" />
-                <span>{t('channel.managers')}</span>
-              </div>
-              {#if activeTab === 'managers'}
-                <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-[var(--ds-interactive)]"></div>
-              {/if}
-            </button>
-          {/if}
-        </nav>
+      <div class="px-6">
+        <TabStrip
+          tabs={[
+            { id: 'configuration', label: t('channel.configuration'), icon: Settings },
+            ...(channel.type === 'form' ? [{ id: 'forms', label: t('forms.title'), icon: ClipboardList }] : []),
+            ...($isSystemAdmin && !isPluginOwned(channel) ? [{ id: 'managers', label: t('channel.managers'), icon: Users }] : [])
+          ]}
+          bind:activeTab
+        />
       </div>
 
       <!-- Tab Content -->

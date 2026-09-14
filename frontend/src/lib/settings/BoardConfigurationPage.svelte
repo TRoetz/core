@@ -1,5 +1,6 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
+  import TabStrip from '../components/TabStrip.svelte';
   import { draggable, dropTargetForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
   import { attachClosestEdge, extractClosestEdge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge';
   import { navigate } from '../router.js';
@@ -800,38 +801,14 @@
         <!-- Configuration content in raised box -->
         <Panel padding="spacious" class="w-full" style="border-color: {styles.hasCustomBackground ? 'transparent' : 'var(--ds-border)'};">
         <!-- Tab Navigation -->
-        <div class="border-b" style="border-color: var(--ds-border);">
-          <div class="flex gap-4">
-            <button
-              class="px-4 py-2 text-sm font-medium border-b-2 transition-colors"
-              class:border-transparent={activeTab !== 'columns'}
-              style:color={activeTab === 'columns' ? 'var(--ds-interactive)' : 'var(--ds-text-subtle)'}
-              style:border-color={activeTab === 'columns' ? 'var(--ds-interactive)' : 'transparent'}
-              onclick={() => activeTab = 'columns'}
-            >
-              {t('settings.boardConfig.columns')}
-            </button>
-            <button
-              class="px-4 py-2 text-sm font-medium border-b-2 transition-colors"
-              class:border-transparent={activeTab !== 'backlog'}
-              style:color={activeTab === 'backlog' ? 'var(--ds-interactive)' : 'var(--ds-text-subtle)'}
-              style:border-color={activeTab === 'backlog' ? 'var(--ds-interactive)' : 'transparent'}
-              onclick={() => activeTab = 'backlog'}
-            >
-              {t('settings.boardConfig.backlog')}
-            </button>
-            <button
-              data-testid="board-config-card-fields-tab"
-              class="px-4 py-2 text-sm font-medium border-b-2 transition-colors"
-              class:border-transparent={activeTab !== 'cardFields'}
-              style:color={activeTab === 'cardFields' ? 'var(--ds-interactive)' : 'var(--ds-text-subtle)'}
-              style:border-color={activeTab === 'cardFields' ? 'var(--ds-interactive)' : 'transparent'}
-              onclick={() => activeTab = 'cardFields'}
-            >
-              {t('settings.boardConfig.cardFields')}
-            </button>
-          </div>
-        </div>
+        <TabStrip
+          tabs={[
+            { id: 'columns', label: t('settings.boardConfig.columns') },
+            { id: 'backlog', label: t('settings.boardConfig.backlog') },
+            { id: 'cardFields', label: t('settings.boardConfig.cardFields'), testid: 'board-config-card-fields-tab' }
+          ]}
+          bind:activeTab
+        />
 
         <!-- Columns Tab -->
         {#if activeTab === 'columns'}

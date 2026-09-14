@@ -1,5 +1,6 @@
 <script>
   import { onMount } from 'svelte';
+  import TabStrip from '../../components/TabStrip.svelte';
   import { api } from '../../api.js';
   import Button from '../../components/Button.svelte';
   import TimeProjectCategories from './TimeProjectCategories.svelte';
@@ -325,24 +326,13 @@
   </PageHeader>
 
   <!-- Tabs -->
-  <div class="border-b" style="border-color: var(--ds-border);">
-    <div class="flex gap-6">
-      <button
-        class="px-1 py-3 text-sm font-medium transition-colors border-b-2 {activeTab === 'projects' ? '' : 'border-transparent'}"
-        style="{activeTab === 'projects' ? 'border-color: var(--ds-interactive); color: var(--ds-interactive);' : 'color: var(--ds-text-subtle);'}"
-        onclick={() => activeTab = 'projects'}
-      >
-        {t('time.projects.projectsTab')}
-      </button>
-      <button
-        class="px-1 py-3 text-sm font-medium transition-colors border-b-2 {activeTab === 'categories' ? '' : 'border-transparent'}"
-        style="{activeTab === 'categories' ? 'border-color: var(--ds-interactive); color: var(--ds-interactive);' : 'color: var(--ds-text-subtle);'}"
-        onclick={() => activeTab = 'categories'}
-      >
-        {t('time.projects.categoriesTab')}
-      </button>
-    </div>
-  </div>
+  <TabStrip
+    tabs={[
+      { id: 'projects', label: t('time.projects.projectsTab') },
+      { id: 'categories', label: t('time.projects.categoriesTab') }
+    ]}
+    bind:activeTab
+  />
 
   <!-- Filters Bar (only show on projects tab) -->
   {#if activeTab === 'projects'}
