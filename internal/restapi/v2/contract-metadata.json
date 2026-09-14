@@ -3812,6 +3812,122 @@
         ]
       }
     },
+    "/hierarchy-levels": {
+      "get": {
+        "description": "List hierarchy levels. Results include only resources visible to the authenticated caller; collections use their documented stable order and bounds.",
+        "parameters": [],
+        "responses": {
+          "401": {},
+          "403": {},
+          "429": {},
+          "500": {}
+        },
+        "summary": "List hierarchy levels",
+        "tags": [
+          "Workspace configuration"
+        ]
+      },
+      "post": {
+        "description": "Create hierarchy level. The server validates resource ownership and command preconditions before persisting changes. Unknown JSON fields are rejected when the operation accepts a body.",
+        "parameters": [],
+        "responses": {
+          "400": {},
+          "401": {},
+          "403": {},
+          "413": {},
+          "415": {},
+          "429": {},
+          "500": {}
+        },
+        "summary": "Create hierarchy level",
+        "tags": [
+          "Workspace configuration"
+        ]
+      }
+    },
+    "/hierarchy-levels/{hierarchy_level_id}": {
+      "delete": {
+        "description": "Delete hierarchy level. The server verifies resource ownership and deletion preconditions before removing the resource.",
+        "parameters": [
+          {
+            "Name": "hierarchy_level_id",
+            "In": "path",
+            "Description": "The hierarchy level identifier.",
+            "Required": true,
+            "Schema": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "401": {},
+          "403": {},
+          "404": {},
+          "429": {},
+          "500": {}
+        },
+        "summary": "Delete hierarchy level",
+        "tags": [
+          "Workspace configuration"
+        ]
+      },
+      "get": {
+        "description": "Get hierarchy level. Results include only resources visible to the authenticated caller; collections use their documented stable order and bounds.",
+        "parameters": [
+          {
+            "Name": "hierarchy_level_id",
+            "In": "path",
+            "Description": "The hierarchy level identifier.",
+            "Required": true,
+            "Schema": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "401": {},
+          "403": {},
+          "404": {},
+          "429": {},
+          "500": {}
+        },
+        "summary": "Get hierarchy level",
+        "tags": [
+          "Workspace configuration"
+        ]
+      },
+      "put": {
+        "description": "Update hierarchy level. The server validates resource ownership and command preconditions before persisting changes. Unknown JSON fields are rejected when the operation accepts a body.",
+        "parameters": [
+          {
+            "Name": "hierarchy_level_id",
+            "In": "path",
+            "Description": "The hierarchy level identifier.",
+            "Required": true,
+            "Schema": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "400": {},
+          "401": {},
+          "403": {},
+          "404": {},
+          "413": {},
+          "415": {},
+          "429": {},
+          "500": {}
+        },
+        "summary": "Update hierarchy level",
+        "tags": [
+          "Workspace configuration"
+        ]
+      }
+    },
     "/item-diagrams/{diagram_id}": {
       "delete": {
         "description": "Delete item diagram. The server verifies resource ownership and deletion preconditions before removing the resource.",

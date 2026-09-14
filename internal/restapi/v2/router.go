@@ -526,6 +526,7 @@ type Deps struct {
 	ObjectTranslations objectLocalizer
 	Catalog            catalogReader
 	CatalogMutations   catalogMutationApplication
+	HierarchyLevels    *services.EnumService
 	Workspaces         workspaceApplication
 	ItemTemplates      itemTemplateApplication
 	Labels             labelApplication
@@ -768,6 +769,7 @@ func buildRoutes(deps Deps) []route {
 	builder.RawResponse[map[string]any](http.MethodGet, "/openapi.json", http.StatusOK, "application/json", AuthPublic, nil, serveOpenAPI(apispec.V2SpecJSON))
 	builder.Read("/users/me", AuthAuthenticated, []string{"users:read"}, getCurrentUser(deps.Users))
 	registerCatalogRoutes(&builder, deps)
+	registerHierarchyLevelRoutes(&builder, deps)
 	registerScopedCatalogRoutes(&builder, deps.Catalog, deps.Workspaces, deps.ItemTemplates)
 	registerLabelRoutes(&builder, deps)
 	registerPreferenceRoutes(&builder, deps.Preferences)

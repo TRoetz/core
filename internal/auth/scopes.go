@@ -30,6 +30,20 @@ const (
 	ScopePrioritiesRead   = "priorities:read"
 	ScopePrioritiesWrite  = "priorities:write"
 	ScopeCustomFieldsRead = "custom-fields:read"
+	// ScopeCustomFieldsWrite covers custom-field definition mutations and the
+	// custom-field index settings (WI-1306 public provisioning surface).
+	ScopeCustomFieldsWrite = "custom-fields:write"
+
+	// Configuration provisioning (WI-1306): screens + screen-field
+	// configuration, hierarchy levels, configuration sets, and workspace roles.
+	ScopeScreensRead            = "screens:read"
+	ScopeScreensWrite           = "screens:write"
+	ScopeHierarchyLevelsRead    = "hierarchy-levels:read"
+	ScopeHierarchyLevelsWrite   = "hierarchy-levels:write"
+	ScopeConfigurationSetsRead  = "configuration-sets:read"
+	ScopeConfigurationSetsWrite = "configuration-sets:write"
+	ScopeWorkspaceRolesRead     = "workspace-roles:read"
+	ScopeWorkspaceRolesWrite    = "workspace-roles:write"
 
 	// Users
 	ScopeUsersRead = "users:read"
@@ -222,6 +236,19 @@ var scopeCatalog = []ScopeInfo{
 	{Scope: ScopePrioritiesRead, Resource: "priorities", ResourceLabel: "Priorities", Action: "read", Label: "Read priorities", Description: "Read the configured priorities.", AgentDefault: true},
 	{Scope: ScopePrioritiesWrite, Resource: "priorities", ResourceLabel: "Priorities", Action: "write", Label: "Manage priorities", Description: "Create, update, and delete priorities."},
 	{Scope: ScopeCustomFieldsRead, Resource: "custom-fields", ResourceLabel: "Custom fields", Action: "read", Label: "Read custom fields", Description: "Read custom field definitions.", AgentDefault: true},
+	{Scope: ScopeCustomFieldsWrite, Resource: "custom-fields", ResourceLabel: "Custom fields", Action: "write", Label: "Manage custom fields", Description: "Create, update, delete, and configure custom field definitions."},
+
+	{Scope: ScopeHierarchyLevelsRead, Resource: "hierarchy-levels", ResourceLabel: "Hierarchy levels", Action: "read", Label: "Read hierarchy levels", Description: "Read the configured hierarchy levels.", AgentDefault: true},
+	{Scope: ScopeHierarchyLevelsWrite, Resource: "hierarchy-levels", ResourceLabel: "Hierarchy levels", Action: "write", Label: "Manage hierarchy levels", Description: "Create, update, and delete hierarchy levels. Requires system administrator permission."},
+
+	{Scope: ScopeScreensRead, Resource: "screens", ResourceLabel: "Screens", Action: "read", Label: "Read screens", Description: "Read screens and their field configuration.", AgentDefault: true},
+	{Scope: ScopeScreensWrite, Resource: "screens", ResourceLabel: "Screens", Action: "write", Label: "Manage screens", Description: "Create and update screens and their field configuration. Requires system administrator permission."},
+
+	{Scope: ScopeConfigurationSetsRead, Resource: "configuration-sets", ResourceLabel: "Configuration sets", Action: "read", Label: "Read configuration sets", Description: "Read configuration sets and their provisioning analysis.", AgentDefault: true},
+	{Scope: ScopeConfigurationSetsWrite, Resource: "configuration-sets", ResourceLabel: "Configuration sets", Action: "write", Label: "Manage configuration sets", Description: "Create, update, delete, and apply configuration sets. Requires system administrator permission."},
+
+	{Scope: ScopeWorkspaceRolesRead, Resource: "workspace-roles", ResourceLabel: "Workspace roles", Action: "read", Label: "Read workspace roles", Description: "Read the available workspace roles.", AgentDefault: true},
+	{Scope: ScopeWorkspaceRolesWrite, Resource: "workspace-roles", ResourceLabel: "Workspace roles", Action: "write", Label: "Manage workspace roles", Description: "Create, update, delete workspace roles and assign them. Requires system administrator permission."},
 	{Scope: ScopeAgentSkillsRead, Resource: "agent-skills", ResourceLabel: "Agent skills", Action: "read", Label: "Read agent skills", Description: "Read the workspace library of agent knowledge packs.", AgentDefault: true},
 	{Scope: ScopeAgentSkillsWrite, Resource: "agent-skills", ResourceLabel: "Agent skills", Action: "write", Label: "Manage agent skills", Description: "Create, update, and delete workspace agent skills."},
 

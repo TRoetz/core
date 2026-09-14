@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"windshift/internal/database"
+	"windshift/internal/models"
+	"windshift/internal/sanitize"
 )
 
 // EnumEntity is the interface that all enum models must implement
@@ -148,6 +150,41 @@ func NewServiceError(statusCode int, message string) *ServiceError {
 	return &ServiceError{StatusCode: statusCode, Message: message}
 }
 
+// sanitizeEnumFields scrubs the shared Name/Color/Description shape of
+// the enum entities. Name + Description render in the settings tables
+// and pickers; Color is a hex code (identifier-shaped). Pass nil for
+// fields the entity doesn't have.
+func sanitizeEnumFields(name, color, description *string) {
+	sanitize.ApplyAll(
+		sanitize.Pair{Target: name, Policy: sanitize.PlainTextField},
+		sanitize.Pair{Target: color, Policy: sanitize.ShortIdentifier},
+		sanitize.Pair{Target: description, Policy: sanitize.PlainTextField},
+	)
+}
+
+// sanitizeEnumEntity dispatches to the entity types the enum service
+// persists.
+func sanitizeEnumEntity(entity any) {
+	switch e := entity.(type) {
+	case *models.HierarchyLevel:
+		sanitizeEnumFields(&e.Name, nil, &e.Description)
+	case *models.StatusCategory:
+		sanitizeEnumFields(&e.Name, &e.Color, &e.Description)
+	case *models.Status:
+		sanitizeEnumFields(&e.Name, nil, &e.Description)
+	case *models.MilestoneCategory:
+		sanitizeEnumFields(&e.Name, &e.Color, &e.Description)
+	case *models.ChannelCategory:
+		sanitizeEnumFields(&e.Name, &e.Color, &e.Description)
+	case *models.CollectionCategory:
+		sanitizeEnumFields(&e.Name, &e.Color, &e.Description)
+	case *models.IterationType:
+		sanitizeEnumFields(&e.Name, nil, &e.Description)
+	case *models.ContactRole:
+		sanitizeEnumFields(&e.Name, nil, &e.Description)
+	}
+}
+
 // GetAll retrieves all entities
 func (s *EnumService) GetAll() ([]EnumEntity, error) {
 	query := s.config.SelectQuery
@@ -212,6 +249,8 @@ func (s *EnumService) Create(entity any, r *http.Request) (EnumEntity, error) {
 	if s.config.ApplyDefaults != nil {
 		s.config.ApplyDefaults(entity)
 	}
+
+	sanitizeEnumEntity(entity)
 
 	// Validate
 	if s.config.Validate != nil {
@@ -284,6 +323,8 @@ func (s *EnumService) Update(id int, entity any, r *http.Request) (EnumEntity, e
 	if err != nil {
 		return nil, err // Returns 404 if not found
 	}
+
+	sanitizeEnumEntity(entity)
 
 	// Before update hook (e.g., system protection)
 	if s.config.BeforeUpdate != nil {

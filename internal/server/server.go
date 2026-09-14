@@ -587,8 +587,9 @@ func (s *Server) initialize() error {
 
 	hierarchyLevelConfig := services.NewHierarchyLevelConfig()
 	hierarchyLevelConfig.AuditEmit = enumAuditEmit
+	hierarchyLevelEnumService := services.NewEnumService(s.db, hierarchyLevelConfig)
 	hierarchyLevelHandler := handlers.NewEnumHandler(
-		services.NewEnumService(s.db, hierarchyLevelConfig),
+		hierarchyLevelEnumService,
 		func() any { return &models.HierarchyLevel{} }).WithObjectTranslations(objectTranslationService, "hierarchy_level")
 	requestTypeHandler := handlers.NewRequestTypeHandler(
 		repository.NewRequestTypeRepository(s.db),
@@ -1717,6 +1718,7 @@ func (s *Server) initialize() error {
 		ObjectTranslations: objectTranslationService,
 		Catalog:            services.NewCatalogReadService(s.db, permService, v2Access, s.activityTracker),
 		CatalogMutations:   catalogMutations,
+		HierarchyLevels:    hierarchyLevelEnumService,
 		Workspaces:         services.NewWorkspaceApplicationService(s.db, v2Access, authorizationCacheInvalidator),
 		ItemTemplates:      services.NewItemTemplateApplicationService(s.db, v2Access),
 		Labels:             services.NewLabelApplicationService(s.db),

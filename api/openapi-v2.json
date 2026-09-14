@@ -7386,6 +7386,133 @@
         ],
         "type": "object"
       },
+      "GetHierarchyLevelsHierarchyLevelIdResult": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "additionalProperties": false,
+            "properties": {
+              "builtin_key": {
+                "description": "The builtin key value.",
+                "nullable": true,
+                "type": "string"
+              },
+              "created_at": {
+                "description": "The created at value.",
+                "format": "date-time",
+                "type": "string"
+              },
+              "description": {
+                "description": "The description value.",
+                "type": "string"
+              },
+              "display_description": {
+                "description": "The display description value.",
+                "type": "string"
+              },
+              "display_name": {
+                "description": "The display name value.",
+                "type": "string"
+              },
+              "id": {
+                "description": "The id value.",
+                "type": "integer"
+              },
+              "level": {
+                "description": "The level value.",
+                "type": "integer"
+              },
+              "name": {
+                "description": "The name value.",
+                "type": "string"
+              },
+              "updated_at": {
+                "description": "The updated at value.",
+                "format": "date-time",
+                "type": "string"
+              }
+            },
+            "required": [
+              "created_at",
+              "description",
+              "id",
+              "level",
+              "name",
+              "updated_at"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "GetHierarchyLevelsResult": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "builtin_key": {
+                  "description": "The builtin key value.",
+                  "nullable": true,
+                  "type": "string"
+                },
+                "created_at": {
+                  "description": "The created at value.",
+                  "format": "date-time",
+                  "type": "string"
+                },
+                "description": {
+                  "description": "The description value.",
+                  "type": "string"
+                },
+                "display_description": {
+                  "description": "The display description value.",
+                  "type": "string"
+                },
+                "display_name": {
+                  "description": "The display name value.",
+                  "type": "string"
+                },
+                "id": {
+                  "description": "The id value.",
+                  "type": "integer"
+                },
+                "level": {
+                  "description": "The level value.",
+                  "type": "integer"
+                },
+                "name": {
+                  "description": "The name value.",
+                  "type": "string"
+                },
+                "updated_at": {
+                  "description": "The updated at value.",
+                  "format": "date-time",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "created_at",
+                "description",
+                "id",
+                "level",
+                "name",
+                "updated_at"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
       "GetItemDiagramsDiagramIdResult": {
         "additionalProperties": false,
         "properties": {
@@ -54932,6 +55059,91 @@
         ],
         "type": "object"
       },
+      "PostHierarchyLevelsPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "description": "The description value.",
+            "type": "string"
+          },
+          "level": {
+            "description": "The level value.",
+            "type": "integer"
+          },
+          "name": {
+            "description": "The name value.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "description",
+          "level",
+          "name"
+        ],
+        "type": "object"
+      },
+      "PostHierarchyLevelsResult": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "additionalProperties": false,
+            "properties": {
+              "builtin_key": {
+                "description": "The builtin key value.",
+                "nullable": true,
+                "type": "string"
+              },
+              "created_at": {
+                "description": "The created at value.",
+                "format": "date-time",
+                "type": "string"
+              },
+              "description": {
+                "description": "The description value.",
+                "type": "string"
+              },
+              "display_description": {
+                "description": "The display description value.",
+                "type": "string"
+              },
+              "display_name": {
+                "description": "The display name value.",
+                "type": "string"
+              },
+              "id": {
+                "description": "The id value.",
+                "type": "integer"
+              },
+              "level": {
+                "description": "The level value.",
+                "type": "integer"
+              },
+              "name": {
+                "description": "The name value.",
+                "type": "string"
+              },
+              "updated_at": {
+                "description": "The updated at value.",
+                "format": "date-time",
+                "type": "string"
+              }
+            },
+            "required": [
+              "created_at",
+              "description",
+              "id",
+              "level",
+              "name",
+              "updated_at"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
       "PostItemTypesPayload": {
         "additionalProperties": false,
         "properties": {
@@ -73711,6 +73923,91 @@
         ],
         "type": "object"
       },
+      "PutHierarchyLevelsHierarchyLevelIdPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "description": "The description value.",
+            "type": "string"
+          },
+          "level": {
+            "description": "The level value.",
+            "type": "integer"
+          },
+          "name": {
+            "description": "The name value.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "description",
+          "level",
+          "name"
+        ],
+        "type": "object"
+      },
+      "PutHierarchyLevelsHierarchyLevelIdResult": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "additionalProperties": false,
+            "properties": {
+              "builtin_key": {
+                "description": "The builtin key value.",
+                "nullable": true,
+                "type": "string"
+              },
+              "created_at": {
+                "description": "The created at value.",
+                "format": "date-time",
+                "type": "string"
+              },
+              "description": {
+                "description": "The description value.",
+                "type": "string"
+              },
+              "display_description": {
+                "description": "The display description value.",
+                "type": "string"
+              },
+              "display_name": {
+                "description": "The display name value.",
+                "type": "string"
+              },
+              "id": {
+                "description": "The id value.",
+                "type": "integer"
+              },
+              "level": {
+                "description": "The level value.",
+                "type": "integer"
+              },
+              "name": {
+                "description": "The name value.",
+                "type": "string"
+              },
+              "updated_at": {
+                "description": "The updated at value.",
+                "format": "date-time",
+                "type": "string"
+              }
+            },
+            "required": [
+              "created_at",
+              "description",
+              "id",
+              "level",
+              "name",
+              "updated_at"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
       "PutItemsItemIdLabelsPayload": {
         "additionalProperties": false,
         "properties": {
@@ -81135,6 +81432,288 @@
         ],
         "x-required-scopes": [
           "custom-fields:read"
+        ]
+      }
+    },
+    "/hierarchy-levels": {
+      "get": {
+        "description": "List hierarchy levels. Results include only resources visible to the authenticated caller; collections use their documented stable order and bounds.",
+        "operationId": "getHierarchyLevels",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetHierarchyLevelsResult"
+                }
+              }
+            },
+            "description": "List hierarchy levels response."
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationError"
+          },
+          "403": {
+            "$ref": "#/components/responses/PermissionError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "List hierarchy levels",
+        "tags": [
+          "Workspace configuration"
+        ],
+        "x-required-scopes": [
+          "hierarchy-levels:read"
+        ]
+      },
+      "post": {
+        "description": "Create hierarchy level. The server validates resource ownership and command preconditions before persisting changes. Unknown JSON fields are rejected when the operation accepts a body.",
+        "operationId": "postHierarchyLevels",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostHierarchyLevelsPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostHierarchyLevelsResult"
+                }
+              }
+            },
+            "description": "Create hierarchy level response."
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationError"
+          },
+          "403": {
+            "$ref": "#/components/responses/PermissionError"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLargeError"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaTypeError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Create hierarchy level",
+        "tags": [
+          "Workspace configuration"
+        ],
+        "x-required-scopes": [
+          "hierarchy-levels:write"
+        ]
+      }
+    },
+    "/hierarchy-levels/{hierarchy_level_id}": {
+      "delete": {
+        "description": "Delete hierarchy level. The server verifies resource ownership and deletion preconditions before removing the resource.",
+        "operationId": "deleteHierarchyLevelsHierarchyLevelId",
+        "parameters": [
+          {
+            "description": "The hierarchy level identifier.",
+            "in": "path",
+            "name": "hierarchy_level_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Request completed successfully with no response body."
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationError"
+          },
+          "403": {
+            "$ref": "#/components/responses/PermissionError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Delete hierarchy level",
+        "tags": [
+          "Workspace configuration"
+        ],
+        "x-required-scopes": [
+          "hierarchy-levels:write"
+        ]
+      },
+      "get": {
+        "description": "Get hierarchy level. Results include only resources visible to the authenticated caller; collections use their documented stable order and bounds.",
+        "operationId": "getHierarchyLevelsHierarchyLevelId",
+        "parameters": [
+          {
+            "description": "The hierarchy level identifier.",
+            "in": "path",
+            "name": "hierarchy_level_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetHierarchyLevelsHierarchyLevelIdResult"
+                }
+              }
+            },
+            "description": "Get hierarchy level response."
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationError"
+          },
+          "403": {
+            "$ref": "#/components/responses/PermissionError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Get hierarchy level",
+        "tags": [
+          "Workspace configuration"
+        ],
+        "x-required-scopes": [
+          "hierarchy-levels:read"
+        ]
+      },
+      "put": {
+        "description": "Update hierarchy level. The server validates resource ownership and command preconditions before persisting changes. Unknown JSON fields are rejected when the operation accepts a body.",
+        "operationId": "putHierarchyLevelsHierarchyLevelId",
+        "parameters": [
+          {
+            "description": "The hierarchy level identifier.",
+            "in": "path",
+            "name": "hierarchy_level_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PutHierarchyLevelsHierarchyLevelIdPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PutHierarchyLevelsHierarchyLevelIdResult"
+                }
+              }
+            },
+            "description": "Update hierarchy level response."
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationError"
+          },
+          "403": {
+            "$ref": "#/components/responses/PermissionError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLargeError"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaTypeError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Update hierarchy level",
+        "tags": [
+          "Workspace configuration"
+        ],
+        "x-required-scopes": [
+          "hierarchy-levels:write"
         ]
       }
     },
