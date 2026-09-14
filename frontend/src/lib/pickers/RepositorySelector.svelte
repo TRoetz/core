@@ -1,5 +1,7 @@
 <script>
   import { onMount } from 'svelte';
+  import StateDisplay from '../components/StateDisplay.svelte';
+  import { useDebounce } from 'runed';
   import { api } from '../api.js';
   import Button from '../components/Button.svelte';
   import Input from '../components/Input.svelte';
@@ -27,6 +29,9 @@
     await loadRepositories();
   });
 
+  // Search goes to the SCM provider so results come from all projects, not
+  // just the pages already fetched. Providers without native search ignore
+  // the param and return the unfiltered page; filteredRepos narrows those.
   async function loadRepositories(resetPage = true) {
     if (resetPage) {
       page = 1;
@@ -37,10 +42,10 @@
     errorCode = null;
 
     try {
-      const result = await api.workspaceSCM.getAvailableRepos(workspaceId, connection.id, {
-        page,
-        per_page: perPage
-      });
+      const params = { page, per_page: perPage };
+      const query = searchQuery.trim();
+      if (query) params.search = query;
+      const result = await api.workspaceSCM.getAvailableRepos(workspaceId, connection.id, params);
 
       if (result.error) {
         error = result.error;
@@ -68,6 +73,11 @@
     page += 1;
     await loadRepositories(false);
   }
+
+  // Debounced re-fetch on search input so each keystroke doesn't hit the SCM
+  // API — the query goes to the provider (page 1) rather than only filtering
+  // whatever pages happen to be loaded already.
+  const debouncedSearch = useDebounce(() => loadRepositories(true), 350);
 
   function toggleRepo(repo) {
     if (repo.is_linked) return; // Already linked, can't select
@@ -185,6 +195,8 @@
         <Input
           type="text"
           bind:value={searchQuery}
+          oninput={debouncedSearch}
+          dataTestid="repository-selector-search"
           placeholder={t('pickers.searchRepositories')}
           class="pl-10"
           size="small"
@@ -195,10 +207,7 @@
     <!-- Repository List -->
     <div class="flex-1 overflow-y-auto px-6 py-3">
       {#if loading && repositories.length === 0}
-        <div class="flex items-center justify-center py-12">
-          <Loader2 class="w-6 h-6 animate-spin" style="color: var(--ds-text-subtle);" />
-          <span class="ml-2 text-sm" style="color: var(--ds-text-subtle);">{t('pickers.loadingRepositories')}</span>
-        </div>
+        <StateDisplay type="loading" message={t('pickers.loadingRepositories')} />
       {:else if error}
         <div class="text-center py-12">
           {#if errorCode === 'user_scm_not_connected'}
@@ -225,6 +234,7 @@
         <div class="space-y-2">
           {#each filteredRepos as repo}
             <button
+              data-testid="repository-selector-repo"
               class="w-full flex items-start gap-3 px-3 py-3 rounded-lg border text-left transition-colors"
               class:opacity-50={repo.is_linked}
               class:cursor-not-allowed={repo.is_linked}
@@ -278,7 +288,7 @@
         </div>
 
         <!-- Load More -->
-        {#if hasMore && !searchQuery}
+        {#if hasMore}
           <div class="flex justify-center py-4">
             {#if loading}
               <Loader2 class="w-5 h-5 animate-spin" style="color: var(--ds-text-subtle);" />

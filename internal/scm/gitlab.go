@@ -145,6 +145,12 @@ func (g *GitLabProvider) ListRepositories(ctx context.Context, opts ListReposito
 	if opts.Visibility != "" && opts.Visibility != "all" {
 		q.Set("visibility", opts.Visibility)
 	}
+	if opts.Search != "" {
+		// GitLab's search matches project name/path/description;
+		// search_namespaces extends it to the group/subgroup path.
+		q.Set("search", opts.Search)
+		q.Set("search_namespaces", "true")
+	}
 	var raw []gitLabProject
 	if err := g.doJSON(ctx, http.MethodGet, g.apiURL("/projects?"+q.Encode()), http.NoBody, http.StatusOK, &raw); err != nil {
 		return nil, err

@@ -85,6 +85,11 @@ type ListRepositoriesOptions struct {
 	Organization string // Filter by organization (if supported)
 	Visibility   string // public, private, all
 	Sort         string // created, updated, pushed, full_name
+	// Search restricts results server-side to repositories matching the
+	// query, for providers that support it (currently GitLab). Providers
+	// without native search ignore it and return the unfiltered page;
+	// callers narrow those client-side.
+	Search string
 }
 
 // ListPROptions contains options for listing pull requests

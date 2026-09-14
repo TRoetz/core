@@ -1,5 +1,6 @@
 <script>
   import { onMount } from 'svelte';
+  import StateDisplay from '../components/StateDisplay.svelte';
   import { api } from '../api.js';
   import { t } from '../stores/i18n.svelte.js';
   import {
@@ -414,9 +415,7 @@
 
   <!-- Loading -->
   {#if loading}
-    <div class="flex items-center justify-center py-12">
-      <Spinner size="lg" />
-    </div>
+    <StateDisplay type="loading" size="lg" />
   {:else if providers.length === 0}
     <EmptyState
       icon={GitBranch}
@@ -549,12 +548,19 @@
         </div>
       </div>
 
-      <!-- Base URL (optional for GitLab.com, required for self-hosted Gitea/Forgejo) -->
-      {#if formData.provider_type === 'gitea' || formData.provider_type === 'gitlab'}
+      <!-- Base URL (for self-hosted Gitea/Forgejo; optional for GitLab) -->
+      {#if formData.provider_type === 'gitea'}
         <FormField label={t('settings.scmProviders.baseUrl')} error={formErrors.base_url} helper={t('settings.scmProviders.baseUrlPlaceholder')}>
           <Input
             bind:value={formData.base_url}
-            placeholder={formData.provider_type === 'gitlab' ? 'https://gitlab.com' : 'https://gitea.example.com'}
+            placeholder="https://gitea.example.com"
+          />
+        </FormField>
+      {:else if formData.provider_type === 'gitlab'}
+        <FormField label={t('settings.scmProviders.baseUrl')} error={formErrors.base_url} helper={t('settings.scmProviders.baseUrlOptionalGitlab')}>
+          <Input
+            bind:value={formData.base_url}
+            placeholder="https://gitlab.com"
           />
         </FormField>
       {/if}

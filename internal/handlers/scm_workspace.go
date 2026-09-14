@@ -454,10 +454,17 @@ func (h *SCMWorkspaceHandler) ListAvailableRepositories(w http.ResponseWriter, r
 	if perPage < 1 || perPage > 100 {
 		perPage = 30
 	}
+	// Optional server-side search (honored by the GitLab provider; other
+	// providers ignore it and return the unfiltered page).
+	search := strings.TrimSpace(r.URL.Query().Get("search"))
+	if len(search) > 200 {
+		search = search[:200]
+	}
 
 	opts := scm.ListRepositoriesOptions{
 		Page:    page,
 		PerPage: perPage,
+		Search:  search,
 	}
 
 	ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
