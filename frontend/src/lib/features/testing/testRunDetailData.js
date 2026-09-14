@@ -18,5 +18,13 @@ export async function loadTestRunDetail(apiClient, workspaceId, runId) {
         result,
       ])
     ),
+    // BDD execution state: run-frozen scenario specs and per-example results.
+    bddSnapshots: Object.fromEntries(
+      (Array.isArray(detail.bdd_snapshots) ? detail.bdd_snapshots : []).map((snapshot) => [
+        snapshot.test_case_id,
+        snapshot,
+      ])
+    ),
+    bddExampleResults: detail.example_results ?? [],
   };
 }

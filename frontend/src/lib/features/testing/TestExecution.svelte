@@ -22,6 +22,8 @@
   import { t } from '../../stores/i18n.svelte.js';
   import DescriptionText from '../../components/DescriptionText.svelte';
   import { loadTestRunDetail } from './testRunDetailData.js';
+import BDDExampleExecution from './BDDExampleExecution.svelte';
+import { parseScenarioSpec, flattenExamples } from './bddSpec.js';
 
   let testRun = $state(null);
   let testCases = $state([]);
@@ -35,6 +37,10 @@
   let pendingLinkStepId = $state(null);
   let sidebarCollapsed = $state(false);
   let previewImage = $state(null);
+  // BDD execution state: frozen spec snapshots and example results, keyed by
+  // test case id. Both come with the run detail payload.
+  let bddSnapshots = $state({});
+  let bddExampleResults = $state({});
 
   function getStatusColor(status) {
     return {
@@ -60,6 +66,8 @@
   let fromPage = $derived($currentRoute.query?.from);
   let currentCase = $derived((Array.isArray(testCases) && testCases[currentCaseIndex]) || null);
   let currentStep = $derived(currentCase?.test_steps?.[currentStepIndex] || null);
+  let currentCaseIsBdd = $derived(isBddCase(currentCase));
+  let currentExampleRows = $derived(currentCaseIsBdd ? bddRowsFor(currentCase) : []);
 
   function testPath(suffix = '') {
     const base = workspaceId ? `/workspaces/${workspaceId}/tests` : '/workspaces';
@@ -88,6 +96,12 @@
 
       const detail = await loadTestRunDetail(api, workspaceId, runId);
       testRun = detail.run;
+      bddSnapshots = detail.bddSnapshots;
+      const groupedExampleResults = {};
+      for (const result of detail.bddExampleResults) {
+        (groupedExampleResults[result.test_case_id] ??= []).push(result);
+      }
+      bddExampleResults = groupedExampleResults;
       testCases = detail.testCases;
       testResults = {};
       stepResults = {};
@@ -177,9 +191,20 @@
       return;
     }
 
-    // Find the first test case that has steps and incomplete work
+    // Find the first test case with incomplete work (steps or BDD examples)
     for (let caseIndex = 0; caseIndex < testCases.length; caseIndex++) {
       const testCase = testCases[caseIndex];
+
+      if (isBddCase(testCase)) {
+        const rows = bddExampleResults[testCase.id] || [];
+        const hasIncompleteExamples = rows.some(row => !row.status || row.status === 'not_run');
+        if (rows.length === 0 || hasIncompleteExamples) {
+          currentCaseIndex = caseIndex;
+          currentStepIndex = 0;
+          return;
+        }
+        continue;
+      }
 
       if (testCase.test_steps && testCase.test_steps.length > 0) {
         // Check if this test case has any incomplete steps
@@ -206,10 +231,10 @@
       }
     }
 
-    // If all test cases are complete or no steps found, find first case with steps
+    // If all test cases are complete, find first execution target
     for (let caseIndex = 0; caseIndex < testCases.length; caseIndex++) {
       const testCase = testCases[caseIndex];
-      if (testCase.test_steps && testCase.test_steps.length > 0) {
+      if (isExecutionTarget(testCase)) {
         currentCaseIndex = caseIndex;
         currentStepIndex = 0;
         return;
@@ -226,11 +251,54 @@
     currentStepIndex = 0;
   }
 
+  // A case is an execution target when it has steps (step format) or a
+  // frozen BDD spec with example rows (bdd format).
+  function isBddCase(testCase) {
+    return testCase?.format === 'bdd';
+  }
+
+  function bddStatusColor(status) {
+    switch (status) {
+      case 'passed': return 'var(--ds-status-success-solid)';
+      case 'failed': return 'var(--ds-status-danger-solid)';
+      case 'blocked': return 'var(--ds-status-warning-solid)';
+      case 'skipped': return 'var(--ds-status-neutral-solid)';
+      default: return 'var(--ds-progress-track)';
+    }
+  }
+
+  function isExecutionTarget(testCase) {
+    return isBddCase(testCase) || (testCase?.test_steps && testCase.test_steps.length > 0);
+  }
+
+  function bddRowsFor(testCase) {
+    return bddExampleResults[testCase?.id] || [];
+  }
+
+  function currentCaseSnapshot() {
+    return bddSnapshots[currentCase?.id] || null;
+  }
+
+  function handleBddResultsChange(updatedResults) {
+    bddExampleResults = {
+      ...bddExampleResults,
+      [currentCase.id]: updatedResults,
+    };
+  }
+
   function goToStep(index) {
     currentStepIndex = index;
   }
 
   function nextStep() {
+    // BDD cases execute as a whole; navigation is case-level.
+    if (isBddCase(currentCase)) {
+      if (currentCaseIndex < testCases.length - 1) {
+        currentCaseIndex++;
+        currentStepIndex = 0;
+      }
+      return;
+    }
     // If current case has steps and we're not at the last step
     if (currentCase?.test_steps?.length > 0 && currentStepIndex < currentCase.test_steps.length - 1) {
       currentStepIndex++;
@@ -240,7 +308,7 @@
         currentCaseIndex++;
         currentStepIndex = 0;
         // If the next test case has no steps, keep moving forward
-        while (currentCaseIndex < testCases.length && (!testCases[currentCaseIndex].test_steps || testCases[currentCaseIndex].test_steps.length === 0)) {
+        while (currentCaseIndex < testCases.length && !isExecutionTarget(testCases[currentCaseIndex])) {
           if (currentCaseIndex < testCases.length - 1) {
             currentCaseIndex++;
           } else {
@@ -252,13 +320,20 @@
   }
 
   function previousStep() {
+    if (isBddCase(currentCase)) {
+      if (currentCaseIndex > 0) {
+        currentCaseIndex--;
+        currentStepIndex = 0;
+      }
+      return;
+    }
     if (currentStepIndex > 0) {
       currentStepIndex--;
     } else if (currentCaseIndex > 0) {
       // Move to previous test case
       currentCaseIndex--;
       // If the previous test case has no steps, keep moving backward
-      while (currentCaseIndex >= 0 && (!testCases[currentCaseIndex].test_steps || testCases[currentCaseIndex].test_steps.length === 0)) {
+      while (currentCaseIndex >= 0 && !isExecutionTarget(testCases[currentCaseIndex])) {
         if (currentCaseIndex > 0) {
           currentCaseIndex--;
         } else {
@@ -267,7 +342,11 @@
       }
       // Set to last step of the previous test case, or 0 if no steps
       const prevCase = testCases[currentCaseIndex];
-      currentStepIndex = Math.max(0, (prevCase?.test_steps?.length || 1) - 1);
+      if (isBddCase(prevCase)) {
+        currentStepIndex = 0;
+      } else {
+        currentStepIndex = Math.max(0, (prevCase?.test_steps?.length || 1) - 1);
+      }
     }
   }
 
@@ -358,6 +437,17 @@
   // Status labels and button styles are shared with the other test views.
 
   function getCaseProgress(testCase, currentStepResults = stepResults) {
+    if (isBddCase(testCase)) {
+      const rows = bddExampleResults[testCase.id] || [];
+      const total = flattenExamples(parseScenarioSpec(bddSnapshots[testCase.id]?.spec))?.length || rows.length;
+      const completed = rows.filter(row => row.status && row.status !== 'not_run').length;
+      return {
+        completed,
+        total,
+        percent: total > 0 ? Math.round((completed / total) * 100) : 0
+      };
+    }
+
     const steps = testCase.test_steps || [];
     if (steps.length === 0) return { completed: 0, total: 0, percent: 0 };
     
@@ -543,7 +633,9 @@
             {/if}
           </div>
           <div class="shrink-0 whitespace-nowrap text-sm" style="color: var(--ds-text-subtle);">
-            {#if currentCase.test_steps && currentCase.test_steps.length > 0}
+            {#if currentCaseIsBdd}
+              {t('testing.examplesCount', { count: currentExampleRows.length })}
+            {:else if currentCase.test_steps && currentCase.test_steps.length > 0}
               {t('testing.stepOfTotal', { current: currentStepIndex + 1, total: currentCase.test_steps.length })}
             {:else}
               {t('testing.noStepsDefined')}
@@ -563,7 +655,18 @@
           </Button>
           
           <div class="flex-1 flex gap-1">
-            {#if currentCase.test_steps && currentCase.test_steps.length > 0}
+            {#if currentCaseIsBdd}
+              {#each currentExampleRows as row (row.example_index)}
+                <div
+                  class="step-seg flex-1 h-2 rounded"
+                  style={`background-color: ${bddStatusColor(row.status)}`}
+                  title={t('testing.exampleN', { n: row.example_index + 1 })}
+                ></div>
+              {/each}
+              {#if currentExampleRows.length === 0}
+                <div class="flex-1 h-2 rounded" style="background-color: var(--ds-progress-track);"></div>
+              {/if}
+            {:else if currentCase.test_steps && currentCase.test_steps.length > 0}
               {#each currentCase.test_steps as step, index}
                 <button
                   onclick={() => goToStep(index)}
@@ -589,8 +692,21 @@
         </div>
       </div>
 
-      <!-- Step Content -->
-      {#if currentStep}
+      <!-- Case Content -->
+      {#if currentCaseIsBdd}
+        <div class="flex-1 p-6 overflow-y-auto">
+          <div class="max-w-4xl">
+            <BDDExampleExecution
+              {workspaceId}
+              {runId}
+              testCase={currentCase}
+              snapshot={currentCaseSnapshot()}
+              initialResults={currentExampleRows}
+              onResultsChange={handleBddResultsChange}
+            />
+          </div>
+        </div>
+      {:else if currentStep}
         <div class="flex-1 p-6 overflow-y-auto">
           <div class="max-w-4xl">
             <!-- Step Details -->

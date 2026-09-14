@@ -17,9 +17,12 @@
   import { t } from '../../stores/i18n.svelte.js';
   import { errorToast, infoToast } from '../../stores/toasts.svelte.js';
   import { loadTestRunDetail } from './testRunDetailData.js';
+  import { formatExampleRow } from './bddSpec.js';
   import { formatAuthenticatedDateTime } from '../../utils/authenticatedDateFormatter.js';
 
   let testRun = $state(null);
+  let bddSnapshots = $state({});
+  let bddExampleResults = $state({});
   let testResults = $state([]);
   let loading = $state(true);
 
@@ -38,6 +41,12 @@
       loading = true;
       const detail = await loadTestRunDetail(api, workspaceId, runId);
       testRun = detail.run;
+      bddSnapshots = detail.bddSnapshots;
+      const groupedExampleResults = {};
+      for (const result of detail.bddExampleResults) {
+        (groupedExampleResults[result.test_case_id] ??= []).push(result);
+      }
+      bddExampleResults = groupedExampleResults;
       
       // Load test results if the run has been executed
       if (testRun.ended_at) {
@@ -63,6 +72,7 @@
           
           return {
             ...result,
+            format: testCase?.format || 'steps',
             test_steps: testCase?.test_steps || [],
             stepResults: caseStepResults
           };
@@ -126,6 +136,9 @@
   }
 
   // Status colors now handled by imported utility (getStatusBadgeCSS, getStatusLabel)
+
+  const isBddResult = (result) => result.format === 'bdd';
+  const exampleRowLabel = (row) => formatExampleRow(row.row_values);
 
   function getStatusColor(status) {
     return {
@@ -380,6 +393,35 @@
                         <div class="text-sm italic" style="color: var(--ds-text-subtle);">
                           {t('testing.noDefinedSteps')}
                         </div>
+                      </div>
+                    {/if}
+
+                    {#if isBddResult(result)}
+                      {@const rows = bddExampleResults[result.test_case_id] || []}
+                      <div class="mt-4 pt-3 border-t" style="border-color: var(--ds-border);" data-testid={`test-run-example-results-${result.test_case_id}`}>
+                        <h4 class="text-sm font-medium mb-2" style="color: var(--ds-text);">{t('testing.exampleResults')}</h4>
+                        {#if rows.length === 0}
+                          <div class="text-sm italic" style="color: var(--ds-text-subtle);">{t('testing.examplesNotExecuted')}</div>
+                        {:else}
+                          <div class="space-y-2">
+                            {#each rows as row (row.example_index)}
+                              <div class="flex items-start gap-2 text-sm">
+                                <span class="w-2 h-2 mt-1.5 rounded-full shrink-0" style="background-color: {getStepStatusStyle(row.status || 'not_run')};"></span>
+                                <div class="min-w-0">
+                                  <span class="font-medium" style="color: var(--ds-text);">
+                                    {t('testing.exampleN', { n: row.example_index + 1 })}:
+                                  </span>
+                                  <span style="color: var(--ds-text-subtle);">
+                                    {exampleRowLabel(row)}
+                                  </span>
+                                  {#if row.notes}
+                                    <div class="text-xs" style="color: var(--ds-text-subtle);">{row.notes}</div>
+                                  {/if}
+                                </div>
+                              </div>
+                            {/each}
+                          </div>
+                        {/if}
                       </div>
                     {/if}
 
