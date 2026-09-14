@@ -21,6 +21,7 @@
 		/** Invoked on clipboard failure. */
 		onError = null,
 		disabled = false,
+		dataTestid = undefined,
 		class: className = ''
 	} = $props();
 
@@ -63,6 +64,7 @@
 	style="color: var(--ds-text-subtle)"
 	{title}
 	{disabled}
+	data-testid={dataTestid}
 	aria-label={title}
 	onclick={handleClick}
 >

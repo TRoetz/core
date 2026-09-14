@@ -1,5 +1,6 @@
 <script>
   import { IconAlertCircle as AlertCircle, IconInbox as Inbox, IconRefresh as RefreshCw } from '@tabler/icons-svelte-runes';
+  import StateDisplay from './StateDisplay.svelte';
   import Button from './Button.svelte';
   import Spinner from './Spinner.svelte';
   import { t } from '../stores/i18n.svelte.js';
@@ -33,6 +34,7 @@
    *   action?: import('svelte').Snippet | null,
    *   size?: 'sm' | 'md' | 'lg',
    *   inline?: boolean,
+   *   dataTestid?: string,
    *   class?: string,
    * }}
    */
@@ -47,6 +49,7 @@
     action = null,
     size = 'md',
     inline = false,
+    dataTestid = undefined,
     class: className = ''
   } = $props();
 
@@ -96,7 +99,7 @@
 
 {#if type === 'loading' && inline}
   <!-- Inline loading state -->
-  <div class="flex items-center gap-2 {className}">
+  <div class="flex items-center gap-2 {className}" data-testid={dataTestid}>
     <Spinner {size} />
     <span class="text-sm" style="color: var(--ds-text-subtle);">
       {displayMessage || t('common.loading')}
@@ -104,7 +107,7 @@
   </div>
 {:else if type === 'loading'}
   <!-- Centered loading state -->
-  <div class="flex flex-col items-center justify-center {padding} {className}">
+  <div class="flex flex-col items-center justify-center {padding} {className}" data-testid={dataTestid}>
     <Spinner {size} />
     <p class="mt-3 text-sm" style="color: var(--ds-text-subtle);">
       {displayMessage || t('common.loading')}
@@ -112,7 +115,7 @@
   </div>
 {:else}
   <!-- Error or Empty state -->
-  <div class="text-center {padding} {className}">
+  <div class="text-center {padding} {className}" data-testid={dataTestid}>
     {#if resolvedIcon}
       {@const Icon = resolvedIcon}
       <Icon class="w-8 h-8 mx-auto mb-3" style="color: {iconColor};" />

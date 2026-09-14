@@ -16,6 +16,8 @@
    *   customText?: string | null,
    *   onGradient?: boolean,
    *   appearance?: string,
+   *   dataTestid?: string,
+   *   class?: string,
    *   children?: any,
    * }}
    */
@@ -31,6 +33,8 @@
     customText = null,
     onGradient = false,
     appearance = null,
+    dataTestid = undefined,
+    class: className = '',
     children = null
   } = $props();
 
@@ -104,8 +108,9 @@
 </script>
 
 <span
-  class="inline-flex items-center whitespace-nowrap {square ? '' : 'gap-1'} font-semibold border {rounded} {square ? 'w-4 h-4 flex-shrink-0' : sizeClass}"
+  class="inline-flex items-center whitespace-nowrap {square ? '' : 'gap-1'} font-semibold border {rounded} {square ? 'w-4 h-4 flex-shrink-0' : sizeClass} {className}"
   style={computedStyle}
+  data-testid={dataTestid}
 >
   {#if Icon}
     <Icon size={12} />

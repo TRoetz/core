@@ -2,6 +2,28 @@
   import Label from './Label.svelte';
   import Input from './Input.svelte';
 
+  /**
+   * @type {{
+   *   label?: string,
+   *   value?: any,
+   *   type?: string,
+   *   placeholder?: string,
+   *   required?: boolean,
+   *   disabled?: boolean,
+   *   autofocus?: boolean,
+   *   id?: string,
+   *   size?: string,
+   *   min?: any,
+   *   max?: any,
+   *   step?: any,
+   *   labelColor?: 'default' | 'subtle',
+   *   labelClass?: string,
+   *   dataTestid?: string,
+   *   inputRef?: any,
+   *   oninput?: (e?: any) => void,
+   *   class?: string,
+   * }}
+   */
   let {
     label = '',
     value = $bindable(''),
@@ -15,14 +37,18 @@
     min = undefined,
     max = undefined,
     step = undefined,
-    class: className = '',
-    inputRef = $bindable(null)
+    labelColor = 'subtle', // 'default' | 'subtle'
+    labelClass = 'mb-2',
+    dataTestid = undefined,
+    inputRef = $bindable(null),
+    oninput = undefined,
+    class: className = ''
   } = $props();
 </script>
 
 <div class={className}>
   {#if label}
-    <Label for={id} {required} class="mb-2">{label}</Label>
+    <Label for={id} {required} color={labelColor} class={labelClass}>{label}</Label>
   {/if}
   <Input
     {type}
@@ -37,5 +63,7 @@
     {min}
     {max}
     {step}
+    {dataTestid}
+    {oninput}
   />
 </div>
