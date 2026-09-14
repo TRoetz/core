@@ -9,6 +9,7 @@
   import Textarea from '../components/Textarea.svelte';
   import { i18n, t } from '../stores/i18n.svelte.js';
   import { isSystemAdmin } from '../stores/permissions.svelte.js';
+	import TextField from '../components/TextField.svelte';
 
   let {
     objectType,
@@ -250,8 +251,11 @@
 {#if !objectId}
   <div class="space-y-4">
     <div>
-      <Label required>{t('settings.localizedObjects.baseName')}</Label>
-      <Input bind:value={canonicalName} required />
+      <TextField
+        label={t('settings.localizedObjects.baseName')}
+        required
+        bind:value={canonicalName}
+      />
     </div>
     {#if includesDescription}
       <div>
@@ -378,8 +382,12 @@
           {t('settings.localizedObjects.canonicalHelp')}
         </p>
         <div>
-          <Label required>{t('settings.localizedObjects.baseName')}</Label>
-          <Input bind:value={canonicalName} required dataTestid="localized-object-canonical-name" />
+          <TextField
+            label={t('settings.localizedObjects.baseName')}
+            required
+            dataTestid="localized-object-canonical-name"
+            bind:value={canonicalName}
+          />
         </div>
         {#if includesDescription}
           <div>

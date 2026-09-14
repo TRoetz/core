@@ -1,5 +1,6 @@
 <script>
   import { useEventListener } from 'runed';
+  import Spinner from '../../components/Spinner.svelte';
   import {
     TicketCheck,
     Plus,
@@ -516,7 +517,7 @@
     </div>
 
     {#if loading}
-      <div class="flex justify-center py-3"><Loader2 class="w-4 h-4 animate-spin" /></div>
+      <div class="flex justify-center py-3"><Spinner size="sm" /></div>
     {:else if error}
       <p class="text-xs" style="color: var(--ds-text-danger);">{error}</p>
     {:else}
@@ -639,7 +640,7 @@
       <p class="text-sm" style="color: var(--ds-text-danger);">{editError}</p>
     {/if}
     {#if loadingEditMetadata}
-      <div class="flex justify-center py-3"><Loader2 class="w-4 h-4 animate-spin" /></div>
+      <div class="flex justify-center py-3"><Spinner size="sm" /></div>
     {:else}
       <FormField label={t('zammad.status')}>
         <NativeSelect

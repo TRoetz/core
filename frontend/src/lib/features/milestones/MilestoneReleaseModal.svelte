@@ -1,5 +1,6 @@
 <script>
   import { onMount } from 'svelte';
+  import StateDisplay from '../../components/StateDisplay.svelte';
   import { api } from '../../api.js';
   import { successToast, errorToast } from '../../stores/toasts.svelte.js';
   import Checkbox from '../../components/Checkbox.svelte';
@@ -11,6 +12,7 @@
   import { IconTag as Tag, IconLoader as Loader2, IconSparkles as Sparkles } from '@tabler/icons-svelte-runes';
   import AlertBox from '../../components/AlertBox.svelte';
   import { loadMilestoneReleaseConnections } from './milestoneReleaseData.js';
+	import TextField from '../../components/TextField.svelte';
 
   let { milestone, workspaceId = null, hasExistingRelease = false, onreleased, onclose } = $props();
 
@@ -224,10 +226,7 @@
   {/if}
 
   {#if loading}
-    <div class="flex items-center justify-center py-8 gap-2" style="color: var(--ds-text-subtle);">
-      <Loader2 class="w-5 h-5 animate-spin" />
-      <span>Loading SCM connections…</span>
-    </div>
+    <StateDisplay type="loading" message="Loading SCM connections…" />
   {:else}
     {#if error}
       <AlertBox variant="error" message={error} />
@@ -326,12 +325,12 @@
     <!-- Release Title -->
     {#if releaseMode === 'create'}
     <div>
-      <Label>Release Title</Label>
-      <Input
+      <TextField
+        label={"Release Title"}
         type="text"
-        bind:value={releaseName}
         placeholder="Release title"
         size="small"
+        bind:value={releaseName}
       />
     </div>
 

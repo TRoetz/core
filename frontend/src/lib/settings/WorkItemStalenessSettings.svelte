@@ -1,11 +1,11 @@
 <script>
   import { onMount } from 'svelte';
+  import StateDisplay from '../components/StateDisplay.svelte';
   import { IconClockPause } from '@tabler/icons-svelte-runes';
   import { api } from '../api.js';
   import Button from '../components/Button.svelte';
   import FormField from '../components/FormField.svelte';
   import Input from '../components/Input.svelte';
-  import Spinner from '../components/Spinner.svelte';
   import PageHeader from '../layout/PageHeader.svelte';
   import { workItemStalenessSettings } from '../stores/workItemStalenessSettings.svelte.js';
   import { t } from '../stores/i18n.svelte.js';
@@ -64,9 +64,7 @@
 />
 
 {#if loading}
-  <div class="flex items-center justify-center py-12" data-testid="work-item-staleness-loading">
-    <Spinner />
-  </div>
+  <StateDisplay type="loading" dataTestid="work-item-staleness-loading" />
 {:else}
   <section class="max-w-3xl" aria-labelledby="work-item-staleness-heading">
     <div class="flex flex-col gap-5 rounded-lg border p-5 sm:flex-row sm:items-end sm:justify-between"

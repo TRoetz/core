@@ -1,5 +1,6 @@
 <script>
   import { onMount } from 'svelte';
+  import Badge from '../../components/Badge.svelte';
   import { slide } from 'svelte/transition';
   import { api } from '../../api.js';
   import { Plus, Check, X, Trash2, ChevronDown, ChevronRight } from '@lucide/svelte';
@@ -389,9 +390,7 @@
               {/if}
             </span>
             <span class="font-semibold text-sm" style="color: var(--ds-text);">{t('todo.myPersonalTasks')}</span>
-            <span class="ml-auto text-xs px-2 py-0.5 rounded-full" style="background-color: var(--ds-surface-raised); color: var(--ds-text-subtle);">
-              {personalTodos.length} {personalTodos.length === 1 ? 'item' : 'items'}
-            </span>
+            <Badge size="sm" class="ml-auto">{personalTodos.length} {personalTodos.length === 1 ? 'item' : 'items'}</Badge>
           </button>
 
           {#if !personalCollapsed}
@@ -506,9 +505,7 @@
               {/if}
             </span>
             <span class="font-semibold text-sm" style="color: var(--ds-text);">{t('todo.assignedToMe')}</span>
-            <span class="ml-auto text-xs px-2 py-0.5 rounded-full" style="background-color: var(--ds-surface-raised); color: var(--ds-text-subtle);">
-              {assignedWork.length} {assignedWork.length === 1 ? 'item' : 'items'}
-            </span>
+            <Badge size="sm" class="ml-auto">{assignedWork.length} {assignedWork.length === 1 ? 'item' : 'items'}</Badge>
           </button>
 
           {#if !assignedCollapsed}

@@ -1,5 +1,6 @@
 <script>
   import { onMount } from 'svelte';
+  import StateDisplay from '../../components/StateDisplay.svelte';
   import { t } from '../../stores/i18n.svelte.js';
   import { confirm } from '../../composables/useConfirm.js';
   import { errorToast } from '../../stores/toasts.svelte.js';
@@ -24,6 +25,7 @@
   import BasePicker from '../../pickers/BasePicker.svelte';
   import DialogFooter from '../../dialogs/DialogFooter.svelte';
   import MilestoneReleaseModal from './MilestoneReleaseModal.svelte';
+	import TextField from '../../components/TextField.svelte';
 
   let { milestoneId, workspaceId = null } = $props();
 
@@ -228,9 +230,7 @@
     </div>
 
     {#if loading}
-      <div class="flex items-center justify-center py-20">
-        <div class="animate-spin rounded-full h-8 w-8 border-b-2" style="border-color: var(--ds-text-subtle);"></div>
-      </div>
+      <StateDisplay type="loading" />
     {:else if error}
       <div class="text-center py-20">
         <p class="text-ds-text-danger">{error}</p>
@@ -391,8 +391,8 @@
         </div>
 
         <div>
-          <Label for="milestone-target-date" class="mb-2">{t('milestones.targetDate')}</Label>
-          <Input
+          <TextField
+            label={t('milestones.targetDate')}
             id="milestone-target-date"
             type="date"
             bind:value={formData.target_date}

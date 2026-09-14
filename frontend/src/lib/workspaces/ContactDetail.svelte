@@ -1,5 +1,6 @@
 <script>
   import { onMount } from 'svelte';
+  import Badge from '../components/Badge.svelte';
   import { IconArrowLeft as ArrowLeft, IconUsers as Users, IconMail as Mail, IconPhone as Phone, IconEdit as Edit2, IconSend as Send, IconMessage as MessageCircle, IconTrash as Trash2, IconDots as MoreHorizontal } from '@tabler/icons-svelte-runes';
   import { api } from '../api.js';
   import { confirm } from '../composables/useConfirm.js';
@@ -254,9 +255,7 @@
           {/if}
         </div>
         {#if orgName}
-          <span class="inline-block mt-2 text-xs px-2 py-0.5 rounded-full" style="background: var(--ds-background-neutral); color: var(--ds-text-subtle);">
-            {orgName}
-          </span>
+          <Badge size="sm" class="mt-2">{orgName}</Badge>
         {/if}
       </div>
       {#if canManage && !isEditing}

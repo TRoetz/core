@@ -1,12 +1,12 @@
 <script>
   import { onMount } from 'svelte';
+  import StateDisplay from '../../components/StateDisplay.svelte';
   import { IconLifebuoy } from '@tabler/icons-svelte-runes';
   import { api } from '../../api.js';
   import Button from '../../components/Button.svelte';
   import DataTable from '../../components/DataTable.svelte';
   import Lozenge from '../../components/Lozenge.svelte';
   import SearchInput from '../../components/SearchInput.svelte';
-  import Spinner from '../../components/Spinner.svelte';
   import PageHeader from '../../layout/PageHeader.svelte';
   import { navigate } from '../../router.js';
   import { t } from '../../stores/i18n.svelte.js';
@@ -114,9 +114,7 @@
       </Button>
     </div>
   {:else if loading}
-    <div class="flex justify-center py-16" data-testid="manager-channels-loading">
-      <Spinner />
-    </div>
+    <StateDisplay type="loading" dataTestid="manager-channels-loading" />
   {:else}
     <DataTable
       {columns}

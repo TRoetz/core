@@ -7,6 +7,7 @@
   // candidates endpoint just keeps the picker honest.
 
   import { onDestroy, onMount, untrack } from 'svelte';
+  import StateDisplay from '../components/StateDisplay.svelte';
   import { ChevronDown, FlaskConical, Loader2, Orbit, Pencil, Plus, Trash2 } from '@lucide/svelte';
   import { agentBindings, agentRuns, agentSkills, api } from '../api.js';
   import Panel from '../components/Panel.svelte';
@@ -27,6 +28,7 @@
   import ConfirmDialog from '../dialogs/ConfirmDialog.svelte';
   import { errorToast, successToast } from '../stores/toasts.svelte.js';
   import { toHotkeyString } from '../utils/keyboardShortcuts.js';
+	import TextField from '../components/TextField.svelte';
 
   // skillsVersion: bumped by the parent when the skills panel below this one
   // creates/edits/deletes a skill, so the attach-pickers here don't go stale.
@@ -683,9 +685,7 @@
   </SectionHeader>
 
   {#if loading}
-    <div class="flex items-center justify-center py-8">
-      <Loader2 class="w-5 h-5 animate-spin" style="color: var(--ds-icon-subtle);" />
-    </div>
+    <StateDisplay type="loading" />
   {:else if bindings.length === 0}
     <div data-testid="binding-empty-state">
       <EmptyState
@@ -862,12 +862,12 @@
           </div>
           {#if formTargetPoolId}
             <div>
-              <Label for="binding-runner-image" class="mb-1">Custom runner image</Label>
-              <Input
+              <TextField
+                label={"Custom runner image"}
                 id="binding-runner-image"
                 dataTestid="binding-runner-image"
-                bind:value={formRunnerImage}
                 placeholder="ghcr.io/windshiftapp/windshift-agent:latest"
+                bind:value={formRunnerImage}
               />
               <p class="text-xs mt-1 text-[var(--ds-text-subtle)]">
                 Optional. Container image for this pool's coding-agent runs — e.g. a Node+Chrome image for Playwright e2e. Leave blank for the default agent image.
@@ -886,8 +886,14 @@
             {/if}
           </div>
           <div>
-            <Label for="binding-ttl" class="mb-1">Per-run token TTL (minutes)</Label>
-            <Input id="binding-ttl" type="number" min="5" max="1440" bind:value={formTokenTTLMinutes} />
+            <TextField
+              label={"Per-run token TTL (minutes)"}
+              id="binding-ttl"
+              type="number"
+              min="5"
+              max="1440"
+              bind:value={formTokenTTLMinutes}
+            />
           </div>
           <!-- Max runs / day is hidden for now but the capability is retained:
                formMaxRunsPerDay is still primed on edit and sent in the payload,

@@ -7,7 +7,8 @@
   // the content.
 
   import { onMount } from 'svelte';
-  import { AlertTriangle, BookOpen, FileText, Loader2, Pencil, Plus, Trash2, X } from '@lucide/svelte';
+  import StateDisplay from '../components/StateDisplay.svelte';
+import { AlertTriangle, BookOpen, FileText, Pencil, Plus, Trash2, X } from '@lucide/svelte';
   import { agentSkills } from '../api.js';
   import Panel from '../components/Panel.svelte';
   import Button from '../components/Button.svelte';
@@ -24,6 +25,7 @@
   import ConfirmDialog from '../dialogs/ConfirmDialog.svelte';
   import { errorToast, successToast } from '../stores/toasts.svelte.js';
   import { toHotkeyString } from '../utils/keyboardShortcuts.js';
+	import TextField from '../components/TextField.svelte';
 
   // onchanged fires after any successful create/update/delete so the
   // bindings panel above can refresh its skill attach-pickers.
@@ -204,9 +206,7 @@
   </SectionHeader>
 
   {#if loading}
-    <div class="flex items-center justify-center py-6">
-      <Loader2 class="w-5 h-5 animate-spin" style="color: var(--ds-icon-subtle);" />
-    </div>
+    <StateDisplay type="loading" />
   {:else if skills.length === 0}
     <EmptyState
       icon={BookOpen}
@@ -260,13 +260,22 @@
     <div class="px-6 py-5 space-y-5" data-testid="agent-skill-editor">
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-4">
         <div>
-          <Label for="agent-skill-name" required class="mb-1">Name</Label>
-          <Input id="agent-skill-name" bind:value={formName} placeholder="release-notes" />
+          <TextField
+            label={"Name"}
+            id="agent-skill-name"
+            required
+            placeholder="release-notes"
+            bind:value={formName}
+          />
           <p class="mt-1 text-xs text-[var(--ds-text-subtle)]">Short, hyphenated — how the agent refers to it.</p>
         </div>
         <div>
-          <Label for="agent-skill-description" class="mb-1">Description</Label>
-          <Input id="agent-skill-description" bind:value={formDescription} placeholder="How we write and format release notes" />
+          <TextField
+            label={"Description"}
+            id="agent-skill-description"
+            placeholder="How we write and format release notes"
+            bind:value={formDescription}
+          />
           <p class="mt-1 text-xs text-[var(--ds-text-subtle)]">When should the agent reach for this? Shown in its prompt index.</p>
         </div>
       </div>

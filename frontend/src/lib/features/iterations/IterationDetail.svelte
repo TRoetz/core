@@ -1,5 +1,6 @@
 <script>
   import { onMount } from 'svelte';
+  import StateDisplay from '../../components/StateDisplay.svelte';
   import { IconArrowLeft, IconCalendar, IconTarget, IconEdit, IconTrash, IconDots, IconWorld, IconBuilding, IconSparkles, IconCircleCheck } from '@tabler/icons-svelte-runes';
   import IterationBurndown from './IterationBurndown.svelte';
   import { api } from '../../api.js';
@@ -24,6 +25,7 @@
   import { aiStore } from '../../stores/aiStore.svelte.js';
   import { permissionStore, isSystemAdmin } from '../../stores/permissions.svelte.js';
   import { workspacePermissions } from '../../stores/workspacePermissions.svelte.js';
+	import TextField from '../../components/TextField.svelte';
 
   let { iterationId, workspaceId = null } = $props();
 
@@ -275,9 +277,7 @@
     </div>
 
     {#if loading}
-      <div class="flex items-center justify-center py-20">
-        <div class="animate-spin rounded-full h-8 w-8 border-b-2" style="border-color: var(--ds-text-subtle);"></div>
-      </div>
+      <StateDisplay type="loading" />
     {:else if error}
       <div class="text-center py-20">
         <p class="text-ds-text-danger">{error}</p>
@@ -401,22 +401,22 @@
         </div>
 
         <div>
-          <Label for="iteration-start-date" required class="mb-2">{t('iterations.startDate')}</Label>
-          <Input
+          <TextField
+            label={t('iterations.startDate')}
             id="iteration-start-date"
+            required
             type="date"
             bind:value={formData.start_date}
-            required
           />
         </div>
 
         <div>
-          <Label for="iteration-end-date" required class="mb-2">{t('iterations.endDate')}</Label>
-          <Input
+          <TextField
+            label={t('iterations.endDate')}
             id="iteration-end-date"
+            required
             type="date"
             bind:value={formData.end_date}
-            required
           />
         </div>
 

@@ -1,5 +1,6 @@
 <script>
   import { onMount, onDestroy, untrack } from 'svelte';
+  import { copyToClipboard } from '../../utils/clipboard.js';
   import { useEventListener } from 'runed';
   import { api } from '../../api.js';
   import { navigate, currentRoute } from '../../router.js';
@@ -313,13 +314,10 @@ import NativeSelect from '../../components/NativeSelect.svelte';
   }
 
   async function handleCopyKey() {
-    try {
-      const key = `${item.workspace_key || workspace?.key || 'WORK'}-${item.workspace_item_number}`;
-      await navigator.clipboard.writeText(key);
-      showCopySuccess(key);
-    } catch (error) {
-      console.error('[handleCopyKey] Failed to copy key to clipboard:', error);
-    }
+    const key = `${item.workspace_key || workspace?.key || 'WORK'}-${item.workspace_item_number}`;
+    const ok = await copyToClipboard(key);
+    if (!ok) console.error('[handleCopyKey] Failed to copy key to clipboard');
+    else showCopySuccess(key);
   }
 
   function showCopySuccess(key) {
@@ -1071,13 +1069,9 @@ import NativeSelect from '../../components/NativeSelect.svelte';
       keywords: ['copy', 'link', 'share', 'url'],
       action: async () => {
         const url = `${publicBaseURL()}/workspaces/${workspaceId}/items/${itemId}`;
-        try {
-          await navigator.clipboard.writeText(url);
-          successToast(t('items.itemLinkCopied'));
-        } catch (error) {
-          console.error('Failed to copy to clipboard:', error);
-          errorToast(t('items.failedToCopyToClipboard'));
-        }
+        const ok = await copyToClipboard(url);
+        if (ok) successToast(t('items.itemLinkCopied'));
+        else errorToast(t('items.failedToCopyToClipboard'));
       },
       priority: COMMAND_PRIORITIES.NORMAL,
       category: 'action'

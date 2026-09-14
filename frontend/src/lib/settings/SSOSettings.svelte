@@ -1,5 +1,6 @@
 <script>
   import { onMount } from 'svelte';
+  import StateDisplay from '../components/StateDisplay.svelte';
   import { ssoStore, capabilitiesStore } from '../stores';
   import { api } from '../api.js';
   import { toHotkeyString } from '../utils/keyboardShortcuts.js';
@@ -27,6 +28,7 @@
   import DescriptionText from '../components/DescriptionText.svelte';
   import { confirm } from '../composables/useConfirm.js';
   import { publicBaseURL } from '../runtime/contextPath.js';
+	import TextField from '../components/TextField.svelte';
 
   let providers = $state([]);
   let loading = $state(true);
@@ -278,9 +280,7 @@
 
   <!-- Loading State -->
   {#if loading}
-    <div class="flex items-center justify-center py-12">
-      <Spinner />
-    </div>
+    <StateDisplay type="loading" />
   {:else if providers.length === 0}
     <Card variant="dashed" padding="spacious">
       <EmptyState
@@ -505,13 +505,14 @@
 
       <!-- Scopes -->
       <div>
-        <Label for="scopes" color="default" class="mb-1">{t('settings.sso.scopes')}</Label>
-        <Input
-          type="text"
+        <TextField
+          label={t('settings.sso.scopes')}
           id="scopes"
-          bind:value={formData.scopes}
+          labelColor="default"
+          type="text"
           size="small"
           placeholder="openid email profile"
+          bind:value={formData.scopes}
         />
         <DescriptionText>{t('settings.sso.scopesHelp')}</DescriptionText>
       </div>

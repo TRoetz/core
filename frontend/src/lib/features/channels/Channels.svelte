@@ -1,5 +1,6 @@
 <script>
   import { onMount } from 'svelte';
+  import StateDisplay from '../../components/StateDisplay.svelte';
   import { useEventListener } from 'runed';
   import { t } from '../../stores/i18n.svelte.js';
   import { IconLifebuoy, IconPlus, IconTrash, IconSettings, IconSearch, IconTag, IconPower, IconFileText } from '@tabler/icons-svelte-runes';
@@ -18,7 +19,6 @@
   import { errorToast, successToast } from '../../stores/toasts.svelte.js';
   import Lozenge from '../../components/Lozenge.svelte';
   import DataTable from '../../components/DataTable.svelte';
-  import Spinner from '../../components/Spinner.svelte';
   import ChannelNavigation from './ChannelNavigation.svelte';
   import { channelTypes as channelTypeDefs, allTypesEntry, getChannelTypeIcon } from './channelTypes.js';
   import { channelAdminRoute } from './channelRoutes.js';
@@ -29,6 +29,7 @@
   import DescriptionText from '../../components/DescriptionText.svelte';
   import DialogFooter from '../../dialogs/DialogFooter.svelte';
   import { isSystemAdmin } from '../../stores/permissions.svelte.js';
+	import TextField from '../../components/TextField.svelte';
 
   // Props
   let { embedded = false } = $props();
@@ -558,9 +559,7 @@
 
     <!-- Data Table -->
     {#if loading}
-      <div class="flex items-center justify-center py-16">
-        <Spinner />
-      </div>
+      <StateDisplay type="loading" />
     {:else if error}
       <div class="text-center py-16">
         <div class="text-ds-text-danger text-sm font-medium mb-2">{error}</div>
@@ -635,12 +634,13 @@
   <div class="p-6">
     <div class="space-y-4">
       <div>
-        <Label for="channelName" required color="default" class="mb-2">Channel Name</Label>
-        <Input
+        <TextField
+          label={"Channel Name"}
           id="channelName"
-          bind:value={channelFormData.name}
           required
+          labelColor="default"
           placeholder="e.g., Customer Support Portal"
+          bind:value={channelFormData.name}
         />
       </div>
 

@@ -9,6 +9,7 @@
   import Input from '../components/Input.svelte';
   import DataTable from '../components/DataTable.svelte';
   import PageHeader from '../layout/PageHeader.svelte';
+  import Modal from '../dialogs/Modal.svelte';
   import Textarea from '../components/Textarea.svelte';
   import Label from '../components/Label.svelte';
   import { confirm } from '../composables/useConfirm.js';
@@ -27,22 +28,6 @@
   onMount(async () => {
     await loadPermissionSets();
   });
-
-  function handleModalKeydown(event) {
-    // Enter to submit (only if not in textarea)
-    if (event.key === 'Enter' && !event.shiftKey && !event.ctrlKey && !event.metaKey) {
-      const target = event.target;
-      if (target.tagName !== 'TEXTAREA') {
-        event.preventDefault();
-        createPermissionSet();
-      }
-    }
-    // Escape to cancel
-    if (event.key === 'Escape') {
-      event.preventDefault();
-      cancelCreate();
-    }
-  }
 
   async function loadPermissionSets() {
     try {
@@ -171,26 +156,22 @@
   </PageHeader>
 
   <!-- Create Modal -->
-  {#if showCreateModal}
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div
-      class="fixed inset-0 flex items-center justify-center p-4 z-50"
-      style="background-color: rgba(0, 0, 0, 0.3); backdrop-filter: blur(2px);"
-      onkeydown={handleModalKeydown}
-    >
-      <div class="rounded shadow-xl max-w-lg w-full p-6" style="background-color: var(--ds-surface-overlay)">
-        <h3 class="text-lg font-semibold mb-4" style="color: var(--ds-text)">{t('settings.permissionSets.createPermissionSet')}</h3>
-
-        <div class="space-y-4">
+  <Modal
+    bind:isOpen={showCreateModal}
+    maxWidth="max-w-lg"
+    onclose={cancelCreate}
+    onSubmit={createPermissionSet}
+  >
+    <div class="p-6">
+      <h3 class="text-lg font-semibold mb-4" style="color: var(--ds-text)">{t('settings.permissionSets.createPermissionSet')}</h3>
+      <div class="space-y-4">
           <div>
             <Label for="permset-name" color="default" required class="mb-1">{t('common.name')}</Label>
-            <!-- svelte-ignore a11y_autofocus -->
             <Input
               type="text"
               id="permset-name"
               bind:value={formData.name}
               placeholder={t('settings.permissionSets.namePlaceholder')}
-              autofocus
               size="small"
             />
           </div>
@@ -206,17 +187,17 @@
           </div>
         </div>
 
-        <div class="flex justify-end space-x-3 mt-6">
-          <Button variant="secondary" onclick={cancelCreate} keyboardHint="Esc">
-            {t('common.cancel')}
-          </Button>
-          <Button variant="primary" onclick={createPermissionSet} keyboardHint="↵">
-            {t('common.create')}
-          </Button>
-        </div>
+        
+      <div class="flex justify-end space-x-3 mt-6">
+        <Button variant="secondary" onclick={cancelCreate} keyboardHint="Esc">
+          {t('common.cancel')}
+        </Button>
+        <Button variant="primary" onclick={createPermissionSet} keyboardHint="↵">
+          {t('common.create')}
+        </Button>
       </div>
     </div>
-  {/if}
+  </Modal>
 
   <DataTable
     data={permissionSets}

@@ -3,15 +3,16 @@
   // here admins mint/revoke its registration tokens and view/revoke the runner
   // instances registered against it. Backend lifecycle: WI-177.
   import { onMount } from 'svelte';
+  import StateDisplay from '../components/StateDisplay.svelte';
   import { api } from '../api.js';
-  import { Plus, Trash2, Copy, Server, KeyRound } from '@lucide/svelte';
+  import { Plus, Trash2, Server, KeyRound } from '@lucide/svelte';
   import Button from '../components/Button.svelte';
   import PageHeader from '../layout/PageHeader.svelte';
   import Modal from '../dialogs/Modal.svelte';
   import ModalHeader from '../dialogs/ModalHeader.svelte';
-  import Spinner from '../components/Spinner.svelte';
   import Lozenge from '../components/Lozenge.svelte';
   import DataTable from '../components/DataTable.svelte';
+  import CopyButton from '../components/CopyButton.svelte';
   import Checkbox from '../components/Checkbox.svelte';
   import Input from '../components/Input.svelte';
   import { successToast, errorToast } from '../stores/toasts.svelte.js';
@@ -174,15 +175,6 @@
     }
   }
 
-  async function copy(text) {
-    try {
-      await navigator.clipboard.writeText(text);
-      successToast(t('settings.adminOperations.runnerPools.copied'));
-    } catch {
-      errorToast(t('settings.adminOperations.runnerPools.copyFailed'));
-    }
-  }
-
   function fmtDate(d) {
     return d ? formatAuthenticatedDateTime(d) : '—';
   }
@@ -254,7 +246,7 @@
   </PageHeader>
 
   {#if loadingPools}
-    <div class="flex justify-center py-10"><Spinner /></div>
+    <StateDisplay type="loading" />
   {:else}
     <DataTable
       columns={poolColumns}
@@ -292,7 +284,7 @@
         </Button>
       </div>
       {#if loadingTokens}
-        <div class="flex justify-center py-6"><Spinner /></div>
+        <StateDisplay type="loading" />
       {:else}
         <DataTable columns={tokenColumns} data={tokens} keyField="id" emptyMessage={t('settings.adminOperations.runnerPools.noTokens')}>
           {#snippet prefix(tok)}
@@ -326,7 +318,7 @@
         <Server size={16} /> {t('settings.adminOperations.runnerPools.runnersForPool', { name: selectedPool.name })}
       </h3>
       {#if loadingInstances}
-        <div class="flex justify-center py-6"><Spinner /></div>
+        <StateDisplay type="loading" />
       {:else}
         <DataTable columns={instanceColumns} data={instances} keyField="id" emptyMessage={t('settings.adminOperations.runnerPools.noRunners')}>
           {#snippet name(inst)}
@@ -439,9 +431,13 @@
                 class="flex-1 overflow-x-auto whitespace-pre rounded-md border px-3 py-2 text-xs"
                 style="background: var(--ds-surface-sunken); color: var(--ds-text); border-color: var(--ds-border);"
               >{mintedToken.installCommand}</code>
-              <Button variant="primary" size="sm" dataTestid="copy-install-command" onclick={() => copy(mintedToken.installCommand)}>
-                <Copy size={14} /> {t('common.copy')}
-              </Button>
+              <CopyButton
+                getText={() => mintedToken.installCommand}
+                label={t('common.copy')}
+                dataTestid="copy-install-command"
+                onCopy={() => successToast(t('settings.adminOperations.runnerPools.copied'))}
+                onError={() => errorToast(t('settings.adminOperations.runnerPools.copyFailed'))}
+              />
             </div>
           </div>
         {/if}
@@ -456,9 +452,13 @@
               class="flex-1 overflow-x-auto rounded-md border px-3 py-2 text-xs"
               style="background: var(--ds-surface-sunken); color: var(--ds-text); border-color: var(--ds-border);"
             >{mintedToken.token}</code>
-            <Button variant="secondary" size="sm" dataTestid="copy-registration-token" onclick={() => copy(mintedToken.token)}>
-              <Copy size={14} /> {t('common.copy')}
-            </Button>
+            <CopyButton
+              getText={() => mintedToken.token}
+              label={t('common.copy')}
+              dataTestid="copy-registration-token"
+              onCopy={() => successToast(t('settings.adminOperations.runnerPools.copied'))}
+              onError={() => errorToast(t('settings.adminOperations.runnerPools.copyFailed'))}
+            />
           </div>
         </div>
         <div class="flex justify-end pt-2 border-t" style="border-color: var(--ds-border);">

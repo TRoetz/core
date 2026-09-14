@@ -6,7 +6,8 @@
   // auto-applied when the description is left empty; the picker is suppressed).
 
   import { onMount } from 'svelte';
-  import { FileStack, Loader2, Pencil, Plus, Trash2 } from '@lucide/svelte';
+  import StateDisplay from '../components/StateDisplay.svelte';
+import { FileStack, Pencil, Plus, Trash2 } from '@lucide/svelte';
   import { api } from '../api.js';
   import Panel from '../components/Panel.svelte';
   import Button from '../components/Button.svelte';
@@ -25,6 +26,7 @@
   import { errorToast, successToast } from '../stores/toasts.svelte.js';
   import { t } from '../stores/i18n.svelte.js';
   import { toHotkeyString } from '../utils/keyboardShortcuts.js';
+	import TextField from '../components/TextField.svelte';
 
   let { workspaceId } = $props();
 
@@ -181,9 +183,7 @@
   </SectionHeader>
 
   {#if loading}
-    <div class="flex items-center justify-center py-6">
-      <Loader2 class="w-5 h-5 animate-spin" style="color: var(--ds-icon-subtle);" />
-    </div>
+    <StateDisplay type="loading" />
   {:else if templates.length === 0}
     <EmptyState
       icon={FileStack}
@@ -242,8 +242,14 @@
     <div class="px-6 py-4 space-y-3" data-testid="item-template-editor">
       <div class="grid grid-cols-2 gap-3">
         <div>
-          <Label for="item-template-name" required class="mb-1">{t('common.name')}</Label>
-          <Input id="item-template-name" bind:value={formName} placeholder="bug-report" dataTestid="item-template-name" />
+          <TextField
+            label={t('common.name')}
+            id="item-template-name"
+            required
+            placeholder="bug-report"
+            dataTestid="item-template-name"
+            bind:value={formName}
+          />
         </div>
         <div>
           <Label for="item-template-mode" class="mb-1">{t('workspaceTemplates.modeLabel')}</Label>

@@ -1,15 +1,13 @@
 <script>
   import { onDestroy } from 'svelte';
   import {
-    IconCheck as Check,
-    IconCopy as Copy,
-    IconKey as Key,
     IconRefresh as Refresh,
     IconServer as Server,
     IconX as X,
   } from '@tabler/icons-svelte-runes';
   import { api } from '../../api.js';
   import AlertBox from '../../components/AlertBox.svelte';
+  import CopyButton from '../../components/CopyButton.svelte';
   import Badge from '../../components/Badge.svelte';
   import Button from '../../components/Button.svelte';
   import Card from '../../components/Card.svelte';
@@ -35,7 +33,6 @@
   let error = $state('');
   let installCommand = $state('');
   let plaintextToken = $state('');
-  let copied = $state('');
   let setupStatus = $state('idle');
   let runnerName = $state('');
   let pollTimer = null;
@@ -187,7 +184,6 @@
     if (!canMint) return;
     minting = true;
     error = '';
-    copied = '';
     try {
       if (pendingTokenId) await revokePending();
       const instances = await api.runnerPools.listWorkspaceInstances(
@@ -224,18 +220,6 @@
       error = err.message || 'Runner setup could not be cancelled.';
     } finally {
       cancelling = false;
-    }
-  }
-
-  async function copy(value, kind) {
-    try {
-      await navigator.clipboard.writeText(value);
-      copied = kind;
-      window.setTimeout(() => {
-        if (copied === kind) copied = '';
-      }, 2_000);
-    } catch {
-      error = 'Clipboard access is unavailable. Select and copy the value manually.';
     }
   }
 </script>
@@ -306,15 +290,13 @@
             <span class="text-sm font-medium" style="color: var(--ds-text);">
               Run on the runner machine
             </span>
-            <Button
-              variant="secondary"
-              size="small"
-              icon={copied === 'command' ? Check : Copy}
+            <CopyButton
+              getText={() => installCommand}
+              label="Copy command"
+              copiedLabel="Copied"
               dataTestid="agent-runner-copy-command"
-              onclick={() => copy(installCommand, 'command')}
-            >
-              {copied === 'command' ? 'Copied' : 'Copy command'}
-            </Button>
+              onError={() => (error = 'Clipboard access is unavailable. Select and copy the value manually.')}
+            />
           </div>
           <code
             class="block max-h-40 overflow-auto whitespace-pre-wrap break-all rounded-md border p-3 text-xs"
@@ -327,15 +309,13 @@
             <span class="text-sm font-medium" style="color: var(--ds-text);">
               One-time registration token
             </span>
-            <Button
-              variant="secondary"
-              size="small"
-              icon={copied === 'token' ? Check : Key}
+            <CopyButton
+              getText={() => plaintextToken}
+              label="Copy token"
+              copiedLabel="Copied"
               dataTestid="agent-runner-copy-token"
-              onclick={() => copy(plaintextToken, 'token')}
-            >
-              {copied === 'token' ? 'Copied' : 'Copy token'}
-            </Button>
+              onError={() => (error = 'Clipboard access is unavailable. Select and copy the value manually.')}
+            />
           </div>
           <code
             class="block overflow-auto break-all rounded-md border p-3 text-xs"

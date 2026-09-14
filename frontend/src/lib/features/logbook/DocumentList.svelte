@@ -11,6 +11,7 @@
   import Progress from '../../components/Progress.svelte';
   import EmptyState from '../../components/EmptyState.svelte';
   import ModalHeader from '../../dialogs/ModalHeader.svelte';
+  import Modal from '../../dialogs/Modal.svelte';
   import SearchInput from '../../components/SearchInput.svelte';
   import Input from '../../components/Input.svelte';
   import DocumentUpload from './DocumentUpload.svelte';
@@ -319,21 +320,7 @@
 {/if}
 
 <!-- Create Note Modal -->
-{#if showNoteModal}
-  <div
-    data-testid="logbook-note-dialog"
-    class="fixed inset-0 z-50 flex items-center justify-center"
-    style="background-color: rgba(0, 0, 0, 0.4); backdrop-filter: blur(2px);"
-    onclick={(e) => { if (e.target === e.currentTarget) { showNoteModal = false; } }}
-    onkeydown={(e) => { if (e.key === 'Escape') showNoteModal = false; }}
-    role="dialog"
-    aria-modal="true"
-    tabindex="-1"
-  >
-    <div
-      class="w-full max-w-2xl rounded-lg border shadow-xl"
-      style="background-color: var(--ds-surface-overlay); border-color: var(--ds-border);"
-    >
+<Modal bind:isOpen={showNoteModal} maxWidth="max-w-2xl" dataTestid="logbook-note-dialog">
       <!-- Header -->
       <ModalHeader title={t('logbook.newNote')} showCloseButton={false} />
 
@@ -382,9 +369,7 @@
           {t('common.create')}
         </Button>
       </div>
-    </div>
-  </div>
-{/if}
+</Modal>
 
 <style>
   .doc-shimmer {
