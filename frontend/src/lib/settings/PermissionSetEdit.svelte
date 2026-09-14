@@ -6,13 +6,10 @@
   import { errorToast } from '../stores/toasts.svelte.js';
   import { ArrowLeft, Save, X, UserPlus } from '@lucide/svelte';
   import Button from '../components/Button.svelte';
-  import Input from '../components/Input.svelte';
   import Modal from '../dialogs/Modal.svelte';
   import UserPicker from '../pickers/UserPicker.svelte';
   import RolePicker from '../pickers/RolePicker.svelte';
   import GroupPicker from '../pickers/GroupPicker.svelte';
-  import Textarea from '../components/Textarea.svelte';
-  import Label from '../components/Label.svelte';
   import Chip from '../components/Chip.svelte';
   import { confirm } from '../composables/useConfirm.js';
 	import TextareaField from '../components/TextareaField.svelte';

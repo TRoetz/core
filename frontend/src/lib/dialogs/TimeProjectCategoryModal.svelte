@@ -1,9 +1,6 @@
 <script>
   import Modal from './Modal.svelte';
   import Button from '../components/Button.svelte';
-  import Input from '../components/Input.svelte';
-  import Textarea from '../components/Textarea.svelte';
-  import Label from '../components/Label.svelte';
   import { t } from '../stores/i18n.svelte.js';
 	import TextareaField from '../components/TextareaField.svelte';
 	import TextField from '../components/TextField.svelte';

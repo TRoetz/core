@@ -1,7 +1,6 @@
 <script>
   import { t } from '../../stores/i18n.svelte.js';
   import Input from '../../components/Input.svelte';
-  import Textarea from '../../components/Textarea.svelte';
   import Label from '../../components/Label.svelte';
   import DescriptionText from '../../components/DescriptionText.svelte';
 	import TextField from '../../components/TextField.svelte';

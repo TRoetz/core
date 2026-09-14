@@ -7,12 +7,8 @@
   import { isSystemAdmin } from '../stores/permissions.svelte.js';
   import Modal from './Modal.svelte';
   import Button from '../components/Button.svelte';
-  import Input from '../components/Input.svelte';
-  import Select from '../components/Select.svelte';
-  import Textarea from '../components/Textarea.svelte';
   import Lozenge from '../components/Lozenge.svelte';
   import ChannelManagersTab from '../settings/ChannelManagersTab.svelte';
-  import Label from '../components/Label.svelte';
   import DialogFooter from './DialogFooter.svelte';
 
   // Import channel config components

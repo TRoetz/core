@@ -5,7 +5,6 @@
   import Button from '../../components/Button.svelte';
   import Input from '../../components/Input.svelte';
   import Modal from '../../dialogs/Modal.svelte';
-  import Textarea from '../../components/Textarea.svelte';
   import AlertBox from '../../components/AlertBox.svelte';
   import Label from '../../components/Label.svelte';
   import { t } from '../../stores/i18n.svelte.js';

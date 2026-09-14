@@ -2,8 +2,6 @@
   import { IconCheck } from '@tabler/icons-svelte-runes';
   import { t } from '../../stores/i18n.svelte.js';
   import { api } from '../../api.js';
-  import Input from '../../components/Input.svelte';
-  import Select from '../../components/Select.svelte';
   import Button from '../../components/Button.svelte';
   import Label from '../../components/Label.svelte';
   import Checkbox from '../../components/Checkbox.svelte';

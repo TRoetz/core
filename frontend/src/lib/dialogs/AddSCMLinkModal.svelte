@@ -1,6 +1,5 @@
 <script>
   import { api } from '../api.js';
-  import Input from '../components/Input.svelte';
   import Label from '../components/Label.svelte';
   import { GitMerge, GitBranch, GitCommit } from '@lucide/svelte';
   import { t } from '../stores/i18n.svelte.js';

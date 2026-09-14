@@ -11,7 +11,6 @@
   import Card from '../../components/Card.svelte';
   import PageHeader from '../../layout/PageHeader.svelte';
   import DataTable from '../../components/DataTable.svelte';
-  import Textarea from '../../components/Textarea.svelte';
   import Input from '../../components/Input.svelte';
   import Lozenge from '../../components/Lozenge.svelte';
   import Modal from '../../dialogs/Modal.svelte';

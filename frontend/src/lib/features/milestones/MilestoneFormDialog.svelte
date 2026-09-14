@@ -7,9 +7,7 @@
   import ModalHeader from '../../dialogs/ModalHeader.svelte';
   import DialogFooter from '../../dialogs/DialogFooter.svelte';
   import BasePicker from '../../pickers/BasePicker.svelte';
-  import Input from '../../components/Input.svelte';
   import Label from '../../components/Label.svelte';
-  import Textarea from '../../components/Textarea.svelte';
 	import TextField from '../../components/TextField.svelte';
 	import TextareaField from '../../components/TextareaField.svelte';
 

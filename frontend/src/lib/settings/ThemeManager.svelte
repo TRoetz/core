@@ -11,8 +11,6 @@
   import ModalHeader from '../dialogs/ModalHeader.svelte';
   import DialogFooter from '../dialogs/DialogFooter.svelte';
   import IconSelector from '../pickers/IconSelector.svelte';
-  import Label from '../components/Label.svelte';
-  import Input from '../components/Input.svelte';
   import { toHotkeyString } from '../utils/keyboardShortcuts.js';
   import { t } from '../stores/i18n.svelte.js';
   import { confirm } from '../composables/useConfirm.js';

@@ -2,7 +2,6 @@
   import { onDestroy } from 'svelte';
   import { api } from '../api.js';
   import { BasePicker } from '../pickers';
-  import Input from '../components/Input.svelte';
   import Label from '../components/Label.svelte';
   import StatusPill from '../components/StatusPill.svelte';
   import ModalHeader from './ModalHeader.svelte';

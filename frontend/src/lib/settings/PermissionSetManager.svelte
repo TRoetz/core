@@ -6,12 +6,9 @@
   import { navigate } from '../router.js';
   import { Plus, Edit, Trash2, Shield } from '@lucide/svelte';
   import Button from '../components/Button.svelte';
-  import Input from '../components/Input.svelte';
   import DataTable from '../components/DataTable.svelte';
   import PageHeader from '../layout/PageHeader.svelte';
   import Modal from '../dialogs/Modal.svelte';
-  import Textarea from '../components/Textarea.svelte';
-  import Label from '../components/Label.svelte';
   import { confirm } from '../composables/useConfirm.js';
   import { toHotkeyString } from '../utils/keyboardShortcuts.js';
 	import TextareaField from '../components/TextareaField.svelte';

@@ -19,9 +19,7 @@
   import FieldLayoutEditor from '../../editors/FieldLayoutEditor.svelte';
   import IconSelector from '../../pickers/IconSelector.svelte';
   import Label from '../../components/Label.svelte';
-  import Input from '../../components/Input.svelte';
   import DescriptionText from '../../components/DescriptionText.svelte';
-  import Textarea from '../../components/Textarea.svelte';
   import Checkbox from '../../components/Checkbox.svelte';
   import DialogFooter from '../../dialogs/DialogFooter.svelte';
   import { t } from '../../stores/i18n.svelte.js';

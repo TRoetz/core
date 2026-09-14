@@ -2,10 +2,6 @@
   import { t } from '../../stores/i18n.svelte.js';
   import { channelCategoriesStore } from '../../stores/channelCategories.js';
   import Button from '../../components/Button.svelte';
-  import Input from '../../components/Input.svelte';
-  import Select from '../../components/Select.svelte';
-  import Textarea from '../../components/Textarea.svelte';
-  import Label from '../../components/Label.svelte';
 	import TextareaField from '../../components/TextareaField.svelte';
 	import SelectField from '../../components/SelectField.svelte';
 	import TextField from '../../components/TextField.svelte';

@@ -4,9 +4,6 @@
   import { User, Blocks, ClipboardList, AlertCircle, Languages } from '@lucide/svelte';
   import Modal from '../dialogs/Modal.svelte';
   import Button from '../components/Button.svelte';
-  import Label from '../components/Label.svelte';
-  import Input from '../components/Input.svelte';
-  import Select from '../components/Select.svelte';
   import Seagulls from '../components/Seagulls.svelte';
   import WaveBackground from '../components/WaveBackground.svelte';
   import { APP_NAME } from '../constants.js';

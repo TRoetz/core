@@ -1,8 +1,5 @@
 <script>
   import FormModal from './FormModal.svelte';
-  import Input from '../components/Input.svelte';
-  import Select from '../components/Select.svelte';
-  import Textarea from '../components/Textarea.svelte';
   import Label from '../components/Label.svelte';
   import IconSelector from '../pickers/IconSelector.svelte';
   import { t } from '../stores/i18n.svelte.js';

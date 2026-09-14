@@ -4,7 +4,6 @@
   import { UserPlus, Trash2, Shield, Users } from '@lucide/svelte';
   import Button from '../components/Button.svelte';
   import Modal from '../dialogs/Modal.svelte';
-  import Select from '../components/Select.svelte';
   import UserPicker from '../pickers/UserPicker.svelte';
   import GroupPicker from '../pickers/GroupPicker.svelte';
   import DataTable from '../components/DataTable.svelte';

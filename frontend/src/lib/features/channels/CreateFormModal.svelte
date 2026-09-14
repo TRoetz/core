@@ -5,7 +5,6 @@
   import { errorToast } from '../../stores/toasts.svelte.js';
   import Modal from '../../dialogs/Modal.svelte';
   import ModalHeader from '../../dialogs/ModalHeader.svelte';
-  import Input from '../../components/Input.svelte';
   import Label from '../../components/Label.svelte';
   import DialogFooter from '../../dialogs/DialogFooter.svelte';
   import BasePicker from '../../pickers/BasePicker.svelte';

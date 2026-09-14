@@ -2,7 +2,6 @@
   import { api } from '../api.js';
   import Input from '../components/Input.svelte';
   import Label from '../components/Label.svelte';
-  import Textarea from '../components/Textarea.svelte';
   import Modal from './Modal.svelte';
   import ModalHeader from './ModalHeader.svelte';
   import DialogFooter from './DialogFooter.svelte';

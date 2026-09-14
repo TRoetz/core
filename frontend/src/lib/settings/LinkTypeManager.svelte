@@ -6,14 +6,11 @@
   import { errorToast } from '../stores/toasts.svelte.js';
   import { confirm } from '../composables/useConfirm.js';
   import Button from '../components/Button.svelte';
-  import Input from '../components/Input.svelte';
   import PageHeader from '../layout/PageHeader.svelte';
   import Modal from '../dialogs/Modal.svelte';
   import ModalHeader from '../dialogs/ModalHeader.svelte';
   import DataTable from '../components/DataTable.svelte';
-  import Textarea from '../components/Textarea.svelte';
   import Lozenge from '../components/Lozenge.svelte';
-  import Label from '../components/Label.svelte';
   import Checkbox from '../components/Checkbox.svelte';
   import { Plus, Link, Edit, Trash2, Power, PowerOff } from '@lucide/svelte';
   import IconSelector from '../pickers/IconSelector.svelte';

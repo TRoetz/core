@@ -3,7 +3,6 @@
   import Button from '../components/Button.svelte';
   import Input from '../components/Input.svelte';
   import FileInput from '../components/FileInput.svelte';
-  import Textarea from '../components/Textarea.svelte';
   import CustomFieldRenderer from '../features/items/CustomFieldRenderer.svelte';
   import Label from '../components/Label.svelte';
   import Checkbox from '../components/Checkbox.svelte';

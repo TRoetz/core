@@ -8,10 +8,7 @@
   import Modal from '../dialogs/Modal.svelte';
   import ModalHeader from '../dialogs/ModalHeader.svelte';
   import Button from '../components/Button.svelte';
-  import Label from '../components/Label.svelte';
-  import Input from '../components/Input.svelte';
   import Lozenge from '../components/Lozenge.svelte';
-  import Textarea from '../components/Textarea.svelte';
   import DialogFooter from '../dialogs/DialogFooter.svelte';
   import { t } from '../stores/i18n.svelte.js';
   import { errorToast, successToast } from '../stores/toasts.svelte.js';

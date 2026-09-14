@@ -11,8 +11,6 @@
   import ModalHeader from '../../dialogs/ModalHeader.svelte';
   import DropdownMenu from '../../layout/DropdownMenu.svelte';
   import Label from '../../components/Label.svelte';
-  import Input from '../../components/Input.svelte';
-  import Textarea from '../../components/Textarea.svelte';
   import { formatDateShort, daysUntil } from '../../utils/dateFormatter.js';
   import ProgressSummary from '../../components/ProgressSummary.svelte';
   import ItemsByStatusCategory from '../../components/ItemsByStatusCategory.svelte';

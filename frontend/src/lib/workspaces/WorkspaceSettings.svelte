@@ -16,12 +16,9 @@
   import Button from '../components/Button.svelte';
   import PageHeader from '../layout/PageHeader.svelte';
   import Input from '../components/Input.svelte';
-  import Select from '../components/Select.svelte';
-  import Textarea from '../components/Textarea.svelte';
   import CategoryMultiSelect from '../pickers/CategoryMultiSelect.svelte';
   import WorkspaceMembers from './WorkspaceMembers.svelte';
   import AlertBox from '../components/AlertBox.svelte';
-  import Label from '../components/Label.svelte';
   import Toggle from '../components/Toggle.svelte';
   import Card from '../components/Card.svelte';
   import { workspaceSettingsItems } from '../navigation/workspaceNavigation.js';

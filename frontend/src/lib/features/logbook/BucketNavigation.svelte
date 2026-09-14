@@ -9,9 +9,6 @@
   import Modal from '../../dialogs/Modal.svelte';
   import ModalHeader from '../../dialogs/ModalHeader.svelte';
   import DialogFooter from '../../dialogs/DialogFooter.svelte';
-  import Label from '../../components/Label.svelte';
-  import Input from '../../components/Input.svelte';
-  import Textarea from '../../components/Textarea.svelte';
   import { IconPlus as Plus, IconFolderOpen as FolderOpen } from '@tabler/icons-svelte-runes';
   import NavigationSidebar from '../../layout/NavigationSidebar.svelte';
 	import TextareaField from '../../components/TextareaField.svelte';

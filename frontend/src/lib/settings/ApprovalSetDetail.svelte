@@ -11,7 +11,6 @@
   import Radio from '../components/Radio.svelte';
   import Input from '../components/Input.svelte';
   import NativeSelect from '../components/NativeSelect.svelte';
-  import Textarea from '../components/Textarea.svelte';
   import Label from '../components/Label.svelte';
   import WorkflowPicker from '../pickers/WorkflowPicker.svelte';
   import UserPicker from '../pickers/UserPicker.svelte';

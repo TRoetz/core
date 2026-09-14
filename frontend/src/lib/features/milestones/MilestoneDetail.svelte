@@ -12,9 +12,7 @@
   import Modal from '../../dialogs/Modal.svelte';
   import ModalHeader from '../../dialogs/ModalHeader.svelte';
   import DropdownMenu from '../../layout/DropdownMenu.svelte';
-  import Textarea from '../../components/Textarea.svelte';
   import Label from '../../components/Label.svelte';
-  import Input from '../../components/Input.svelte';
   import { milestonesStore } from '../../stores/milestones.js';
   import { formatDateShort, daysUntil } from '../../utils/dateFormatter.js';
   import { safeHref } from '../../utils/sanitize';

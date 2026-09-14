@@ -6,8 +6,6 @@
   import { api } from '../api.js';
   import { ArrowLeft } from '@lucide/svelte';
   import Button from '../components/Button.svelte';
-  import Input from '../components/Input.svelte';
-  import Textarea from '../components/Textarea.svelte';
   import Tabs from '../components/Tabs.svelte';
   import ConfigurationSetWorkspaces from './ConfigurationSetWorkspaces.svelte';
   import ConfigurationSetItemTypes from './ConfigurationSetItemTypes.svelte';

@@ -2,10 +2,7 @@
   import { t } from '../../stores/i18n.svelte.js';
   import { api } from '../../api.js';
   import AlertBox from '../../components/AlertBox.svelte';
-  import Input from '../../components/Input.svelte';
   import Button from '../../components/Button.svelte';
-  import Label from '../../components/Label.svelte';
-  import Select from '../../components/Select.svelte';
   import Spinner from '../../components/Spinner.svelte';
   import DescriptionText from '../../components/DescriptionText.svelte';
   import Toggle from '../../components/Toggle.svelte';
