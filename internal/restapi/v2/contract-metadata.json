@@ -3782,9 +3782,72 @@
         "tags": [
           "Workspace configuration"
         ]
+      },
+      "post": {
+        "description": "Create custom field. The server validates resource ownership and command preconditions before persisting changes. Unknown JSON fields are rejected when the operation accepts a body.",
+        "parameters": [],
+        "responses": {
+          "400": {},
+          "401": {},
+          "403": {},
+          "413": {},
+          "415": {},
+          "429": {},
+          "500": {}
+        },
+        "summary": "Create custom field",
+        "tags": [
+          "Workspace configuration"
+        ]
+      }
+    },
+    "/custom-fields/settings": {
+      "put": {
+        "description": "Update custom field settings. The server validates resource ownership and command preconditions before persisting changes. Unknown JSON fields are rejected when the operation accepts a body.",
+        "parameters": [],
+        "responses": {
+          "400": {},
+          "401": {},
+          "403": {},
+          "413": {},
+          "415": {},
+          "429": {},
+          "500": {}
+        },
+        "summary": "Update custom field settings",
+        "tags": [
+          "Workspace configuration"
+        ]
       }
     },
     "/custom-fields/{custom_field_id}": {
+      "delete": {
+        "description": "Delete custom field. The server verifies resource ownership and deletion preconditions before removing the resource.",
+        "parameters": [
+          {
+            "Name": "custom_field_id",
+            "In": "path",
+            "Description": "The custom field identifier.",
+            "Required": true,
+            "Schema": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "401": {},
+          "403": {},
+          "404": {},
+          "409": {},
+          "429": {},
+          "500": {}
+        },
+        "summary": "Delete custom field",
+        "tags": [
+          "Workspace configuration"
+        ]
+      },
       "get": {
         "description": "Get custom field. Results include only resources visible to the authenticated caller; collections use their documented stable order and bounds.",
         "parameters": [
@@ -3807,6 +3870,35 @@
           "500": {}
         },
         "summary": "Get custom field",
+        "tags": [
+          "Workspace configuration"
+        ]
+      },
+      "patch": {
+        "description": "Update custom field. The operation uses JSON Merge Patch: omitted fields remain unchanged and documented nullable fields accept null. Unknown fields are rejected.",
+        "parameters": [
+          {
+            "Name": "custom_field_id",
+            "In": "path",
+            "Description": "The custom field identifier.",
+            "Required": true,
+            "Schema": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "400": {},
+          "401": {},
+          "403": {},
+          "404": {},
+          "413": {},
+          "415": {},
+          "429": {},
+          "500": {}
+        },
+        "summary": "Update custom field",
         "tags": [
           "Workspace configuration"
         ]

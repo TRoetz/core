@@ -43916,6 +43916,186 @@
         ],
         "type": "object"
       },
+      "PatchCustomFieldsCustomFieldIdPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "applies_to_customer_organisations": {
+            "description": "The applies to customer organisations value.",
+            "nullable": true,
+            "type": "boolean"
+          },
+          "applies_to_portal_customers": {
+            "description": "The applies to portal customers value.",
+            "nullable": true,
+            "type": "boolean"
+          },
+          "description": {
+            "description": "The description value.",
+            "nullable": true,
+            "type": "string"
+          },
+          "display_order": {
+            "description": "The display order value.",
+            "nullable": true,
+            "type": "integer"
+          },
+          "field_type": {
+            "description": "The field type value.",
+            "nullable": true,
+            "type": "string"
+          },
+          "indexed": {
+            "additionalProperties": false,
+            "description": "The indexed value.",
+            "nullable": true,
+            "properties": {
+              "assets": {
+                "description": "The assets value.",
+                "type": "boolean"
+              },
+              "items": {
+                "description": "The items value.",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "assets",
+              "items"
+            ],
+            "type": "object"
+          },
+          "name": {
+            "description": "The name value.",
+            "nullable": true,
+            "type": "string"
+          },
+          "options": {
+            "description": "The options value.",
+            "nullable": true,
+            "type": "string"
+          },
+          "required": {
+            "description": "The required value.",
+            "nullable": true,
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "PatchCustomFieldsCustomFieldIdResult": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "additionalProperties": false,
+            "properties": {
+              "custom_field": {
+                "additionalProperties": false,
+                "description": "The custom field value.",
+                "properties": {
+                  "applies_to_customer_organisations": {
+                    "description": "The applies to customer organisations value.",
+                    "type": "boolean"
+                  },
+                  "applies_to_portal_customers": {
+                    "description": "The applies to portal customers value.",
+                    "type": "boolean"
+                  },
+                  "created_at": {
+                    "description": "The created at value.",
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  "description": {
+                    "description": "The description value.",
+                    "type": "string"
+                  },
+                  "display_order": {
+                    "description": "The display order value.",
+                    "type": "integer"
+                  },
+                  "field_type": {
+                    "description": "The field type value.",
+                    "type": "string"
+                  },
+                  "id": {
+                    "description": "The id value.",
+                    "type": "integer"
+                  },
+                  "name": {
+                    "description": "The name value.",
+                    "type": "string"
+                  },
+                  "options": {
+                    "description": "The options value.",
+                    "type": "string"
+                  },
+                  "required": {
+                    "description": "The required value.",
+                    "type": "boolean"
+                  },
+                  "system_default": {
+                    "description": "The system default value.",
+                    "type": "boolean"
+                  },
+                  "updated_at": {
+                    "description": "The updated at value.",
+                    "format": "date-time",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "applies_to_customer_organisations",
+                  "applies_to_portal_customers",
+                  "created_at",
+                  "display_order",
+                  "field_type",
+                  "id",
+                  "name",
+                  "required",
+                  "system_default",
+                  "updated_at"
+                ],
+                "type": "object"
+              },
+              "indexing_deferred": {
+                "additionalProperties": false,
+                "description": "The indexing deferred value.",
+                "nullable": true,
+                "properties": {
+                  "assets": {
+                    "description": "The assets value.",
+                    "type": "boolean"
+                  },
+                  "items": {
+                    "description": "The items value.",
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "assets",
+                  "items"
+                ],
+                "type": "object"
+              },
+              "warnings": {
+                "description": "The warnings value.",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            },
+            "required": [
+              "custom_field"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
       "PatchItemDiagramsDiagramIdPayload": {
         "additionalProperties": false,
         "properties": {
@@ -55050,6 +55230,168 @@
               "name",
               "updated_at",
               "workflow_id"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "PostCustomFieldsPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "applies_to_customer_organisations": {
+            "description": "The applies to customer organisations value.",
+            "type": "boolean"
+          },
+          "applies_to_portal_customers": {
+            "description": "The applies to portal customers value.",
+            "type": "boolean"
+          },
+          "description": {
+            "description": "The description value.",
+            "type": "string"
+          },
+          "display_order": {
+            "description": "The display order value.",
+            "type": "integer"
+          },
+          "field_type": {
+            "description": "The field type value.",
+            "type": "string"
+          },
+          "name": {
+            "description": "The name value.",
+            "type": "string"
+          },
+          "options": {
+            "description": "The options value.",
+            "type": "string"
+          },
+          "required": {
+            "description": "The required value.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "applies_to_customer_organisations",
+          "applies_to_portal_customers",
+          "description",
+          "display_order",
+          "field_type",
+          "name",
+          "options",
+          "required"
+        ],
+        "type": "object"
+      },
+      "PostCustomFieldsResult": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "additionalProperties": false,
+            "properties": {
+              "custom_field": {
+                "additionalProperties": false,
+                "description": "The custom field value.",
+                "properties": {
+                  "applies_to_customer_organisations": {
+                    "description": "The applies to customer organisations value.",
+                    "type": "boolean"
+                  },
+                  "applies_to_portal_customers": {
+                    "description": "The applies to portal customers value.",
+                    "type": "boolean"
+                  },
+                  "created_at": {
+                    "description": "The created at value.",
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  "description": {
+                    "description": "The description value.",
+                    "type": "string"
+                  },
+                  "display_order": {
+                    "description": "The display order value.",
+                    "type": "integer"
+                  },
+                  "field_type": {
+                    "description": "The field type value.",
+                    "type": "string"
+                  },
+                  "id": {
+                    "description": "The id value.",
+                    "type": "integer"
+                  },
+                  "name": {
+                    "description": "The name value.",
+                    "type": "string"
+                  },
+                  "options": {
+                    "description": "The options value.",
+                    "type": "string"
+                  },
+                  "required": {
+                    "description": "The required value.",
+                    "type": "boolean"
+                  },
+                  "system_default": {
+                    "description": "The system default value.",
+                    "type": "boolean"
+                  },
+                  "updated_at": {
+                    "description": "The updated at value.",
+                    "format": "date-time",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "applies_to_customer_organisations",
+                  "applies_to_portal_customers",
+                  "created_at",
+                  "display_order",
+                  "field_type",
+                  "id",
+                  "name",
+                  "required",
+                  "system_default",
+                  "updated_at"
+                ],
+                "type": "object"
+              },
+              "indexing_deferred": {
+                "additionalProperties": false,
+                "description": "The indexing deferred value.",
+                "nullable": true,
+                "properties": {
+                  "assets": {
+                    "description": "The assets value.",
+                    "type": "boolean"
+                  },
+                  "items": {
+                    "description": "The items value.",
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "assets",
+                  "items"
+                ],
+                "type": "object"
+              },
+              "warnings": {
+                "description": "The warnings value.",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            },
+            "required": [
+              "custom_field"
             ],
             "type": "object"
           }
@@ -73923,6 +74265,41 @@
         ],
         "type": "object"
       },
+      "PutCustomFieldsSettingsPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "max_indexes_per_table": {
+            "description": "The max indexes per table value.",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "max_indexes_per_table"
+        ],
+        "type": "object"
+      },
+      "PutCustomFieldsSettingsResult": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "additionalProperties": false,
+            "properties": {
+              "max_indexes_per_table": {
+                "description": "The max indexes per table value.",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "max_indexes_per_table"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
       "PutHierarchyLevelsHierarchyLevelIdPayload": {
         "additionalProperties": false,
         "properties": {
@@ -81376,9 +81753,182 @@
         "x-required-scopes": [
           "custom-fields:read"
         ]
+      },
+      "post": {
+        "description": "Create custom field. The server validates resource ownership and command preconditions before persisting changes. Unknown JSON fields are rejected when the operation accepts a body.",
+        "operationId": "postCustomFields",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostCustomFieldsPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostCustomFieldsResult"
+                }
+              }
+            },
+            "description": "Create custom field response."
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationError"
+          },
+          "403": {
+            "$ref": "#/components/responses/PermissionError"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLargeError"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaTypeError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Create custom field",
+        "tags": [
+          "Workspace configuration"
+        ],
+        "x-required-scopes": [
+          "custom-fields:write"
+        ]
+      }
+    },
+    "/custom-fields/settings": {
+      "put": {
+        "description": "Update custom field settings. The server validates resource ownership and command preconditions before persisting changes. Unknown JSON fields are rejected when the operation accepts a body.",
+        "operationId": "putCustomFieldsSettings",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PutCustomFieldsSettingsPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PutCustomFieldsSettingsResult"
+                }
+              }
+            },
+            "description": "Update custom field settings response."
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationError"
+          },
+          "403": {
+            "$ref": "#/components/responses/PermissionError"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLargeError"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaTypeError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Update custom field settings",
+        "tags": [
+          "Workspace configuration"
+        ],
+        "x-required-scopes": [
+          "custom-fields:write"
+        ]
       }
     },
     "/custom-fields/{custom_field_id}": {
+      "delete": {
+        "description": "Delete custom field. The server verifies resource ownership and deletion preconditions before removing the resource.",
+        "operationId": "deleteCustomFieldsCustomFieldId",
+        "parameters": [
+          {
+            "description": "The custom field identifier.",
+            "in": "path",
+            "name": "custom_field_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Request completed successfully with no response body."
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationError"
+          },
+          "403": {
+            "$ref": "#/components/responses/PermissionError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "409": {
+            "$ref": "#/components/responses/ConflictError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Delete custom field",
+        "tags": [
+          "Workspace configuration"
+        ],
+        "x-required-scopes": [
+          "custom-fields:write"
+        ]
+      },
       "get": {
         "description": "Get custom field. Results include only resources visible to the authenticated caller; collections use their documented stable order and bounds.",
         "operationId": "getCustomFieldsCustomFieldId",
@@ -81432,6 +81982,80 @@
         ],
         "x-required-scopes": [
           "custom-fields:read"
+        ]
+      },
+      "patch": {
+        "description": "Update custom field. The operation uses JSON Merge Patch: omitted fields remain unchanged and documented nullable fields accept null. Unknown fields are rejected.",
+        "operationId": "patchCustomFieldsCustomFieldId",
+        "parameters": [
+          {
+            "description": "The custom field identifier.",
+            "in": "path",
+            "name": "custom_field_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/merge-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchCustomFieldsCustomFieldIdPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PatchCustomFieldsCustomFieldIdResult"
+                }
+              }
+            },
+            "description": "Update custom field response."
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationError"
+          },
+          "403": {
+            "$ref": "#/components/responses/PermissionError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLargeError"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaTypeError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Update custom field",
+        "tags": [
+          "Workspace configuration"
+        ],
+        "x-required-scopes": [
+          "custom-fields:write"
         ]
       }
     },
