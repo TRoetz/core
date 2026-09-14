@@ -3,7 +3,7 @@
   import { useEventListener } from 'runed';
   import { navigate, currentRoute } from '../router.js';
   import { milestonesStore } from '../stores/milestones.js';
-  import { workspacesStore, shouldNavigateAfterCreate, workItemFormStore, permissionStore, isSystemAdmin } from '../stores';
+  import { workspacesStore, shouldNavigateAfterCreate, workItemFormStore, permissionStore, isSystemAdmin, workspacePermissions } from '../stores';
   import { api } from '../api.js';
   import { X, Target, Building, FolderOpen, ChevronRight, FileText } from '@lucide/svelte';
   import { t } from '../stores/i18n.svelte.js';
@@ -279,6 +279,11 @@
           payload.template_workspace_id = workspaceFormData.template_workspace_id;
         }
         const result = await api.workspaces.create(payload);
+
+        // The creator becomes the workspace administrator server-side; refresh
+        // the permission profile so the workspace nav immediately shows the
+        // admin-only entries (Agents, Settings).
+        await workspacePermissions.reload();
 
         workspacesStore.add(result);
         window.dispatchEvent(new CustomEvent('refresh-workspaces', {

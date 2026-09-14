@@ -120,6 +120,15 @@ class WorkspacePermissionStore {
     return perms && perms.size > 0;
   }
 
+  // Refresh from the server, discarding the cached permission profile. Needed
+  // after the user gains a new grant (e.g. creating a workspace makes them its
+  // administrator) — the profile cache would otherwise serve stale data until
+  // the next full page load.
+  async reload() {
+    clearPermissionProfiles();
+    await this.loadPermissions(authStore.currentUser?.id);
+  }
+
   // Clear all permissions
   clear() {
     clearPermissionProfiles();
