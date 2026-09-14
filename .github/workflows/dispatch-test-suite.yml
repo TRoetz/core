@@ -1,0 +1,27 @@
+name: Dispatch test suite
+
+# The full regression suite (including fresh-database schema initialization
+# on SQLite and PostgreSQL) lives in the private core-tests repository, which
+# cannot see pushes here. Notify it on every push to main so regressions
+# fail there within minutes; core-tests triggers on the `core-pushed`
+# repository_dispatch event.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger core-tests suite
+        env:
+          GH_TOKEN: ${{ secrets.TESTS_REPO_PAT }}
+        run: |
+          gh api repos/Windshiftapp/core-tests/dispatches \
+            -f event_type=core-pushed \
+            -f "client_payload[sha]=${GITHUB_SHA}" \
+            -f "client_payload[ref]=${GITHUB_REF_NAME}"
