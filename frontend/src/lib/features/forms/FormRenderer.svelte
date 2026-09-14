@@ -1,10 +1,10 @@
 <script>
   import { untrack } from 'svelte';
+  import StateDisplay from '../../components/StateDisplay.svelte';
   import { ExternalLink, FileText, LogIn, Paperclip, RotateCcw } from '@lucide/svelte';
   import { api } from '../../api.js';
   import { t } from '../../stores/i18n.svelte.js';
   import { authStore } from '../../stores';
-  import Spinner from '../../components/Spinner.svelte';
   import Label from '../../components/Label.svelte';
   import FileInput from '../../components/FileInput.svelte';
   import AlertBox from '../../components/AlertBox.svelte';
@@ -340,9 +340,7 @@
   style={brandColor ? `--ds-brand-color: ${brandColor}` : undefined}
 >
   {#if loading}
-    <div class="flex items-center justify-center py-12">
-      <Spinner />
-    </div>
+    <StateDisplay type="loading" />
   {:else if success}
     <div data-testid="public-form-success">
       <AlertBox variant="success">

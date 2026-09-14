@@ -1,5 +1,6 @@
 <script>
   import { onMount } from 'svelte';
+  import StateDisplay from '../components/StateDisplay.svelte';
   import { SvelteSet } from 'svelte/reactivity';
   import { api } from '../api.js';
   import Button from '../components/Button.svelte';
@@ -307,9 +308,7 @@
   </div>
 
   {#if loading}
-    <div class="flex items-center justify-center py-12">
-      <Loader2 class="w-6 h-6 animate-spin" style="color: var(--ds-text-subtle);" />
-    </div>
+    <StateDisplay type="loading" />
   {:else}
     <!-- Available Providers Section -->
     {#if availableProviders.length > 0}
@@ -421,9 +420,7 @@
 
                 <!-- Linked repositories -->
                 {#if loadingRepos.has(conn.id)}
-                  <div class="flex items-center justify-center py-4">
-                    <Loader2 class="w-5 h-5 animate-spin" style="color: var(--ds-text-subtle);" />
-                  </div>
+                  <StateDisplay type="loading" />
                 {:else if !linkedRepos[conn.id] || linkedRepos[conn.id].length === 0}
                   <EmptyState title={t('scmSettings.noRepositories')}>
                     {#snippet action()}

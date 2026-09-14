@@ -1,5 +1,7 @@
 <script>
-  import { X, Table2, ChevronLeft, ChevronRight, Loader2, AlertCircle, Package } from '@lucide/svelte';
+import { X, Table2, ChevronLeft, ChevronRight, AlertCircle, Package } from '@lucide/svelte';
+import EmptyState from '../components/EmptyState.svelte';
+  import StateDisplay from '../components/StateDisplay.svelte';
   import { api } from '../api.js';
   import { portalCustomizationStore as portalStore } from '../stores/portal.svelte.js';
   import { iconMap } from '../stores/portalPresentation.js';
@@ -277,9 +279,7 @@
          results render via the table branch below. -->
     <div class="p-4">
       {#if formLoading}
-        <div class="flex items-center justify-center py-8">
-          <Loader2 class="w-6 h-6 animate-spin" style="color: var(--ds-text-subtle);" />
-        </div>
+        <StateDisplay type="loading" />
       {:else if error}
         <div class="flex items-center gap-2 py-4">
           <AlertCircle class="w-5 h-5 text-ds-icon-danger" />
@@ -344,20 +344,14 @@
   <!-- Table Content -->
   <div class="overflow-x-auto">
     {#if loading}
-      <div class="flex items-center justify-center py-12">
-        <Loader2 class="w-6 h-6 animate-spin" style="color: var(--ds-text-subtle);" />
-        <span class="ml-2 text-sm" style="color: var(--ds-text-subtle);">{t('common.loading')}</span>
-      </div>
+      <StateDisplay type="loading" />
     {:else if error}
       <div class="flex items-center justify-center py-12 gap-2">
         <AlertCircle class="w-5 h-5 text-ds-icon-danger" />
         <span class="text-sm text-ds-text-danger">{error}</span>
       </div>
     {:else if assets.length === 0}
-      <div class="flex flex-col items-center justify-center py-12">
-        <Package class="w-8 h-8 mb-2" style="color: var(--ds-text-subtle);" />
-        <p class="text-sm" style="color: var(--ds-text-subtle);">{t('portal.noAssetsFound')}</p>
-      </div>
+      <EmptyState icon={Package} title={t('portal.noAssetsFound')} />
     {:else}
       <table class="w-full">
         <thead>

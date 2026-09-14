@@ -1,11 +1,11 @@
 <script>
   import { onDestroy } from 'svelte';
+  import StateDisplay from '../components/StateDisplay.svelte';
   import { CalendarDays, Copy, Eye, EyeOff, Link2, RefreshCw, Trash2 } from '@lucide/svelte';
   import { createCalendarFeedToken, getCalendarFeedToken, revokeCalendarFeedToken } from '../api.js';
   import AlertBox from '../components/AlertBox.svelte';
   import Button from '../components/Button.svelte';
   import Input from '../components/Input.svelte';
-  import Spinner from '../components/Spinner.svelte';
   import { confirm } from '../composables/useConfirm.js';
   import { t } from '../stores/i18n.svelte.js';
   import { copyToClipboard } from '../utils/clipboard.js';
@@ -112,7 +112,7 @@
 {/if}
 
 {#if loading}
-  <div class="flex items-center justify-center py-8"><Spinner size="md" /></div>
+  <StateDisplay type="loading" />
 {:else if !feedInfo}
   <div class="py-4">
     <Button variant="default" onclick={load}>{t('users.loadCalendarFeedSettings')}</Button>

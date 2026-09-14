@@ -1,11 +1,11 @@
 <script>
   import { onMount } from 'svelte';
+  import StateDisplay from '../components/StateDisplay.svelte';
   import { api } from '../api.js';
   import { AlertCircle, CheckCircle, X, Plus, Paperclip } from '@lucide/svelte';
   import Button from '../components/Button.svelte';
   import Input from '../components/Input.svelte';
   import PageHeader from '../layout/PageHeader.svelte';
-  import Spinner from '../components/Spinner.svelte';
   import Lozenge from '../components/Lozenge.svelte';
   import Label from '../components/Label.svelte';
   import { successToast } from '../stores/toasts.svelte.js';
@@ -214,9 +214,7 @@
   subtitle={t('settings.attachments.subtitle')}
 />
     {#if loading}
-      <div class="flex items-center justify-center py-12">
-        <Spinner />
-      </div>
+      <StateDisplay type="loading" />
     {:else}
       <!-- Status Section -->
       {#if status}

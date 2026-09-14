@@ -1,11 +1,11 @@
 <script>
   import { api } from '../api.js';
+  import StateDisplay from '../components/StateDisplay.svelte';
   import Button from '../components/Button.svelte';
   import Checkbox from '../components/Checkbox.svelte';
   import Input from '../components/Input.svelte';
   import Textarea from '../components/Textarea.svelte';
   import AlertBox from '../components/AlertBox.svelte';
-  import Spinner from '../components/Spinner.svelte';
   import Label from '../components/Label.svelte';
   import PortalModal from './PortalModal.svelte';
   import BasePicker from '../pickers/BasePicker.svelte';
@@ -182,9 +182,7 @@
     bodyClass="px-6 py-4 max-h-[75vh] overflow-y-auto"
   >
     {#if loading}
-      <div class="flex items-center justify-center py-12">
-        <Spinner size="lg" />
-      </div>
+      <StateDisplay type="loading" size="lg" />
     {:else}
       {#if error}
         <AlertBox variant="error" message={error} class="mb-4" />

@@ -1,12 +1,12 @@
 <script>
   import { untrack } from 'svelte';
+  import StateDisplay from '../components/StateDisplay.svelte';
   import { useDebounce } from 'runed';
   import { t } from '../stores/i18n.svelte.js';
   import { api } from '../api.js';
   import { formatDateSimple } from '../utils/dateFormatter.js';
   import Modal from './Modal.svelte';
   import ModalHeader from './ModalHeader.svelte';
-  import Spinner from '../components/Spinner.svelte';
   import Button from '../components/Button.svelte';
   import EmptyState from '../components/EmptyState.svelte';
   import DataTable from '../components/DataTable.svelte';
@@ -139,9 +139,7 @@
   <!-- Content -->
   <div class="p-6">
     {#if loading && !data}
-      <div class="flex items-center justify-center py-12">
-        <Spinner />
-      </div>
+      <StateDisplay type="loading" />
     {:else if error}
       <div class="text-center py-12">
         <p class="text-sm" style="color: var(--ds-text-danger);">{error}</p>

@@ -1,11 +1,11 @@
 <script>
   import { onMount } from 'svelte';
+  import StateDisplay from '../components/StateDisplay.svelte';
   import { Bot, CheckSquare, Puzzle, Upload, RefreshCw, Trash2, ToggleLeft, ToggleRight, Package } from '@lucide/svelte';
   import { moduleSettings } from '../stores/moduleSettings.js';
   import Toggle from '../components/Toggle.svelte';
   import Button from '../components/Button.svelte';
   import PageHeader from '../layout/PageHeader.svelte';
-  import Spinner from '../components/Spinner.svelte';
   import AlertBox from '../components/AlertBox.svelte';
   import Panel from '../components/Panel.svelte';
   import { api, getSecuritySettings, fetchAPI } from '../api.js';
@@ -262,9 +262,7 @@
 />
 
   {#if $moduleSettings.loading}
-    <div class="flex items-center justify-center py-12">
-      <Spinner />
-    </div>
+    <StateDisplay type="loading" />
   {:else}
     <!-- Success Message -->
     {#if successMessage}
@@ -419,9 +417,7 @@
         <h3 class="text-lg font-medium mb-4" style="color: var(--ds-text);">{t('settings.modules.installedPlugins')}</h3>
 
         {#if loadingPlugins}
-          <div class="flex items-center justify-center py-8">
-            <Spinner />
-          </div>
+          <StateDisplay type="loading" />
         {:else if plugins.length === 0}
           <EmptyState icon={Puzzle} title={t('settings.modules.noPluginsInstalled')} />
         {:else}

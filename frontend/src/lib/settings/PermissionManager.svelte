@@ -1,5 +1,6 @@
 <script>
   import { onMount } from 'svelte';
+  import StateDisplay from '../components/StateDisplay.svelte';
   import { api } from '../api.js';
   import { t } from '../stores/i18n.svelte.js';
   import { authStore } from '../stores/auth.svelte.js';
@@ -7,7 +8,6 @@
   import { Shield, Users as UsersIcon, Plus, X, User, Crown } from '@lucide/svelte';
   import PageHeader from '../layout/PageHeader.svelte';
   import AssigneePicker from '../pickers/AssigneePicker.svelte';
-  import Spinner from '../components/Spinner.svelte';
   import AlertBox from '../components/AlertBox.svelte';
   import Lozenge from '../components/Lozenge.svelte';
   import DataTable from '../components/DataTable.svelte';
@@ -259,10 +259,7 @@
   {/if}
 
   {#if loading}
-    <div class="flex items-center justify-center py-12">
-      <Spinner size="lg" />
-      <span class="ml-3" style="color: var(--ds-text-subtle);">{t('settings.permissions.loadingPermissions')}</span>
-    </div>
+    <StateDisplay type="loading" size="lg" message={t('settings.permissions.loadingPermissions')} />
   {:else}
     <!-- Global Permissions Table -->
     <h2 class="text-xl font-semibold mb-4" style="color: var(--ds-text);">{t('settings.permissions.globalPermissions')}</h2>

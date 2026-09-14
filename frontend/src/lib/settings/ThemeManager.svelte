@@ -1,5 +1,6 @@
 <script>
   import { onMount } from 'svelte';
+  import StateDisplay from '../components/StateDisplay.svelte';
   import { api } from '../api.js';
   import { Plus, Edit, Trash2, Palette, Check, X } from '@lucide/svelte';
   import AlertBox from '../components/AlertBox.svelte';
@@ -9,7 +10,6 @@
   import Modal from '../dialogs/Modal.svelte';
   import ModalHeader from '../dialogs/ModalHeader.svelte';
   import DialogFooter from '../dialogs/DialogFooter.svelte';
-  import Spinner from '../components/Spinner.svelte';
   import IconSelector from '../pickers/IconSelector.svelte';
   import Label from '../components/Label.svelte';
   import Input from '../components/Input.svelte';
@@ -347,9 +347,7 @@
 
   <!-- Themes List -->
   {#if loading}
-    <div class="flex justify-center py-8">
-      <Spinner />
-    </div>
+    <StateDisplay type="loading" />
   {:else}
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {#each themes as theme (theme.id)}

@@ -3,7 +3,8 @@
   // removal.
 
   import { onMount } from 'svelte';
-  import { Loader2, Plus, Trash2 } from '@lucide/svelte';
+  import StateDisplay from '../components/StateDisplay.svelte';
+import { Plus, Trash2 } from '@lucide/svelte';
   import { agentSecurity, api } from '../api.js';
   import UserPicker from '../pickers/UserPicker.svelte';
   import WorkspacePicker from '../pickers/WorkspacePicker.svelte';
@@ -156,9 +157,7 @@
   {/if}
 
   {#if loading}
-    <div class="flex items-center justify-center py-4">
-      <Loader2 class="w-4 h-4 animate-spin" style="color: var(--ds-icon-subtle);" />
-    </div>
+    <StateDisplay type="loading" />
   {:else}
     {#if entries.length === 0}
       <p class="text-sm py-2" style="color: var(--ds-text-subtle);">

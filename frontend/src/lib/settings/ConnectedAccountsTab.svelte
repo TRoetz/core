@@ -1,7 +1,8 @@
 <script>
 	import { onMount } from 'svelte';
+  import StateDisplay from '../components/StateDisplay.svelte';
 	import { api } from '../api.js';
-	import { GitBranch, CheckCircle, XCircle, LogOut, Loader2, ExternalLink } from '@lucide/svelte';
+ import { GitBranch, CheckCircle, XCircle, LogOut, ExternalLink } from '@lucide/svelte';
 	import { IconBrandGithub as Github } from '@tabler/icons-svelte-runes';
 	import Button from '../components/Button.svelte';
 	import AlertBox from '../components/AlertBox.svelte';
@@ -152,9 +153,7 @@
 	{/if}
 
 	{#if loading}
-		<div class="flex items-center justify-center py-8">
-			<Loader2 class="w-6 h-6 animate-spin" style="color: var(--ds-text-subtle);" />
-		</div>
+		<StateDisplay type="loading" />
 	{:else if providers.length === 0}
 		<EmptyState
 			icon={GitBranch}
@@ -237,15 +236,10 @@
 								variant="danger"
 								size="small"
 								onclick={() => disconnect(provider.id)}
-								disabled={disconnecting === provider.id}
+								loading={disconnecting === provider.id}
+								icon={LogOut}
 							>
-								{#if disconnecting === provider.id}
-									<Loader2 class="w-4 h-4 animate-spin mr-1" />
-									{t('settings.connectedAccounts.disconnecting')}
-								{:else}
-									<LogOut class="w-4 h-4 mr-1" />
-									{t('settings.connectedAccounts.disconnect')}
-								{/if}
+								{disconnecting === provider.id ? t('settings.connectedAccounts.disconnecting') : t('settings.connectedAccounts.disconnect')}
 							</Button>
 						{:else}
 							<Button
@@ -358,13 +352,9 @@
 									variant="danger"
 									size="small"
 									onclick={() => disconnectIntegration(provider.id)}
-									disabled={intDisconnecting === provider.id}
+									loading={intDisconnecting === provider.id}
+									icon={LogOut}
 								>
-									{#if intDisconnecting === provider.id}
-										<Loader2 class="w-4 h-4 animate-spin mr-1" />
-									{:else}
-										<LogOut class="w-4 h-4 mr-1" />
-									{/if}
 									{t('integrations.disconnect')}
 								</Button>
 							{:else}

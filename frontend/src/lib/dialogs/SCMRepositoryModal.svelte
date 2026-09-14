@@ -1,5 +1,6 @@
 <script>
   import { onMount } from 'svelte';
+  import StateDisplay from '../components/StateDisplay.svelte';
   import { api } from '../api.js';
   import EmptyState from '../components/EmptyState.svelte';
   import Label from '../components/Label.svelte';
@@ -8,7 +9,6 @@
   import DialogFooter from './DialogFooter.svelte';
   import Modal from './Modal.svelte';
   import ModalHeader from './ModalHeader.svelte';
-  import { Loader2 } from '@lucide/svelte';
 
   let {
     itemId,
@@ -56,9 +56,7 @@
 
   <div class="px-6 py-4 space-y-4">
     {#if loading}
-      <div class="flex items-center justify-center py-8">
-        <Loader2 class="w-6 h-6 animate-spin" style="color: var(--ds-text-subtle);" />
-      </div>
+      <StateDisplay type="loading" />
     {:else if repositories.length === 0}
       <EmptyState
         icon={emptyIcon}

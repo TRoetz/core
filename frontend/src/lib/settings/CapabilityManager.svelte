@@ -1,5 +1,6 @@
 <script>
   import { onMount } from 'svelte';
+  import StateDisplay from '../components/StateDisplay.svelte';
   import { api } from '../api.js';
   import { Plus, Edit, Trash2 } from '@lucide/svelte';
   import Button from '../components/Button.svelte';
@@ -7,7 +8,6 @@
   import Radio from '../components/Radio.svelte';
   import Input from '../components/Input.svelte';
   import PageHeader from '../layout/PageHeader.svelte';
-  import Spinner from '../components/Spinner.svelte';
   import Lozenge from '../components/Lozenge.svelte';
   import Select from '../components/Select.svelte';
   import DataTable from '../components/DataTable.svelte';
@@ -401,9 +401,7 @@
   </PageHeader>
 
   {#if loading}
-    <div class="flex items-center justify-center py-12">
-      <Spinner />
-    </div>
+    <StateDisplay type="loading" />
   {:else if capabilities.length === 0}
     <div class="flex flex-col items-center py-12 gap-3 rounded-lg border" style="border-color: var(--ds-border); background: var(--ds-surface-raised);">
       <p class="text-sm" style="color: var(--ds-text-subtle);">{t('settings.actionCapabilities.noCapabilities')}</p>

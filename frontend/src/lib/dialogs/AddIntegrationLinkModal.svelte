@@ -1,5 +1,6 @@
 <script>
   import { onMount } from 'svelte';
+  import StateDisplay from '../components/StateDisplay.svelte';
   import { api } from '../api.js';
   import Button from '../components/Button.svelte';
   import Input from '../components/Input.svelte';
@@ -134,9 +135,7 @@
     <!-- Content -->
     <div class="px-6 py-4 space-y-4">
       {#if loading}
-        <div class="flex items-center justify-center py-8">
-          <Loader2 class="w-6 h-6 animate-spin" style="color: var(--ds-text-subtle);" />
-        </div>
+        <StateDisplay type="loading" />
       {:else if providers.length === 0}
         <EmptyState
           icon={ExternalLink}

@@ -1,5 +1,6 @@
 <script>
   import { onMount } from 'svelte';
+  import StateDisplay from '../components/StateDisplay.svelte';
   import { api } from '../api.js';
   import Button from '../components/Button.svelte';
   import Card from '../components/Card.svelte';
@@ -10,7 +11,7 @@
   import Radio from '../components/Radio.svelte';
   import AlertBox from '../components/AlertBox.svelte';
   import Chip from '../components/Chip.svelte';
-  import { RefreshCw, Trash2, ExternalLink, Loader2, Plus, X, Layers } from '@lucide/svelte';
+  import { RefreshCw, Trash2, ExternalLink, Plus, X, Layers } from '@lucide/svelte';
   import { successToast, errorToast } from '../stores/toasts.svelte.js';
   import { t } from '../stores/i18n.svelte.js';
   import { confirm } from '../composables/useConfirm.js';
@@ -273,9 +274,7 @@
 </script>
 
 {#if loading}
-  <div class="flex items-center justify-center py-12">
-    <Loader2 class="w-6 h-6 animate-spin" style="color: var(--ds-text-subtle);" />
-  </div>
+  <StateDisplay type="loading" />
 {:else if linkedRepos.length === 0}
   <AlertBox type="info">
     <p>{t('issueSync.noLinkedRepos')}</p>
@@ -344,10 +343,7 @@
         <p class="text-xs mb-3" style="color: var(--ds-text-subtle);">{t('issueSync.statusMappingDescription')}</p>
         <AlertBox type="warning" class="mb-4" message={t('issueSync.workflowBypassWarning')} />
         {#if loadingStatuses}
-          <div class="flex items-center gap-2 py-2">
-            <Loader2 class="w-4 h-4 animate-spin" style="color: var(--ds-text-subtle);" />
-            <span class="text-sm" style="color: var(--ds-text-subtle);">Loading statuses...</span>
-          </div>
+          <StateDisplay type="loading" inline message="Loading statuses..." class="py-2" />
         {:else}
           <div class="space-y-3">
             <div class="flex items-center gap-3">
@@ -521,15 +517,10 @@
             size="sm"
             variant="secondary"
             onclick={triggerSync}
-            disabled={syncing}
+            loading={syncing}
+            icon={RefreshCw}
           >
-            {#if syncing}
-              <Loader2 class="w-4 h-4 animate-spin mr-1" />
-              {t('issueSync.syncing')}
-            {:else}
-              <RefreshCw class="w-4 h-4 mr-1" />
-              {t('issueSync.syncNow')}
-            {/if}
+            {syncing ? t('issueSync.syncing') : t('issueSync.syncNow')}
           </Button>
         </div>
         <div class="space-y-2 text-sm">
@@ -585,11 +576,9 @@
         dataTestid="issue-sync-save"
         variant="primary"
         onclick={saveConfig}
-        disabled={saving || !formData.workspace_repository_id}
+        loading={saving}
+        disabled={!formData.workspace_repository_id}
       >
-        {#if saving}
-          <Loader2 class="w-4 h-4 animate-spin mr-1" />
-        {/if}
         {t('issueSync.save')}
       </Button>
     </div>

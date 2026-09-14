@@ -1,7 +1,8 @@
 <script>
   import { onMount } from 'svelte';
+  import StateDisplay from '../components/StateDisplay.svelte';
   import { api } from '../api.js';
-  import { Plus, Edit2, Trash2, Loader2, PlugZap, RefreshCw } from '@lucide/svelte';
+  import { Plus, Edit2, Trash2, PlugZap, RefreshCw } from '@lucide/svelte';
   import Button from '../components/Button.svelte';
   import Modal from '../dialogs/Modal.svelte';
   import ModalHeader from '../dialogs/ModalHeader.svelte';
@@ -310,8 +311,7 @@
   <SectionHeader title={t('zammad.connections')} subtitle={t('zammad.connectionsDescription')} class="mb-6">
     {#snippet actions()}
       <div class="flex items-center gap-2">
-        <Button variant="ghost" size="small" onclick={refreshAllTickets} disabled={refreshingAll || connections.length === 0}>
-          {#if refreshingAll}<Loader2 class="w-4 h-4 animate-spin" />{:else}<RefreshCw class="w-4 h-4" />{/if}
+        <Button variant="ghost" size="small" onclick={refreshAllTickets} loading={refreshingAll} disabled={connections.length === 0} icon={RefreshCw}>
           {t('zammad.refreshAllTickets')}
         </Button>
         <!-- shortcut-guard-exempt: this secondary integration tab does not own a global add shortcut -->
@@ -325,7 +325,7 @@
   {#if error}<div class="mb-4"><AlertBox message={error} /></div>{/if}
 
   {#if loading}
-    <div class="flex justify-center py-12"><Loader2 class="w-6 h-6 animate-spin" /></div>
+    <StateDisplay type="loading" />
   {:else if connections.length === 0}
     <EmptyState title={t('zammad.noConnections')} />
   {:else}
@@ -348,13 +348,11 @@
               {/if}
             </div>
             <div class="flex items-center gap-1">
-              <Button variant="ghost" size="small" onclick={() => testConnection(connection)} disabled={testingId === connection.id || oauthAuthorizationRequired(connection)}>
-                {#if testingId === connection.id}<Loader2 class="w-4 h-4 animate-spin" />{:else}<PlugZap class="w-4 h-4" />{/if}
+              <Button variant="ghost" size="small" onclick={() => testConnection(connection)} loading={testingId === connection.id} disabled={oauthAuthorizationRequired(connection)} icon={PlugZap}>
                 {t('zammad.testConnection')}
               </Button>
               {#if connection.auth_method === 'oauth'}
-                <Button variant="ghost" size="small" onclick={() => startOAuth(connection)} disabled={authorizingId === connection.id}>
-                  {#if authorizingId === connection.id}<Loader2 class="w-4 h-4 animate-spin" />{/if}
+                <Button variant="ghost" size="small" onclick={() => startOAuth(connection)} loading={authorizingId === connection.id}>
                   {connection.oauth_connected || connection.reauthorization_required ? t('zammad.reauthorizeOAuth') : t('zammad.connectOAuth')}
                 </Button>
               {/if}
@@ -545,8 +543,7 @@
 
     <div class="flex justify-end gap-2 pt-2">
       <Button variant="ghost" onclick={() => (showModal = false)}>{t('common.cancel')}</Button>
-      <Button variant="primary" type="submit" disabled={saving || !form.name || !form.slug || !form.base_url || !form.default_customer || (form.auth_method === 'oauth' ? (!form.oauth_client_id || (!editing && !form.oauth_client_secret) || (editing && !form.has_oauth_client_secret && !form.oauth_client_secret)) : (!editing && !form.api_token)) || (!form.applies_to_all_workspaces && form.workspace_ids.length === 0)}>
-        {#if saving}<Loader2 class="w-4 h-4 animate-spin" />{/if}
+      <Button variant="primary" type="submit" loading={saving} disabled={!form.name || !form.slug || !form.base_url || !form.default_customer || (form.auth_method === 'oauth' ? (!form.oauth_client_id || (!editing && !form.oauth_client_secret) || (editing && !form.has_oauth_client_secret && !form.oauth_client_secret)) : (!editing && !form.api_token)) || (!form.applies_to_all_workspaces && form.workspace_ids.length === 0)}>
         {editing ? t('common.update') : t('common.create')}
       </Button>
     </div>

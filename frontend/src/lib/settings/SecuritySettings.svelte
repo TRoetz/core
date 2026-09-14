@@ -1,5 +1,6 @@
 <script>
   import { onMount } from 'svelte';
+  import StateDisplay from '../components/StateDisplay.svelte';
   import { Shield, Calendar, Image as ImageIcon, Loader2, Terminal, Key, Users, UserCog, AlertTriangle, ChevronDown, ChevronUp } from '@lucide/svelte';
   import { agentSecurity, getSecuritySettings, updateSecuritySettings, authPolicy } from '../api.js';
   import AgentSecurityAllowlistEditor from './AgentSecurityAllowlistEditor.svelte';
@@ -268,9 +269,7 @@
   <PageHeader title={t('settings.security.title')} subtitle={t('settings.security.subtitle')} icon={Shield} />
 
   {#if loading}
-    <div class="flex items-center justify-center py-12">
-      <Loader2 class="w-6 h-6 animate-spin" style="color: var(--ds-icon-subtle);" />
-    </div>
+    <StateDisplay type="loading" />
   {:else}
     <!-- Calendar Feed Settings -->
     <Panel padding="spacious">
@@ -506,9 +505,7 @@
           </div>
 
           {#if loadingPolicy}
-            <div class="flex items-center justify-center py-4">
-              <Loader2 class="w-5 h-5 animate-spin" style="color: var(--ds-icon-subtle);" />
-            </div>
+            <StateDisplay type="loading" />
           {:else}
             <!-- Policy Selector -->
             <div class="mt-4">

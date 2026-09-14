@@ -1,7 +1,8 @@
 <script>
 	import { onMount } from 'svelte';
+  import StateDisplay from '../components/StateDisplay.svelte';
 	import { api } from '../api.js';
-	import { Plus, Edit2, Trash2, RefreshCw, Loader2, X } from '@lucide/svelte';
+ import { Plus, Edit2, Trash2, RefreshCw, X } from '@lucide/svelte';
 	import Button from '../components/Button.svelte';
 	import CopyButton from '../components/CopyButton.svelte';
 	import Modal from '../dialogs/Modal.svelte';
@@ -268,9 +269,7 @@
 	{/if}
 
 	{#if loading}
-		<div class="flex items-center justify-center py-12">
-			<Loader2 class="w-6 h-6 animate-spin" style="color: var(--ds-text-subtle);" />
-		</div>
+		<StateDisplay type="loading" />
 	{:else if clients.length === 0}
 		<EmptyState
 			title={t('integrations.oauthClients.empty')}
@@ -410,15 +409,12 @@
 			<Button
 				variant="primary"
 				type="submit"
-				disabled={saving ||
-					!formData.slug ||
+				loading={saving}
+				disabled={!formData.slug ||
 					!formData.display_name ||
 					formData.allowed_scopes.length === 0 ||
 					parseRedirectURIs(formData.redirect_uris_text).length === 0}
 			>
-				{#if saving}
-					<Loader2 class="w-4 h-4 animate-spin mr-1" />
-				{/if}
 				{editingClient ? t('common.update') : t('integrations.oauthClients.register')}
 			</Button>
 		</div>

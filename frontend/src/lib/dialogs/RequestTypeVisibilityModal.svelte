@@ -1,5 +1,6 @@
 <script>
   import { Shield, Users, Building2, Check, Info } from '@lucide/svelte';
+  import StateDisplay from '../components/StateDisplay.svelte';
   import Modal from './Modal.svelte';
   import Spinner from '../components/Spinner.svelte';
   import { api } from '../api.js';
@@ -116,9 +117,7 @@
 >
   <div class="p-6">
     {#if loading}
-      <div class="flex items-center justify-center py-8">
-        <Spinner />
-      </div>
+      <StateDisplay type="loading" />
     {:else}
       {#if error}
         <div class="mb-4 p-3 rounded bg-ds-danger-subtle text-ds-text-danger text-sm">

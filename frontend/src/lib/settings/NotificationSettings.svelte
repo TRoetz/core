@@ -1,5 +1,6 @@
 <script>
   import { onMount } from 'svelte';
+  import StateDisplay from '../components/StateDisplay.svelte';
   import { api } from '../api.js';
   import { authStore } from '../stores/auth.svelte.js';
   import { t } from '../stores/i18n.svelte.js';
@@ -15,7 +16,6 @@
   import Input from '../components/Input.svelte';
   import Modal from '../dialogs/Modal.svelte';
   import ModalHeader from '../dialogs/ModalHeader.svelte';
-  import Spinner from '../components/Spinner.svelte';
   import Textarea from '../components/Textarea.svelte';
   import BasePicker from '../pickers/BasePicker.svelte';
   import Label from '../components/Label.svelte';
@@ -293,9 +293,7 @@
   </PageHeader>
 
   {#if loading}
-    <div class="flex justify-center py-12">
-      <Spinner />
-    </div>
+    <StateDisplay type="loading" />
   {:else if error}
     <AlertBox variant="error" message={error} />
   {:else}

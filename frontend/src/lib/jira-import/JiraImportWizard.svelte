@@ -1,5 +1,6 @@
 <script>
   import { jiraImport } from './JiraImportStore.svelte.js';
+  import StateDisplay from '../components/StateDisplay.svelte';
   import Modal from '../dialogs/Modal.svelte';
   import DialogFooter from '../dialogs/DialogFooter.svelte';
   import Button from '../components/Button.svelte';
@@ -313,10 +314,7 @@
           {:else if savedConnections.items.length > 0 && !showNewConnectionForm}
             <!-- Show saved connections -->
             {#if isLoadingSavedConnection}
-              <div class="flex flex-col items-center justify-center py-12">
-                <Spinner size="lg" />
-                <p class="mt-4 text-sm" style="color: var(--ds-text-subtle);">{t('projects.loadingProjects')}</p>
-              </div>
+              <StateDisplay type="loading" size="lg" message={t('projects.loadingProjects')} />
             {:else}
               <AlertBox variant="info" message={t('jiraImport.messages.selectConnection')} />
 
@@ -548,9 +546,7 @@
           {/if}
 
           {#if projects.isLoading}
-            <div class="flex items-center justify-center py-12">
-              <Spinner size="lg" />
-            </div>
+            <StateDisplay type="loading" size="lg" />
           {:else}
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-96 overflow-y-auto">
               {#each filteredProjects as project}

@@ -1,7 +1,8 @@
 <script>
 	import { onMount } from 'svelte';
+  import StateDisplay from '../components/StateDisplay.svelte';
 	import { api } from '../api.js';
-	import { Plus, Edit2, Trash2, Loader2 } from '@lucide/svelte';
+ import { Plus, Edit2, Trash2 } from '@lucide/svelte';
 	import Button from '../components/Button.svelte';
 	import CopyButton from '../components/CopyButton.svelte';
 	import Modal from '../dialogs/Modal.svelte';
@@ -169,9 +170,7 @@
 	{/if}
 
 	{#if loading}
-		<div class="flex items-center justify-center py-12">
-			<Loader2 class="w-6 h-6 animate-spin" style="color: var(--ds-text-subtle);" />
-		</div>
+		<StateDisplay type="loading" />
 	{:else if providers.length === 0}
 		<EmptyState title={t('integrations.noProviders')} />
 	{:else}
@@ -259,10 +258,7 @@
 
 			<div class="flex justify-end gap-2 pt-2">
 				<Button variant="ghost" onclick={() => showModal = false}>{t('common.cancel')}</Button>
-				<Button variant="primary" type="submit" disabled={saving || !formData.slug || !formData.name}>
-					{#if saving}
-						<Loader2 class="w-4 h-4 animate-spin mr-1" />
-					{/if}
+				<Button variant="primary" type="submit" loading={saving} disabled={!formData.slug || !formData.name}>
 					{editingProvider ? t('common.update') : t('common.create')}
 				</Button>
 			</div>

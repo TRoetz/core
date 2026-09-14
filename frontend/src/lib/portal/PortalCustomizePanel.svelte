@@ -1,5 +1,6 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
+  import StateDisplay from '../components/StateDisplay.svelte';
   import { draggable } from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
   import {
     Palette, Navigation, X, TextCursorInput, BookOpen, Check,
@@ -7,7 +8,6 @@
     Package, Shield, Table2, Edit3, Info
   } from '@lucide/svelte';
   import Tooltip from '../components/Tooltip.svelte';
-  import Spinner from '../components/Spinner.svelte';
   import DropdownMenu from '../layout/DropdownMenu.svelte';
   import RequestTypeVisibilityModal from '../dialogs/RequestTypeVisibilityModal.svelte';
   import AssetReportVisibilityModal from '../dialogs/RequestTypeVisibilityModal.svelte';
@@ -475,9 +475,7 @@
         </div>
 
         {#if portalCatalogStore.loadingRequestTypes}
-          <div class="flex items-center justify-center py-8">
-            <Spinner />
-          </div>
+          <StateDisplay type="loading" />
         {:else}
           <!-- Request Types List -->
           <div class="space-y-2 mb-4">
@@ -597,9 +595,7 @@
         </div>
 
         {#if portalCatalogStore.loadingAssetReports}
-          <div class="flex items-center justify-center py-8">
-            <Spinner />
-          </div>
+          <StateDisplay type="loading" />
         {:else}
           <!-- Asset Reports List -->
           <div class="space-y-2 mb-4">

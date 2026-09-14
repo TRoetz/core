@@ -1,5 +1,6 @@
 <script>
   import { onMount } from 'svelte';
+  import StateDisplay from '../components/StateDisplay.svelte';
   import { api } from '../api.js';
   import {
     Plus, Edit, Trash2, TestTube, CheckCircle, Star, AlertTriangle, Eye, EyeOff
@@ -8,7 +9,6 @@
   import Input from '../components/Input.svelte';
   import Checkbox from '../components/Checkbox.svelte';
   import PageHeader from '../layout/PageHeader.svelte';
-  import Spinner from '../components/Spinner.svelte';
   import Lozenge from '../components/Lozenge.svelte';
   import DataTable from '../components/DataTable.svelte';
   import { successToast, errorToast } from '../stores/toasts.svelte.js';
@@ -361,9 +361,7 @@
   </PageHeader>
 
   {#if loading}
-    <div class="flex items-center justify-center py-12">
-      <Spinner />
-    </div>
+    <StateDisplay type="loading" />
   {:else if connections.length === 0}
     <div class="flex flex-col items-center py-12 gap-3 rounded-lg border" style="border-color: var(--ds-border); background: var(--ds-surface-raised);">
       <p class="text-sm" style="color: var(--ds-text-subtle);">{t('settings.adminOperations.llmConnections.empty')}</p>

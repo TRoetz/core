@@ -13,6 +13,7 @@
 -->
 <script>
   import { onMount } from 'svelte';
+  import StateDisplay from '../components/StateDisplay.svelte';
   import { Plus, Edit, Trash2, KeyRound } from '@lucide/svelte';
   import { api } from '../api.js';
   import Button from '../components/Button.svelte';
@@ -21,7 +22,6 @@
   import Input from '../components/Input.svelte';
   import Textarea from '../components/Textarea.svelte';
   import PageHeader from '../layout/PageHeader.svelte';
-  import Spinner from '../components/Spinner.svelte';
   import Lozenge from '../components/Lozenge.svelte';
   import Select from '../components/Select.svelte';
   import DataTable from '../components/DataTable.svelte';
@@ -271,7 +271,7 @@
   </PageHeader>
 
   {#if loading}
-    <div class="flex items-center justify-center py-12"><Spinner /></div>
+    <StateDisplay type="loading" />
   {:else if credentials.length === 0}
     <div
       class="flex flex-col items-center py-12 gap-3 rounded-lg border"

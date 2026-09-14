@@ -1,5 +1,6 @@
 <script>
   import { draggable, dropTargetForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
+  import StateDisplay from '../components/StateDisplay.svelte';
   import { attachClosestEdge, extractClosestEdge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge';
   import { createPopover, melt } from '@melt-ui/svelte';
   import { fly } from 'svelte/transition';
@@ -628,9 +629,7 @@
   <!-- Body -->
   <div class="flex-1 overflow-y-auto px-4 py-4">
     {#if loading}
-      <div class="flex items-center justify-center py-12">
-        <Spinner />
-      </div>
+      <StateDisplay type="loading" />
     {:else}
       {#if error}
         <div

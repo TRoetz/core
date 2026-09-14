@@ -1,5 +1,6 @@
 <script>
   import { onMount } from 'svelte';
+  import StateDisplay from '../../components/StateDisplay.svelte';
   import { api } from '../../api.js';
   import { t } from '../../stores/i18n.svelte.js';
   import DataTable from '../../components/DataTable.svelte';
@@ -83,9 +84,7 @@
   <!-- DataTable -->
   <div class="flex-1 p-4 overflow-auto">
     {#if loading}
-      <div class="flex justify-center py-12">
-        <div class="animate-spin h-8 w-8 border-b-2 rounded-full" style="border-color: var(--ds-interactive);"></div>
-      </div>
+      <StateDisplay type="loading" />
     {:else}
       <DataTable
         {columns}

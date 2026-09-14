@@ -1,6 +1,7 @@
 <script>
-  import { Search, X, BookOpen } from '@lucide/svelte';
-  import Spinner from '../components/Spinner.svelte';
+  import { Search, BookOpen } from '@lucide/svelte';
+  import StateDisplay from '../components/StateDisplay.svelte';
+  import EmptyState from '../components/EmptyState.svelte';
   import Input from '../components/Input.svelte';
   import { portalCustomizationStore as portalStore } from '../stores/portal.svelte.js';
   import { gradients } from '../stores/portalPresentation.js';
@@ -106,21 +107,10 @@
           <div class="flex-1 overflow-y-auto p-6 text-left">
             {#if portalSearchStore.loading}
               <!-- Loading State -->
-              <div class="flex flex-col items-center justify-center py-12">
-                <Spinner size="lg" class="mb-4" />
-                <p class="text-sm" style="color: var(--ds-text-subtle);">Searching knowledge base...</p>
-              </div>
+              <StateDisplay type="loading" size="lg" message="Searching knowledge base..." />
             {:else if portalSearchStore.error}
               <!-- Error State -->
-              <div class="flex flex-col items-center justify-center py-12">
-                <div class="w-12 h-12 rounded-full flex items-center justify-center mb-4" style="background-color: var(--ds-danger-subtle);">
-                  <X class="w-6 h-6" style="color: var(--ds-text-danger);" />
-                </div>
-                <h3 class="text-lg font-semibold mb-2" style="color: var(--ds-text);">Search Failed</h3>
-                <p class="text-sm text-center" style="color: var(--ds-text-subtle);">
-                  {portalSearchStore.error}
-                </p>
-              </div>
+              <StateDisplay type="error" title="Search Failed" message={portalSearchStore.error} />
             {:else if portalSearchStore.results && portalSearchStore.results.data && portalSearchStore.results.data.length > 0}
               <!-- Results List -->
               <div class="space-y-3">
@@ -165,15 +155,11 @@
               </div>
             {:else}
               <!-- Empty State -->
-              <div class="flex flex-col items-center justify-center py-12">
-                <div class="w-12 h-12 rounded-full flex items-center justify-center mb-4" style="background-color: var(--ds-background-neutral);">
-                  <Search class="w-6 h-6" style="color: var(--ds-text-subtle);" />
-                </div>
-                <h3 class="text-lg font-semibold mb-2" style="color: var(--ds-text);">No Results Found</h3>
-                <p class="text-sm text-center" style="color: var(--ds-text-subtle);">
-                  We couldn't find any articles matching "{portalSearchStore.query}"
-                </p>
-              </div>
+              <EmptyState
+                icon={Search}
+                title="No Results Found"
+                message={`We couldn't find any articles matching "${portalSearchStore.query}"`}
+              />
             {/if}
           </div>
         </div>

@@ -1,5 +1,6 @@
 <script>
   import { onMount } from 'svelte';
+  import StateDisplay from '../../components/StateDisplay.svelte';
   import { Tag, Plus, Pencil, Trash2, Check, X } from '@lucide/svelte';
   import { api } from '../../api.js';
   import { authStore } from '../../stores';
@@ -9,7 +10,6 @@
   import Input from '../../components/Input.svelte';
   import Button from '../../components/Button.svelte';
   import Label from '../../components/Label.svelte';
-  import Spinner from '../../components/Spinner.svelte';
   import IconSelector from '../../pickers/IconSelector.svelte';
 
   let labels = $state(/** @type {any[]} */ ([]));
@@ -189,9 +189,7 @@
   {/if}
 
   {#if loading}
-    <div class="flex items-center justify-center py-8">
-      <Spinner size="md" />
-    </div>
+    <StateDisplay type="loading" />
   {:else if filtered.length === 0}
     <div class="rounded border p-8 text-center" style="border-color: var(--ds-border);">
       <Tag class="w-8 h-8 mx-auto mb-2" style="color: var(--ds-text-subtle);" />

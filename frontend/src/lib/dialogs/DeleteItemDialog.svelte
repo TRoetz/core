@@ -1,5 +1,6 @@
 <script>
   import { AlertTriangle, X, Trash2, Users } from '@lucide/svelte';
+  import StateDisplay from '../components/StateDisplay.svelte';
   import Button from '../components/Button.svelte';
   import ModalBackdrop from '../components/ModalBackdrop.svelte';
   import Spinner from '../components/Spinner.svelte';
@@ -207,9 +208,7 @@
       <!-- Body -->
       <div class="px-6 py-4">
         {#if loadingInfo}
-          <div class="flex items-center justify-center py-8">
-            <Spinner size="medium" />
-          </div>
+          <StateDisplay type="loading" />
         {:else if hasChildren}
           <!-- Has children - show options -->
           <p class="text-sm mb-4" style="color: var(--ds-text-subtle);">

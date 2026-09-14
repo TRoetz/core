@@ -1,10 +1,10 @@
 <script>
   import { onMount } from 'svelte';
+  import StateDisplay from '../components/StateDisplay.svelte';
   import { jiraImport } from './JiraImportStore.svelte.js';
   import { toHotkeyString, getShortcutDisplay } from '../utils/keyboardShortcuts.js';
   import JiraImportWizard from './JiraImportWizard.svelte';
   import Button from '../components/Button.svelte';
-  import Spinner from '../components/Spinner.svelte';
   import AlertBox from '../components/AlertBox.svelte';
   import Input from '../components/Input.svelte';
   import Modal from '../dialogs/Modal.svelte';
@@ -177,9 +177,7 @@
 
     <div class="p-6">
       {#if savedConnections.isLoading}
-        <div class="flex items-center justify-center py-8">
-          <Spinner size="md" />
-        </div>
+        <StateDisplay type="loading" />
       {:else if savedConnections.error}
         <AlertBox variant="error" message={savedConnections.error} />
       {:else if savedConnections.items.length === 0}
@@ -251,9 +249,7 @@
 
     <div class="p-6">
       {#if importJobs.isLoading}
-        <div class="flex items-center justify-center py-8">
-          <Spinner size="md" />
-        </div>
+        <StateDisplay type="loading" />
       {:else if importJobs.error}
         <AlertBox variant="error" message={importJobs.error} />
       {:else if importJobs.items.length === 0}

@@ -1,6 +1,6 @@
 <script>
   import { ArrowLeft, Clock, ShieldCheck, Check, MessageSquare, X } from '@lucide/svelte';
-  import Spinner from '../components/Spinner.svelte';
+  import StateDisplay from '../components/StateDisplay.svelte';
   import Badge from '../components/Badge.svelte';
   import Textarea from '../components/Textarea.svelte';
   import Button from '../components/Button.svelte';
@@ -249,9 +249,7 @@
       subtitle="Review requests that are waiting for your decision."
     />
     {#if portalApprovalsStore.loading}
-      <div class="flex justify-center py-12">
-        <Spinner size="lg" />
-      </div>
+      <StateDisplay type="loading" size="lg" />
     {:else if portalApprovalsStore.approvals.length === 0}
       <div class="max-w-xl py-8 border-t" style="border-color: var(--ds-border);">
         <div class="flex items-start gap-3">

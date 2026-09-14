@@ -9,7 +9,7 @@
     MessageSquare,
     Tag,
   } from '@lucide/svelte';
-  import Spinner from '../components/Spinner.svelte';
+  import StateDisplay from '../components/StateDisplay.svelte';
   import Badge from '../components/Badge.svelte';
   import StatusBadge from '../components/StatusBadge.svelte';
   import Textarea from '../components/Textarea.svelte';
@@ -97,9 +97,7 @@
           </div>
 
           {#if portalRequestsStore.loadingComments}
-            <div class="flex justify-center py-8">
-              <Spinner />
-            </div>
+            <StateDisplay type="loading" />
           {:else}
             <div class="space-y-3 mb-7">
               {#each portalRequestsStore.comments as comment}
@@ -217,7 +215,7 @@
     />
 
     {#if portalRequestsStore.loading}
-      <div class="flex justify-center py-12"><Spinner size="lg" /></div>
+      <StateDisplay type="loading" size="lg" />
     {:else if portalRequestsStore.requests.length === 0}
       <div class="max-w-xl py-8 border-t" style="border-color: var(--ds-border);">
         <div class="flex items-start gap-3">

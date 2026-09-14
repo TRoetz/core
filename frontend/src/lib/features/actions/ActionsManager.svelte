@@ -1,5 +1,6 @@
 <script>
   import { t } from '../../stores/i18n.svelte.js';
+  import StateDisplay from '../../components/StateDisplay.svelte';
   import { confirm } from '../../composables/useConfirm.js';
   import { toHotkeyString, getShortcutDisplay } from '../../utils/keyboardShortcuts.js';
   import Button from '../../components/Button.svelte';
@@ -112,9 +113,7 @@
   </PageHeader>
 
   {#if loading}
-    <div class="flex items-center justify-center py-12">
-      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-ds-interactive"></div>
-    </div>
+    <StateDisplay type="loading" />
   {:else if actions.length === 0}
     <EmptyState
       icon={Zap}

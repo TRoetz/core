@@ -1,11 +1,11 @@
 <script>
   import { api } from '../api.js';
+  import StateDisplay from '../components/StateDisplay.svelte';
   import { authStore } from '../stores';
   import { portalAuthStore } from '../stores/portalAuth.svelte.js';
   import { portalCustomizationStore as portalStore } from '../stores/portal.svelte.js';
   import { iconMap } from '../stores/portalPresentation.js';
   import Button from '../components/Button.svelte';
-  import Spinner from '../components/Spinner.svelte';
   import AlertBox from '../components/AlertBox.svelte';
   import PortalModal from './PortalModal.svelte';
   import { ChevronLeft, ChevronRight, Package, X } from '@lucide/svelte';
@@ -381,9 +381,7 @@
 
     <!-- Form Body -->
     {#if loading}
-      <div class="flex items-center justify-center py-12">
-        <Spinner />
-      </div>
+      <StateDisplay type="loading" />
     {:else if success}
       <div class="px-6 py-4">
         <AlertBox variant="success" message={t('requestForm.requestSubmittedSuccess')} />

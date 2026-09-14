@@ -1,10 +1,10 @@
 <script>
 	import { onMount } from 'svelte';
+  import StateDisplay from '../../components/StateDisplay.svelte';
 	import { api } from '../../api.js';
 	import { authStore } from '../../stores';
 	import { formatHistoryTimestamp, formatRelativeTime, getUserTimezone } from '../../utils/dateFormatter.js';
 	import { Clock, User, Bot } from '@lucide/svelte';
-	import Spinner from '../../components/Spinner.svelte';
 	import AlertBox from '../../components/AlertBox.svelte';
 	import EmptyState from '../../components/EmptyState.svelte';
 	import Tooltip from '../../components/Tooltip.svelte';
@@ -189,9 +189,7 @@
 
 <div class="item-history">
 	{#if loading}
-		<div class="flex items-center justify-center py-8">
-			<Spinner />
-		</div>
+		<StateDisplay type="loading" />
 	{:else if error}
 		<AlertBox message={error} />
 	{:else if groupedHistory.length === 0}
