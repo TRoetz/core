@@ -23685,6 +23685,14 @@
                   "description": "The description value.",
                   "type": "string"
                 },
+                "display_description": {
+                  "description": "The display description value.",
+                  "type": "string"
+                },
+                "display_name": {
+                  "description": "The display name value.",
+                  "type": "string"
+                },
                 "fields": {
                   "description": "The fields value.",
                   "items": {
@@ -23771,6 +23779,7 @@
               "required": [
                 "created_at",
                 "description",
+                "display_name",
                 "id",
                 "name",
                 "updated_at"
@@ -23875,6 +23884,14 @@
                 "description": "The description value.",
                 "type": "string"
               },
+              "display_description": {
+                "description": "The display description value.",
+                "type": "string"
+              },
+              "display_name": {
+                "description": "The display name value.",
+                "type": "string"
+              },
               "fields": {
                 "description": "The fields value.",
                 "items": {
@@ -23961,6 +23978,7 @@
             "required": [
               "created_at",
               "description",
+              "display_name",
               "id",
               "name",
               "updated_at"
@@ -47543,6 +47561,14 @@
                 "description": "The description value.",
                 "type": "string"
               },
+              "display_description": {
+                "description": "The display description value.",
+                "type": "string"
+              },
+              "display_name": {
+                "description": "The display name value.",
+                "type": "string"
+              },
               "fields": {
                 "description": "The fields value.",
                 "items": {
@@ -47629,6 +47655,7 @@
             "required": [
               "created_at",
               "description",
+              "display_name",
               "id",
               "name",
               "updated_at"
@@ -68489,6 +68516,14 @@
                 "description": "The description value.",
                 "type": "string"
               },
+              "display_description": {
+                "description": "The display description value.",
+                "type": "string"
+              },
+              "display_name": {
+                "description": "The display name value.",
+                "type": "string"
+              },
               "fields": {
                 "description": "The fields value.",
                 "items": {
@@ -68575,6 +68610,7 @@
             "required": [
               "created_at",
               "description",
+              "display_name",
               "id",
               "name",
               "updated_at"

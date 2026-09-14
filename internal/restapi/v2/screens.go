@@ -10,27 +10,31 @@ import (
 )
 
 type screenDTO struct {
-	ID           int                  `json:"id"`
-	BuiltinKey   *string              `json:"builtin_key"`
-	Name         string               `json:"name"`
-	Description  string               `json:"description"`
-	CreatedAt    time.Time            `json:"created_at"`
-	UpdatedAt    time.Time            `json:"updated_at"`
-	Fields       []models.ScreenField `json:"fields,omitempty"`
-	SystemFields []string             `json:"system_fields,omitempty"`
+	ID                 int                  `json:"id"`
+	BuiltinKey         *string              `json:"builtin_key"`
+	Name               string               `json:"name"`
+	DisplayName        string               `json:"display_name"`
+	Description        string               `json:"description"`
+	DisplayDescription string               `json:"display_description,omitempty"`
+	CreatedAt          time.Time            `json:"created_at"`
+	UpdatedAt          time.Time            `json:"updated_at"`
+	Fields             []models.ScreenField `json:"fields,omitempty"`
+	SystemFields       []string             `json:"system_fields,omitempty"`
 }
 
 func screenDTOFromModel(screen *models.Screen) screenDTO {
 	builtinKey := nullableString(screen.BuiltinKey)
 	return screenDTO{
-		ID:           screen.ID,
-		BuiltinKey:   builtinKey,
-		Name:         screen.Name,
-		Description:  screen.Description,
-		CreatedAt:    screen.CreatedAt,
-		UpdatedAt:    screen.UpdatedAt,
-		Fields:       screen.Fields,
-		SystemFields: screen.SystemFields,
+		ID:                 screen.ID,
+		BuiltinKey:         builtinKey,
+		Name:               screen.Name,
+		DisplayName:        screen.DisplayName,
+		Description:        screen.Description,
+		DisplayDescription: screen.DisplayDescription,
+		CreatedAt:          screen.CreatedAt,
+		UpdatedAt:          screen.UpdatedAt,
+		Fields:             screen.Fields,
+		SystemFields:       screen.SystemFields,
 	}
 }
 
