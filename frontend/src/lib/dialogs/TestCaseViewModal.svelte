@@ -9,7 +9,8 @@
     Clock,
     ListOrdered,
     ClipboardList,
-    History
+    History,
+    Copy
   } from '@lucide/svelte';
   import Modal from './Modal.svelte';
   import Button from '../components/Button.svelte';
@@ -21,6 +22,8 @@
   import Lozenge from '../components/Lozenge.svelte';
   import PageHeader from '../layout/PageHeader.svelte';
   import { api } from '../api.js';
+  import BDDScenarioView from '../features/testing/BDDScenarioView.svelte';
+  import { parseScenarioSpec } from '../features/testing/bddSpec.js';
   import { formatAuthenticatedDateTime as formatDateTimeLocale } from '../utils/authenticatedDateFormatter.js';
   import { t } from '../stores/i18n.svelte.js';
 
@@ -68,10 +71,10 @@
     error = null;
 
     try {
-      const [caseData, stepsData] = await Promise.all([
-        api.tests.testCases.get(workspaceId, numericId),
-        api.tests.testCases.steps.getAll(workspaceId, numericId)
-      ]);
+      const caseData = await api.tests.testCases.get(workspaceId, numericId);
+      const stepsData = caseData?.format === 'bdd'
+        ? []
+        : await api.tests.testCases.steps.getAll(workspaceId, numericId);
 
       let connections = null;
       try {
@@ -92,6 +95,26 @@
       error = err?.message || 'Failed to load test case';
     } finally {
       loading = false;
+    }
+  }
+
+  let isBdd = $derived(testCase?.format === 'bdd');
+  let bddSpec = $derived(isBdd ? parseScenarioSpec(testCase?.bdd?.spec) : null);
+  let copyState = $state('');
+
+  // Export the authored feature file and copy it. The backend serializes the
+  // stored source; no client-side reconstruction needed.
+  async function copyFeatureFile() {
+    if (!workspaceId || !testCase?.id) return;
+    try {
+      const feature = await api.tests.testCases.feature(workspaceId, testCase.id);
+      await navigator.clipboard.writeText(feature);
+      copyState = 'copied';
+    } catch (err) {
+      console.error('Failed to copy feature file:', err);
+      copyState = 'failed';
+    } finally {
+      setTimeout(() => (copyState = ''), 2000);
     }
   }
 
@@ -208,15 +231,28 @@
       <div class="space-y-6">
         <!-- Action Buttons -->
         <div class="flex flex-wrap gap-3">
-          <Button
-            variant="primary"
-            icon={Edit}
-            size="medium"
-            href={`${workspaceTestsBasePath}/cases/${testCase.id}/steps`}
-            onclick={closeOnPlainClick}
-          >
-            {t('testCase.editTestSteps')}
-          </Button>
+          {#if !isBdd}
+            <Button
+              variant="primary"
+              icon={Edit}
+              size="medium"
+              href={`${workspaceTestsBasePath}/cases/${testCase.id}/steps`}
+              onclick={closeOnPlainClick}
+            >
+              {t('testCase.editTestSteps')}
+            </Button>
+          {/if}
+          {#if isBdd}
+            <Button
+              variant="primary"
+              icon={Copy}
+              size="medium"
+              onclick={copyFeatureFile}
+              dataTestid="test-case-copy-feature"
+            >
+              {copyState === 'copied' ? t('testing.featureCopied') : copyState === 'failed' ? t('testing.featureCopyFailed') : t('testing.copyFeatureFile')}
+            </Button>
+          {/if}
           <Button
             variant="default"
             icon={Play}
@@ -234,6 +270,35 @@
           </AlertBox>
         {/if}
 
+        <!-- BDD Scenario Section -->
+        {#if isBdd}
+          <Card variant="raised" padding="none" rounded="xl" shadow class="overflow-hidden">
+            {#snippet header()}
+              <h2 class="text-lg font-semibold flex items-center gap-2" style="color: var(--ds-text);">
+                <ListOrdered class="w-5 h-5" style="color: var(--ds-interactive);" />
+                {t('testing.scenario')}
+              </h2>
+            {/snippet}
+            <div class="p-6">
+              {#if bddSpec}
+                <BDDScenarioView spec={bddSpec} raw={testCase.bdd?.gherkin || ''} dataTestid="test-case-bdd-view" />
+              {:else}
+                <EmptyState icon={ClipboardList} title={t('testing.bddSpecUnavailable')}>
+                  {#snippet action()}
+                    <Button
+                      variant="default"
+                      size="medium"
+                      onclick={copyFeatureFile}
+                      dataTestid="test-case-copy-feature-fallback"
+                    >
+                      {t('testing.copyFeatureFile')}
+                    </Button>
+                  {/snippet}
+                </EmptyState>
+              {/if}
+            </div>
+          </Card>
+        {:else}
         <!-- Test Steps Section -->
         <Card variant="raised" padding="none" rounded="xl" shadow class="overflow-hidden">
           {#snippet header()}
@@ -311,6 +376,7 @@
             {/if}
           </div>
         </Card>
+        {/if}
 
         <!-- Recent Executions Section -->
         <Card variant="raised" padding="none" rounded="xl" shadow class="overflow-hidden">
