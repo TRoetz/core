@@ -26735,6 +26735,245 @@
         ],
         "type": "object"
       },
+      "GetWorkspaceRolesResult": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "builtin_key": {
+                  "description": "The builtin key value.",
+                  "nullable": true,
+                  "type": "string"
+                },
+                "created_at": {
+                  "description": "The created at value.",
+                  "format": "date-time",
+                  "type": "string"
+                },
+                "description": {
+                  "description": "The description value.",
+                  "type": "string"
+                },
+                "display_name": {
+                  "description": "The display name value.",
+                  "type": "string"
+                },
+                "id": {
+                  "description": "The id value.",
+                  "type": "integer"
+                },
+                "is_system": {
+                  "description": "The is system value.",
+                  "type": "boolean"
+                },
+                "name": {
+                  "description": "The name value.",
+                  "type": "string"
+                },
+                "permissions": {
+                  "description": "The permissions value.",
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "created_at": {
+                        "description": "The created at value.",
+                        "format": "date-time",
+                        "type": "string"
+                      },
+                      "description": {
+                        "description": "The description value.",
+                        "type": "string"
+                      },
+                      "id": {
+                        "description": "The id value.",
+                        "type": "integer"
+                      },
+                      "is_system": {
+                        "description": "The is system value.",
+                        "type": "boolean"
+                      },
+                      "permission_key": {
+                        "description": "The permission key value.",
+                        "type": "string"
+                      },
+                      "permission_name": {
+                        "description": "The permission name value.",
+                        "type": "string"
+                      },
+                      "scope": {
+                        "description": "The scope value.",
+                        "type": "string"
+                      },
+                      "updated_at": {
+                        "description": "The updated at value.",
+                        "format": "date-time",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "created_at",
+                      "description",
+                      "id",
+                      "is_system",
+                      "permission_key",
+                      "permission_name",
+                      "scope",
+                      "updated_at"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "permissions_enabled": {
+                  "description": "The permissions enabled value.",
+                  "type": "boolean"
+                },
+                "updated_at": {
+                  "description": "The updated at value.",
+                  "format": "date-time",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "created_at",
+                "description",
+                "display_name",
+                "id",
+                "is_system",
+                "name",
+                "permissions_enabled",
+                "updated_at"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "GetWorkspaceRolesWorkspaceRoleIdResult": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "additionalProperties": false,
+            "properties": {
+              "builtin_key": {
+                "description": "The builtin key value.",
+                "nullable": true,
+                "type": "string"
+              },
+              "created_at": {
+                "description": "The created at value.",
+                "format": "date-time",
+                "type": "string"
+              },
+              "description": {
+                "description": "The description value.",
+                "type": "string"
+              },
+              "display_name": {
+                "description": "The display name value.",
+                "type": "string"
+              },
+              "id": {
+                "description": "The id value.",
+                "type": "integer"
+              },
+              "is_system": {
+                "description": "The is system value.",
+                "type": "boolean"
+              },
+              "name": {
+                "description": "The name value.",
+                "type": "string"
+              },
+              "permissions": {
+                "description": "The permissions value.",
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "created_at": {
+                      "description": "The created at value.",
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "description": {
+                      "description": "The description value.",
+                      "type": "string"
+                    },
+                    "id": {
+                      "description": "The id value.",
+                      "type": "integer"
+                    },
+                    "is_system": {
+                      "description": "The is system value.",
+                      "type": "boolean"
+                    },
+                    "permission_key": {
+                      "description": "The permission key value.",
+                      "type": "string"
+                    },
+                    "permission_name": {
+                      "description": "The permission name value.",
+                      "type": "string"
+                    },
+                    "scope": {
+                      "description": "The scope value.",
+                      "type": "string"
+                    },
+                    "updated_at": {
+                      "description": "The updated at value.",
+                      "format": "date-time",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "created_at",
+                    "description",
+                    "id",
+                    "is_system",
+                    "permission_key",
+                    "permission_name",
+                    "scope",
+                    "updated_at"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "permissions_enabled": {
+                "description": "The permissions enabled value.",
+                "type": "boolean"
+              },
+              "updated_at": {
+                "description": "The updated at value.",
+                "format": "date-time",
+                "type": "string"
+              }
+            },
+            "required": [
+              "created_at",
+              "description",
+              "display_name",
+              "id",
+              "is_system",
+              "name",
+              "permissions_enabled",
+              "updated_at"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
       "GetWorkspaceTemplatesResult": {
         "additionalProperties": false,
         "properties": {
@@ -69829,6 +70068,142 @@
         ],
         "type": "object"
       },
+      "PostWorkspaceRolesPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "description": "The description value.",
+            "type": "string"
+          },
+          "name": {
+            "description": "The name value.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "description",
+          "name"
+        ],
+        "type": "object"
+      },
+      "PostWorkspaceRolesResult": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "additionalProperties": false,
+            "properties": {
+              "builtin_key": {
+                "description": "The builtin key value.",
+                "nullable": true,
+                "type": "string"
+              },
+              "created_at": {
+                "description": "The created at value.",
+                "format": "date-time",
+                "type": "string"
+              },
+              "description": {
+                "description": "The description value.",
+                "type": "string"
+              },
+              "display_name": {
+                "description": "The display name value.",
+                "type": "string"
+              },
+              "id": {
+                "description": "The id value.",
+                "type": "integer"
+              },
+              "is_system": {
+                "description": "The is system value.",
+                "type": "boolean"
+              },
+              "name": {
+                "description": "The name value.",
+                "type": "string"
+              },
+              "permissions": {
+                "description": "The permissions value.",
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "created_at": {
+                      "description": "The created at value.",
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "description": {
+                      "description": "The description value.",
+                      "type": "string"
+                    },
+                    "id": {
+                      "description": "The id value.",
+                      "type": "integer"
+                    },
+                    "is_system": {
+                      "description": "The is system value.",
+                      "type": "boolean"
+                    },
+                    "permission_key": {
+                      "description": "The permission key value.",
+                      "type": "string"
+                    },
+                    "permission_name": {
+                      "description": "The permission name value.",
+                      "type": "string"
+                    },
+                    "scope": {
+                      "description": "The scope value.",
+                      "type": "string"
+                    },
+                    "updated_at": {
+                      "description": "The updated at value.",
+                      "format": "date-time",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "created_at",
+                    "description",
+                    "id",
+                    "is_system",
+                    "permission_key",
+                    "permission_name",
+                    "scope",
+                    "updated_at"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "permissions_enabled": {
+                "description": "The permissions enabled value.",
+                "type": "boolean"
+              },
+              "updated_at": {
+                "description": "The updated at value.",
+                "format": "date-time",
+                "type": "string"
+              }
+            },
+            "required": [
+              "created_at",
+              "description",
+              "display_name",
+              "id",
+              "is_system",
+              "name",
+              "permissions_enabled",
+              "updated_at"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
       "PostWorkspacesPayload": {
         "additionalProperties": false,
         "properties": {
@@ -75569,6 +75944,142 @@
               "type": "object"
             },
             "type": "array"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "PutWorkspaceRolesWorkspaceRoleIdPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "description": "The description value.",
+            "type": "string"
+          },
+          "name": {
+            "description": "The name value.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "description",
+          "name"
+        ],
+        "type": "object"
+      },
+      "PutWorkspaceRolesWorkspaceRoleIdResult": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "additionalProperties": false,
+            "properties": {
+              "builtin_key": {
+                "description": "The builtin key value.",
+                "nullable": true,
+                "type": "string"
+              },
+              "created_at": {
+                "description": "The created at value.",
+                "format": "date-time",
+                "type": "string"
+              },
+              "description": {
+                "description": "The description value.",
+                "type": "string"
+              },
+              "display_name": {
+                "description": "The display name value.",
+                "type": "string"
+              },
+              "id": {
+                "description": "The id value.",
+                "type": "integer"
+              },
+              "is_system": {
+                "description": "The is system value.",
+                "type": "boolean"
+              },
+              "name": {
+                "description": "The name value.",
+                "type": "string"
+              },
+              "permissions": {
+                "description": "The permissions value.",
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "created_at": {
+                      "description": "The created at value.",
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "description": {
+                      "description": "The description value.",
+                      "type": "string"
+                    },
+                    "id": {
+                      "description": "The id value.",
+                      "type": "integer"
+                    },
+                    "is_system": {
+                      "description": "The is system value.",
+                      "type": "boolean"
+                    },
+                    "permission_key": {
+                      "description": "The permission key value.",
+                      "type": "string"
+                    },
+                    "permission_name": {
+                      "description": "The permission name value.",
+                      "type": "string"
+                    },
+                    "scope": {
+                      "description": "The scope value.",
+                      "type": "string"
+                    },
+                    "updated_at": {
+                      "description": "The updated at value.",
+                      "format": "date-time",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "created_at",
+                    "description",
+                    "id",
+                    "is_system",
+                    "permission_key",
+                    "permission_name",
+                    "scope",
+                    "updated_at"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "permissions_enabled": {
+                "description": "The permissions enabled value.",
+                "type": "boolean"
+              },
+              "updated_at": {
+                "description": "The updated at value.",
+                "format": "date-time",
+                "type": "string"
+              }
+            },
+            "required": [
+              "created_at",
+              "description",
+              "display_name",
+              "id",
+              "is_system",
+              "name",
+              "permissions_enabled",
+              "updated_at"
+            ],
+            "type": "object"
           }
         },
         "required": [
@@ -94046,6 +94557,300 @@
         ],
         "x-required-scopes": [
           "workflows:write"
+        ]
+      }
+    },
+    "/workspace-roles": {
+      "get": {
+        "description": "List workspace roles. Results include only resources visible to the authenticated caller; collections use their documented stable order and bounds.",
+        "operationId": "getWorkspaceRoles",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetWorkspaceRolesResult"
+                }
+              }
+            },
+            "description": "List workspace roles response."
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationError"
+          },
+          "403": {
+            "$ref": "#/components/responses/PermissionError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "List workspace roles",
+        "tags": [
+          "Workspace configuration"
+        ],
+        "x-required-scopes": [
+          "workspace-roles:read"
+        ]
+      },
+      "post": {
+        "description": "Create workspace role. The server validates resource ownership and command preconditions before persisting changes. Unknown JSON fields are rejected when the operation accepts a body.",
+        "operationId": "postWorkspaceRoles",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostWorkspaceRolesPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostWorkspaceRolesResult"
+                }
+              }
+            },
+            "description": "Create workspace role response."
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationError"
+          },
+          "403": {
+            "$ref": "#/components/responses/PermissionError"
+          },
+          "409": {
+            "$ref": "#/components/responses/ConflictError"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLargeError"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaTypeError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Create workspace role",
+        "tags": [
+          "Workspace configuration"
+        ],
+        "x-required-scopes": [
+          "workspace-roles:write"
+        ]
+      }
+    },
+    "/workspace-roles/{workspace_role_id}": {
+      "delete": {
+        "description": "Delete workspace role. The server verifies resource ownership and deletion preconditions before removing the resource.",
+        "operationId": "deleteWorkspaceRolesWorkspaceRoleId",
+        "parameters": [
+          {
+            "description": "The workspace role identifier.",
+            "in": "path",
+            "name": "workspace_role_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Request completed successfully with no response body."
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationError"
+          },
+          "403": {
+            "$ref": "#/components/responses/PermissionError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "409": {
+            "$ref": "#/components/responses/ConflictError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Delete workspace role",
+        "tags": [
+          "Workspace configuration"
+        ],
+        "x-required-scopes": [
+          "workspace-roles:write"
+        ]
+      },
+      "get": {
+        "description": "Get workspace role. Results include only resources visible to the authenticated caller; collections use their documented stable order and bounds.",
+        "operationId": "getWorkspaceRolesWorkspaceRoleId",
+        "parameters": [
+          {
+            "description": "The workspace role identifier.",
+            "in": "path",
+            "name": "workspace_role_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetWorkspaceRolesWorkspaceRoleIdResult"
+                }
+              }
+            },
+            "description": "Get workspace role response."
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationError"
+          },
+          "403": {
+            "$ref": "#/components/responses/PermissionError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Get workspace role",
+        "tags": [
+          "Workspace configuration"
+        ],
+        "x-required-scopes": [
+          "workspace-roles:read"
+        ]
+      },
+      "put": {
+        "description": "Update workspace role. The server validates resource ownership and command preconditions before persisting changes. Unknown JSON fields are rejected when the operation accepts a body.",
+        "operationId": "putWorkspaceRolesWorkspaceRoleId",
+        "parameters": [
+          {
+            "description": "The workspace role identifier.",
+            "in": "path",
+            "name": "workspace_role_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PutWorkspaceRolesWorkspaceRoleIdPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PutWorkspaceRolesWorkspaceRoleIdResult"
+                }
+              }
+            },
+            "description": "Update workspace role response."
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationError"
+          },
+          "403": {
+            "$ref": "#/components/responses/PermissionError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "409": {
+            "$ref": "#/components/responses/ConflictError"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLargeError"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaTypeError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Update workspace role",
+        "tags": [
+          "Workspace configuration"
+        ],
+        "x-required-scopes": [
+          "workspace-roles:write"
         ]
       }
     },

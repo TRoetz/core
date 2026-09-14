@@ -5,14 +5,11 @@ import (
 	"fmt"
 	"net/http"
 	"sort"
-	"strings"
-	"time"
 
 	"windshift/internal/logger"
 	"windshift/internal/models"
 	"windshift/internal/objecttranslation"
 	"windshift/internal/repository"
-	"windshift/internal/sanitize"
 	"windshift/internal/services"
 	"windshift/internal/utils"
 )
@@ -23,6 +20,7 @@ type WorkspaceRoleHandler struct {
 	approvalService   *services.ApprovalService
 	auditor           *logger.Auditor
 	translations      *objecttranslation.Service
+	provisioning      *services.WorkspaceRoleProvisioningService
 }
 
 func (h *WorkspaceRoleHandler) WithObjectTranslations(service *objecttranslation.Service) *WorkspaceRoleHandler {
@@ -35,6 +33,7 @@ func NewWorkspaceRoleHandlerWithPool(repo *repository.WorkspaceRoleRepository, p
 		repo:              repo,
 		permissionService: permissionService,
 		auditor:           auditor,
+		provisioning:      services.NewWorkspaceRoleProvisioningService(repo.DB(), repo, permissionService, nil),
 	}
 }
 
@@ -597,193 +596,65 @@ type createCustomRoleRequest struct {
 //
 // POST /api/workspace-roles
 func (h *WorkspaceRoleHandler) Create(w http.ResponseWriter, r *http.Request) {
-	user, ok := RequireAuth(w, r)
-	if !ok {
-		return
-	}
 	body, ok := decodeJSON[createCustomRoleRequest](w, r)
 	if !ok {
 		return
 	}
-	// Role Name renders in every member list, role picker, and assignment
-	// dialog — a short user-facing label. Description shows in the role
-	// directory and is multi-line free-form text.
-	warnings := sanitize.ApplyAllWithWarnings(
-		sanitize.Pair{Target: &body.Name, Policy: sanitize.PlainTextField, Label: "Name"},
-		sanitize.Pair{Target: &body.Description, Policy: sanitize.RichText, Label: "Description"},
-	)
-	name := strings.TrimSpace(body.Name)
-	if name == "" {
-		respondValidationError(w, r, "name is required")
-		return
-	}
 
-	// Workspace_roles.name is UNIQUE — short-circuit with a friendly conflict
-	// before letting the DB raise a generic constraint error.
-	if nameTaken, err := h.repo.NameExists(name); err == nil && nameTaken {
-		respondConflict(w, r, fmt.Sprintf("A role named %q already exists", name))
-		return
-	}
-
-	now := time.Now()
-	id, err := h.repo.CreateCustomRole(name, body.Description, now)
+	result, err := h.provisioning.Create(serviceActor(r), body.Name, body.Description)
 	if err != nil {
-		respondInternalError(w, r, err)
+		handleServiceError(w, r, err)
 		return
 	}
 
-	h.auditor.Log(r, user, logger.ActionWorkspaceRoleCreate, logger.ResourceRole, &id, name)
-
-	out := models.WorkspaceRole{
-		ID:                 id,
-		Name:               name,
-		Description:        body.Description,
-		IsSystem:           false,
-		PermissionsEnabled: false,
-		CreatedAt:          now,
-		UpdatedAt:          now,
-		Permissions:        []models.Permission{},
-	}
-	if !localizeObjectResponse(w, r, h.translations, "workspace_role", &out) {
+	if !localizeObjectResponse(w, r, h.translations, "workspace_role", result.Role) {
 		return
 	}
 	respondJSONCreated(w, struct {
 		models.WorkspaceRole
 		Warnings []string `json:"warnings,omitempty"`
-	}{out, warnings})
+	}{*result.Role, result.Warnings})
 }
 
 // Update changes a workspace role's canonical fallback label without changing
 // its identity, built-in key, permission behavior, or assignments.
 func (h *WorkspaceRoleHandler) Update(w http.ResponseWriter, r *http.Request) {
-	user, ok := RequireAuth(w, r)
-	if !ok {
-		return
-	}
 	id, ok := requireIDParam(w, r, "id")
 	if !ok {
-		return
-	}
-	role, err := h.repo.GetByID(id)
-	if errors.Is(err, repository.ErrNotFound) {
-		respondNotFound(w, r, "workspace_role")
-		return
-	}
-	if err != nil {
-		respondInternalError(w, r, err)
 		return
 	}
 	body, ok := decodeJSON[createCustomRoleRequest](w, r)
 	if !ok {
 		return
 	}
-	warnings := sanitize.ApplyAllWithWarnings(
-		sanitize.Pair{Target: &body.Name, Policy: sanitize.PlainTextField, Label: "Name"},
-		sanitize.Pair{Target: &body.Description, Policy: sanitize.RichText, Label: "Description"},
-	)
-	name := strings.TrimSpace(body.Name)
-	if name == "" {
-		respondValidationError(w, r, "name is required")
-		return
-	}
-	if nameTaken, err := h.repo.NameExistsExcept(name, id); err != nil {
-		respondInternalError(w, r, err)
-		return
-	} else if nameTaken {
-		respondConflict(w, r, fmt.Sprintf("A role named %q already exists", name))
-		return
-	}
 
-	now := time.Now()
-	if err := h.repo.UpdateMetadata(id, name, body.Description, now); err != nil {
-		respondInternalError(w, r, err)
-		return
-	}
-	h.auditor.Log(r, user, logger.ActionWorkspaceRoleUpdate, logger.ResourceRole, &id, name)
-
-	role.Name = name
-	role.Description = body.Description
-	role.UpdatedAt = now
-	role.Permissions, err = h.repo.GetPermissions(id)
+	result, err := h.provisioning.Update(serviceActor(r), id, body.Name, body.Description)
 	if err != nil {
-		respondInternalError(w, r, err)
+		handleServiceError(w, r, err)
 		return
 	}
-	if !localizeObjectResponse(w, r, h.translations, "workspace_role", role) {
+
+	if !localizeObjectResponse(w, r, h.translations, "workspace_role", result.Role) {
 		return
 	}
 	respondJSONOK(w, struct {
 		*models.WorkspaceRole
 		Warnings []string `json:"warnings,omitempty"`
-	}{role, warnings})
+	}{result.Role, result.Warnings})
 }
 
-// Delete removes a custom workspace role. System roles (is_system=true) cannot
-// be deleted. The DELETE cascades to user_workspace_roles + group_workspace_roles
-// + role_permissions via existing FKs; action allowlists deliberately block the
-// delete because removing their last row would broaden manual-action access.
-// We still flush the permission cache for affected users so any cached
-// label-only role assignment goes away.
-//
-// DELETE /api/workspace-roles/{id}
+// Delete removes a custom workspace role. System roles cannot be deleted; the
+// shared provisioning service refuses roles referenced by pending approvals or
+// manual-action restrictions and invalidates affected permission caches.
 func (h *WorkspaceRoleHandler) Delete(w http.ResponseWriter, r *http.Request) {
-	user, ok := RequireAuth(w, r)
-	if !ok {
-		return
-	}
 	id, ok := requireIDParam(w, r, "id")
 	if !ok {
 		return
 	}
 
-	role, err := h.repo.GetByID(id)
-	if errors.Is(err, repository.ErrNotFound) {
-		respondNotFound(w, r, "workspace_role")
+	if err := h.provisioning.Delete(serviceActor(r), id); err != nil {
+		handleServiceError(w, r, err)
 		return
 	}
-	if err != nil {
-		respondInternalError(w, r, err)
-		return
-	}
-	if role.IsSystem {
-		respondValidationError(w, r, "System roles cannot be deleted")
-		return
-	}
-
-	// Refuse delete if the role is referenced by any pending approval — the
-	// snapshot's source_role_id stays intact for audit, but we don't want to
-	// orphan an in-flight pool. Cancel the approval first, then delete.
-	if h.approvalService != nil {
-		if pendingCount, err := h.approvalService.CountPendingApproversForRole(r.Context(), id); err == nil && pendingCount > 0 {
-			respondConflict(w, r, fmt.Sprintf("Cannot delete: %d pending approval(s) still reference this role", pendingCount))
-			return
-		}
-	}
-	if actionCount, err := h.repo.CountManualActionRestrictions(id); err != nil {
-		respondInternalError(w, r, err)
-		return
-	} else if actionCount > 0 {
-		respondConflict(w, r, fmt.Sprintf("Cannot delete: %d manual action(s) still restrict access to this role", actionCount))
-		return
-	}
-
-	// Snapshot affected users for cache invalidation before the DELETE cascades.
-	affected := h.repo.AffectedUserIDs(id)
-
-	if err := h.repo.Delete(id); err != nil {
-		respondInternalError(w, r, err)
-		return
-	}
-
-	h.auditor.Log(r, user, logger.ActionWorkspaceRoleDelete, logger.ResourceRole, &id, role.Name)
-
-	if h.permissionService != nil && len(affected) > 0 {
-		ids := make([]int, 0, len(affected))
-		for uid := range affected {
-			ids = append(ids, uid)
-		}
-		_ = h.permissionService.InvalidateMultipleUserCaches(ids)
-	}
-
 	w.WriteHeader(http.StatusNoContent)
 }

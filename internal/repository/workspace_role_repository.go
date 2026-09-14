@@ -23,6 +23,10 @@ func NewWorkspaceRoleRepository(db database.Database) *WorkspaceRoleRepository {
 	return &WorkspaceRoleRepository{db: db}
 }
 
+// DB exposes the underlying handle for services that share the repository's
+// connection.
+func (r *WorkspaceRoleRepository) DB() database.Database { return r.db }
+
 const workspaceRoleSelectColumns = "id, COALESCE(builtin_key, ''), name, description, is_system, permissions_enabled, display_order, created_at, updated_at"
 
 // List returns all workspace roles ordered by display_order then name.

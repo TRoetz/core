@@ -1730,6 +1730,7 @@ func (s *Server) initialize() error {
 			CancelPendingIndexBuilds: scheduler.CancelPendingIndexBuilds,
 		}),
 		Screens:           services.NewScreenProvisioningService(s.db),
+		WorkspaceRoles:    services.NewWorkspaceRoleProvisioningService(s.db, repository.NewWorkspaceRoleRepository(s.db), permService, approvalService),
 		HierarchyLevels:   hierarchyLevelEnumService,
 		Workspaces:        services.NewWorkspaceApplicationService(s.db, v2Access, authorizationCacheInvalidator),
 		ItemTemplates:     services.NewItemTemplateApplicationService(s.db, v2Access),

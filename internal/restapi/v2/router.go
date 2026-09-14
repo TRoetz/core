@@ -528,6 +528,7 @@ type Deps struct {
 	CatalogMutations        catalogMutationApplication
 	CustomFieldProvisioning *services.CustomFieldProvisioningService
 	Screens                 *services.ScreenProvisioningService
+	WorkspaceRoles          *services.WorkspaceRoleProvisioningService
 	HierarchyLevels         *services.EnumService
 	Workspaces              workspaceApplication
 	ItemTemplates           itemTemplateApplication
@@ -777,6 +778,7 @@ func buildRoutes(deps Deps) []route {
 	registerCatalogRoutes(&builder, deps)
 	registerCustomFieldMutationRoutes(&builder, deps)
 	registerScreenRoutes(&builder, deps)
+	registerWorkspaceRoleRoutes(&builder, deps)
 	registerHierarchyLevelRoutes(&builder, deps)
 	registerScopedCatalogRoutes(&builder, deps.Catalog, deps.Workspaces, deps.ItemTemplates)
 	registerLabelRoutes(&builder, deps)
