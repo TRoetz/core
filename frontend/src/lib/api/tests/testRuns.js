@@ -19,6 +19,28 @@ export const testRuns = {
     }),
   getStepResults: (workspaceId, runId) =>
     fetchV2Data(`/workspaces/${workspaceId}/test-runs/${runId}/steps`),
+  // BDD example execution: one result row per Scenario Outline example row,
+  // created when the run starts against the frozen spec snapshot.
+  getExampleResults: (workspaceId, runId) =>
+    fetchV2Data(`/workspaces/${workspaceId}/test-runs/${runId}/example-results`),
+  updateExampleResult: (workspaceId, runId, testCaseId, exampleIndex, data) =>
+    fetchV2Data(
+      `/workspaces/${workspaceId}/test-runs/${runId}/test-cases/${testCaseId}/examples/${exampleIndex}`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/merge-patch+json' },
+        body: JSON.stringify(data),
+      }
+    ),
+  updateExampleStepResult: (workspaceId, runId, testCaseId, exampleIndex, stepNumber, data) =>
+    fetchV2Data(
+      `/workspaces/${workspaceId}/test-runs/${runId}/test-cases/${testCaseId}/examples/${exampleIndex}/steps/${stepNumber}`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/merge-patch+json' },
+        body: JSON.stringify(data),
+      }
+    ),
   updateStepResult: (workspaceId, runId, stepId, data) =>
     fetchV2Data(`/workspaces/${workspaceId}/test-runs/${runId}/steps/${stepId}`, {
       method: 'PATCH',

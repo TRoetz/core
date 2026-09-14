@@ -141,10 +141,17 @@ function createApiError(response, responseText) {
 /**
  * @param {string} base
  * @param {string} endpoint
- * @param {RequestInit & { timeout?: number }} [options]
+ * @param {RequestInit & { timeout?: number; text?: boolean }} [options]
  */
 async function performFetchAPI(base, endpoint, options = {}) {
-  const { timeout: requestedTimeout = 0, signal: callerSignal, ...fetchOptions } = options;
+  const {
+    timeout: requestedTimeout = 0,
+    signal: callerSignal,
+    // Return the raw response body as text instead of parsing JSON —
+    // used by endpoints that serve non-JSON documents (e.g. Gherkin).
+    text: asText = false,
+    ...fetchOptions
+  } = options;
   const isFormData = typeof FormData !== 'undefined' && fetchOptions.body instanceof FormData;
   const headers = isFormData
     ? { 'Accept-Language': requestLocale(), ...fetchOptions.headers }
@@ -286,7 +293,9 @@ async function performFetchAPI(base, endpoint, options = {}) {
     let result = null;
     if (response.status !== 204) {
       const contentType = response.headers.get('content-type');
-      if (contentType?.includes('application/json')) {
+      if (asText) {
+        result = await response.text();
+      } else if (contentType?.includes('application/json')) {
         result = await response.json();
       }
     }
@@ -316,6 +325,11 @@ export function fetchAPIV2(endpoint, options = {}) {
 export async function fetchV2Data(endpoint, options = {}) {
   const document = await fetchAPIV2(endpoint, options);
   return document?.data;
+}
+
+/** Fetch a v2 endpoint that responds with a plain text document. */
+export async function fetchV2Text(endpoint, options = {}) {
+  return fetchAPIV2(endpoint, { ...options, text: true });
 }
 
 export async function fetchAllV2Pages(endpoint, options = {}) {

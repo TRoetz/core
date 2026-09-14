@@ -1,8 +1,18 @@
-import { fetchAllV2Pages, fetchAPIV2, fetchV2Data } from '../core.js';
+import { fetchAllV2Pages, fetchAPIV2, fetchV2Data, fetchV2Text } from '../core.js';
 import { createCrudClient } from '../createCrudClient.js';
 
 export const testCases = {
   ...createCrudClient('/test-cases', { parentPath: '/workspaces', v2: true }),
+  // Validate authored Gherkin without creating anything. The body is the raw
+  // feature file, not JSON; the reply is the parse result envelope.
+  validateFeature: (workspaceId, gherkin) =>
+    fetchV2Data(`/workspaces/${workspaceId}/test-cases/validate-feature`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/x-gherkin' },
+      body: gherkin,
+    }),
+  // Export a BDD case's authored feature document (text/x-gherkin).
+  feature: (workspaceId, id) => fetchV2Text(`/workspaces/${workspaceId}/test-cases/${id}/feature`),
   // Custom getAll: callers pass `folder_id: null` (literal string "null" expected
   // by backend) or `all: true`; the generic buildQueryString cannot replicate
   // that, so the override stays bespoke.
