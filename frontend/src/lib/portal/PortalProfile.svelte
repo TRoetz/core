@@ -5,6 +5,7 @@
   import { portalAuthStore } from '../stores/portalAuth.svelte.js';
   import { t } from '../stores/i18n.svelte.js';
   import { api } from '../api.js';
+  import { confirm } from '../composables/useConfirm.js';
   import { navigate } from '../router.js';
   import {
     isWebAuthnSupported,
@@ -107,9 +108,10 @@
   }
 
   async function handleRemove(credential) {
-    const ok = window.confirm(
-      `Remove passkey "${credential.credential_name}"? You won't be able to sign in with this device anymore.`
-    );
+    const ok = await confirm({
+      message: `Remove passkey "${credential.credential_name}"? You won't be able to sign in with this device anymore.`,
+      confirmText: 'Remove',
+    });
     if (!ok) return;
     removingId = credential.id;
     actionError = '';

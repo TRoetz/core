@@ -1,12 +1,13 @@
 <script>
   import { FileText, Package, Trash2 } from '@lucide/svelte';
-  import Spinner from '../components/Spinner.svelte';
+  import StateDisplay from '../components/StateDisplay.svelte';
   import PageHeader from '../layout/PageHeader.svelte';
   import { portalCatalogStore as portalStore } from '../stores/portal.svelte.js';
   import { portalDraftsStore } from '../stores/portalActivity.svelte.js';
   import { iconMap } from '../stores/portalPresentation.js';
   import { t } from '../stores/i18n.svelte.js';
   import { formatRelativeTime } from '../utils/dateFormatter.js';
+  import { confirm } from '../composables/useConfirm.js';
 
   // onresume({ requestType }) is wired by Portal.svelte to open
   // RequestFormModal, which then auto-loads the draft and jumps to the saved
@@ -23,7 +24,7 @@
   }
 
   async function deleteDraft(draft) {
-    if (!window.confirm(t('portal.draftDeleteConfirm'))) return;
+    if (!(await confirm({ message: t('portal.draftDeleteConfirm') }))) return;
     await portalDraftsStore.delete(draft.request_type_id);
   }
 </script>
@@ -32,9 +33,7 @@
   <PageHeader title={t('portal.draftsTitle')} subtitle={t('portal.draftsSubtitle')} />
 
   {#if portalDraftsStore.loading}
-    <div class="flex justify-center py-12">
-      <Spinner size="lg" />
-    </div>
+    <StateDisplay type="loading" size="lg" />
   {:else if portalDraftsStore.drafts.length === 0}
     <div class="max-w-xl mt-7 py-8 border-t" style="border-color: var(--ds-border);">
       <div class="flex items-start gap-3">

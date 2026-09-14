@@ -1,4 +1,5 @@
 import { api } from '../api.js';
+import { confirm } from '../composables/useConfirm.js';
 import { navigate } from '../router.js';
 import { authStore } from '../stores';
 import { portalAuthStore } from './portalAuth.svelte.js';
@@ -257,11 +258,12 @@ async function viewApproval(approval) {
 async function decideApproval(decision) {
   const slug = context.getSlug();
   if (!selectedApproval || !slug) return;
-  if (
-    decision !== 'comment' &&
-    !window.confirm(`${decision === 'approve' ? 'Approve' : 'Reject'} this request?`)
-  ) {
-    return;
+  if (decision !== 'comment') {
+    const ok = await confirm({
+      message: `${decision === 'approve' ? 'Approve' : 'Reject'} this request?`,
+      confirmText: decision === 'approve' ? 'Approve' : 'Reject',
+    });
+    if (!ok) return;
   }
   try {
     decidingApproval = true;
