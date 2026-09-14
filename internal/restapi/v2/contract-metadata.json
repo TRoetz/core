@@ -3768,6 +3768,164 @@
         ]
       }
     },
+    "/configuration-sets": {
+      "get": {
+        "description": "List configuration sets. Results include only resources visible to the authenticated caller; collections use their documented stable order and bounds.",
+        "parameters": [
+          {
+            "Name": "page",
+            "In": "query",
+            "Description": "One-based page number.",
+            "Required": false,
+            "Schema": {
+              "default": 1,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "Name": "limit",
+            "In": "query",
+            "Description": "Entries per page. Defaults to 10.",
+            "Required": false,
+            "Schema": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "Name": "search",
+            "In": "query",
+            "Description": "Match set names containing this text.",
+            "Required": false,
+            "Schema": {
+              "type": "string"
+            }
+          },
+          {
+            "Name": "page_size",
+            "In": "query",
+            "Description": "Maximum number of resources to return.",
+            "Required": false,
+            "Schema": {
+              "default": 50,
+              "maximum": 1000,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "401": {},
+          "403": {},
+          "429": {},
+          "500": {}
+        },
+        "summary": "List configuration sets",
+        "tags": [
+          "Workspace configuration"
+        ]
+      },
+      "post": {
+        "description": "Create configuration set. The server validates resource ownership and command preconditions before persisting changes. Unknown JSON fields are rejected when the operation accepts a body.",
+        "parameters": [],
+        "responses": {
+          "400": {},
+          "401": {},
+          "403": {},
+          "413": {},
+          "415": {},
+          "429": {},
+          "500": {}
+        },
+        "summary": "Create configuration set",
+        "tags": [
+          "Workspace configuration"
+        ]
+      }
+    },
+    "/configuration-sets/{configuration_set_id}": {
+      "delete": {
+        "description": "Delete configuration set. The server verifies resource ownership and deletion preconditions before removing the resource.",
+        "parameters": [
+          {
+            "Name": "configuration_set_id",
+            "In": "path",
+            "Description": "The configuration set identifier.",
+            "Required": true,
+            "Schema": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "401": {},
+          "403": {},
+          "404": {},
+          "429": {},
+          "500": {}
+        },
+        "summary": "Delete configuration set",
+        "tags": [
+          "Workspace configuration"
+        ]
+      },
+      "get": {
+        "description": "Get configuration set. Results include only resources visible to the authenticated caller; collections use their documented stable order and bounds.",
+        "parameters": [
+          {
+            "Name": "configuration_set_id",
+            "In": "path",
+            "Description": "The configuration set identifier.",
+            "Required": true,
+            "Schema": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "401": {},
+          "403": {},
+          "404": {},
+          "429": {},
+          "500": {}
+        },
+        "summary": "Get configuration set",
+        "tags": [
+          "Workspace configuration"
+        ]
+      }
+    },
+    "/configuration-sets/{configuration_set_id}/export": {
+      "get": {
+        "description": "Export configuration set. Results include only resources visible to the authenticated caller; collections use their documented stable order and bounds.",
+        "parameters": [
+          {
+            "Name": "configuration_set_id",
+            "In": "path",
+            "Description": "The configuration set identifier.",
+            "Required": true,
+            "Schema": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "401": {},
+          "403": {},
+          "404": {},
+          "429": {},
+          "500": {}
+        },
+        "summary": "Export configuration set",
+        "tags": [
+          "Workspace configuration"
+        ]
+      }
+    },
     "/custom-fields": {
       "get": {
         "description": "List custom fields. Results include only resources visible to the authenticated caller; collections use their documented stable order and bounds.",

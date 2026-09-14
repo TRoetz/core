@@ -517,67 +517,69 @@ type actionApplication interface {
 
 // Deps lists every required v2 dependency. Construction has no fallbacks.
 type Deps struct {
-	Mux                     *http.ServeMux
-	Tokens                  tokenAuthenticator
-	Users                   userReader
-	Statuses                statusReader
-	Workflows               workflowReader
-	Configuration           configurationReader
-	ObjectTranslations      objectLocalizer
-	Catalog                 catalogReader
-	CatalogMutations        catalogMutationApplication
-	CustomFieldProvisioning *services.CustomFieldProvisioningService
-	Screens                 *services.ScreenProvisioningService
-	WorkspaceRoles          *services.WorkspaceRoleProvisioningService
-	HierarchyLevels         *services.EnumService
-	Workspaces              workspaceApplication
-	ItemTemplates           itemTemplateApplication
-	Labels                  labelApplication
-	Items                   itemReader
-	Access                  resourceAccess
-	Preferences             preferencesApplication
-	Recurrence              recurrenceApplication
-	ItemDiagrams            itemDiagramApplication
-	Pages                   pageReader
-	PageApplication         pageApplication
-	PageDiagrams            pageDiagramApplication
-	PageAccess              pageAccess
-	PageLabels              pageLabelApplication
-	PagePublication         *services.KnowledgePublicationService
-	Worklogs                worklogApplication
-	TimeAccess              timeAccess
-	TimeProjects            timeProjectApplication
-	Timers                  timerApplication
-	SystemAdmins            systemAdministrator
-	GlobalPermission        globalPermissionReader
-	Groups                  groupApplication
-	AdminUsers              adminUserApplication
-	AuditLogs               auditLogReader
-	AdminTokens             adminTokenManager
-	AdminAuditor            *logger.Auditor
-	AdminTranslations       *objecttranslation.Service
-	Comments                commentApplication
-	CommentAccess           commentAccess
-	Attachments             attachmentApplication
-	PageAttachments         pageAttachmentApplication
-	Collections             collectionApplication
-	Planning                planningApplication
-	Links                   linkApplication
-	AgentRuns               agentRunApplication
-	AgentSkills             agentSkillReader
-	ConditionSets           conditionSetApplication
-	Governance              governanceApplication
-	Actions                 actionApplication
-	TestManagement          *services.TestManagementApplicationService
-	Assets                  *services.AssetApplicationService
-	ItemApplication         *services.ItemApplicationService
-	ItemDetail              *services.ItemDetailApplicationService
-	SessionMiddleware       func(http.Handler) http.Handler
-	SearchAllowed           func(*http.Request) bool
-	DBRequestTimeout        time.Duration
-	CORS                    Middleware
-	CSRF                    csrfValidator
-	Concurrency             concurrencyLimiter
+	Mux                          *http.ServeMux
+	Tokens                       tokenAuthenticator
+	Users                        userReader
+	Statuses                     statusReader
+	Workflows                    workflowReader
+	Configuration                configurationReader
+	ObjectTranslations           objectLocalizer
+	Catalog                      catalogReader
+	CatalogMutations             catalogMutationApplication
+	CustomFieldProvisioning      *services.CustomFieldProvisioningService
+	Screens                      *services.ScreenProvisioningService
+	WorkspaceRoles               *services.WorkspaceRoleProvisioningService
+	ConfigurationSetProvisioning *services.ConfigurationSetProvisioningService
+	ConfigurationSetExport       *services.ConfigSetExportService
+	HierarchyLevels              *services.EnumService
+	Workspaces                   workspaceApplication
+	ItemTemplates                itemTemplateApplication
+	Labels                       labelApplication
+	Items                        itemReader
+	Access                       resourceAccess
+	Preferences                  preferencesApplication
+	Recurrence                   recurrenceApplication
+	ItemDiagrams                 itemDiagramApplication
+	Pages                        pageReader
+	PageApplication              pageApplication
+	PageDiagrams                 pageDiagramApplication
+	PageAccess                   pageAccess
+	PageLabels                   pageLabelApplication
+	PagePublication              *services.KnowledgePublicationService
+	Worklogs                     worklogApplication
+	TimeAccess                   timeAccess
+	TimeProjects                 timeProjectApplication
+	Timers                       timerApplication
+	SystemAdmins                 systemAdministrator
+	GlobalPermission             globalPermissionReader
+	Groups                       groupApplication
+	AdminUsers                   adminUserApplication
+	AuditLogs                    auditLogReader
+	AdminTokens                  adminTokenManager
+	AdminAuditor                 *logger.Auditor
+	AdminTranslations            *objecttranslation.Service
+	Comments                     commentApplication
+	CommentAccess                commentAccess
+	Attachments                  attachmentApplication
+	PageAttachments              pageAttachmentApplication
+	Collections                  collectionApplication
+	Planning                     planningApplication
+	Links                        linkApplication
+	AgentRuns                    agentRunApplication
+	AgentSkills                  agentSkillReader
+	ConditionSets                conditionSetApplication
+	Governance                   governanceApplication
+	Actions                      actionApplication
+	TestManagement               *services.TestManagementApplicationService
+	Assets                       *services.AssetApplicationService
+	ItemApplication              *services.ItemApplicationService
+	ItemDetail                   *services.ItemDetailApplicationService
+	SessionMiddleware            func(http.Handler) http.Handler
+	SearchAllowed                func(*http.Request) bool
+	DBRequestTimeout             time.Duration
+	CORS                         Middleware
+	CSRF                         csrfValidator
+	Concurrency                  concurrencyLimiter
 }
 
 // RegisterRoutes validates dependencies and mounts the canonical inventory twice.
@@ -779,6 +781,7 @@ func buildRoutes(deps Deps) []route {
 	registerCustomFieldMutationRoutes(&builder, deps)
 	registerScreenRoutes(&builder, deps)
 	registerWorkspaceRoleRoutes(&builder, deps)
+	registerConfigurationSetRoutes(&builder, deps)
 	registerHierarchyLevelRoutes(&builder, deps)
 	registerScopedCatalogRoutes(&builder, deps.Catalog, deps.Workspaces, deps.ItemTemplates)
 	registerLabelRoutes(&builder, deps)

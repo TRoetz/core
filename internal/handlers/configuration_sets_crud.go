@@ -1,19 +1,14 @@
 package handlers
 
 import (
-	"fmt"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"windshift/internal/database"
-	"windshift/internal/logger"
 	"windshift/internal/models"
 	"windshift/internal/objecttranslation"
 	"windshift/internal/repository"
-	"windshift/internal/sanitize"
 	"windshift/internal/services"
-	"windshift/internal/utils"
 )
 
 type ConfigurationSetHandler struct {
@@ -24,6 +19,7 @@ type ConfigurationSetHandler struct {
 	} // Notification service for cache refresh (optional, can be nil)
 	permissionService *services.PermissionService
 	translations      *objecttranslation.Service
+	provisioning      *services.ConfigurationSetProvisioningService
 }
 
 func (h *ConfigurationSetHandler) WithObjectTranslations(service *objecttranslation.Service) *ConfigurationSetHandler {
@@ -32,11 +28,13 @@ func (h *ConfigurationSetHandler) WithObjectTranslations(service *objecttranslat
 }
 
 func NewConfigurationSetHandler(db database.Database, notificationService interface{ ForceRefreshCache() error }, permissionService *services.PermissionService) *ConfigurationSetHandler {
+	repo := repository.NewConfigurationSetRepository(db)
 	return &ConfigurationSetHandler{
 		db:                  db,
-		repo:                repository.NewConfigurationSetRepository(db),
+		repo:                repo,
 		notificationService: notificationService,
 		permissionService:   permissionService,
+		provisioning:        services.NewConfigurationSetProvisioningService(db, repo, permissionService, notificationService),
 	}
 }
 
@@ -112,84 +110,17 @@ func (h *ConfigurationSetHandler) Create(w http.ResponseWriter, r *http.Request)
 	if !ok {
 		return
 	}
-	// Configuration set Name + Description render in the admin
-	// directory and the workspace assignment picker. The Create flow
-	// uses the existing APIWarning channel for notification-cache
-	// invalidation — keep sanitize warnings silent here; the contract
-	// test pins the scrub.
-	sanitize.ApplyAll(
-		sanitize.Pair{Target: &cs.Name, Policy: sanitize.PlainTextField},
-		sanitize.Pair{Target: &cs.Description, Policy: sanitize.RichText},
-	)
 
-	// Validate required fields
-	if strings.TrimSpace(cs.Name) == "" {
-		respondValidationError(w, r, "Configuration set name is required")
-		return
-	}
-
-	// Verify workspaces exist
-	for _, workspaceID := range cs.WorkspaceIDs {
-		exists, err := h.repo.WorkspaceExists(workspaceID)
-		if err != nil || !exists {
-			respondValidationError(w, r, "One or more workspaces not found")
-			return
-		}
-	}
-
-	// Create the configuration set and dependent assignments
-	id, err := h.repo.CreateFull(&cs)
+	result, err := h.provisioning.Create(serviceActor(r), &cs)
 	if err != nil {
-		respondInternalError(w, r, err)
-		return
-	}
-	configSetID := int(id)
-
-	// Invalidate permission cache for affected workspaces
-	if h.permissionService != nil {
-		_ = h.permissionService.OnConfigurationSetChanged(configSetID)
-	}
-
-	// Refresh notification cache if service is available
-	var warnings []models.APIWarning
-	if h.notificationService != nil {
-		if err = h.notificationService.ForceRefreshCache(); err != nil {
-			warnings = append(warnings, createCacheWarning("notification", err, fmt.Sprintf("configuration_set_id:%d", id)))
-		}
-	}
-
-	// Load and return the created configuration set with all relations
-	createdCS, err := h.repo.FindByID(configSetID)
-	if err != nil {
-		respondInternalError(w, r, err)
+		handleServiceError(w, r, err)
 		return
 	}
 
-	// Log audit event
-	currentUser := utils.GetCurrentUser(r)
-	if currentUser != nil {
-		_ = logger.LogAudit(h.db, logger.AuditEvent{
-			UserID:       currentUser.ID,
-			Username:     currentUser.Username,
-			IPAddress:    utils.GetClientIP(r),
-			UserAgent:    r.UserAgent(),
-			ActionType:   logger.ActionConfigSetCreate,
-			ResourceType: logger.ResourceConfigurationSet,
-			ResourceID:   &configSetID,
-			ResourceName: createdCS.Name,
-			Details: map[string]any{
-				"description":     createdCS.Description,
-				"workflow_id":     createdCS.WorkflowID,
-				"workspace_count": len(createdCS.WorkspaceIDs),
-			},
-			Success: true,
-		})
-	}
-	if !localizeObjectResponse(w, r, h.translations, "configuration_set", createdCS) {
+	if !localizeObjectResponse(w, r, h.translations, "configuration_set", result.Set) {
 		return
 	}
-
-	respondJSONCreatedWithWarnings(w, createdCS, warnings)
+	respondJSONCreatedWithWarnings(w, result.Set, result.Warnings)
 }
 
 func (h *ConfigurationSetHandler) Delete(w http.ResponseWriter, r *http.Request) {
@@ -198,50 +129,9 @@ func (h *ConfigurationSetHandler) Delete(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Get the configuration set details for audit logging before deletion
-	cs, err := h.repo.FindByIDBasic(id)
-	if err == repository.ErrNotFound {
-		respondNotFound(w, r, "configuration_set")
+	if err := h.provisioning.Delete(serviceActor(r), id); err != nil {
+		handleServiceError(w, r, err)
 		return
-	}
-	if err != nil {
-		respondInternalError(w, r, err)
-		return
-	}
-
-	// Invalidate permission cache before deletion (while workspace associations still exist)
-	if h.permissionService != nil {
-		_ = h.permissionService.OnConfigurationSetChanged(id)
-	}
-
-	// Delete the configuration set (including all associations)
-	if err := h.repo.Delete(id); err != nil {
-		if err == repository.ErrNotFound {
-			respondNotFound(w, r, "configuration_set")
-			return
-		}
-		respondInternalError(w, r, err)
-		return
-	}
-
-	// Log audit event
-	currentUser := utils.GetCurrentUser(r)
-	if currentUser != nil {
-		_ = logger.LogAudit(h.db, logger.AuditEvent{
-			UserID:       currentUser.ID,
-			Username:     currentUser.Username,
-			IPAddress:    utils.GetClientIP(r),
-			UserAgent:    r.UserAgent(),
-			ActionType:   logger.ActionConfigSetDelete,
-			ResourceType: logger.ResourceConfigurationSet,
-			ResourceID:   &id,
-			ResourceName: cs.Name,
-			Details: map[string]any{
-				"description": cs.Description,
-				"is_default":  cs.IsDefault,
-			},
-			Success: true,
-		})
 	}
 
 	w.WriteHeader(http.StatusNoContent)
