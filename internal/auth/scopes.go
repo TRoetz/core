@@ -128,6 +128,14 @@ const (
 	ScopeAgentSkillsRead  = "agent-skills:read"
 	ScopeAgentSkillsWrite = "agent-skills:write"
 
+	// AI tier (agentic chat, daily briefing). :chat invokes the LLM — every
+	// call costs tokens, so grant it deliberately; :read covers AI-generated
+	// artifacts like the daily briefing. Workspace-level data access inside
+	// a chat still flows through the caller's workspace permissions — token
+	// scope alone never widens what the assistant can see.
+	ScopeAIChat = "ai:chat"
+	ScopeAIRead = "ai:read"
+
 	// Approvals. Workflow configuration uses workflows:*; these scopes cover
 	// live approval requests and decisions.
 	ScopeApprovalsRead  = "approvals:read"
@@ -251,6 +259,9 @@ var scopeCatalog = []ScopeInfo{
 	{Scope: ScopeWorkspaceRolesWrite, Resource: "workspace-roles", ResourceLabel: "Workspace roles", Action: "write", Label: "Manage workspace roles", Description: "Create, update, delete workspace roles and assign them. Requires system administrator permission."},
 	{Scope: ScopeAgentSkillsRead, Resource: "agent-skills", ResourceLabel: "Agent skills", Action: "read", Label: "Read agent skills", Description: "Read the workspace library of agent knowledge packs.", AgentDefault: true},
 	{Scope: ScopeAgentSkillsWrite, Resource: "agent-skills", ResourceLabel: "Agent skills", Action: "write", Label: "Manage agent skills", Description: "Create, update, and delete workspace agent skills."},
+
+	{Scope: ScopeAIChat, Resource: "ai", ResourceLabel: "AI assistant", Action: "chat", Label: "Chat with the AI assistant", Description: "Invoke the AI assistant (agentic chat). Every call runs LLM tokens; data access stays within the owner's workspace permissions."},
+	{Scope: ScopeAIRead, Resource: "ai", ResourceLabel: "AI assistant", Action: "read", Label: "Read AI artifacts", Description: "Read AI-generated artifacts such as the daily briefing."},
 
 	{Scope: ScopeApprovalsRead, Resource: "approvals", ResourceLabel: "Approvals", Action: "read", Label: "Read approvals", Description: "Read approval requests visible to the token owner."},
 	{Scope: ScopeApprovalsWrite, Resource: "approvals", ResourceLabel: "Approvals", Action: "write", Label: "Act on approvals", Description: "Decide, cancel, delegate, refresh, or escalate approval requests."},

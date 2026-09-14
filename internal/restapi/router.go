@@ -79,6 +79,28 @@ type Deps struct {
 	// AuthorizationCacheInvalidator is the shared post-commit invalidation
 	// boundary used by every authorization-affecting mutation surface.
 	AuthorizationCacheInvalidator *services.AuthorizationCacheInvalidator
+	// AI is the AI-tier surface (agentic chat, daily briefing) shared with
+	// the cookie-auth /api mount. Typed as a narrow interface because
+	// internal/handlers imports this package — the concrete
+	// *handlers.AIHandler satisfies it implicitly. Nil disables the v1 AI
+	// surface.
+	AI AIHandler
+	// AIRateLimiter bounds expensive AI calls, user-keyed. Satisfied by
+	// *middleware.RateLimiter (same import-cycle reasoning as AI). Optional:
+	// nil falls back to the group rate limiter alone.
+	AIRateLimiter Limiter
+}
+
+// AIHandler is the subset of the AI tier the bearer surface exposes.
+type AIHandler interface {
+	Chat(w http.ResponseWriter, r *http.Request)
+	GetDailyBriefing(w http.ResponseWriter, r *http.Request)
+}
+
+// Limiter wraps a request with a rate limit. Satisfied by the core
+// *middleware.RateLimiter.
+type Limiter interface {
+	Limit(next http.Handler) http.Handler
 }
 
 // SetupRoutesFunc is a function type for setting up v1 routes

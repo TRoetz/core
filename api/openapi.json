@@ -1249,6 +1249,61 @@
         },
         "type": "object"
       },
+      "handlers.AIChatRequest": {
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "session_id": {
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "handlers.AIChatResponse": {
+        "properties": {
+          "answer": {
+            "type": "string"
+          },
+          "iterations": {
+            "type": "integer"
+          },
+          "message_id": {
+            "type": "integer"
+          },
+          "run_id": {
+            "type": "integer"
+          },
+          "stop_reason": {
+            "type": "string"
+          },
+          "user_message_id": {
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "handlers.AIDailyBriefingResponse": {
+        "properties": {
+          "content": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string"
+          },
+          "generated_at": {
+            "type": "string"
+          },
+          "id": {
+            "type": "integer"
+          },
+          "references": {
+            "additionalProperties": {},
+            "type": "object"
+          }
+        },
+        "type": "object"
+      },
       "handlers.AdminGroupCreateRequest": {
         "properties": {
           "description": {
@@ -4422,6 +4477,9 @@
       },
       "models.TestCase": {
         "properties": {
+          "bdd": {
+            "$ref": "#/components/schemas/models.TestCaseBDD"
+          },
           "created_at": {
             "type": "string"
           },
@@ -4433,6 +4491,9 @@
             "type": "integer"
           },
           "folder_name": {
+            "type": "string"
+          },
+          "format": {
             "type": "string"
           },
           "id": {
@@ -4474,6 +4535,109 @@
             "type": "string"
           },
           "workspace_id": {
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "models.TestCaseBDD": {
+        "properties": {
+          "created_at": {
+            "type": "string"
+          },
+          "feature_name": {
+            "type": "string"
+          },
+          "gherkin": {
+            "type": "string"
+          },
+          "scenario_keyword": {
+            "type": "string"
+          },
+          "spec": {
+            "description": "Spec is the JSON-encoded gherkin.ScenarioSpec derived from Gherkin.",
+            "type": "string"
+          },
+          "test_case_id": {
+            "type": "integer"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "models.TestExampleResult": {
+        "properties": {
+          "actual_result": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "example_index": {
+            "type": "integer"
+          },
+          "executed_at": {
+            "type": "string"
+          },
+          "id": {
+            "type": "integer"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "row_values": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "run_id": {
+            "type": "integer"
+          },
+          "status": {
+            "type": "string"
+          },
+          "step_results": {
+            "items": {
+              "$ref": "#/components/schemas/models.TestExampleStepResult"
+            },
+            "type": "array"
+          },
+          "test_case_id": {
+            "type": "integer"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "models.TestExampleStepResult": {
+        "properties": {
+          "actual_result": {
+            "type": "string"
+          },
+          "example_result_id": {
+            "type": "integer"
+          },
+          "executed_at": {
+            "type": "string"
+          },
+          "id": {
+            "type": "integer"
+          },
+          "item_id": {
+            "type": "integer"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "step_number": {
             "type": "integer"
           }
         },
@@ -4576,6 +4740,35 @@
           },
           "workspace_id": {
             "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "models.TestRunCaseSnapshot": {
+        "properties": {
+          "created_at": {
+            "type": "string"
+          },
+          "gherkin": {
+            "type": "string"
+          },
+          "id": {
+            "type": "integer"
+          },
+          "preconditions": {
+            "type": "string"
+          },
+          "run_id": {
+            "type": "integer"
+          },
+          "spec": {
+            "type": "string"
+          },
+          "test_case_id": {
+            "type": "integer"
+          },
+          "title": {
+            "type": "string"
           }
         },
         "type": "object"
@@ -5003,6 +5196,18 @@
       },
       "services.TestRunDetail": {
         "properties": {
+          "bdd_snapshots": {
+            "items": {
+              "$ref": "#/components/schemas/models.TestRunCaseSnapshot"
+            },
+            "type": "array"
+          },
+          "example_results": {
+            "items": {
+              "$ref": "#/components/schemas/models.TestExampleResult"
+            },
+            "type": "array"
+          },
           "results": {
             "items": {
               "$ref": "#/components/schemas/services.TestRunResultWithCaseTitle"
@@ -6636,6 +6841,160 @@
         "summary": "Update a user (admin)",
         "tags": [
           "admin"
+        ]
+      }
+    },
+    "/ai/chat": {
+      "post": {
+        "description": "Agentic chat: the assistant can query workspaces and items via tool calls. Conversation history persists server-side per session; the durable general session is used when no session_id is given. Requires the ai:chat scope; workspace-level data access stays within the token owner's permissions.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/handlers.AIChatRequest"
+              }
+            }
+          },
+          "description": "Chat message",
+          "required": true,
+          "x-originalParamName": "request"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/handlers.AIChatResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/handlers.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid request body"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/handlers.ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/handlers.ErrorResponse"
+                }
+              }
+            },
+            "description": "Token lacks the ai:chat scope"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/handlers.ErrorResponse"
+                }
+              }
+            },
+            "description": "Agent session already has an active turn"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/handlers.ErrorResponse"
+                }
+              }
+            },
+            "description": "AI rate limit exceeded"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/handlers.ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Chat with the AI assistant",
+        "tags": [
+          "ai"
+        ]
+      }
+    },
+    "/ai/daily-briefing": {
+      "get": {
+        "description": "Returns the latest successful daily briefing generated for the token owner, with item-key references resolved. Empty content means no briefing is available today. Requires the ai:read scope.",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/handlers.AIDailyBriefingResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/handlers.ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/handlers.ErrorResponse"
+                }
+              }
+            },
+            "description": "Token lacks the ai:read scope"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/handlers.ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Get the daily briefing",
+        "tags": [
+          "ai"
         ]
       }
     },

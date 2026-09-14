@@ -9,6 +9,7 @@ package v1
 import (
 	"net/http"
 
+	"windshift/internal/auth"
 	coremiddleware "windshift/internal/middleware"
 	"windshift/internal/objecttranslation"
 	"windshift/internal/repository"
@@ -551,4 +552,26 @@ func RegisterRoutes(deps restapi.Deps) {
 	adminV1.HandleWithMiddleware("GET /admin/object-translations/{objectType}/{objectId}", objectTranslationHandler.List, bearerAuth.RequirePermission("admin:object-translations:read"))
 	adminV1.HandleWithMiddleware("PUT /admin/object-translations/{objectType}/{objectId}/{field}/{locale}", objectTranslationHandler.Upsert, bearerAuth.RequirePermission("admin:object-translations:write"))
 	adminV1.HandleWithMiddleware("DELETE /admin/object-translations/{objectType}/{objectId}/{field}/{locale}", objectTranslationHandler.Delete, bearerAuth.RequirePermission("admin:object-translations:write"))
+
+	// ============================================
+	// AI tier (agentic chat + daily briefing).
+	//
+	// Same handlers as the cookie-auth /api/ai routes, exposed over bearer
+	// tokens for external clients (MCP-adjacent tooling, personal dashboards,
+	// the town homepage). Scope instead of session: ai:chat invokes the LLM
+	// (deliberately not an agent default — every call costs tokens), ai:read
+	// covers generated artifacts. Data access inside a chat still flows
+	// through the token owner's workspace permissions, so scope alone never
+	// widens what the assistant can see. Unregistered when the embedder did
+	// not wire deps.AI.
+	// ============================================
+	if deps.AI != nil {
+		aiSurface := handlers.NewAIHandler(deps.AI.Chat, deps.AI.GetDailyBriefing)
+		aiLimiter := func(next http.Handler) http.Handler { return next }
+		if deps.AIRateLimiter != nil {
+			aiLimiter = deps.AIRateLimiter.Limit
+		}
+		v1.HandleWithMiddleware("POST /ai/chat", aiSurface.Chat, bearerAuth.RequirePermission(auth.ScopeAIChat), aiLimiter)
+		v1.HandleWithMiddleware("GET /ai/daily-briefing", aiSurface.DailyBriefing, bearerAuth.RequirePermission(auth.ScopeAIRead))
+	}
 }
