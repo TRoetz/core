@@ -1,6 +1,4 @@
 <script>
-  import { fade, scale } from 'svelte/transition';
-  import { backOut } from 'svelte/easing';
   import { getShortcut, matchesShortcut, getDisplayString } from '../utils/keyboardShortcuts.js';
   import { portal } from '../actions/portal.js';
 
@@ -146,7 +144,6 @@
   <!-- Backdrop -->
   <div
     use:portal
-    transition:fade={{ duration: 150 }}
     bind:this={backdropElement}
     class={`fixed inset-0 flex items-start justify-center pt-8 overflow-y-auto ${zIndexClass}`}
     style={noBackdrop ? '' : 'background-color: rgba(0, 0, 0, 0.4); backdrop-filter: blur(4px);'}
@@ -158,10 +155,8 @@
     aria-modal="true"
     data-testid={dataTestid}
   >
-    <!-- Modal with scale entrance animation -->
     <div
       bind:this={modalContentElement}
-      transition:scale={{ duration: 200, start: 0.95, easing: backOut }}
       class="relative rounded-lg overflow-hidden {maxWidth} w-full mx-4 mb-8 {maxHeight ? 'flex flex-col' : ''}"
       style="background-color: var(--ds-surface-raised, var(--ds-surface, white)); box-shadow: var(--shadow-float, 0 20px 50px rgba(0, 0, 0, 0.18));{maxHeight ? ` max-height: ${maxHeight};` : ''}"
     >

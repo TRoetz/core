@@ -1,7 +1,6 @@
 <script>
   import { onMount } from 'svelte';
   import Badge from '../../components/Badge.svelte';
-  import { slide } from 'svelte/transition';
   import { api } from '../../api.js';
   import { Plus, Check, X, Trash2, ChevronDown, ChevronRight } from '@lucide/svelte';
   import WorkItemRow from './WorkItemRow.svelte';
@@ -394,7 +393,7 @@
           </button>
 
           {#if !personalCollapsed}
-            <div transition:slide={{ duration: 200 }} class="mt-1">
+            <div class="mt-1">
               <!-- Add Todo -->
               <div class="mb-2 px-1">
                 {#if isAddingTodo}
@@ -509,7 +508,7 @@
           </button>
 
           {#if !assignedCollapsed}
-            <div transition:slide={{ duration: 200 }} class="mt-1">
+            <div class="mt-1">
               {#if assignedWork.length === 0}
                 <EmptyState
                   title={t('todo.noAssignedWork')}

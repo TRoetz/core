@@ -1,5 +1,4 @@
 <script>
-  import { fly } from 'svelte/transition';
   import { IconArchive, IconMessage, IconX, IconLoader2, IconSend, IconPlus, IconRefresh } from '@tabler/icons-svelte-runes';
   import { useEventListener } from 'runed';
   import MilkdownEditor from '../../editors/LazyMilkdownEditor.svelte';
@@ -256,7 +255,6 @@
     style="background-color: var(--ds-surface-raised); border: 1px solid var(--ds-border); container-type: inline-size;
            width: {panelWidth}px; height: {panelHeight}px; max-height: calc(100vh - 32px);
            right: {panelRight}px; bottom: {panelBottom}px;"
-    transition:fly={{ y: 100, duration: 250 }}
     onkeydown={handleKeydown}
   >
     <!-- Resize handles -->

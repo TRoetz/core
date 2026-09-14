@@ -895,8 +895,6 @@
     width: 100%;
     min-height: 100vh;
     position: relative;
-    background-size: 200% 200%;
-    animation: gradient-shift 15s ease infinite;
   }
 
   /* Add subtle pattern overlay for depth */
@@ -913,43 +911,14 @@
     pointer-events: none;
   }
 
-  /* Floating glow orbs for visual interest */
-  :global(.workspace-welcome-wrapper::after) {
-    content: '';
-    position: absolute;
-    top: 10%;
-    right: 10%;
-    width: 300px;
-    height: 300px;
-    border-radius: 50%;
-    background: radial-gradient(circle, rgba(255, 255, 255, 0.15), transparent 70%);
-    filter: blur(60px);
-    pointer-events: none;
-    animation: glow-breathe 6s ease-in-out infinite;
-  }
-
   /* Ensure content appears above the gradient overlay */
   :global(.workspace-welcome) {
     position: relative;
     z-index: 1;
-    animation: fade-up var(--duration-slow, 300ms) var(--ease-smooth, ease) forwards;
   }
 
   .section-drop-zone {
     position: relative;
-  }
-
-  /* Reduced motion support */
-  @media (prefers-reduced-motion: reduce) {
-    :global(.workspace-welcome-wrapper) {
-      animation: none;
-    }
-    :global(.workspace-welcome-wrapper::after) {
-      animation: none;
-    }
-    :global(.workspace-welcome) {
-      animation: none;
-    }
   }
 
   .section-edit {

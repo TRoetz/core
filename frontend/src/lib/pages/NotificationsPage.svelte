@@ -12,7 +12,6 @@
   import DropdownMenu from '../layout/DropdownMenu.svelte';
   import SearchInput from '../components/SearchInput.svelte';
   import Card from '../components/Card.svelte';
-  import { slide } from 'svelte/transition';
   import PageHeader from '../layout/PageHeader.svelte';
 
   let filteredNotifications = $state([]);
@@ -176,7 +175,7 @@
 
     <!-- Filters Section -->
     {#if showFilters}
-      <div class="mb-6 p-4 rounded border" style="border-color: var(--ds-border); background-color: var(--ds-surface-raised);" transition:slide={{ duration: 200 }}>
+      <div class="mb-6 p-4 rounded border" style="border-color: var(--ds-border); background-color: var(--ds-surface-raised);">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <!-- Search -->
           <SearchInput

@@ -1,6 +1,5 @@
 <script>
   import { createCombobox, melt } from '@melt-ui/svelte';
-  import { fly } from 'svelte/transition';
   import { Check, ChevronDown, X, Search } from '@lucide/svelte';
   import Spinner from '../components/Spinner.svelte';
   import { t } from '../stores/i18n.svelte.js';
@@ -553,8 +552,7 @@
   {#if $open}
     <div bind:this={menuRef} use:melt={$menu} data-testid="picker-dropdown"
          class="fixed z-[70] min-w-[250px] rounded border shadow-lg flex flex-col overflow-y-auto overscroll-contain"
-         style="background-color: var(--ds-surface-raised); border-color: var(--ds-border);"
-         in:fly={{ duration: 150, y: -5 }}>
+         style="background-color: var(--ds-surface-raised); border-color: var(--ds-border);">
       {#if popoverMode}
         <!-- Search input inside dropdown -->
         <div class="p-2 border-b shrink-0" style="border-color: var(--ds-border);">

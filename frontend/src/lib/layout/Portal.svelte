@@ -674,7 +674,6 @@
     <ModalBackdrop
       show={authCheckComplete && !!verifyToken}
       blur={4}
-      transition={false}
       closeOnClick={false}
       closeOnEscape={true}
       onclose={() => {

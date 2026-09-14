@@ -24,7 +24,6 @@
     opacity={0.4}
     closeOnClick={false}
     closeOnEscape={false}
-    transition={false}
     ariaLabelledBy="root-dialog-loading-label"
   >
     <div
@@ -49,7 +48,6 @@
     opacity={0.4}
     closeOnClick={false}
     closeOnEscape={false}
-    transition={false}
     ariaLabelledBy="root-dialog-error-title"
   >
     <div

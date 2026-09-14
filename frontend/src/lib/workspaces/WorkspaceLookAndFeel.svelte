@@ -456,14 +456,6 @@
     width: 100%;
     min-height: 100vh;
     position: relative;
-    background-size: 200% 200%;
-    animation: gradient-shift 15s ease infinite;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    :global(.look-and-feel-wrapper) {
-      animation: none;
-    }
   }
 
 </style>

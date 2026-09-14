@@ -1,5 +1,4 @@
 <script>
-  import { fade, fly } from 'svelte/transition';
   import { portal } from '../actions/portal.js';
 
   /**
@@ -28,9 +27,6 @@
     children,
   } = $props();
 
-  // Vitest/jsdom cannot complete WAAPI/JS outros (no rendering loop); zero
-  // durations under test keep close() synchronous so suites can assert DOM.
-  const T = import.meta.env.MODE === 'test' ? 0 : 1;
   let sheetEl = $state(null);
   // Drag-to-dismiss state: offset while dragging (px, >=0), whether a drag is
   // active. Applied to the inner card so it never fights the fly transition.
@@ -133,7 +129,6 @@
     use:portal
     class="sheet-layer"
     data-testid={dataTestid}
-    transition:fade={{ duration: 150 * T }}
   >
     <!-- Scrim: tap to dismiss -->
     <button
@@ -153,7 +148,6 @@
       aria-label={title || 'Dialog'}
       tabindex="-1"
       style:transform={dragY > 0 ? `translateY(${dragY}px)` : ''}
-      transition:fly={{ y: 320, duration: 260 * T, opacity: 1 }}
     >
       <!-- Grabber zone: drag down to dismiss (pointer-only enhancement;
            dismissal also works via scrim tap, Escape, and back gesture). -->

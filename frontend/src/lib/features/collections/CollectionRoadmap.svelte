@@ -1,7 +1,6 @@
 <script>
   import { onMount } from 'svelte';
   import { untrack } from 'svelte';
-  import { fly } from 'svelte/transition';
   import { t } from '../../stores/i18n.svelte.js';
   import { api } from '../../api.js';
   import { resolveScreenId } from '../../utils/screenResolution.js';
@@ -1123,7 +1122,6 @@
                   class="absolute right-0 top-full mt-1 rounded-lg shadow-xl z-[60] p-4"
                   style="background-color: var(--ds-surface-raised); border: 1px solid var(--ds-border); min-width: 300px;"
                   data-testid="roadmap-settings-panel"
-                  transition:fly={{ y: -4, duration: 150 }}
                 >
                   <div class="flex flex-col gap-3">
                     <div>

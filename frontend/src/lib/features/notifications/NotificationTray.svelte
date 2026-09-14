@@ -4,8 +4,6 @@
   import { notifications, notificationActions } from '../../stores/notifications.js';
   import NotificationCard from '../notifications/NotificationCard.svelte';
   import EmptyState from '../../components/EmptyState.svelte';
-  import { scale, fly } from 'svelte/transition';
-  import { quintOut } from 'svelte/easing';
   import { navigate } from '../../router.js';
   import { t } from '../../stores/i18n.svelte.js';
   import { createPopover, melt } from '@melt-ui/svelte';
@@ -108,8 +106,6 @@
         <span
           class="absolute -top-1 -right-1 text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center"
           style="background-color: var(--ds-danger); color: var(--ds-text-inverse);"
-          in:scale={{ duration: 200, easing: quintOut }}
-          out:scale={{ duration: 150 }}
         >
           {unreadCount > 99 ? '99+' : unreadCount}
         </span>
@@ -128,8 +124,6 @@
       tabindex="-1"
       class="notification-dropdown z-[60] w-96 rounded shadow-xl flex flex-col overflow-hidden"
       style="background-color: var(--ds-surface-overlay); border: 1px solid var(--ds-border); color: var(--ds-text);"
-      in:fly={{ x: -10, duration: 200, easing: quintOut }}
-      out:fly={{ x: -10, duration: 150 }}
     >
       <!-- Header -->
       <div class="p-4 shrink-0 flex items-center justify-between" style="border-bottom: 1px solid var(--ds-border);">
@@ -167,8 +161,6 @@
         {:else}
           {#each $notifications as notification (notification.id)}
             <div
-              in:fly={{ x: 20, duration: 200, easing: quintOut }}
-              out:fly={{ x: -20, duration: 150 }}
             >
               <NotificationCard
                 {notification}

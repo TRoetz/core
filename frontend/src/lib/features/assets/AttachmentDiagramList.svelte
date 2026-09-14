@@ -4,7 +4,6 @@
   import { errorToast } from '../../stores/toasts.svelte.js';
   import { portal } from '../../actions/portal.js';
   import { api } from '../../api.js';
-  import { fade, scale } from 'svelte/transition';
 
   let {
     attachments = [],
@@ -201,7 +200,6 @@
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div
     use:portal
-    transition:fade={{ duration: 120 }}
     class="fixed inset-0 z-50 flex items-center justify-center p-6"
     style="background-color: rgba(0,0,0,0.85);"
     onclick={(e) => { if (e.target === e.currentTarget) closeLightbox(); }}
@@ -218,7 +216,7 @@
     >
       ×
     </button>
-    <div class="max-w-full max-h-full" transition:scale={{ duration: 150, start: 0.97 }}>
+    <div class="max-w-full max-h-full">
       {#if isImage(lightbox)}
         <img
           src={contentUrl(lightbox)}

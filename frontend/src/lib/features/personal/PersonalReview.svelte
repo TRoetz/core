@@ -6,7 +6,6 @@
   import EmptyState from '../../components/EmptyState.svelte';
   import Card from '../../components/Card.svelte';
   import WorkItemRow from '../items/WorkItemRow.svelte';
-  import { scale } from 'svelte/transition';
   import PageHeader from '../../layout/PageHeader.svelte';
   import MilkdownEditor from '../../editors/LazyMilkdownEditor.svelte';
   import Button from '../../components/Button.svelte';
@@ -372,7 +371,6 @@ ${t('personal.placeholderImprovements')}`;
             <div
               class="absolute right-0 top-12 w-80 rounded shadow-lg border z-50 p-4"
               style="background-color: var(--ds-surface); border-color: var(--ds-border);"
-              transition:scale={{ duration: 150, start: 0.95 }}
             >
               <div class="flex items-center space-x-3 mb-4">
                 <Clock class="w-4 h-4" style="color: var(--ds-text-subtle);" />

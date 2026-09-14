@@ -1,7 +1,5 @@
 <script>
   import { createCombobox, melt } from '@melt-ui/svelte';
-  import { scale } from 'svelte/transition';
-  import { backOut } from 'svelte/easing';
   import { api } from '../api.js';
   import { contextCommands } from '../utils/contextCommands.js';
   import { currentRoute } from '../router.js';
@@ -270,10 +268,6 @@
 </script>
 
 <style>
-  .command-palette-container {
-    animation: scale-in var(--duration-normal, 200ms) var(--ease-spring, cubic-bezier(0.34, 1.56, 0.64, 1)) forwards;
-  }
-
   [data-highlighted] {
     background-color: var(--ds-background-neutral-hovered) !important;
   }
@@ -315,12 +309,6 @@
   .kbd:hover {
     background-color: var(--ds-background-neutral-hovered);
   }
-
-  @media (prefers-reduced-motion: reduce) {
-    .command-palette-container {
-      animation: none;
-    }
-  }
 </style>
 
 <svelte:window onkeydown={handleKeydown} />
@@ -328,7 +316,6 @@
 <ModalBackdrop bind:show={isOpen} opacity={0.4} blur={8} extraFilter="saturate(120%)" zIndex={60} align="top" paddingTop="pt-[20vh]" onclose={close}>
   <div
     class="relative w-full max-w-2xl mx-4"
-    transition:scale={{ duration: 200, start: 0.95, easing: backOut }}
   >
     <div class="command-palette-container rounded-lg overflow-hidden" style="background-color: var(--ds-glass-bg, var(--ds-surface-raised)); backdrop-filter: blur(12px) saturate(180%); -webkit-backdrop-filter: blur(12px) saturate(180%); border: 1px solid var(--ds-glass-border, var(--ds-border)); box-shadow: var(--shadow-float, 0 20px 50px rgba(0, 0, 0, 0.18));">
       <div class="p-4 border-b" style="background-color: var(--ds-surface); border-color: var(--ds-border);">

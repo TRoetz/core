@@ -27,7 +27,6 @@
   import { confirm } from '../composables/useConfirm.js';
   import DescriptionText from '../components/DescriptionText.svelte';
   import RequestTypeFieldsBuilder from '../dialogs/RequestTypeFieldsBuilder.svelte';
-  import { fly } from 'svelte/transition';
 
   let {
     onOpenRequestTypeModal = () => {},
@@ -1009,7 +1008,6 @@
       box-shadow: 24px 0 48px -12px rgba(0, 0, 0, 0.25);
     "
     data-testid="portal-fields-builder"
-    transition:fly={{ x: -240, duration: 220 }}
   >
     <RequestTypeFieldsBuilder
       requestTypeId={expandedRequestTypeForFields.id}

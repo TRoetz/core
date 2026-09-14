@@ -3,7 +3,6 @@
   import StateDisplay from '../components/StateDisplay.svelte';
   import { attachClosestEdge, extractClosestEdge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge';
   import { createPopover, melt } from '@melt-ui/svelte';
-  import { fly } from 'svelte/transition';
   import { tick } from 'svelte';
   import { api } from '../api.js';
   import { Plus, Trash2, Pencil, Type, AlignLeft, ListChecks, ToggleLeft, AlertTriangle, Search, X } from '@lucide/svelte';
@@ -953,7 +952,6 @@
     use:melt={$addFieldContent}
     class="z-[70] w-72 rounded border shadow-lg flex flex-col"
     style="background-color: var(--ds-surface-raised); border-color: var(--ds-border);"
-    transition:fly={{ duration: 150, y: -5 }}
   >
     <div class="p-2 border-b" style="border-color: var(--ds-border);">
       <div class="relative">

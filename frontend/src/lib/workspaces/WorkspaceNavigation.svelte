@@ -701,17 +701,6 @@
     transform: translateX(2px) scale(0.98);
   }
 
-  /* Staggered entrance animation for nav sections */
-  nav {
-    animation: fade-up var(--duration-normal, 200ms) var(--ease-smooth, ease) forwards;
-  }
-
-  /* Section header animation */
-  nav .border-t {
-    animation: fade-up var(--duration-slow, 300ms) var(--ease-smooth, ease) forwards;
-    animation-delay: 100ms;
-  }
-
   /* Reduced motion support */
   @media (prefers-reduced-motion: reduce) {
     :global(.workspace-nav-item:hover),
@@ -719,9 +708,7 @@
       transform: none;
     }
 
-    :global(.sidebar-mode-panel),
-    nav,
-    nav .border-t {
+    :global(.sidebar-mode-panel) {
       animation: none;
     }
   }

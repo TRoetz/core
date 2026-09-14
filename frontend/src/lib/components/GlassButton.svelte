@@ -4,7 +4,7 @@
   /**
    * GlassButton - glassmorphism-styled button for portal/hub heroes.
    *
-   * Uses the .glass-btn utility (defined in design-system/animations.css)
+   * Uses the .glass-btn utility (defined in design-system/index.css)
    * for the backdrop-filter + translucent background. Matches Button's
    * prop conventions (variant/size/icon/href/onclick).
    *

@@ -79,7 +79,6 @@
     paddingTop="pt-[20vh]"
     closeOnClick={false}
     closeOnEscape={false}
-    transition={false}
   >
     <div class="rounded-lg p-6" style="background-color: var(--ds-surface-raised); color: var(--ds-text-subtle);">
       <Spinner class="mx-auto mb-4" />
@@ -104,7 +103,7 @@
 {/if}
 
 {#if createModalState.loading && showCreateModal}
-  <ModalBackdrop show={true} opacity={0.4} closeOnClick={false} closeOnEscape={false} transition={false}>
+  <ModalBackdrop show={true} opacity={0.4} closeOnClick={false} closeOnEscape={false}>
     <div class="rounded-lg p-6" style="background-color: var(--ds-surface-raised); color: var(--ds-text-subtle);">
       <Spinner class="mx-auto mb-4" />
       <p>{t('nav.loadingCreateForm')}</p>

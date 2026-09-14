@@ -3,7 +3,6 @@
   import { api } from '../../api.js';
   import { navigate } from '../../router.js';
   import { ChevronDown, ChevronRight, Plus, Check, X, ExternalLink, CheckCircle2 } from '@lucide/svelte';
-  import { slide } from 'svelte/transition';
   import { workspacesStore } from '../../stores';
   import Tooltip from '../../components/Tooltip.svelte';
   import Text from '../../components/Text.svelte';
@@ -276,7 +275,7 @@
 
   <!-- Expandable Content -->
   {#if expanded}
-    <div transition:slide={{ duration: 200 }} class="mt-1">
+    <div class="mt-1">
       {#if loading}
         <div class="py-2 text-xs" style="color: var(--ds-text-subtle);">
           {t('nav.loading')}

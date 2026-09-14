@@ -1,5 +1,4 @@
 <script>
-  import { slide } from 'svelte/transition';
   import { Menu } from '@lucide/svelte';
   import { useEventListener } from 'runed';
   import { api } from '../api.js';
@@ -346,7 +345,6 @@
         <div
           class="workspace-context-nav h-full min-h-0"
           class:mobile-open={mobileWorkspaceNavOpen}
-          out:slide={{ duration: 200, axis: 'x' }}
         >
           <WorkspaceNavigation
             workspaceId={$currentRoute.path?.startsWith('/personal')
@@ -355,7 +353,7 @@
           />
         </div>
       {:else if showCollectionNav}
-        <div class="h-full min-h-0" out:slide={{ duration: 200, axis: 'x' }}>
+        <div class="h-full min-h-0">
           <CollectionNavigation collectionId={$currentRoute.params.id} />
         </div>
       {/if}

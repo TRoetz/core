@@ -2,7 +2,6 @@
   import { createPopover, melt } from '@melt-ui/svelte';
   import { ChevronDown, Check } from '@lucide/svelte';
   import { tick, untrack } from 'svelte';
-  import { fly } from 'svelte/transition';
 
   /**
    * @type {{
@@ -213,7 +212,6 @@
     class="rounded border shadow-lg flex flex-col overflow-hidden z-[60] focus:outline-none"
     style="background-color: var(--ds-surface-raised); border-color: var(--ds-border); width: {menuWidth || undefined};
            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.25), 0 10px 10px -5px rgba(0, 0, 0, 0.15);"
-    transition:fly={{ duration: 150, y: -5 }}
   >
     <div class="min-h-0 max-h-60 overflow-y-auto overscroll-contain">
     {#each options as opt, index (opt.value ?? `opt-${index}`)}

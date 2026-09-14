@@ -1,7 +1,5 @@
 <script>
   import { X } from '@lucide/svelte';
-  import { scale } from 'svelte/transition';
-  import { backOut } from 'svelte/easing';
   import Spinner from './Spinner.svelte';
   import ModalBackdrop from './ModalBackdrop.svelte';
 
@@ -25,7 +23,6 @@
 
 <ModalBackdrop bind:show opacity={0.4} blur={4} align="top" paddingTop="pt-8" scrollable onclose={close} ariaLabelledBy={titleId}>
     <div
-      transition:scale={{ duration: 200, start: 0.95, easing: backOut }}
       class="relative rounded-lg overflow-hidden max-w-2xl w-full mx-4 mb-8"
       style="background-color: var(--ds-surface-raised); box-shadow: 0 20px 50px rgba(0, 0, 0, 0.18);"
     >

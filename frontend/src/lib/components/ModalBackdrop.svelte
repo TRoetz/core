@@ -1,6 +1,5 @@
 <script>
   import { tick } from 'svelte';
-  import { fade } from 'svelte/transition';
 
   let {
     show = $bindable(false),
@@ -13,7 +12,6 @@
     scrollable = false,
     closeOnClick = true,
     closeOnEscape = true,
-    transition = true,
     ariaLabelledBy = undefined,
     /** CSS selector for the element that should receive focus first. */
     initialFocus = '[data-autofocus], [autofocus]',
@@ -102,10 +100,6 @@
     (first || backdropRef)?.focus();
   }
 
-  function handleIntroEnd() {
-    void focusInitialElement();
-  }
-
   function handleClick(event) {
     // Outside-click dismissal can silently discard typed-in form data, so
     // creation / editing dialogs opt out (closeOnClick=false) and rely on
@@ -157,8 +151,6 @@
 {#if show}
   <div
     bind:this={backdropRef}
-    transition:fade={{ duration: transition ? 150 : 0 }}
-    onintroend={handleIntroEnd}
     class="fixed inset-0 {layoutClasses} focus:outline-none"
     style="z-index: {zIndex}; background-color: {bgStyle}; backdrop-filter: {filterStyle};"
     onclick={handleClick}
