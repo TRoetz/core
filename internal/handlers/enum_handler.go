@@ -168,6 +168,8 @@ func handleServiceError(w http.ResponseWriter, r *http.Request, err error) {
 		switch se.StatusCode {
 		case 400:
 			respondBadRequest(w, r, se.Message)
+		case 403:
+			respondForbidden(w, r)
 		case 404:
 			respondNotFound(w, r, se.Message)
 		case 409:

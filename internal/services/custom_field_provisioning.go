@@ -109,6 +109,12 @@ func IsValidCustomFieldType(t string) bool {
 	return validFieldTypes[t]
 }
 
+// IsIndexableCustomFieldType reports whether the field type supports B-tree
+// indexing on items/assets.
+func IsIndexableCustomFieldType(t string) bool {
+	return indexableFieldTypes[t]
+}
+
 // Create validates and persists a new custom-field definition, auto-creating
 // the mirror field when the linking options request one.
 func (s *CustomFieldProvisioningService) Create(actor AuditActor, cf *models.CustomFieldDefinition) (*CustomFieldMutationResult, error) {

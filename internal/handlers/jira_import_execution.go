@@ -2269,7 +2269,7 @@ func (h *JiraImportHandler) ensureCustomFields(
 				fieldType = "textarea"
 			}
 		}
-		if !isValidFieldType(fieldType) {
+		if !services.IsValidCustomFieldType(fieldType) {
 			slog.Warn("Skipping Jira custom field with unsupported Windshift type",
 				slog.String("component", "jira"),
 				slog.String("jiraFieldID", m.JiraID),
