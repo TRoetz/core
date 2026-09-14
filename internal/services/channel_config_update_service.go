@@ -8,6 +8,7 @@ import (
 	"net/mail"
 	"net/url"
 	"regexp"
+	"slices"
 	"strings"
 
 	"windshift/internal/models"
@@ -57,6 +58,9 @@ type ChannelConfigUpdateService struct {
 	validateEmail func(*models.Channel, *models.ChannelConfig) error
 	validateURL   func(string) error
 	refresh       func()
+	// validatePageSource checks that a knowledge-base root page exists,
+	// is live, and belongs to the wired workspace. Nil skips the check.
+	validatePageSource func(workspaceID, pageID int) error
 }
 
 var channelSlugPattern = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{1,62}[a-z0-9]$`)
@@ -79,6 +83,12 @@ func (s *ChannelConfigUpdateService) SetURLValidator(validate func(string) error
 
 func (s *ChannelConfigUpdateService) SetSubscriptionInvalidator(invalidate func()) {
 	s.refresh = invalidate
+}
+
+// SetKnowledgeBasePageValidator wires the page-existence check used when a
+// portal wires a sub-page subtree into its knowledge base.
+func (s *ChannelConfigUpdateService) SetKnowledgeBasePageValidator(validate func(workspaceID, pageID int) error) {
+	s.validatePageSource = validate
 }
 
 // Update applies a partial configuration object and returns true only when
@@ -416,6 +426,11 @@ func (s *ChannelConfigUpdateService) validate(ctx context.Context, actorID int, 
 		if err := ValidatePortalConfig(config); err != nil {
 			return channelConfigInvalid(err.Error())
 		}
+		if err := s.validateKnowledgeBasePageSources(actorID, config); err != nil {
+			return err
+		}
+	} else if _, present := incoming["knowledge_base_page_sources"]; present {
+		return channelConfigInvalid(fmt.Sprintf("knowledge_base_page_sources is not valid for a %s channel", channel.Type))
 	}
 	if err := validateChannelTargetField(channel.Type, incoming); err != nil {
 		return err
@@ -442,6 +457,60 @@ func (s *ChannelConfigUpdateService) validate(ctx context.Context, actorID int, 
 	if channel.Status == "enabled" {
 		if err := validateEnabledChannel(channel, config, s.validateEmail); err != nil {
 			return err
+		}
+	}
+	return nil
+}
+
+// validateKnowledgeBasePageSources checks a portal's workspace-pages
+// knowledge-base wiring: bounded count, target workspaces only, live root
+// pages, and workspace-administered disclosure for non-admin actors.
+func (s *ChannelConfigUpdateService) validateKnowledgeBasePageSources(actorID int, config *models.ChannelConfig) error {
+	sources := config.KnowledgeBasePageSources
+	if len(sources) == 0 {
+		return nil
+	}
+	if len(sources) > maxKnowledgeBasePageSources {
+		return channelConfigInvalid(fmt.Sprintf("knowledge_base_page_sources accepts at most %d entries", maxKnowledgeBasePageSources))
+	}
+	admin, err := s.permission.IsSystemAdmin(actorID)
+	if err != nil {
+		return err
+	}
+	seen := make(map[int]map[int]bool, len(sources))
+	for _, src := range sources {
+		if src.WorkspaceID <= 0 {
+			return channelConfigInvalid("knowledge_base_page_sources entries need a workspace_id")
+		}
+		if !slices.Contains(config.PortalWorkspaceIDs, src.WorkspaceID) {
+			return channelConfigInvalid(fmt.Sprintf("workspace %d must be connected to the portal before its pages can join the knowledge base", src.WorkspaceID))
+		}
+		if seen[src.WorkspaceID] == nil {
+			seen[src.WorkspaceID] = map[int]bool{}
+		}
+		rootKey := 0
+		if src.RootPageID != nil {
+			rootKey = *src.RootPageID
+			if err := s.validatePageSource(src.WorkspaceID, rootKey); err != nil {
+				return channelConfigInvalid(fmt.Sprintf("knowledge base page source is invalid: %s", err.Error()))
+			}
+		}
+		if seen[src.WorkspaceID][rootKey] {
+			return channelConfigInvalid(fmt.Sprintf("workspace %d is wired into the knowledge base more than once", src.WorkspaceID))
+		}
+		seen[src.WorkspaceID][rootKey] = true
+		if admin {
+			continue
+		}
+		allowed, err := s.permission.HasWorkspacePermission(actorID, src.WorkspaceID, models.PermissionWorkspaceAdmin)
+		if err != nil {
+			return err
+		}
+		if !allowed {
+			return &ChannelConfigError{
+				Kind:    ChannelConfigWorkspaceForbidden,
+				Message: fmt.Sprintf("Workspace administration permission is required to publish workspace %d pages through the knowledge base", src.WorkspaceID),
+			}
 		}
 	}
 	return nil

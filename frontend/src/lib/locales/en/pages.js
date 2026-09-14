@@ -70,6 +70,12 @@ export default {
     statusUnsaved: 'Unsaved',
     statusError: 'Save failed',
 
+    // Public knowledge-base publication banner (green bar above the page)
+    publiclyViewableBanner:
+      'Publicly viewable — this page is published through a portal knowledge base and can be read by portal users.',
+    publiclyViewableBannerWithPortals:
+      'Publicly viewable — this page is published through the {portals} knowledge base and can be read by portal users.',
+
     // Segmented Edit / Read mode toggle
     modeEdit: 'Edit',
     modeRead: 'Read',

@@ -119,6 +119,12 @@ type ChannelConfig struct {
 	KnowledgeBaseURL       string `json:"knowledge_base_url,omitempty"`        // Parsed base URL (e.g., https://wiki.realigned.tech)
 	KnowledgeBaseShareID   string `json:"knowledge_base_share_id,omitempty"`   // Parsed share ID (e.g., u1gkl0jk1u)
 
+	// Knowledge Base workspace-pages wiring. Explicit opt-in by the channel
+	// manager: every entry publishes a workspace pages tree (whole workspace
+	// when RootPageID is nil, otherwise the subtree rooted at that page)
+	// through the portal knowledge base.
+	KnowledgeBasePageSources []KnowledgeBasePageSource `json:"knowledge_base_page_sources,omitempty"`
+
 	// Form Channel Configuration
 	FormSlug           string `json:"form_slug,omitempty"`            // URL-friendly identifier for form channel
 	FormTheme          string `json:"form_theme,omitempty"`           // "light", "dark", "auto"
@@ -127,6 +133,14 @@ type ChannelConfig struct {
 	FormWorkspaceIDs   []int  `json:"form_workspace_ids"`             // Target workspaces for submissions
 	FormSuccessMessage string `json:"form_success_message,omitempty"` // Default post-submit message
 	FormRedirectURL    string `json:"form_redirect_url,omitempty"`    // Optional redirect after submit
+}
+
+// KnowledgeBasePageSource wires one workspace's Pages feature into a
+// portal knowledge base. RootPageID nil publishes the entire pages tree;
+// a non-nil value publishes only the subtree rooted at that page.
+type KnowledgeBasePageSource struct {
+	WorkspaceID int  `json:"workspace_id"`
+	RootPageID  *int `json:"root_page_id,omitempty"`
 }
 
 // ChannelManager represents a user or group that can manage a channel

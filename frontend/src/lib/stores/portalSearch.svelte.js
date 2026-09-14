@@ -2,6 +2,7 @@ import { api } from '../api.js';
 
 let context = {
   getKnowledgeBaseShareLink: () => '',
+  getKnowledgeBasePageSources: () => [],
   getSlug: () => null,
 };
 
@@ -21,7 +22,9 @@ async function search() {
   const normalizedQuery = query.trim();
   if (!normalizedQuery) return;
 
-  if (!context.getKnowledgeBaseShareLink()) {
+  // The knowledge base exists once either a Docmost share or workspace
+  // pages are wired into it.
+  if (!context.getKnowledgeBaseShareLink() && context.getKnowledgeBasePageSources().length === 0) {
     error = 'Knowledge base not configured';
     visible = true;
     return;

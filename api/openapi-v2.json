@@ -30281,6 +30281,36 @@
         ],
         "type": "object"
       },
+      "GetWorkspacesWorkspaceIdPagesPageIdPublicationResult": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "additionalProperties": false,
+            "properties": {
+              "portals": {
+                "description": "The portals value.",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "publicly_viewable": {
+                "description": "The publicly viewable value.",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "portals",
+              "publicly_viewable"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
       "GetWorkspacesWorkspaceIdPagesPageIdResult": {
         "additionalProperties": false,
         "properties": {
@@ -98355,6 +98385,73 @@
         ],
         "x-required-scopes": [
           "pages:write"
+        ]
+      }
+    },
+    "/workspaces/{workspace_id}/pages/{page_id}/publication": {
+      "get": {
+        "description": "Get page publication. Results include only resources visible to the authenticated caller; collections use their documented stable order and bounds.",
+        "operationId": "getWorkspacesWorkspaceIdPagesPageIdPublication",
+        "parameters": [
+          {
+            "description": "The workspace identifier.",
+            "in": "path",
+            "name": "workspace_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "The page identifier.",
+            "in": "path",
+            "name": "page_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetWorkspacesWorkspaceIdPagesPageIdPublicationResult"
+                }
+              }
+            },
+            "description": "Get page publication response."
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationError"
+          },
+          "403": {
+            "$ref": "#/components/responses/PermissionError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Get page publication",
+        "tags": [
+          "Knowledge"
+        ],
+        "x-required-scopes": [
+          "pages:read"
         ]
       }
     },

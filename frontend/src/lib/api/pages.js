@@ -10,6 +10,10 @@ export const pages = {
   /** Fetch every visible page as an ordered, flat metadata list. */
   getAll: (workspaceId) => fetchV2Data(`/workspaces/${workspaceId}/pages`),
 
+  /** Portal knowledge-base publication state of a page. */
+  getPublication: (workspaceId, pageId) =>
+    fetchV2Data(`/workspaces/${workspaceId}/pages/${pageId}/publication`),
+
   /** Fetch a single page (404 on missing or no view permission). */
   getPage: (workspaceId, pageId) => fetchV2Data(`/workspaces/${workspaceId}/pages/${pageId}`),
 

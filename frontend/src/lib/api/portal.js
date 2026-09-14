@@ -76,6 +76,10 @@ export const portal = {
       body: JSON.stringify({ query }),
     }),
 
+  /** Fetch one workspace page published through the portal knowledge base. */
+  getKnowledgeBasePage: (slug, pageId) =>
+    fetchAPI(`/portal/${slug}/knowledge-base/pages/${pageId}`),
+
   getMyRequests: (slug) => fetchAPI(`/portal/${slug}/my-requests`),
 
   getRequestDetail: (slug, itemId) => fetchAPI(`/portal/${slug}/requests/${itemId}`),

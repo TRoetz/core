@@ -685,6 +685,7 @@ func (s *Server) initialize() error {
 	)
 	knowledgeRetrieval := services.NewKnowledgeRetrievalService(s.db, pagePermissionService)
 	knowledgeSearchHandler := handlers.NewKnowledgeSearchHandler(knowledgeRetrieval)
+	knowledgePublication := services.NewKnowledgePublicationService(s.db)
 	pageLabelService := services.NewPageLabelService(pageLabelRepo, logger.NewAuditor(s.db))
 
 	recurrenceService := services.NewRecurrenceService(repository.NewRecurrenceRepository(s.db), s.recurrenceScheduler, logger.NewAuditor(s.db))
@@ -1159,6 +1160,7 @@ func (s *Server) initialize() error {
 	channelHandler.SetEmailScheduler(s.emailScheduler)
 	channelHandler.SetEncryption(scmProviderHandler.GetEncryption())
 	channelHandler.SetBaseURL(baseURL)
+	channelHandler.SetKnowledgeBasePageValidator(repository.NewPageRepository(s.db).ValidateLivePageInWorkspace)
 	channelHandler.SetSMTPSender(smtpSender)
 	channelHandler.SetCredentialManager(emailCredManager)
 	// Wire at-rest decryption into the SMTP sender so dispatch can decrypt
@@ -1173,6 +1175,7 @@ func (s *Server) initialize() error {
 	portalHandler := handlers.NewPortalHandler(s.db, sessionManager, portalSessionManager, ipExtractor, cfg.AttachmentPath)
 	portalHandler.SetApprovalService(approvalService)
 	portalHandler.SetEventCoordinator(eventCoordinator)
+	portalHandler.SetKnowledgePublicationService(knowledgePublication)
 	portalAuthHandler := handlers.NewPortalAuthHandler(repository.NewPortalAuthRepository(s.db), portalSessionManager, sessionManager, magicLinkService, ipExtractor)
 	var portalWebAuthnHandler *handlers.PortalWebAuthnHandler
 	if portalWebAuthnConfig != nil {
@@ -1740,6 +1743,7 @@ func (s *Server) initialize() error {
 		PageDiagrams:      pageDiagramService,
 		PageAccess:        pagePermissionService,
 		PageLabels:        pageLabelService,
+		PagePublication:   knowledgePublication,
 		Worklogs:          timeWorklogService,
 		TimeAccess:        timePermissionService,
 		TimeProjects:      services.NewTimeProjectApplicationService(s.db, timePermissionService, v2Access),

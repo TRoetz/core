@@ -26,6 +26,7 @@ func registerPageRoutes(builder *routeBuilder, deps Deps) {
 	builder.Read("/workspaces/{workspace_id}/pages/{page_id}/history/{revision_id}", AuthAuthenticated, []string{"pages:read"}, getPageRevision(pages))
 	builder.Action(http.MethodPost, "/workspaces/{workspace_id}/pages/{page_id}/history/{revision_id}/restore", http.StatusOK, AuthAuthenticated, []string{"pages:write"}, restorePageRevision(pages))
 	builder.Read("/workspaces/{workspace_id}/pages/{page_id}/permissions", AuthAuthenticated, []string{"pages:read"}, getPagePermissions(pages))
+	builder.Read("/workspaces/{workspace_id}/pages/{page_id}/publication", AuthAuthenticated, []string{"pages:read"}, getPagePublication(deps))
 	builder.JSON(http.MethodPost, "/workspaces/{workspace_id}/pages/{page_id}/permissions", http.StatusCreated, false, AuthAuthenticated, []string{"pages:write"}, grantPagePermission(pages))
 	builder.Command(http.MethodDelete, "/workspaces/{workspace_id}/pages/{page_id}/permissions/{permission_id}", AuthAuthenticated, []string{"pages:write"}, revokePagePermission(pages))
 	builder.JSON(http.MethodPatch, "/workspaces/{workspace_id}/pages/{page_id}/inheritance", http.StatusOK, true, AuthAuthenticated, []string{"pages:write"}, setPageInheritance(pages))
@@ -262,6 +263,46 @@ func getPagePermissions(pages pageApplication) readOperation[services.PagePermis
 		}
 		result, err := pages.GetPermissions(user.ID, workspaceID, pageID)
 		return result, pageError(err)
+	}
+}
+
+// pagePublicationDTO reports whether a page is published through portal
+// knowledge bases. Portals lists the portal titles exposing it; always an
+// array so consumers never null-check.
+type pagePublicationDTO struct {
+	PubliclyViewable bool     `json:"publicly_viewable"`
+	Portals          []string `json:"portals"`
+}
+
+// getPagePublication resolves the portal knowledge-base publication state of
+// a page the caller can view. Editors use it to surface a visible
+// "publicly viewable" marker on published pages.
+func getPagePublication(deps Deps) readOperation[pagePublicationDTO] {
+	return func(r *http.Request) (pagePublicationDTO, error) {
+		user, workspaceID, pageID, err := pageTarget(r)
+		if err != nil {
+			return pagePublicationDTO{}, err
+		}
+		result := pagePublicationDTO{Portals: []string{}}
+		// Route through the permission-checked page read so existence of an
+		// unpublished page never leaks through this endpoint either.
+		page, err := deps.PageApplication.Get(user.ID, workspaceID, pageID)
+		if err != nil {
+			return pagePublicationDTO{}, pageError(err)
+		}
+		if deps.PagePublication == nil {
+			return result, nil
+		}
+		viewable, portals, err := deps.PagePublication.PagePublication(page)
+		if err != nil {
+			return pagePublicationDTO{}, err
+		}
+		result.PubliclyViewable = viewable
+		result.Portals = portals
+		if result.Portals == nil {
+			result.Portals = []string{}
+		}
+		return result, nil
 	}
 }
 

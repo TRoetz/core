@@ -1,12 +1,16 @@
 <script>
-  import { Search, BookOpen } from '@lucide/svelte';
+  import { Search, BookOpen, X } from '@lucide/svelte';
   import StateDisplay from '../components/StateDisplay.svelte';
   import EmptyState from '../components/EmptyState.svelte';
   import Input from '../components/Input.svelte';
   import { portalCustomizationStore as portalStore } from '../stores/portal.svelte.js';
   import { gradients } from '../stores/portalPresentation.js';
   import { portalSearchStore } from '../stores/portalSearch.svelte.js';
+  import { api } from '../api.js';
+  import { renderMarkdown } from '../utils/render-markdown.js';
   import { safeCssUrl } from '../utils/sanitize';
+  import { t } from '../stores/i18n.svelte.js';
+  import ModalBackdrop from '../components/ModalBackdrop.svelte';
 
   function handleSearch(e) {
     e.preventDefault();
@@ -24,6 +28,38 @@
     portalSearchStore.query = e.target.value;
     portalSearchStore.searchDebounced();
   }
+
+  // In-portal viewer for published workspace pages (source: workspace_page).
+  let viewedPage = $state(null);
+  let viewedPageLoading = $state(false);
+  let viewedPageError = $state('');
+  let viewedPageRequestSeq = 0;
+
+  async function openWorkspacePage(result) {
+    const slug = portalStore.currentSlug;
+    const requestSeq = ++viewedPageRequestSeq;
+    viewedPage = { title: result.title, content: '' };
+    viewedPageError = '';
+    viewedPageLoading = true;
+    try {
+      const page = await api.portal.getKnowledgeBasePage(slug, result.page_id);
+      if (requestSeq !== viewedPageRequestSeq) return;
+      viewedPage = { title: page.title, content: page.content, updatedAt: page.updated_at };
+    } catch (err) {
+      if (requestSeq !== viewedPageRequestSeq) return;
+      viewedPageError = err.message || 'Failed to load page';
+    } finally {
+      if (requestSeq === viewedPageRequestSeq) viewedPageLoading = false;
+    }
+  }
+
+  function closeWorkspacePage() {
+    viewedPageRequestSeq++;
+    viewedPage = null;
+    viewedPageError = '';
+  }
+
+  const renderedViewedPage = $derived(viewedPage ? renderMarkdown(viewedPage.content) : '');
 
   // Compute background style - image takes priority over gradient. The image
   // URL is admin-controlled, so it's run through safeCssUrl to prevent CSS
@@ -58,6 +94,7 @@
             value={portalSearchStore.query}
             oninput={handleSearchInput}
             onkeydown={handleSearchKeydown}
+            dataTestid="portal-kb-search-input"
             placeholder={portalStore.editableSearchPlaceholder}
             class="block w-full pl-12 pr-4 py-5 text-lg border-0 rounded-xl focus:outline-none focus:ring-2 focus:ring-white/30 transition-all shadow-xl"
             style="background-color: rgba(255, 255, 255, 0.95); color: #111827;"
@@ -118,39 +155,76 @@
                   Found {portalSearchStore.results.data.length} result{portalSearchStore.results.data.length !== 1 ? 's' : ''} for "{portalSearchStore.query}"
                 </div>
                 {#each portalSearchStore.results.data as result}
-                  {@const parsed = portalStore.parseDocmostShareLink(portalStore.knowledgeBaseShareLink)}
-                  <a
-                    href="{parsed.baseURL}/share/{parsed.shareID}/p/{result.slugId}"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="block p-4 rounded border transition-all hover:shadow-md"
-                    style="background-color: var(--ds-surface-raised); border-color: var(--ds-border);"
-                  >
-                    <div class="flex items-start gap-3">
-                      <div class="flex-shrink-0 mt-1">
-                        <BookOpen class="w-5 h-5" style="color: var(--ds-text-link);" />
+                  {@const isWorkspacePage = result.source === 'workspace_page'}
+                  {#if isWorkspacePage}
+                    <button
+                      type="button"
+                      class="block w-full text-left p-4 rounded border transition-all hover:shadow-md"
+                      style="background-color: var(--ds-surface-raised); border-color: var(--ds-border);"
+                      data-testid="kb-result-workspace-page"
+                      onclick={() => openWorkspacePage(result)}
+                    >
+                      <div class="flex items-start gap-3">
+                        <div class="flex-shrink-0 mt-1">
+                          <BookOpen class="w-5 h-5" style="color: var(--ds-text-link);" />
+                        </div>
+                        <div class="flex-1 min-w-0">
+                          <h3 class="font-medium mb-1" style="color: var(--ds-text);">
+                            {result.title}
+                          </h3>
+                          {#if result.heading_path}
+                            <p class="text-xs mb-1" style="color: var(--ds-text-subtle);">{result.heading_path}</p>
+                          {/if}
+                          {#if result.highlight}
+                            <p class="text-sm line-clamp-2 mb-1" style="color: var(--ds-text-subtle);">
+                              {result.highlight}
+                            </p>
+                          {/if}
+                          <span
+                            class="inline-block text-xs px-2 py-0.5 rounded mt-1"
+                            style="background-color: rgba(16, 185, 129, 0.15); color: #10b981;"
+                            data-testid="kb-result-source-badge"
+                          >
+                            {t('portal.customize.workspacePagesBadge')}
+                          </span>
+                        </div>
                       </div>
-                      <div class="flex-1 min-w-0">
-                        <h3 class="font-medium mb-1" style="color: var(--ds-text);">
-                          {result.title}
-                        </h3>
-                        {#if result.highlight}
-                          <p class="text-sm line-clamp-2 mb-1" style="color: var(--ds-text-subtle);">
-                            {result.highlight.replace(/<[^>]*>/g, '')}
-                          </p>
-                        {:else if result.excerpt}
-                          <p class="text-sm line-clamp-2" style="color: var(--ds-text-subtle);">
-                            {result.excerpt}
-                          </p>
-                        {/if}
+                    </button>
+                  {:else}
+                    {@const parsed = portalStore.parseDocmostShareLink(portalStore.knowledgeBaseShareLink)}
+                    <a
+                      href="{parsed.baseURL}/share/{parsed.shareID}/p/{result.slugId}"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="block p-4 rounded border transition-all hover:shadow-md"
+                      style="background-color: var(--ds-surface-raised); border-color: var(--ds-border);"
+                    >
+                      <div class="flex items-start gap-3">
+                        <div class="flex-shrink-0 mt-1">
+                          <BookOpen class="w-5 h-5" style="color: var(--ds-text-link);" />
+                        </div>
+                        <div class="flex-1 min-w-0">
+                          <h3 class="font-medium mb-1" style="color: var(--ds-text);">
+                            {result.title}
+                          </h3>
+                          {#if result.highlight}
+                            <p class="text-sm line-clamp-2 mb-1" style="color: var(--ds-text-subtle);">
+                              {result.highlight.replace(/<[^>]*>/g, '')}
+                            </p>
+                          {:else if result.excerpt}
+                            <p class="text-sm line-clamp-2" style="color: var(--ds-text-subtle);">
+                              {result.excerpt}
+                            </p>
+                          {/if}
+                        </div>
+                        <div class="flex-shrink-0">
+                          <svg class="w-5 h-5" style="color: var(--ds-text-subtle);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                        </div>
                       </div>
-                      <div class="flex-shrink-0">
-                        <svg class="w-5 h-5" style="color: var(--ds-text-subtle);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                        </svg>
-                      </div>
-                    </div>
-                  </a>
+                    </a>
+                  {/if}
                 {/each}
               </div>
             {:else}
@@ -167,6 +241,45 @@
     </div>
   </div>
 </div>
+
+<!-- Published workspace page viewer (knowledge base results) -->
+<ModalBackdrop
+  show={viewedPage !== null}
+  zIndex={70}
+  onclose={closeWorkspacePage}
+>
+  {#if viewedPage}
+    <div
+      class="w-full max-w-3xl max-h-[85vh] rounded shadow-2xl flex flex-col"
+      style="background-color: var(--ds-surface-card);"
+      data-testid="kb-page-viewer"
+    >
+      <div class="flex items-center justify-between p-4 border-b" style="border-color: var(--ds-border);">
+        <h2 class="text-lg font-semibold" style="color: var(--ds-text);">{viewedPage.title}</h2>
+        <button
+          type="button"
+          class="p-1 rounded hover:opacity-70"
+          aria-label={t('common.close')}
+          data-testid="kb-page-viewer-close"
+          onclick={closeWorkspacePage}
+        >
+          <X class="w-5 h-5" style="color: var(--ds-text-subtle);" />
+        </button>
+      </div>
+      <div class="flex-1 overflow-y-auto p-6">
+        {#if viewedPageLoading}
+          <StateDisplay type="loading" message="Loading page..." />
+        {:else if viewedPageError}
+          <StateDisplay type="error" title="Load Failed" message={viewedPageError} />
+        {:else}
+          <div class="prose-kb-page" data-testid="kb-page-viewer-content">
+            {@html renderedViewedPage}
+          </div>
+        {/if}
+      </div>
+    </div>
+  {/if}
+</ModalBackdrop>
 
 <style>
   .hero-gradient {

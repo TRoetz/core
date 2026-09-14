@@ -50,6 +50,13 @@ type PortalHandler struct {
 	draftRepo            *repository.PortalDraftRepository
 	attachmentPath       string
 	eventCoordinator     *services.EventCoordinator
+	publication          *services.KnowledgePublicationService
+}
+
+// SetKnowledgePublicationService wires the resolver for workspace pages
+// published through portal knowledge bases.
+func (h *PortalHandler) SetKnowledgePublicationService(s *services.KnowledgePublicationService) {
+	h.publication = s
 }
 
 // SetApprovalService wires the approval service so portal customers can
@@ -522,8 +529,19 @@ func (h *PortalHandler) loadPortalData(ctx context.Context, channel models.Chann
 	response["knowledge_base_share_link"] = config.KnowledgeBaseShareLink
 	response["knowledge_base_url"] = config.KnowledgeBaseURL
 	response["knowledge_base_share_id"] = config.KnowledgeBaseShareID
+	// Workspace-pages wiring is part of the authenticated portal contract so
+	// the customize panel and the KB itself can mark the exposure.
+	response["knowledge_base_page_sources"] = knowledgeBasePageSourcesResponse(config.KnowledgeBasePageSources)
 
 	return response, nil
+}
+
+// knowledgeBasePageSourcesResponse always serializes the wiring as an array.
+func knowledgeBasePageSourcesResponse(sources []models.KnowledgeBasePageSource) []models.KnowledgeBasePageSource {
+	if sources == nil {
+		return []models.KnowledgeBasePageSource{}
+	}
+	return sources
 }
 
 // loadPortalEntryData returns only the branding needed to identify a portal
@@ -808,7 +826,9 @@ func (h *PortalHandler) SubmitToPortal(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// SearchKnowledgeBase proxies knowledge base search requests to Docmost
+// SearchKnowledgeBase handles portal knowledge-base search. Results come
+// from the connected Docmost share (if configured) plus the workspace pages
+// the channel manager wired into the knowledge base.
 func (h *PortalHandler) SearchKnowledgeBase(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel, _, config, ok := h.resolvePortalBySlug(w, r)
 	if !ok {
@@ -816,7 +836,9 @@ func (h *PortalHandler) SearchKnowledgeBase(w http.ResponseWriter, r *http.Reque
 	}
 	defer cancel()
 
-	if config.KnowledgeBaseURL == "" || config.KnowledgeBaseShareID == "" {
+	docmostConfigured := config.KnowledgeBaseURL != "" && config.KnowledgeBaseShareID != ""
+	pagesWired := h.publication != nil && len(config.KnowledgeBasePageSources) > 0
+	if !docmostConfigured && !pagesWired {
 		respondError(w, r, restapi.NewAPIError(http.StatusNotFound, restapi.ErrCodeNotFound, "Knowledge base not configured for this portal"))
 		return
 	}
@@ -845,33 +867,62 @@ func (h *PortalHandler) SearchKnowledgeBase(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	data := []map[string]any{}
+	var docmostErr *restapi.APIError
+	if docmostConfigured {
+		docmostErr = h.searchDocmostKnowledgeBase(ctx, config, searchRequest.Query, &data)
+		if docmostErr != nil && !pagesWired {
+			respondError(w, r, docmostErr)
+			return
+		}
+		if docmostErr != nil {
+			slog.Warn("docmost knowledge base search failed; serving workspace page results only",
+				slog.String("component", "portal"), slog.Any("error", docmostErr))
+		}
+	}
+	if pagesWired {
+		if err := h.appendWorkspacePageHits(searchRequest.Query, &data); err != nil {
+			slog.Error("failed to search published workspace pages",
+				slog.String("component", "portal"), slog.Any("error", err))
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(map[string]any{"data": data})
+}
+
+// knowledgeBasePageSearchLimit caps how many published workspace pages one
+// search returns.
+const knowledgeBasePageSearchLimit = 25
+
+// searchDocmostKnowledgeBase proxies a search to the connected Docmost
+// share and appends its result items (tagged source "docmost") to data.
+// A non-2xx or oversized response is a BAD_GATEWAY APIError.
+func (h *PortalHandler) searchDocmostKnowledgeBase(ctx context.Context, config models.ChannelConfig, query string, data *[]map[string]any) *restapi.APIError {
 	if err := utils.ValidateExternalURL(config.KnowledgeBaseURL); err != nil {
-		respondError(w, r, restapi.NewAPIError(http.StatusBadGateway, "BAD_GATEWAY", "Failed to connect to knowledge base"))
-		return
+		return restapi.NewAPIError(http.StatusBadGateway, "BAD_GATEWAY", "Failed to connect to knowledge base")
 	}
 
 	docmostURL := fmt.Sprintf("%s/api/search/share-search", config.KnowledgeBaseURL)
 	requestBody, err := json.Marshal(map[string]string{
-		"query":   searchRequest.Query,
+		"query":   query,
 		"shareId": config.KnowledgeBaseShareID,
 	})
 	if err != nil {
-		respondInternalError(w, r, err)
-		return
+		return restapi.NewAPIError(http.StatusInternalServerError, "INTERNAL", "Internal server error")
 	}
 
 	req, err := http.NewRequestWithContext(ctx, "POST", docmostURL, bytes.NewBuffer(requestBody))
 	if err != nil {
-		respondInternalError(w, r, err)
-		return
+		return restapi.NewAPIError(http.StatusInternalServerError, "INTERNAL", "Internal server error")
 	}
 	req.Header.Set("Content-Type", "application/json")
 
 	client := utils.NewSSRFSafeHTTPClient(10 * time.Second)
 	resp, err := client.Do(req)
 	if err != nil {
-		respondError(w, r, restapi.NewAPIError(http.StatusBadGateway, "BAD_GATEWAY", "Failed to connect to knowledge base"))
-		return
+		return restapi.NewAPIError(http.StatusBadGateway, "BAD_GATEWAY", "Failed to connect to knowledge base")
 	}
 	defer func() { _ = resp.Body.Close() }()
 
@@ -881,22 +932,87 @@ func (h *PortalHandler) SearchKnowledgeBase(w http.ResponseWriter, r *http.Reque
 	const maxKBResponseBytes = 2 << 20
 	body, err := io.ReadAll(io.LimitReader(resp.Body, maxKBResponseBytes+1))
 	if err != nil {
-		respondInternalError(w, r, err)
-		return
+		return restapi.NewAPIError(http.StatusInternalServerError, "INTERNAL", "Internal server error")
 	}
 	if len(body) > maxKBResponseBytes {
-		respondError(w, r, restapi.NewAPIError(http.StatusBadGateway, "BAD_GATEWAY", "Knowledge base response was too large"))
-		return
+		return restapi.NewAPIError(http.StatusBadGateway, "BAD_GATEWAY", "Knowledge base response was too large")
 	}
-
 	if resp.StatusCode != http.StatusOK {
-		respondError(w, r, restapi.NewAPIError(http.StatusBadGateway, "BAD_GATEWAY", "Knowledge base search failed"))
+		return restapi.NewAPIError(http.StatusBadGateway, "BAD_GATEWAY", "Knowledge base search failed")
+	}
+
+	var parsed struct {
+		Data []map[string]any `json:"data"`
+	}
+	if err := json.Unmarshal(body, &parsed); err != nil {
+		return restapi.NewAPIError(http.StatusBadGateway, "BAD_GATEWAY", "Knowledge base search failed")
+	}
+	for _, item := range parsed.Data {
+		if item != nil {
+			item["source"] = "docmost"
+			*data = append(*data, item)
+		}
+	}
+	return nil
+}
+
+// appendWorkspacePageHits searches the workspace pages wired into this
+// portal's knowledge base and appends them to data marked with the
+// workspace_page source.
+func (h *PortalHandler) appendWorkspacePageHits(query string, data *[]map[string]any) error {
+	hits, err := h.publication.SearchPublishedPages(query, knowledgeBasePageSearchLimit)
+	if err != nil {
+		return err
+	}
+	for _, hit := range hits {
+		item := map[string]any{
+			"source":       "workspace_page",
+			"page_id":      hit.PageID,
+			"workspace_id": hit.WorkspaceID,
+			"title":        hit.Title,
+			"highlight":    hit.Snippet,
+		}
+		if hit.HeadingPath != "" {
+			item["heading_path"] = hit.HeadingPath
+		}
+		*data = append(*data, item)
+	}
+	return nil
+}
+
+// GetKnowledgeBasePage serves one published workspace page to portal
+// callers. The page must be inside a subtree (or whole-workspace wiring)
+// this portal's knowledge base publishes; anything else is 404.
+func (h *PortalHandler) GetKnowledgeBasePage(w http.ResponseWriter, r *http.Request) {
+	_, cancel, _, config, ok := h.resolvePortalBySlug(w, r)
+	if !ok {
+		return
+	}
+	defer cancel()
+
+	if h.publication == nil || len(config.KnowledgeBasePageSources) == 0 {
+		respondError(w, r, restapi.NewAPIError(http.StatusNotFound, restapi.ErrCodeNotFound, "Page not found"))
+		return
+	}
+	pageID, err := strconv.Atoi(r.PathValue("pageId"))
+	if err != nil {
+		respondInvalidID(w, r, "pageId")
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write(body)
+	page, err := h.publication.PublishedPageForPortal(config, pageID)
+	if err != nil {
+		respondError(w, r, restapi.NewAPIError(http.StatusNotFound, restapi.ErrCodeNotFound, "Page not found"))
+		return
+	}
+	respondJSONOK(w, map[string]any{
+		"source":       "workspace_page",
+		"page_id":      page.ID,
+		"workspace_id": page.WorkspaceID,
+		"title":        page.Title,
+		"content":      page.Content,
+		"updated_at":   page.UpdatedAt,
+	})
 }
 
 // DownloadPortalAttachment serves portal branding attachments (logos, backgrounds) without authentication

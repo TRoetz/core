@@ -541,6 +541,7 @@ type Deps struct {
 	PageDiagrams            pageDiagramApplication
 	PageAccess              pageAccess
 	PageLabels              pageLabelApplication
+	PagePublication         *services.KnowledgePublicationService
 	Worklogs                worklogApplication
 	TimeAccess              timeAccess
 	TimeProjects            timeProjectApplication
@@ -641,6 +642,9 @@ func RegisterRoutes(deps Deps) error {
 	}
 	if deps.PageLabels == nil {
 		return errors.New("v2: PageLabels is required")
+	}
+	if deps.PagePublication == nil {
+		return errors.New("v2: PagePublication is required")
 	}
 	if deps.Worklogs == nil {
 		return errors.New("v2: Worklogs is required")

@@ -135,6 +135,12 @@ func (h *ChannelHandler) SetBaseURL(baseURL string) {
 	h.baseURL = baseURL
 }
 
+// SetKnowledgeBasePageValidator wires the page-existence check used when a
+// portal wires a page subtree into its knowledge base.
+func (h *ChannelHandler) SetKnowledgeBasePageValidator(validate func(workspaceID, pageID int) error) {
+	h.configUpdate.SetKnowledgeBasePageValidator(validate)
+}
+
 // SetEmailScheduler sets the email scheduler (used to avoid circular dependencies)
 func (h *ChannelHandler) SetEmailScheduler(es *scheduler.EmailScheduler) {
 	h.emailScheduler = es

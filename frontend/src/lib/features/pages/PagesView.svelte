@@ -217,6 +217,7 @@
       pageLinks = [];
       pageEffectiveLevel = '';
       pagePermissionsLoaded = false;
+      pagePublication = null;
     }
   });
 
@@ -256,14 +257,33 @@
       void loadPageLinks(id);
       void ensurePageEffectiveLevel(id);
       void ensureLinkTypesLoaded();
+      void loadPagePublication(id);
     } catch (err) {
       if (requestSeq !== loadPageRequestSeq) return;
       error = err?.message || t('pages.errorLoadPage');
       selectedPage = null;
       pageEffectiveLevel = '';
       pagePermissionsLoaded = false;
+      pagePublication = null;
     } finally {
       if (requestSeq === loadPageRequestSeq) loadingPage = false;
+    }
+  }
+
+  // Portal knowledge-base publication state. Non-fatal: a failed lookup
+  // just means no public-viewable banner.
+  let pagePublication = $state(null);
+  let pagePublicationRequestSeq = 0;
+
+  async function loadPagePublication(id) {
+    const requestSeq = ++pagePublicationRequestSeq;
+    try {
+      const publication = await api.pages.getPublication(workspaceId, id);
+      if (requestSeq !== pagePublicationRequestSeq || selectedPage?.id !== id) return;
+      pagePublication = publication;
+    } catch (err) {
+      if (requestSeq !== pagePublicationRequestSeq) return;
+      pagePublication = null;
     }
   }
 
@@ -642,6 +662,15 @@
       data-testid="page-canvas"
       data-width={canvasExpanded ? 'wide' : 'comfortable'}
     >
+      {#if pagePublication?.publicly_viewable}
+        <div class="publication-banner" data-testid="page-publication-banner">
+          {pagePublication.portals?.length
+            ? t('pages.publiclyViewableBannerWithPortals', {
+                portals: pagePublication.portals.join(', '),
+              })
+            : t('pages.publiclyViewableBanner')}
+        </div>
+      {/if}
       <div class="toolbar">
         <div class="actions">
           {#if statusLabel && mode === 'edit' && canEditPage}
@@ -949,6 +978,19 @@
     gap: 1rem;
     align-items: stretch;
     padding: 0 var(--page-gutter);
+  }
+
+  /* Green status bar above the page when a portal knowledge base
+     publishes it. */
+  .publication-banner {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem var(--page-gutter);
+    font-size: 0.8125rem;
+    color: var(--ds-text-success, #065f46);
+    background-color: var(--ds-status-success-bg, rgba(16, 185, 129, 0.12));
+    border-bottom: 1px solid var(--ds-status-success-border, rgba(16, 185, 129, 0.4));
   }
 
   .label-row {

@@ -181,6 +181,24 @@ func (r *PageRepository) GetByID(id int) (*models.Page, error) {
 	return page, nil
 }
 
+// ValidateLivePageInWorkspace asserts that pageID is a non-archived page
+// inside workspaceID. Used as the channel-config guard for wiring a page
+// subtree into a portal knowledge base.
+func (r *PageRepository) ValidateLivePageInWorkspace(workspaceID, pageID int) error {
+	var archived sql.NullTime
+	err := r.db.QueryRow(`SELECT archived_at FROM pages WHERE id = ? AND workspace_id = ?`, pageID, workspaceID).Scan(&archived)
+	if errors.Is(err, sql.ErrNoRows) {
+		return fmt.Errorf("page %d does not exist in workspace %d", pageID, workspaceID)
+	}
+	if err != nil {
+		return fmt.Errorf("check page %d: %w", pageID, err)
+	}
+	if archived.Valid {
+		return fmt.Errorf("page %d is archived", pageID)
+	}
+	return nil
+}
+
 // GetByIDs loads multiple pages in a single query. Missing ids are simply
 // absent from the result — the caller decides how to surface that. The slice
 // is ordered as returned by the database (callers that need a specific order

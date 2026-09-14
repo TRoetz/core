@@ -538,6 +538,24 @@ export default {
       docmostStep3: 'Enable public sharing',
       docmostStep4: 'Copy the share link',
       docmostStep5: 'Paste it above',
+      workspacePagesBadge: 'Workspace page',
+      workspacePagesTitle: 'Workspace Pages',
+      workspacePagesDescription:
+        'Publish a workspace\u2019s Pages tree as part of this knowledge base. Published pages are searchable here and are marked as publicly viewable in the page editor.',
+      workspacePagesNotice:
+        'This knowledge base exposes workspace pages ({count}). Published pages are searchable by portal users and marked as publicly viewable in the editor.',
+      workspacePagesEmpty: 'No workspace pages are published in this knowledge base yet.',
+      workspacePagesPickWorkspace: 'Workspace',
+      workspacePagesPickWorkspacePlaceholder: 'Choose a workspace\u2026',
+      workspacePagesScope: 'Scope',
+      workspacePagesEntire: 'Entire pages tree',
+      workspacePagesSubtree: 'Sub-page (with its sub-pages)',
+      workspacePagesPickPage: 'Start page',
+      workspacePagesPickPagePlaceholder: 'Choose a start page\u2026',
+      workspacePagesAdd: 'Add to knowledge base',
+      workspacePagesRemove: 'Remove from knowledge base',
+      workspacePagesEntryEntire: '{workspace} \u2014 entire pages tree',
+      workspacePagesEntrySubtree: '{workspace} \u2014 sub-page \u201c{page}\u201d',
       // Logo section
       logo: 'Portal Logo',
       logoHelp:

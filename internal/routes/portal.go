@@ -38,6 +38,7 @@ func RegisterPortalRoutes(deps *Deps) {
 		api.HandleH("POST /portal/{slug}/asset-reports/{id}/execute", deps.PortalSearchLimiter.Limit(portalAuth(http.HandlerFunc(deps.Portal.Portal.ExecuteAssetReport))))
 		api.HandleH("GET /portal/{slug}/asset-reports/{id}/fields", portalAuth(http.HandlerFunc(deps.Portal.Portal.GetAssetReportFields)))
 		api.HandleH("POST /portal/{slug}/knowledge-base/search", deps.PortalSearchLimiter.Limit(portalAuth(http.HandlerFunc(deps.Portal.Portal.SearchKnowledgeBase))))
+		api.HandleH("GET /portal/{slug}/knowledge-base/pages/{pageId}", deps.PortalSearchLimiter.Limit(portalAuth(http.HandlerFunc(deps.Portal.Portal.GetKnowledgeBasePage))))
 
 		api.HandleH("GET /portal/{slug}/request-types/{id}/fields", portalAuth(http.HandlerFunc(deps.Portal.Portal.GetRequestTypeFields)))
 		api.HandleH("GET /portal/{slug}/custom-fields", portalAuth(http.HandlerFunc(deps.Portal.Portal.GetCustomFields)))

@@ -42,6 +42,71 @@ CREATE TABLE IF NOT EXISTS test_case_bdd (
 	FOREIGN KEY (test_case_id) REFERENCES test_cases(id) ON DELETE CASCADE
 );
 
+CREATE INDEX IF NOT EXISTS idx_test_folders_workspace_id ON test_folders(workspace_id);
+CREATE INDEX IF NOT EXISTS idx_test_folders_sort_order ON test_folders(sort_order);
+CREATE INDEX IF NOT EXISTS idx_test_folders_parent_id ON test_folders(parent_id);
+CREATE INDEX IF NOT EXISTS idx_test_cases_workspace_id ON test_cases(workspace_id);
+CREATE INDEX IF NOT EXISTS idx_test_cases_folder_id ON test_cases(folder_id);
+CREATE INDEX IF NOT EXISTS idx_test_cases_sort_order ON test_cases(sort_order);
+
+CREATE TABLE IF NOT EXISTS test_sets (
+	id SERIAL PRIMARY KEY,
+	workspace_id INTEGER NOT NULL,
+	name TEXT NOT NULL,
+	description TEXT,
+	milestone_id INTEGER REFERENCES milestones(id) ON DELETE SET NULL,
+	created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+	updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+	FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_test_sets_workspace_id ON test_sets(workspace_id);
+
+CREATE TABLE IF NOT EXISTS set_test_cases (
+	id SERIAL PRIMARY KEY,
+	set_id INTEGER NOT NULL,
+	test_case_id INTEGER NOT NULL,
+	FOREIGN KEY (set_id) REFERENCES test_sets(id) ON DELETE CASCADE,
+	FOREIGN KEY (test_case_id) REFERENCES test_cases(id) ON DELETE CASCADE,
+	UNIQUE(set_id, test_case_id)
+);
+
+CREATE TABLE IF NOT EXISTS test_run_templates (
+	id SERIAL PRIMARY KEY,
+	workspace_id INTEGER NOT NULL,
+	set_id INTEGER NOT NULL,
+	name TEXT NOT NULL,
+	description TEXT DEFAULT '',
+	created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+	updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+	FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE,
+	FOREIGN KEY (set_id) REFERENCES test_sets(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_test_run_templates_workspace_id ON test_run_templates(workspace_id);
+
+-- Follow-up repair for 20260911_bdd_test_case_format: that commit inserted
+-- run-dependent BDD tables above test_runs. SQLite tolerates the forward
+-- references; Postgres does not. This file keeps every FK target ahead of
+-- its dependents.
+-- migration: 20260911_bdd_test_case_format
+CREATE TABLE IF NOT EXISTS test_runs (
+	id SERIAL PRIMARY KEY,
+	workspace_id INTEGER NOT NULL,
+	template_id INTEGER,
+	set_id INTEGER NOT NULL,
+	name TEXT NOT NULL,
+	assignee_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+	started_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+	ended_at TIMESTAMPTZ,
+	created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+	FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE,
+	FOREIGN KEY (template_id) REFERENCES test_run_templates(id) ON DELETE SET NULL,
+	FOREIGN KEY (set_id) REFERENCES test_sets(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_test_runs_workspace_id ON test_runs(workspace_id);
+
 -- Run-scoped snapshot of a BDD case's specification, written when the case
 -- enters a run. Later case edits must not rewrite an existing run.
 CREATE TABLE IF NOT EXISTS test_run_case_snapshots (
@@ -93,65 +158,7 @@ CREATE TABLE IF NOT EXISTS test_example_step_results (
 	UNIQUE(example_result_id, step_number)
 );
 
-CREATE INDEX IF NOT EXISTS idx_test_folders_workspace_id ON test_folders(workspace_id);
-CREATE INDEX IF NOT EXISTS idx_test_folders_sort_order ON test_folders(sort_order);
-CREATE INDEX IF NOT EXISTS idx_test_folders_parent_id ON test_folders(parent_id);
-CREATE INDEX IF NOT EXISTS idx_test_cases_workspace_id ON test_cases(workspace_id);
-CREATE INDEX IF NOT EXISTS idx_test_cases_folder_id ON test_cases(folder_id);
-CREATE INDEX IF NOT EXISTS idx_test_cases_sort_order ON test_cases(sort_order);
 
-CREATE TABLE IF NOT EXISTS test_sets (
-	id SERIAL PRIMARY KEY,
-	workspace_id INTEGER NOT NULL,
-	name TEXT NOT NULL,
-	description TEXT,
-	milestone_id INTEGER REFERENCES milestones(id) ON DELETE SET NULL,
-	created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-	updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-	FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
-);
-
-CREATE INDEX IF NOT EXISTS idx_test_sets_workspace_id ON test_sets(workspace_id);
-
-CREATE TABLE IF NOT EXISTS set_test_cases (
-	id SERIAL PRIMARY KEY,
-	set_id INTEGER NOT NULL,
-	test_case_id INTEGER NOT NULL,
-	FOREIGN KEY (set_id) REFERENCES test_sets(id) ON DELETE CASCADE,
-	FOREIGN KEY (test_case_id) REFERENCES test_cases(id) ON DELETE CASCADE,
-	UNIQUE(set_id, test_case_id)
-);
-
-CREATE TABLE IF NOT EXISTS test_run_templates (
-	id SERIAL PRIMARY KEY,
-	workspace_id INTEGER NOT NULL,
-	set_id INTEGER NOT NULL,
-	name TEXT NOT NULL,
-	description TEXT DEFAULT '',
-	created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-	updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-	FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE,
-	FOREIGN KEY (set_id) REFERENCES test_sets(id) ON DELETE CASCADE
-);
-
-CREATE INDEX IF NOT EXISTS idx_test_run_templates_workspace_id ON test_run_templates(workspace_id);
-
-CREATE TABLE IF NOT EXISTS test_runs (
-	id SERIAL PRIMARY KEY,
-	workspace_id INTEGER NOT NULL,
-	template_id INTEGER,
-	set_id INTEGER NOT NULL,
-	name TEXT NOT NULL,
-	assignee_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
-	started_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-	ended_at TIMESTAMPTZ,
-	created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-	FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE,
-	FOREIGN KEY (template_id) REFERENCES test_run_templates(id) ON DELETE SET NULL,
-	FOREIGN KEY (set_id) REFERENCES test_sets(id) ON DELETE CASCADE
-);
-
-CREATE INDEX IF NOT EXISTS idx_test_runs_workspace_id ON test_runs(workspace_id);
 
 CREATE TABLE IF NOT EXISTS test_results (
 	id SERIAL PRIMARY KEY,

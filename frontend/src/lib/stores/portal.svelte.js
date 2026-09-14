@@ -83,6 +83,9 @@ let footerColumns = $state([
 
 // Knowledge base
 let knowledgeBaseShareLink = $state('');
+// Workspace-pages wiring: entries published through the KB by the channel
+// manager. Each entry is { workspace_id, root_page_id? }.
+let knowledgeBasePageSources = $state([]);
 
 // Pending request type (for opening form after login)
 let pendingRequestType = $state(null);
@@ -93,6 +96,7 @@ let saveTimeout = null;
 
 configurePortalSearchStore({
   getKnowledgeBaseShareLink: () => knowledgeBaseShareLink,
+  getKnowledgeBasePageSources: () => knowledgeBasePageSources,
   getSlug: () => portalData?.slug || currentSlug,
 });
 configurePortalActivityStore({
@@ -151,6 +155,7 @@ async function loadPortal(slug) {
 
     // Load knowledge base configuration
     knowledgeBaseShareLink = portalData.knowledge_base_share_link || '';
+    knowledgeBasePageSources = portalData.knowledge_base_page_sources || [];
 
     // Ensure workspace_ids is always an array
     portalData.workspace_ids = portalData.workspace_ids || [];
@@ -361,6 +366,7 @@ function buildPortalConfig() {
     knowledge_base_share_link: knowledgeBaseShareLink,
     knowledge_base_url: baseURL,
     knowledge_base_share_id: shareID,
+    knowledge_base_page_sources: knowledgeBasePageSources,
     portal_background_image_url: backgroundImageUrl || '',
     portal_logo_url: logoUrl || '',
   };
@@ -403,6 +409,23 @@ async function saveKnowledgeBaseConfig() {
     console.error('Failed to save knowledge base configuration:', err);
     errorToast(`Failed to save knowledge base configuration: ${err.message || err}`);
   }
+}
+
+/**
+ * Wire one workspace pages source (entire tree or sub-page subtree) into
+ * the knowledge base and persist immediately.
+ */
+function addKnowledgeBasePageSource(source) {
+  knowledgeBasePageSources = [...knowledgeBasePageSources, source];
+  void saveKnowledgeBaseConfig();
+}
+
+/**
+ * Remove a workspace pages source from the knowledge base and persist.
+ */
+function removeKnowledgeBasePageSource(index) {
+  knowledgeBasePageSources = knowledgeBasePageSources.filter((_, i) => i !== index);
+  void saveKnowledgeBaseConfig();
 }
 
 /**
@@ -681,6 +704,7 @@ function reset() {
     { title: '', links: [] },
   ];
   knowledgeBaseShareLink = '';
+  knowledgeBasePageSources = [];
   portalSearchStore.reset();
   portalActivityStore.reset();
   pendingRequestType = null;
@@ -829,6 +853,9 @@ export const portalCustomizationStore = {
   set knowledgeBaseShareLink(value) {
     knowledgeBaseShareLink = value;
   },
+  get knowledgeBasePageSources() {
+    return knowledgeBasePageSources;
+  },
   get pendingRequestType() {
     return pendingRequestType;
   },
@@ -842,6 +869,8 @@ export const portalCustomizationStore = {
   selectGradient,
   saveCustomizations,
   saveKnowledgeBaseConfig,
+  addKnowledgeBasePageSource,
+  removeKnowledgeBasePageSource,
   parseDocmostShareLink,
   selectBackgroundImage,
   removeBackgroundImage,

@@ -59,6 +59,12 @@ export default {
     statusUnsaved: 'Есть несохранённые изменения',
     statusError: 'Не удалось сохранить',
 
+    // Public knowledge-base publication banner (green bar above the page)
+    publiclyViewableBanner:
+      'Общедоступно — эта страница опубликована в базе знаний портала и доступна для чтения пользователям портала.',
+    publiclyViewableBannerWithPortals:
+      'Общедоступно — эта страница опубликована в базе знаний «{portals}» и доступна для чтения пользователям портала.',
+
     modeEdit: 'Редактирование',
     modeRead: 'Чтение',
     modeAria: 'Режим просмотра',

@@ -53,6 +53,104 @@
   let showVisibilityModal = $state(false);
   let selectedRequestTypeForVisibility = $state(null);
 
+  // Knowledge-base workspace-pages wiring state (see the knowledge-base
+  // customize section). Workspaces and page titles load lazily when the
+  // section opens; the wiring itself lives in the portal store so both
+  // persistence paths serialize identically.
+  let kbWorkspaceId = $state('');
+  let kbScope = $state('entire');
+  let kbRootPageId = $state('');
+  let kbWorkspaces = $state([]);
+  let kbPages = $state([]);
+  let kbPagesLoading = $state(false);
+  let kbPageTitles = $state({});
+
+  let kbAddReady = $derived(Boolean(kbWorkspaceId) && (kbScope !== 'subtree' || kbRootPageId));
+
+  async function loadKbWorkspaces() {
+    try {
+      kbWorkspaces = (await api.workspaces.getAll()) ?? [];
+    } catch (err) {
+      console.error('Failed to load workspaces for knowledge base wiring:', err);
+      kbWorkspaces = [];
+    }
+  }
+
+  async function loadKbPages(workspaceId) {
+    kbPagesLoading = true;
+    try {
+      const response = await api.pages.getAll(workspaceId);
+      kbPages = Array.isArray(response) ? response : (response?.items ?? []);
+    } catch (err) {
+      console.error('Failed to load pages for knowledge base wiring:', err);
+      kbPages = [];
+    } finally {
+      kbPagesLoading = false;
+    }
+  }
+
+  async function loadKbPageTitles() {
+    const sources = portalStore.knowledgeBasePageSources || [];
+    const workspaceIds = [...new Set(sources.map((s) => s.workspace_id))];
+    for (const workspaceId of workspaceIds) {
+      if (kbPageTitles[workspaceId]) continue;
+      try {
+        const pages = await api.pages.getAll(workspaceId);
+        const rows = Array.isArray(pages) ? pages : (pages?.items ?? []);
+        const titles = { ...kbPageTitles };
+        for (const page of rows) titles[page.id] = page.title;
+        titles[`ws:${workspaceId}`] = true;
+        kbPageTitles = titles;
+      } catch (err) {
+        console.error('Failed to load page titles for knowledge base wiring:', err);
+      }
+    }
+  }
+
+  function onKbWorkspaceChange() {
+    kbRootPageId = '';
+    kbScope = 'entire';
+    kbPages = [];
+    if (kbWorkspaceId) void loadKbPages(Number(kbWorkspaceId));
+  }
+
+  function addKbPageSource() {
+    const workspaceId = Number(kbWorkspaceId);
+    if (!workspaceId) return;
+    const source =
+      kbScope === 'subtree' && kbRootPageId
+        ? { workspace_id: workspaceId, root_page_id: Number(kbRootPageId) }
+        : { workspace_id: workspaceId };
+    portalStore.addKnowledgeBasePageSource(source);
+    kbWorkspaceId = '';
+    kbScope = 'entire';
+    kbRootPageId = '';
+    kbPages = [];
+  }
+
+  function kbSourceLabel(source) {
+    const workspace = kbWorkspaces.find((ws) => ws.id === source.workspace_id);
+    const workspaceName = workspace?.name || `#${source.workspace_id}`;
+    if (source.root_page_id == null) {
+      return t('portal.customize.workspacePagesEntryEntire', { workspace: workspaceName });
+    }
+    const pageTitle = kbPageTitles[source.root_page_id] || `#${source.root_page_id}`;
+    return t('portal.customize.workspacePagesEntrySubtree', {
+      workspace: workspaceName,
+      page: pageTitle,
+    });
+  }
+
+  $effect(() => {
+    if (
+      portalStore.activeSection === 'knowledge-base' &&
+      portalStore.showCustomizePanel
+    ) {
+      if (kbWorkspaces.length === 0) void loadKbWorkspaces();
+      void loadKbPageTitles();
+    }
+  });
+
   function openVisibilityModal(requestType) {
     selectedRequestTypeForVisibility = requestType;
     showVisibilityModal = true;
@@ -369,6 +467,7 @@
       {#snippet children()}
         <button
           onclick={() => portalStore.activeSection = 'knowledge-base'}
+          data-testid="portal-customize-kb-section"
           class="w-10 h-10 rounded flex items-center justify-center cursor-pointer transition-all"
           style="background-color: {portalStore.activeSection === 'knowledge-base' ? 'var(--ds-background-neutral)' : 'transparent'};"
         >
@@ -767,6 +866,127 @@
               <li>{t('portal.customize.docmostStep4')}</li>
               <li>{t('portal.customize.docmostStep5')}</li>
             </ol>
+          </div>
+
+          <!-- Workspace pages wiring -->
+          <div class="pt-4 border-t" style="border-color: var(--ds-border);" data-testid="kb-pages-wiring">
+            <h4 class="text-xs font-medium mb-2" style="color: var(--ds-text);">
+              {t('portal.customize.workspacePagesTitle')}
+            </h4>
+            <p class="text-xs mb-3" style="color: var(--ds-text-subtle);">
+              {t('portal.customize.workspacePagesDescription')}
+            </p>
+
+            {#if portalStore.knowledgeBasePageSources.length > 0}
+              <!-- Clear marker: this knowledge base exposes workspace pages -->
+              <div
+                class="p-3 rounded mb-3"
+                style="background-color: var(--ds-background-neutral); border-left: 3px solid #10b981;"
+                data-testid="kb-pages-wiring-notice"
+              >
+                <div class="flex items-start gap-2 text-xs font-medium" style="color: var(--ds-text);">
+                  <BookOpen class="w-4 h-4 flex-shrink-0" style="color: #10b981;" />
+                  <span>{t('portal.customize.workspacePagesNotice', { count: portalStore.knowledgeBasePageSources.length })}</span>
+                </div>
+              </div>
+              <div class="space-y-2 mb-3">
+                {#each portalStore.knowledgeBasePageSources as source, index}
+                  <div
+                    class="flex items-center justify-between p-2 rounded text-xs"
+                    style="background-color: var(--ds-surface-raised);"
+                    data-testid="kb-page-source-entry"
+                  >
+                    <span style="color: var(--ds-text);">
+                      {kbSourceLabel(source)}
+                    </span>
+                    <button
+                      type="button"
+                      class="p-1 rounded hover:opacity-70"
+                      aria-label={t('portal.customize.workspacePagesRemove')}
+                      data-testid="kb-remove-page-source"
+                      onclick={() => portalStore.removeKnowledgeBasePageSource(index)}
+                    >
+                      <Trash2 class="w-3.5 h-3.5" style="color: var(--ds-text-danger);" />
+                    </button>
+                  </div>
+                {/each}
+              </div>
+            {:else}
+              <p class="text-xs mb-3" style="color: var(--ds-text-subtle);" data-testid="kb-pages-wiring-empty">
+                {t('portal.customize.workspacePagesEmpty')}
+              </p>
+            {/if}
+
+            <div class="space-y-2">
+              <div>
+                <label for="kb-add-workspace" class="block text-xs font-medium mb-1" style="color: var(--ds-text);">
+                  {t('portal.customize.workspacePagesPickWorkspace')}
+                </label>
+                <select
+                  id="kb-add-workspace"
+                  class="w-full text-xs rounded p-2"
+                  style="background-color: var(--ds-surface-raised); color: var(--ds-text); border-color: var(--ds-border);"
+                  bind:value={kbWorkspaceId}
+                  onchange={() => onKbWorkspaceChange()}
+                  data-testid="kb-add-workspace"
+                >
+                  <option value="">{t('portal.customize.workspacePagesPickWorkspacePlaceholder')}</option>
+                  {#each kbWorkspaces as workspace}
+                    <option value={String(workspace.id)}>{workspace.name}</option>
+                  {/each}
+                </select>
+              </div>
+              {#if kbWorkspaceId}
+                <div>
+                  <label for="kb-add-scope" class="block text-xs font-medium mb-1" style="color: var(--ds-text);">
+                    {t('portal.customize.workspacePagesScope')}
+                  </label>
+                  <select
+                    id="kb-add-scope"
+                    class="w-full text-xs rounded p-2"
+                    style="background-color: var(--ds-surface-raised); color: var(--ds-text); border-color: var(--ds-border);"
+                    bind:value={kbScope}
+                    data-testid="kb-add-scope"
+                  >
+                    <option value="entire">{t('portal.customize.workspacePagesEntire')}</option>
+                    <option value="subtree">{t('portal.customize.workspacePagesSubtree')}</option>
+                  </select>
+                </div>
+                {#if kbScope === 'subtree'}
+                  <div>
+                    <label for="kb-add-page" class="block text-xs font-medium mb-1" style="color: var(--ds-text);">
+                      {t('portal.customize.workspacePagesPickPage')}
+                    </label>
+                    {#if kbPagesLoading}
+                      <p class="text-xs" style="color: var(--ds-text-subtle);">{t('common.loading')}</p>
+                    {:else}
+                      <select
+                        id="kb-add-page"
+                        class="w-full text-xs rounded p-2"
+                        style="background-color: var(--ds-surface-raised); color: var(--ds-text); border-color: var(--ds-border);"
+                        bind:value={kbRootPageId}
+                        data-testid="kb-add-page"
+                      >
+                        <option value="">{t('portal.customize.workspacePagesPickPagePlaceholder')}</option>
+                        {#each kbPages as page}
+                          <option value={String(page.id)}>{'\u00a0'.repeat(page.depth * 2)}{page.title}</option>
+                        {/each}
+                      </select>
+                    {/if}
+                  </div>
+                {/if}
+                <button
+                  type="button"
+                  class="w-full p-2 rounded text-xs font-medium"
+                  style="background-color: var(--ds-interactive, #2563eb); color: #ffffff;"
+                  disabled={!kbAddReady}
+                  data-testid="kb-add-page-source"
+                  onclick={addKbPageSource}
+                >
+                  {t('portal.customize.workspacePagesAdd')}
+                </button>
+              {/if}
+            </div>
           </div>
         </div>
       {/if}
