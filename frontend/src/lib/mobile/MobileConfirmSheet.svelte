@@ -16,6 +16,7 @@
    *   busy?: boolean,
    *   onconfirm?: () => void,
    *   onclose?: (() => void) | null,
+   *   pushHistory?: boolean,
    *   dataTestid?: string,
    * }}
    */
@@ -29,11 +30,12 @@
     busy = false,
     onconfirm = () => {},
     onclose = null,
+    pushHistory = true,
     dataTestid = undefined,
   } = $props();
 </script>
 
-<MobileSheet bind:isOpen {title} {onclose} {dataTestid}>
+<MobileSheet bind:isOpen {title} {onclose} {pushHistory} {dataTestid}>
   <div class="confirm">
     {#if message}
       <p class="message" data-testid="mobile-confirm-message">{message}</p>
