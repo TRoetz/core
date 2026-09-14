@@ -23664,6 +23664,315 @@
         ],
         "type": "object"
       },
+      "GetScreensResult": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "builtin_key": {
+                  "description": "The builtin key value.",
+                  "nullable": true,
+                  "type": "string"
+                },
+                "created_at": {
+                  "description": "The created at value.",
+                  "format": "date-time",
+                  "type": "string"
+                },
+                "description": {
+                  "description": "The description value.",
+                  "type": "string"
+                },
+                "fields": {
+                  "description": "The fields value.",
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "display_order": {
+                        "description": "The display order value.",
+                        "type": "integer"
+                      },
+                      "field_config": {
+                        "additionalProperties": {
+                          "description": "Arbitrary JSON extension value."
+                        },
+                        "description": "The field config value.",
+                        "type": "object"
+                      },
+                      "field_identifier": {
+                        "description": "The field identifier value.",
+                        "type": "string"
+                      },
+                      "field_label": {
+                        "description": "The field label value.",
+                        "type": "string"
+                      },
+                      "field_name": {
+                        "description": "The field name value.",
+                        "type": "string"
+                      },
+                      "field_type": {
+                        "description": "The field type value.",
+                        "type": "string"
+                      },
+                      "field_width": {
+                        "description": "The field width value.",
+                        "type": "string"
+                      },
+                      "id": {
+                        "description": "The id value.",
+                        "type": "integer"
+                      },
+                      "is_required": {
+                        "description": "The is required value.",
+                        "type": "boolean"
+                      },
+                      "screen_id": {
+                        "description": "The screen id value.",
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "display_order",
+                      "field_identifier",
+                      "field_type",
+                      "field_width",
+                      "id",
+                      "is_required",
+                      "screen_id"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "id": {
+                  "description": "The id value.",
+                  "type": "integer"
+                },
+                "name": {
+                  "description": "The name value.",
+                  "type": "string"
+                },
+                "system_fields": {
+                  "description": "The system fields value.",
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "updated_at": {
+                  "description": "The updated at value.",
+                  "format": "date-time",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "created_at",
+                "description",
+                "id",
+                "name",
+                "updated_at"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "GetScreensScreenIdFieldsResult": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "display_order": {
+                  "description": "The display order value.",
+                  "type": "integer"
+                },
+                "field_config": {
+                  "additionalProperties": {
+                    "description": "Arbitrary JSON extension value."
+                  },
+                  "description": "The field config value.",
+                  "type": "object"
+                },
+                "field_identifier": {
+                  "description": "The field identifier value.",
+                  "type": "string"
+                },
+                "field_label": {
+                  "description": "The field label value.",
+                  "type": "string"
+                },
+                "field_name": {
+                  "description": "The field name value.",
+                  "type": "string"
+                },
+                "field_type": {
+                  "description": "The field type value.",
+                  "type": "string"
+                },
+                "field_width": {
+                  "description": "The field width value.",
+                  "type": "string"
+                },
+                "id": {
+                  "description": "The id value.",
+                  "type": "integer"
+                },
+                "is_required": {
+                  "description": "The is required value.",
+                  "type": "boolean"
+                },
+                "screen_id": {
+                  "description": "The screen id value.",
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "display_order",
+                "field_identifier",
+                "field_type",
+                "field_width",
+                "id",
+                "is_required",
+                "screen_id"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "GetScreensScreenIdResult": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "additionalProperties": false,
+            "properties": {
+              "builtin_key": {
+                "description": "The builtin key value.",
+                "nullable": true,
+                "type": "string"
+              },
+              "created_at": {
+                "description": "The created at value.",
+                "format": "date-time",
+                "type": "string"
+              },
+              "description": {
+                "description": "The description value.",
+                "type": "string"
+              },
+              "fields": {
+                "description": "The fields value.",
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "display_order": {
+                      "description": "The display order value.",
+                      "type": "integer"
+                    },
+                    "field_config": {
+                      "additionalProperties": {
+                        "description": "Arbitrary JSON extension value."
+                      },
+                      "description": "The field config value.",
+                      "type": "object"
+                    },
+                    "field_identifier": {
+                      "description": "The field identifier value.",
+                      "type": "string"
+                    },
+                    "field_label": {
+                      "description": "The field label value.",
+                      "type": "string"
+                    },
+                    "field_name": {
+                      "description": "The field name value.",
+                      "type": "string"
+                    },
+                    "field_type": {
+                      "description": "The field type value.",
+                      "type": "string"
+                    },
+                    "field_width": {
+                      "description": "The field width value.",
+                      "type": "string"
+                    },
+                    "id": {
+                      "description": "The id value.",
+                      "type": "integer"
+                    },
+                    "is_required": {
+                      "description": "The is required value.",
+                      "type": "boolean"
+                    },
+                    "screen_id": {
+                      "description": "The screen id value.",
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "display_order",
+                    "field_identifier",
+                    "field_type",
+                    "field_width",
+                    "id",
+                    "is_required",
+                    "screen_id"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "id": {
+                "description": "The id value.",
+                "type": "integer"
+              },
+              "name": {
+                "description": "The name value.",
+                "type": "string"
+              },
+              "system_fields": {
+                "description": "The system fields value.",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "updated_at": {
+                "description": "The updated at value.",
+                "format": "date-time",
+                "type": "string"
+              }
+            },
+            "required": [
+              "created_at",
+              "description",
+              "id",
+              "name",
+              "updated_at"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
       "GetStatusCategoriesCategoryIdResult": {
         "additionalProperties": false,
         "properties": {
@@ -47198,6 +47507,140 @@
         ],
         "type": "object"
       },
+      "PatchScreensScreenIdPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "description": "The description value.",
+            "nullable": true,
+            "type": "string"
+          },
+          "name": {
+            "description": "The name value.",
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "PatchScreensScreenIdResult": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "additionalProperties": false,
+            "properties": {
+              "builtin_key": {
+                "description": "The builtin key value.",
+                "nullable": true,
+                "type": "string"
+              },
+              "created_at": {
+                "description": "The created at value.",
+                "format": "date-time",
+                "type": "string"
+              },
+              "description": {
+                "description": "The description value.",
+                "type": "string"
+              },
+              "fields": {
+                "description": "The fields value.",
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "display_order": {
+                      "description": "The display order value.",
+                      "type": "integer"
+                    },
+                    "field_config": {
+                      "additionalProperties": {
+                        "description": "Arbitrary JSON extension value."
+                      },
+                      "description": "The field config value.",
+                      "type": "object"
+                    },
+                    "field_identifier": {
+                      "description": "The field identifier value.",
+                      "type": "string"
+                    },
+                    "field_label": {
+                      "description": "The field label value.",
+                      "type": "string"
+                    },
+                    "field_name": {
+                      "description": "The field name value.",
+                      "type": "string"
+                    },
+                    "field_type": {
+                      "description": "The field type value.",
+                      "type": "string"
+                    },
+                    "field_width": {
+                      "description": "The field width value.",
+                      "type": "string"
+                    },
+                    "id": {
+                      "description": "The id value.",
+                      "type": "integer"
+                    },
+                    "is_required": {
+                      "description": "The is required value.",
+                      "type": "boolean"
+                    },
+                    "screen_id": {
+                      "description": "The screen id value.",
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "display_order",
+                    "field_identifier",
+                    "field_type",
+                    "field_width",
+                    "id",
+                    "is_required",
+                    "screen_id"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "id": {
+                "description": "The id value.",
+                "type": "integer"
+              },
+              "name": {
+                "description": "The name value.",
+                "type": "string"
+              },
+              "system_fields": {
+                "description": "The system fields value.",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "updated_at": {
+                "description": "The updated at value.",
+                "format": "date-time",
+                "type": "string"
+              }
+            },
+            "required": [
+              "created_at",
+              "description",
+              "id",
+              "name",
+              "updated_at"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
       "PatchStatusCategoriesCategoryIdPayload": {
         "additionalProperties": false,
         "properties": {
@@ -68008,6 +68451,142 @@
         ],
         "type": "object"
       },
+      "PostScreensPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "description": "The description value.",
+            "type": "string"
+          },
+          "name": {
+            "description": "The name value.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "description",
+          "name"
+        ],
+        "type": "object"
+      },
+      "PostScreensResult": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "additionalProperties": false,
+            "properties": {
+              "builtin_key": {
+                "description": "The builtin key value.",
+                "nullable": true,
+                "type": "string"
+              },
+              "created_at": {
+                "description": "The created at value.",
+                "format": "date-time",
+                "type": "string"
+              },
+              "description": {
+                "description": "The description value.",
+                "type": "string"
+              },
+              "fields": {
+                "description": "The fields value.",
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "display_order": {
+                      "description": "The display order value.",
+                      "type": "integer"
+                    },
+                    "field_config": {
+                      "additionalProperties": {
+                        "description": "Arbitrary JSON extension value."
+                      },
+                      "description": "The field config value.",
+                      "type": "object"
+                    },
+                    "field_identifier": {
+                      "description": "The field identifier value.",
+                      "type": "string"
+                    },
+                    "field_label": {
+                      "description": "The field label value.",
+                      "type": "string"
+                    },
+                    "field_name": {
+                      "description": "The field name value.",
+                      "type": "string"
+                    },
+                    "field_type": {
+                      "description": "The field type value.",
+                      "type": "string"
+                    },
+                    "field_width": {
+                      "description": "The field width value.",
+                      "type": "string"
+                    },
+                    "id": {
+                      "description": "The id value.",
+                      "type": "integer"
+                    },
+                    "is_required": {
+                      "description": "The is required value.",
+                      "type": "boolean"
+                    },
+                    "screen_id": {
+                      "description": "The screen id value.",
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "display_order",
+                    "field_identifier",
+                    "field_type",
+                    "field_width",
+                    "id",
+                    "is_required",
+                    "screen_id"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "id": {
+                "description": "The id value.",
+                "type": "integer"
+              },
+              "name": {
+                "description": "The name value.",
+                "type": "string"
+              },
+              "system_fields": {
+                "description": "The system fields value.",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "updated_at": {
+                "description": "The updated at value.",
+                "format": "date-time",
+                "type": "string"
+              }
+            },
+            "required": [
+              "created_at",
+              "description",
+              "id",
+              "name",
+              "updated_at"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
       "PostStatusCategoriesPayload": {
         "additionalProperties": false,
         "properties": {
@@ -74509,6 +75088,178 @@
               "watching"
             ],
             "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "PutScreensScreenIdFieldsPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "fields": {
+            "description": "The fields value.",
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "display_order": {
+                  "description": "The display order value.",
+                  "type": "integer"
+                },
+                "field_config": {
+                  "additionalProperties": {
+                    "description": "Arbitrary JSON extension value."
+                  },
+                  "description": "The field config value.",
+                  "type": "object"
+                },
+                "field_identifier": {
+                  "description": "The field identifier value.",
+                  "type": "string"
+                },
+                "field_label": {
+                  "description": "The field label value.",
+                  "type": "string"
+                },
+                "field_name": {
+                  "description": "The field name value.",
+                  "type": "string"
+                },
+                "field_type": {
+                  "description": "The field type value.",
+                  "type": "string"
+                },
+                "field_width": {
+                  "description": "The field width value.",
+                  "type": "string"
+                },
+                "id": {
+                  "description": "The id value.",
+                  "type": "integer"
+                },
+                "is_required": {
+                  "description": "The is required value.",
+                  "type": "boolean"
+                },
+                "screen_id": {
+                  "description": "The screen id value.",
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "display_order",
+                "field_identifier",
+                "field_type",
+                "field_width",
+                "id",
+                "is_required",
+                "screen_id"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "fields"
+        ],
+        "type": "object"
+      },
+      "PutScreensScreenIdFieldsResult": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "display_order": {
+                  "description": "The display order value.",
+                  "type": "integer"
+                },
+                "field_config": {
+                  "additionalProperties": {
+                    "description": "Arbitrary JSON extension value."
+                  },
+                  "description": "The field config value.",
+                  "type": "object"
+                },
+                "field_identifier": {
+                  "description": "The field identifier value.",
+                  "type": "string"
+                },
+                "field_label": {
+                  "description": "The field label value.",
+                  "type": "string"
+                },
+                "field_name": {
+                  "description": "The field name value.",
+                  "type": "string"
+                },
+                "field_type": {
+                  "description": "The field type value.",
+                  "type": "string"
+                },
+                "field_width": {
+                  "description": "The field width value.",
+                  "type": "string"
+                },
+                "id": {
+                  "description": "The id value.",
+                  "type": "integer"
+                },
+                "is_required": {
+                  "description": "The is required value.",
+                  "type": "boolean"
+                },
+                "screen_id": {
+                  "description": "The screen id value.",
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "display_order",
+                "field_identifier",
+                "field_type",
+                "field_width",
+                "id",
+                "is_required",
+                "screen_id"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "PutScreensScreenIdSystemFieldsPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "system_fields": {
+            "description": "The system fields value.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "system_fields"
+        ],
+        "type": "object"
+      },
+      "PutScreensScreenIdSystemFieldsResult": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
           }
         },
         "required": [
@@ -89640,6 +90391,498 @@
         ],
         "x-required-scopes": [
           "items:read"
+        ]
+      }
+    },
+    "/screens": {
+      "get": {
+        "description": "List screens. Results include only resources visible to the authenticated caller; collections use their documented stable order and bounds.",
+        "operationId": "getScreens",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetScreensResult"
+                }
+              }
+            },
+            "description": "List screens response."
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationError"
+          },
+          "403": {
+            "$ref": "#/components/responses/PermissionError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "List screens",
+        "tags": [
+          "Workspace configuration"
+        ],
+        "x-required-scopes": [
+          "screens:read"
+        ]
+      },
+      "post": {
+        "description": "Create screen. The server validates resource ownership and command preconditions before persisting changes. Unknown JSON fields are rejected when the operation accepts a body.",
+        "operationId": "postScreens",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostScreensPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostScreensResult"
+                }
+              }
+            },
+            "description": "Create screen response."
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationError"
+          },
+          "403": {
+            "$ref": "#/components/responses/PermissionError"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLargeError"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaTypeError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Create screen",
+        "tags": [
+          "Workspace configuration"
+        ],
+        "x-required-scopes": [
+          "screens:write"
+        ]
+      }
+    },
+    "/screens/{screen_id}": {
+      "delete": {
+        "description": "Delete screen. The server verifies resource ownership and deletion preconditions before removing the resource.",
+        "operationId": "deleteScreensScreenId",
+        "parameters": [
+          {
+            "description": "The screen identifier.",
+            "in": "path",
+            "name": "screen_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Request completed successfully with no response body."
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationError"
+          },
+          "403": {
+            "$ref": "#/components/responses/PermissionError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Delete screen",
+        "tags": [
+          "Workspace configuration"
+        ],
+        "x-required-scopes": [
+          "screens:write"
+        ]
+      },
+      "get": {
+        "description": "Get screen. Results include only resources visible to the authenticated caller; collections use their documented stable order and bounds.",
+        "operationId": "getScreensScreenId",
+        "parameters": [
+          {
+            "description": "The screen identifier.",
+            "in": "path",
+            "name": "screen_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetScreensScreenIdResult"
+                }
+              }
+            },
+            "description": "Get screen response."
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationError"
+          },
+          "403": {
+            "$ref": "#/components/responses/PermissionError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Get screen",
+        "tags": [
+          "Workspace configuration"
+        ],
+        "x-required-scopes": [
+          "screens:read"
+        ]
+      },
+      "patch": {
+        "description": "Update screen. The operation uses JSON Merge Patch: omitted fields remain unchanged and documented nullable fields accept null. Unknown fields are rejected.",
+        "operationId": "patchScreensScreenId",
+        "parameters": [
+          {
+            "description": "The screen identifier.",
+            "in": "path",
+            "name": "screen_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/merge-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchScreensScreenIdPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PatchScreensScreenIdResult"
+                }
+              }
+            },
+            "description": "Update screen response."
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationError"
+          },
+          "403": {
+            "$ref": "#/components/responses/PermissionError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLargeError"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaTypeError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Update screen",
+        "tags": [
+          "Workspace configuration"
+        ],
+        "x-required-scopes": [
+          "screens:write"
+        ]
+      }
+    },
+    "/screens/{screen_id}/fields": {
+      "get": {
+        "description": "List screen fields. Results include only resources visible to the authenticated caller; collections use their documented stable order and bounds.",
+        "operationId": "getScreensScreenIdFields",
+        "parameters": [
+          {
+            "description": "The screen identifier.",
+            "in": "path",
+            "name": "screen_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetScreensScreenIdFieldsResult"
+                }
+              }
+            },
+            "description": "List screen fields response."
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationError"
+          },
+          "403": {
+            "$ref": "#/components/responses/PermissionError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "List screen fields",
+        "tags": [
+          "Workspace configuration"
+        ],
+        "x-required-scopes": [
+          "screens:read"
+        ]
+      },
+      "put": {
+        "description": "Replace screen fields. The server validates resource ownership and command preconditions before persisting changes. Unknown JSON fields are rejected when the operation accepts a body.",
+        "operationId": "putScreensScreenIdFields",
+        "parameters": [
+          {
+            "description": "The screen identifier.",
+            "in": "path",
+            "name": "screen_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PutScreensScreenIdFieldsPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PutScreensScreenIdFieldsResult"
+                }
+              }
+            },
+            "description": "Replace screen fields response."
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationError"
+          },
+          "403": {
+            "$ref": "#/components/responses/PermissionError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLargeError"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaTypeError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Replace screen fields",
+        "tags": [
+          "Workspace configuration"
+        ],
+        "x-required-scopes": [
+          "screens:write"
+        ]
+      }
+    },
+    "/screens/{screen_id}/system-fields": {
+      "put": {
+        "description": "Replace screen system fields. The server validates resource ownership and command preconditions before persisting changes. Unknown JSON fields are rejected when the operation accepts a body.",
+        "operationId": "putScreensScreenIdSystemFields",
+        "parameters": [
+          {
+            "description": "The screen identifier.",
+            "in": "path",
+            "name": "screen_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PutScreensScreenIdSystemFieldsPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PutScreensScreenIdSystemFieldsResult"
+                }
+              }
+            },
+            "description": "Replace screen system fields response."
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationError"
+          },
+          "403": {
+            "$ref": "#/components/responses/PermissionError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLargeError"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaTypeError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Replace screen system fields",
+        "tags": [
+          "Workspace configuration"
+        ],
+        "x-required-scopes": [
+          "screens:write"
         ]
       }
     },

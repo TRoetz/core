@@ -527,6 +527,7 @@ type Deps struct {
 	Catalog                 catalogReader
 	CatalogMutations        catalogMutationApplication
 	CustomFieldProvisioning *services.CustomFieldProvisioningService
+	Screens                 *services.ScreenProvisioningService
 	HierarchyLevels         *services.EnumService
 	Workspaces              workspaceApplication
 	ItemTemplates           itemTemplateApplication
@@ -775,6 +776,7 @@ func buildRoutes(deps Deps) []route {
 	builder.Read("/users/me", AuthAuthenticated, []string{"users:read"}, getCurrentUser(deps.Users))
 	registerCatalogRoutes(&builder, deps)
 	registerCustomFieldMutationRoutes(&builder, deps)
+	registerScreenRoutes(&builder, deps)
 	registerHierarchyLevelRoutes(&builder, deps)
 	registerScopedCatalogRoutes(&builder, deps.Catalog, deps.Workspaces, deps.ItemTemplates)
 	registerLabelRoutes(&builder, deps)

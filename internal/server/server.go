@@ -1729,6 +1729,7 @@ func (s *Server) initialize() error {
 			EnqueueIndexBuild:        scheduler.EnqueueIndexBuild,
 			CancelPendingIndexBuilds: scheduler.CancelPendingIndexBuilds,
 		}),
+		Screens:           services.NewScreenProvisioningService(s.db),
 		HierarchyLevels:   hierarchyLevelEnumService,
 		Workspaces:        services.NewWorkspaceApplicationService(s.db, v2Access, authorizationCacheInvalidator),
 		ItemTemplates:     services.NewItemTemplateApplicationService(s.db, v2Access),
