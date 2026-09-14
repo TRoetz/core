@@ -287,7 +287,9 @@ func (h *IntegrationItemLinksHandler) RefreshItemLink(w http.ResponseWriter, r *
 		return
 	}
 
-	if !CheckItemPermission(w, r, repository.NewItemRepository(h.db), h.permissionService, itemID, models.PermissionItemView) {
+	// Refreshing writes shared title/icon/URL metadata, so it requires the same
+	// permission as creating or deleting the link.
+	if !CheckItemPermission(w, r, repository.NewItemRepository(h.db), h.permissionService, itemID, models.PermissionItemEdit) {
 		return
 	}
 
