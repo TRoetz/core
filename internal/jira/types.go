@@ -5,6 +5,7 @@ package jira
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strings"
 	"time"
 )
@@ -658,50 +659,78 @@ type SearchOptions struct {
 // Jira Assets (Insight) Types
 // ================================================================
 
+// AssetTime decodes Assets timestamps, which arrive as epoch-millisecond
+// numbers on Cloud and as ISO date-time strings (or null) on Data Center.
+type AssetTime time.Time
+
+func (t *AssetTime) UnmarshalJSON(data []byte) error {
+	if string(data) == "null" {
+		*t = AssetTime(time.Time{})
+		return nil
+	}
+	var millis int64
+	if err := json.Unmarshal(data, &millis); err == nil {
+		*t = AssetTime(time.UnixMilli(millis))
+		return nil
+	}
+	var text string
+	if err := json.Unmarshal(data, &text); err != nil {
+		return fmt.Errorf("asset timestamp is neither epoch millis nor a string: %w", err)
+	}
+	// Cloud sends RFC 3339; Data Center uses Java-style offsets (+0000).
+	for _, layout := range []string{time.RFC3339Nano, "2006-01-02T15:04:05.000-0700", "2006-01-02T15:04:05-0700"} {
+		if parsed, err := time.Parse(layout, text); err == nil {
+			*t = AssetTime(parsed)
+			return nil
+		}
+	}
+	return fmt.Errorf("unrecognized asset timestamp format: %q", text)
+}
+
 // AssetObjectSchema represents a Jira Assets object schema
 type AssetObjectSchema struct {
-	ID              string    `json:"id"`
-	Name            string    `json:"name"`
-	ObjectSchemaKey string    `json:"objectSchemaKey"`
-	Description     string    `json:"description"`
-	Created         time.Time `json:"created"`
-	Updated         time.Time `json:"updated"`
-	ObjectCount     int       `json:"objectCount"`
-	ObjectTypeCount int       `json:"objectTypeCount"`
+	ID              cloudFlexibleID `json:"id"`
+	Name            string          `json:"name"`
+	ObjectSchemaKey string          `json:"objectSchemaKey"`
+	Description     string          `json:"description"`
+	Created         AssetTime       `json:"created"`
+	Updated         AssetTime       `json:"updated"`
+	ObjectCount     int             `json:"objectCount"`
+	ObjectTypeCount int             `json:"objectTypeCount"`
 }
 
 // AssetObjectType represents an object type within a schema
 type AssetObjectType struct {
-	ID                 string                 `json:"id"`
+	ID                 cloudFlexibleID        `json:"id"`
 	Name               string                 `json:"name"`
 	Description        string                 `json:"description"`
 	Icon               *AssetIcon             `json:"icon"`
 	Position           int                    `json:"position"`
-	Created            time.Time              `json:"created"`
-	Updated            time.Time              `json:"updated"`
+	Created            AssetTime              `json:"created"`
+	Updated            AssetTime              `json:"updated"`
 	ObjectCount        int                    `json:"objectCount"`
-	ObjectSchemaID     string                 `json:"objectSchemaId"`
+	ObjectSchemaID     cloudFlexibleID        `json:"objectSchemaId"`
 	Inherited          bool                   `json:"inherited"`
 	AbstractObjectType bool                   `json:"abstractObjectType"`
-	ParentObjectTypeID string                 `json:"parentObjectTypeId,omitempty"`
+	ParentObjectTypeID cloudFlexibleID        `json:"parentObjectTypeId,omitempty"`
 	Attributes         []AssetObjectAttribute `json:"attributes,omitempty"`
 }
 
 // AssetIcon represents an icon for an object type
 type AssetIcon struct {
-	ID    string `json:"id"`
-	Name  string `json:"name"`
-	URL16 string `json:"url16"`
-	URL48 string `json:"url48"`
+	ID    cloudFlexibleID `json:"id"`
+	Name  string          `json:"name"`
+	URL16 string          `json:"url16"`
+	URL48 string          `json:"url48"`
 }
 
 // AssetObjectAttribute represents an attribute definition for an object type
 type AssetObjectAttribute struct {
-	ID                  string            `json:"id"`
+	ID                  cloudFlexibleID   `json:"id"`
 	Name                string            `json:"name"`
 	Label               bool              `json:"label"`
 	Type                int               `json:"type"` // 0=Default, 1=ObjectRef, 2=User, 3=Confluence, etc.
-	TypeValue           string            `json:"typeValue,omitempty"`
+	TypeValue           cloudFlexibleID   `json:"typeValue,omitempty"`
 	DefaultTypeID       int               `json:"defaultTypeId,omitempty"` // For type=0: 0=Text, 1=Integer, 2=Boolean, etc.
 	DefaultType         *AssetDefaultType `json:"defaultType,omitempty"`
 	Description         string            `json:"description"`
@@ -722,12 +751,12 @@ type AssetDefaultType struct {
 
 // AssetObject represents an object instance in Assets
 type AssetObject struct {
-	ID           string                      `json:"id"`
+	ID           cloudFlexibleID             `json:"id"`
 	Label        string                      `json:"label"`
 	ObjectKey    string                      `json:"objectKey"`
 	ObjectType   *AssetObjectType            `json:"objectType"`
-	Created      time.Time                   `json:"created"`
-	Updated      time.Time                   `json:"updated"`
+	Created      AssetTime                   `json:"created"`
+	Updated      AssetTime                   `json:"updated"`
 	HasAvatar    bool                        `json:"hasAvatar"`
 	Timestamp    int64                       `json:"timestamp"`
 	Attributes   []AssetObjectAttributeValue `json:"attributes"`
@@ -737,8 +766,8 @@ type AssetObject struct {
 
 // AssetObjectAttributeValue represents an attribute value on an object
 type AssetObjectAttributeValue struct {
-	ID                    string                `json:"id"`
-	ObjectTypeAttributeID string                `json:"objectTypeAttributeId"`
+	ID                    cloudFlexibleID       `json:"id"`
+	ObjectTypeAttributeID cloudFlexibleID       `json:"objectTypeAttributeId"`
 	ObjectAttributeValues []AssetAttributeValue `json:"objectAttributeValues"`
 }
 
@@ -758,10 +787,10 @@ type AssetAttributeValue struct {
 
 // AssetStatus represents a status in Assets
 type AssetStatus struct {
-	ID          string `json:"id"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Category    int    `json:"category"` // 0=Inactive, 1=Active, 2=Pending
+	ID          cloudFlexibleID `json:"id"`
+	Name        string          `json:"name"`
+	Description string          `json:"description"`
+	Category    int             `json:"category"` // 0=Inactive, 1=Active, 2=Pending
 }
 
 // AssetExtendedInfo contains additional object info

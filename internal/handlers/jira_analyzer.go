@@ -523,10 +523,10 @@ func (h *JiraImportHandler) Analyze(w http.ResponseWriter, r *http.Request) {
 		setNames := jiraAssetSetNames(assetSchemas)
 		for _, schema := range assetSchemas {
 			result.AssetSchemas = append(result.AssetSchemas, JiraAssetSchemaInfo{
-				ID:          schema.ID,
+				ID:          string(schema.ID),
 				Key:         schema.ObjectSchemaKey,
 				Name:        schema.Name,
-				SetName:     setNames[schema.ID],
+				SetName:     setNames[string(schema.ID)],
 				Description: schema.Description,
 				ObjectCount: schema.ObjectCount,
 				TypeCount:   schema.ObjectTypeCount,
@@ -567,10 +567,10 @@ func (h *JiraImportHandler) GetAssetSchemas(w http.ResponseWriter, r *http.Reque
 	setNames := jiraAssetSetNames(schemas)
 	for i, s := range schemas {
 		schemaInfos[i] = JiraAssetSchemaInfo{
-			ID:          s.ID,
+			ID:          string(s.ID),
 			Key:         s.ObjectSchemaKey,
 			Name:        s.Name,
-			SetName:     setNames[s.ID],
+			SetName:     setNames[string(s.ID)],
 			Description: s.Description,
 			ObjectCount: s.ObjectCount,
 			TypeCount:   s.ObjectTypeCount,
