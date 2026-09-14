@@ -8,6 +8,7 @@
   import Input from '../../components/Input.svelte';
   import Label from '../../components/Label.svelte';
   import { publicBaseURL } from '../../runtime/contextPath.js';
+	import TextField from '../../components/TextField.svelte';
 
   let { slug = '', runtimeUrl = '' } = $props();
 
@@ -120,12 +121,20 @@
     <div class="space-y-3">
       <div class="grid grid-cols-2 gap-3">
         <div>
-          <Label color="default" class="mb-1">{t('forms.integration.widthLabel')}</Label>
-          <Input bind:value={iframeWidth} placeholder="100%" />
+          <TextField
+            label={t('forms.integration.widthLabel')}
+            labelColor="default"
+            placeholder="100%"
+            bind:value={iframeWidth}
+          />
         </div>
         <div>
-          <Label color="default" class="mb-1">{t('forms.integration.heightLabel')}</Label>
-          <Input bind:value={iframeHeight} placeholder="600" />
+          <TextField
+            label={t('forms.integration.heightLabel')}
+            labelColor="default"
+            placeholder="600"
+            bind:value={iframeHeight}
+          />
         </div>
       </div>
       <div class="relative">

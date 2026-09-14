@@ -12,6 +12,7 @@
   import { APP_NAME } from '../constants.js';
   import Toggle from '../components/Toggle.svelte';
   import { i18n, SUPPORTED_LOCALES, t } from '../stores/i18n.svelte.js';
+	import TextField from '../components/TextField.svelte';
 
   let {
     isOpen = $bindable(true),
@@ -286,26 +287,28 @@
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label for="password" color="default" required class="mb-2">{t('setup.password')}</Label>
-              <Input
+              <TextField
+                label={t('setup.password')}
                 id="password"
-                type="password"
-                bind:value={adminUser.password}
-                placeholder="••••••••"
                 required
+                labelColor="default"
+                type="password"
+                placeholder="••••••••"
                 size="small"
+                bind:value={adminUser.password}
               />
             </div>
 
             <div>
-              <Label for="confirm_password" color="default" required class="mb-2">{t('setup.confirmPassword')}</Label>
-              <Input
+              <TextField
+                label={t('setup.confirmPassword')}
                 id="confirm_password"
-                type="password"
-                bind:value={adminUser.confirmPassword}
-                placeholder="••••••••"
                 required
+                labelColor="default"
+                type="password"
+                placeholder="••••••••"
                 size="small"
+                bind:value={adminUser.confirmPassword}
               />
             </div>
           </div>

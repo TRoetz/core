@@ -24,6 +24,7 @@
 	import { formatDateSimple } from '../utils/dateFormatter.js';
 	import { confirm } from '../composables/useConfirm.js';
 	import { publicBaseURL } from '../runtime/contextPath.js';
+	import TextField from '../components/TextField.svelte';
 
 	let users = $state([]);
 	let loading = $state(false);
@@ -480,40 +481,44 @@
 			<form onsubmit={(e) => { e.preventDefault(); saveUser(); }} class="space-y-4">
 				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 					<div>
-						<Label for="first_name" color="default">{t('users.firstName')}</Label>
-						<Input
+						<TextField
+							label={t('users.firstName')}
 							id="first_name"
-							bind:value={formData.first_name}
 							required
+							labelColor="default"
+							bind:value={formData.first_name}
 						/>
 					</div>
 
 					<div>
-						<Label for="last_name" color="default">{t('users.lastName')}</Label>
-						<Input
+						<TextField
+							label={t('users.lastName')}
 							id="last_name"
-							bind:value={formData.last_name}
 							required
+							labelColor="default"
+							bind:value={formData.last_name}
 						/>
 					</div>
 				</div>
 
 				<div>
-					<Label for="email" color="default">{t('common.email')}</Label>
-					<Input
+					<TextField
+						label={t('common.email')}
 						id="email"
+						required
+						labelColor="default"
 						type="email"
 						bind:value={formData.email}
-						required
 					/>
 				</div>
 
 				<div>
-					<Label for="username" color="default">{t('common.username')}</Label>
-					<Input
+					<TextField
+						label={t('common.username')}
 						id="username"
-						bind:value={formData.username}
 						required
+						labelColor="default"
+						bind:value={formData.username}
 					/>
 				</div>
 
@@ -780,12 +785,22 @@
 				</div>
 			{:else}
 				<div>
-					<Label for="token-name" color="default" required>Token name</Label>
-					<Input id="token-name" bind:value={newTokenName} required />
+					<TextField
+						label={"Token name"}
+						id="token-name"
+						required
+						labelColor="default"
+						bind:value={newTokenName}
+					/>
 				</div>
 				<div>
-					<Label for="token-expiry" color="default">Last valid date (optional)</Label>
-					<Input id="token-expiry" type="date" bind:value={newTokenExpiry} />
+					<TextField
+						label={"Last valid date (optional)"}
+						id="token-expiry"
+						labelColor="default"
+						type="date"
+						bind:value={newTokenExpiry}
+					/>
 				</div>
 				{#if tokenTargetUser && !tokenTargetUser.agent_owner_user_id}
 					<AlertBox message="Service users do not inherit an owner's workspace/page permissions. Grant this agent workspace roles or page ACLs separately; scopes only limit what the token may do." />

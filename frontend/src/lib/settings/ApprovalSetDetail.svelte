@@ -18,6 +18,7 @@
   import BasePicker from '../pickers/BasePicker.svelte';
   import TransitionOverrideWarning from '../components/TransitionOverrideWarning.svelte';
   import { toHotkeyString } from '../utils/keyboardShortcuts.js';
+	import TextField from '../components/TextField.svelte';
 
   // Vocabulary mirrored from internal/models/configuration.go.
   const STEP_MODES = [
@@ -782,13 +783,13 @@
                                 {#if step.escalation_action && step.escalation_action !== ''}
                                   <div class="mt-3 pl-4 border-l-2 space-y-2" style="border-color: var(--ds-border-bold);">
                                     <div>
-                                      <Label>{t('approvalSets.escalationAfterHours')}</Label>
-                                      <Input
+                                      <TextField
+                                        label={t('approvalSets.escalationAfterHours')}
                                         type="number"
                                         min="1"
                                         placeholder="24"
-                                        bind:value={step.escalation_after_hours}
                                         size="small"
+                                        bind:value={step.escalation_after_hours}
                                       />
                                     </div>
                                     {#if step.escalation_action === 'reassign'}
@@ -802,13 +803,13 @@
                                           />
                                         </div>
                                         <div>
-                                          <Label>{t('approvalSets.maxEscalations')}</Label>
-                                          <Input
+                                          <TextField
+                                            label={t('approvalSets.maxEscalations')}
                                             type="number"
                                             min="1"
                                             placeholder="∞"
-                                            bind:value={step.max_escalations}
                                             size="small"
+                                            bind:value={step.max_escalations}
                                           />
                                         </div>
                                       </div>

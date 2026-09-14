@@ -31,6 +31,7 @@
   import { customFieldFormData, loadCustomFieldsOverview } from './customFieldsData.js';
   import { BOOLEAN_CUSTOM_FIELD_TYPE, canonicalCustomFieldType, isBooleanCustomFieldType } from '../utils/customFieldTypes.js';
   import { workspaceDataStore } from '../stores/workspaceDataStore.svelte.js';
+	import TextField from '../components/TextField.svelte';
 
   const entityTypeOptions = [
     { id: 'item', name: 'Items' },
@@ -743,13 +744,13 @@
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 
         <div>
-          <Label for="field-name" required class="mb-2">{t('fields.fieldName')}</Label>
-          <Input
+          <TextField
+            label={t('fields.fieldName')}
             id="field-name"
-            dataTestid="custom-field-name"
-            bind:value={formData.field_name}
-            placeholder="e.g., Sprint, Epic, Customer Impact"
             required
+            dataTestid="custom-field-name"
+            placeholder="e.g., Sprint, Epic, Customer Impact"
+            bind:value={formData.field_name}
           />
         </div>
 
@@ -958,11 +959,11 @@
             </div>
 
             <div class="p-4 rounded-lg" style="background: var(--ds-surface); border: 1px solid var(--ds-border);">
-              <Label for="linking-mirror-name" class="mb-2">Mirror Field Name (optional)</Label>
-              <Input
+              <TextField
+                label={"Mirror Field Name (optional)"}
                 id="linking-mirror-name"
+                placeholder="e.g., &quot;Blocks&quot; (reverse of &quot;Blocked By&quot;)"
                 bind:value={linkingMirrorName}
-                placeholder='e.g., "Blocks" (reverse of "Blocked By")'
               />
               <DescriptionText>
                 Creates a reverse field that shows the other side of the relationship. Leave empty for no mirror.

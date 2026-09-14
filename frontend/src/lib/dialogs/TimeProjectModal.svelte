@@ -7,6 +7,7 @@
   import IconSelector from '../pickers/IconSelector.svelte';
   import { t } from '../stores/i18n.svelte.js';
   import DescriptionText from '../components/DescriptionText.svelte';
+	import TextField from '../components/TextField.svelte';
 
   // Props
   let {
@@ -49,8 +50,12 @@
 >
   <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
     <div>
-      <Label required class="mb-2">{t('timeProject.projectName')}</Label>
-      <Input id="time-project-name" bind:value={formData.name} required />
+      <TextField
+        label={t('timeProject.projectName')}
+        id="time-project-name"
+        required
+        bind:value={formData.name}
+      />
     </div>
 
     <div>
@@ -70,8 +75,13 @@
   </div>
 
   <div class="mt-6">
-    <Label class="mb-2">{t('timeProject.hourlyRate')}</Label>
-    <Input type="number" bind:value={formData.hourly_rate} min="0" step="0.01" />
+    <TextField
+      label={t('timeProject.hourlyRate')}
+      type="number"
+      min="0"
+      step="0.01"
+      bind:value={formData.hourly_rate}
+    />
   </div>
 
   <div class="mt-6">

@@ -4,6 +4,7 @@
   import Textarea from '../../components/Textarea.svelte';
   import Label from '../../components/Label.svelte';
   import DescriptionText from '../../components/DescriptionText.svelte';
+	import TextField from '../../components/TextField.svelte';
 
   let {
     formData = $bindable({
@@ -122,8 +123,12 @@
     </div>
 
     <div>
-      <Label color="default" class="mb-2">{t('channel.formLogoUrl')}</Label>
-      <Input bind:value={formData.logo_url} placeholder="https://example.com/logo.png" />
+      <TextField
+        label={t('channel.formLogoUrl')}
+        labelColor="default"
+        placeholder="https://example.com/logo.png"
+        bind:value={formData.logo_url}
+      />
     </div>
 
     <div>
@@ -136,8 +141,12 @@
     </div>
 
     <div>
-      <Label color="default" class="mb-2">{t('channel.formRedirectUrl')}</Label>
-      <Input bind:value={formData.redirect_url} placeholder="https://example.com/thank-you" />
+      <TextField
+        label={t('channel.formRedirectUrl')}
+        labelColor="default"
+        placeholder="https://example.com/thank-you"
+        bind:value={formData.redirect_url}
+      />
       <DescriptionText>
         {t('channel.formRedirectUrlHelp')}
       </DescriptionText>

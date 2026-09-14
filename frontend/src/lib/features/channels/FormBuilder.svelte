@@ -26,6 +26,7 @@
   import { publicBaseURL } from '../../runtime/contextPath.js';
   import FormFieldPalette from './FormFieldPalette.svelte';
   import FormPreviewModal from './FormPreviewModal.svelte';
+	import TextField from '../../components/TextField.svelte';
 
   let {
     channelId,
@@ -537,8 +538,12 @@
             />
 
             <div>
-              <Label color="default" class="mb-2">{t('forms.settings.submitButton')}</Label>
-              <Input bind:value={formBuilderStore.formConfig.submit_button_text} placeholder="Submit" />
+              <TextField
+                label={t('forms.settings.submitButton')}
+                labelColor="default"
+                placeholder="Submit"
+                bind:value={formBuilderStore.formConfig.submit_button_text}
+              />
             </div>
 
             <div>
@@ -548,8 +553,12 @@
             </div>
 
             <div>
-              <Label color="default" class="mb-2">{t('forms.settings.redirectUrl')}</Label>
-              <Input bind:value={formBuilderStore.formConfig.redirect_url} placeholder="https://example.com/thank-you" />
+              <TextField
+                label={t('forms.settings.redirectUrl')}
+                labelColor="default"
+                placeholder="https://example.com/thank-you"
+                bind:value={formBuilderStore.formConfig.redirect_url}
+              />
               <DescriptionText>Optional HTTPS destination opened after a successful response.</DescriptionText>
             </div>
 

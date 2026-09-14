@@ -11,6 +11,7 @@
   import { api } from '../api.js';
   import { t } from '../stores/i18n.svelte.js';
   import { errorToast, warningToast } from '../stores/toasts.svelte.js';
+	import TextField from '../components/TextField.svelte';
 
   // Props
   let {
@@ -115,8 +116,11 @@
         </div>
 
         <div>
-          <Label class="mb-2">{t('organization.email')}</Label>
-          <Input type="email" bind:value={formData.email} />
+          <TextField
+            label={t('organization.email')}
+            type="email"
+            bind:value={formData.email}
+          />
         </div>
       </div>
 

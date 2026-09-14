@@ -31,6 +31,7 @@
   import { toHotkeyString } from '../../utils/keyboardShortcuts.js';
   import { formatDateSimple } from '../../utils/dateFormatter.js';
   import { fetchAssetCategories, fetchAssetStatuses, flattenCategories } from './shared/assetSetUtils.js';
+	import TextField from '../../components/TextField.svelte';
 
   // Props for detail view
   let { assetId = null } = $props();
@@ -928,13 +929,14 @@
   <form onsubmit={(e) => { e.preventDefault(); handleAssetSubmit(); }} class="p-6">
     <div class="space-y-4">
       <div>
-        <Label color="default" class="mb-1">Title</Label>
-        <Input
+        <TextField
+          label={"Title"}
           id="asset-title-input"
-          type="text"
-          bind:value={assetFormData.title}
           required
+          labelColor="default"
+          type="text"
           size="small"
+          bind:value={assetFormData.title}
         />
       </div>
       <div>
@@ -946,12 +948,13 @@
         />
       </div>
       <div>
-        <Label color="default" class="mb-1">Asset Tag</Label>
-        <Input
+        <TextField
+          label={"Asset Tag"}
           id="asset-tag-input"
+          labelColor="default"
           type="text"
-          bind:value={assetFormData.asset_tag}
           size="small"
+          bind:value={assetFormData.asset_tag}
         />
       </div>
       <div>

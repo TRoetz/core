@@ -5,6 +5,7 @@
   import { GitMerge, GitBranch, GitCommit } from '@lucide/svelte';
   import { t } from '../stores/i18n.svelte.js';
   import SCMRepositoryModal from './SCMRepositoryModal.svelte';
+	import TextField from '../components/TextField.svelte';
 
   let { itemId, oncreated, onclose } = $props();
 
@@ -196,12 +197,13 @@
 
         <!-- Title (optional) -->
         <div>
-          <Label color="default" class="mb-1.5">{t('scm.titleOptional')}</Label>
-          <Input
+          <TextField
+            label={t('scm.titleOptional')}
+            labelColor="default"
             type="text"
-            bind:value={title}
             placeholder="e.g., Add user authentication"
             size="small"
+            bind:value={title}
           />
         </div>
 

@@ -10,6 +10,7 @@
   import DescriptionText from '../../components/DescriptionText.svelte';
   import Toggle from '../../components/Toggle.svelte';
   import { isSystemAdmin } from '../../stores/permissions.svelte.js';
+	import TextField from '../../components/TextField.svelte';
 
   let {
     channelId,
@@ -116,12 +117,24 @@
     <div class="space-y-4">
       <div class="grid grid-cols-2 gap-4">
         <div>
-          <Label color="default" required class="mb-2">{t('channel.smtpHost')}</Label>
-          <Input type="text" bind:value={formData.host} required placeholder="smtp.example.com" />
+          <TextField
+            label={t('channel.smtpHost')}
+            required
+            labelColor="default"
+            type="text"
+            placeholder="smtp.example.com"
+            bind:value={formData.host}
+          />
         </div>
         <div>
-          <Label color="default" required class="mb-2">{t('channel.smtpPort')}</Label>
-          <Input type="number" bind:value={formData.port} required placeholder="587" />
+          <TextField
+            label={t('channel.smtpPort')}
+            required
+            labelColor="default"
+            type="number"
+            placeholder="587"
+            bind:value={formData.port}
+          />
         </div>
       </div>
 
@@ -181,8 +194,14 @@
       <h5 class="text-sm font-semibold mb-3" style="color: var(--ds-text);">{t('channel.senderSettings')}</h5>
       <div class="space-y-4">
         <div>
-          <Label color="default" required class="mb-2">{t('channel.smtpFromEmail')}</Label>
-          <Input type="email" bind:value={formData.from_email} required placeholder="noreply@example.com" />
+          <TextField
+            label={t('channel.smtpFromEmail')}
+            required
+            labelColor="default"
+            type="email"
+            placeholder="noreply@example.com"
+            bind:value={formData.from_email}
+          />
         </div>
         <div>
           <Label color="default" class="mb-2">{t('channel.smtpFromName')}</Label>

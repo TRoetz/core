@@ -12,6 +12,7 @@
   import Toggle from '../../components/Toggle.svelte';
   import { publicBaseURL } from '../../runtime/contextPath.js';
   import { isSystemAdmin } from '../../stores/permissions.svelte.js';
+	import TextField from '../../components/TextField.svelte';
 
   let {
     channelId,
@@ -223,8 +224,13 @@
         <!-- OAuth Credentials -->
         <div class="grid grid-cols-2 gap-4">
           <div>
-            <Label color="default" required class="mb-2">{t('channel.clientId')}</Label>
-            <Input bind:value={formData.oauth_client_id} placeholder="Application (client) ID" />
+            <TextField
+              label={t('channel.clientId')}
+              required
+              labelColor="default"
+              placeholder="Application (client) ID"
+              bind:value={formData.oauth_client_id}
+            />
           </div>
           <div>
             <Label color="default" required class="mb-2">{t('channel.clientSecret')}</Label>
@@ -238,8 +244,12 @@
 
         {#if formData.oauth_provider_type === 'microsoft'}
           <div>
-            <Label color="default" class="mb-2">{t('channel.tenantId')}</Label>
-            <Input bind:value={formData.oauth_tenant_id} placeholder="common (multi-tenant) or specific tenant ID" />
+            <TextField
+              label={t('channel.tenantId')}
+              labelColor="default"
+              placeholder="common (multi-tenant) or specific tenant ID"
+              bind:value={formData.oauth_tenant_id}
+            />
             <DescriptionText>
               {t('channel.tenantIdHelp')}
             </DescriptionText>
@@ -295,13 +305,23 @@
 
         <div class="grid grid-cols-2 gap-4">
           <div>
-            <Label color="default" required class="mb-2">{t('channel.imapHost')}</Label>
-            <Input bind:value={formData.imap_host} placeholder="imap.example.com" />
+            <TextField
+              label={t('channel.imapHost')}
+              required
+              labelColor="default"
+              placeholder="imap.example.com"
+              bind:value={formData.imap_host}
+            />
           </div>
           <div class="grid grid-cols-2 gap-4">
             <div>
-              <Label color="default" class="mb-2">{t('channel.port')}</Label>
-              <Input type="number" bind:value={formData.imap_port} placeholder="993" />
+              <TextField
+                label={t('channel.port')}
+                labelColor="default"
+                type="number"
+                placeholder="993"
+                bind:value={formData.imap_port}
+              />
             </div>
             <div>
               <Label color="default" class="mb-2">{t('channel.encryption')}</Label>
@@ -312,12 +332,23 @@
 
         <div class="grid grid-cols-2 gap-4">
           <div>
-            <Label color="default" required class="mb-2">{t('channel.username')}</Label>
-            <Input bind:value={formData.imap_username} placeholder="user@example.com" />
+            <TextField
+              label={t('channel.username')}
+              required
+              labelColor="default"
+              placeholder="user@example.com"
+              bind:value={formData.imap_username}
+            />
           </div>
           <div>
-            <Label color="default" required class="mb-2">{t('channel.password')}</Label>
-            <Input type="password" bind:value={formData.imap_password} placeholder="Enter password to update" />
+            <TextField
+              label={t('channel.password')}
+              required
+              labelColor="default"
+              type="password"
+              placeholder="Enter password to update"
+              bind:value={formData.imap_password}
+            />
             <DescriptionText>{t('channel.leaveBlankPassword')}</DescriptionText>
           </div>
         </div>
@@ -356,8 +387,12 @@
       <h5 class="text-sm font-medium" style="color: var(--ds-text);">{t('channel.processingOptions')}</h5>
 
       <div>
-        <Label color="default" class="mb-2">{t('channel.mailbox')}</Label>
-        <Input bind:value={formData.mailbox} placeholder="INBOX" />
+        <TextField
+          label={t('channel.mailbox')}
+          labelColor="default"
+          placeholder="INBOX"
+          bind:value={formData.mailbox}
+        />
         <DescriptionText>{t('channel.mailboxHelp')}</DescriptionText>
       </div>
 

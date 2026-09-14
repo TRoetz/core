@@ -10,6 +10,7 @@
   import Input from '../../components/Input.svelte';
   import Label from '../../components/Label.svelte';
   import Textarea from '../../components/Textarea.svelte';
+	import TextField from '../../components/TextField.svelte';
 
   let {
     isOpen = $bindable(false),
@@ -92,8 +93,8 @@
           </div>
 
           <div>
-            <Label for="milestone-target-date" class="mb-2">{t('milestones.targetDate')}</Label>
-            <Input
+            <TextField
+              label={t('milestones.targetDate')}
               id="milestone-target-date"
               type="date"
               bind:value={formData.target_date}

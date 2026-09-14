@@ -19,6 +19,7 @@
   import { getUserTimezone } from '../utils/dateFormatter.js';
   import { authStore } from '../stores/auth.svelte.js';
   import { dateKeyInZone, formatClockInZone } from '../utils/worklogTimezone.js';
+	import TextField from '../components/TextField.svelte';
 
   // Configuration props
   let {
@@ -359,12 +360,13 @@
 
       <!-- Date -->
       <div>
-        <Label color="default" class="mb-2">{t('common.date')}</Label>
-        <Input
+        <TextField
+          label={t('common.date')}
           id="time-log-date"
+          labelColor="default"
           type="date"
-          bind:value={formData.date}
           size="small"
+          bind:value={formData.date}
         />
       </div>
     </div>

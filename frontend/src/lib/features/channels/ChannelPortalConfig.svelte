@@ -7,6 +7,7 @@
   import WorkspacePicker from '../../pickers/WorkspacePicker.svelte';
   import DescriptionText from '../../components/DescriptionText.svelte';
   import Toggle from '../../components/Toggle.svelte';
+	import TextField from '../../components/TextField.svelte';
 
   let {
     formData = $bindable({
@@ -89,11 +90,12 @@
     </div>
 
     <div>
-      <Label color="default" class="mb-2">{t('channel.portalTitle')}</Label>
-      <Input
-        bind:value={formData.title}
+      <TextField
+        label={t('channel.portalTitle')}
+        labelColor="default"
         placeholder="Support Portal"
         dataTestid="channel-portal-title"
+        bind:value={formData.title}
       />
     </div>
 

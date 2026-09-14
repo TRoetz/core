@@ -12,6 +12,7 @@
   import DescriptionText from '../../components/DescriptionText.svelte';
   import Toggle from '../../components/Toggle.svelte';
   import Radio from '../../components/Radio.svelte';
+	import TextField from '../../components/TextField.svelte';
 
   let {
     channelId,
@@ -161,8 +162,14 @@
     <div class="space-y-6">
       <div class="space-y-4">
         <div>
-          <Label color="default" required class="mb-2">{t('channel.webhookUrl')}</Label>
-          <Input type="url" bind:value={formData.url} required placeholder="https://your-server.com/webhook" />
+          <TextField
+            label={t('channel.webhookUrl')}
+            required
+            labelColor="default"
+            type="url"
+            placeholder="https://your-server.com/webhook"
+            bind:value={formData.url}
+          />
         </div>
 
         <div>
