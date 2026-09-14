@@ -117,11 +117,7 @@
         </div>
 
         <div>
-          <TextField
-            label={t('organization.email')}
-            type="email"
-            bind:value={formData.email}
-          />
+          <TextField label={t('organization.email')} type="email" bind:value={formData.email} />
         </div>
       </div>
 
@@ -200,11 +196,7 @@
       </div>
 
       <div class="mt-6">
-        <TextareaField
-          label={t('common.description')}
-          rows={3}
-          bind:value={formData.description}
-        />
+        <TextareaField label={t('common.description')} rows={3} bind:value={formData.description} />
       </div>
 
       <div class="mt-6">

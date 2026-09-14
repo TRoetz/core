@@ -111,6 +111,10 @@ class ItemDetailStore {
   loading = $state(true);
   error = $state(null);
   saving = $state(false);
+  // Latest requested save per field while another save is in flight; replayed
+  // on completion so rapid edits are not dropped.
+  #pendingSaves = new Map();
+  #drainingPendingSaves = false;
   // The detail view closes when an SSE deletion or refresh 404 sets this.
   notFound = $state(false);
 
@@ -852,7 +856,16 @@ class ItemDetailStore {
   }
 
   async saveField(field, directValue = null, assigneeName = null, iterationName = null) {
-    if (this.saving) return;
+    if (this.saving) {
+      // A save is in flight; remember the latest requested value per field
+      // and replay it when that save finishes so rapid edits are not lost.
+      this.#pendingSaves.set(field, {
+        directValue: this.#resolveSaveValue(field, directValue),
+        assigneeName,
+        iterationName,
+      });
+      return;
+    }
 
     try {
       this.saving = true;
@@ -1041,7 +1054,40 @@ class ItemDetailStore {
       throw err;
     } finally {
       this.saving = false;
+      await this.#drainPendingSaves();
       this.#runPendingRefresh();
+    }
+  }
+
+  // Resolve an editing-state value into a direct value so a queued save keeps
+  // writing the same content after the editor closes.
+  #resolveSaveValue(field, directValue) {
+    if (directValue !== null || !field.startsWith('custom_field_')) {
+      return directValue;
+    }
+    const fieldId = field.replace('custom_field_', '');
+    const value = this.editing.customFields.values[fieldId];
+    return value !== undefined ? value : null;
+  }
+
+  // Replay queued saves sequentially; the nested saveField call re-enters
+  // this drain in its own finally, so guard against double processing.
+  async #drainPendingSaves() {
+    if (this.#drainingPendingSaves) return;
+    this.#drainingPendingSaves = true;
+    try {
+      while (this.#pendingSaves.size > 0) {
+        const [field, pending] = this.#pendingSaves.entries().next().value;
+        this.#pendingSaves.delete(field);
+        await this.saveField(
+          field,
+          pending.directValue,
+          pending.assigneeName,
+          pending.iterationName
+        );
+      }
+    } finally {
+      this.#drainingPendingSaves = false;
     }
   }
 
@@ -1255,6 +1301,8 @@ class ItemDetailStore {
     this.#loadToken += 1;
     this.#refreshToken += 1;
     this.#refreshPending = false;
+    this.#pendingSaves.clear();
+    this.#drainingPendingSaves = false;
     this.#loadController?.abort();
     this.#refreshController?.abort();
     this.#linksController?.abort();

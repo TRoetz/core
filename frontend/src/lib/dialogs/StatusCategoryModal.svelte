@@ -86,11 +86,7 @@
 
       {#if !isEditing}
         <div class="mb-6">
-          <TextareaField
-            label={t('common.description')}
-            rows={2}
-            bind:value={formData.description}
-          />
+          <TextareaField label={t('common.description')} rows={2} bind:value={formData.description} />
         </div>
       {/if}
 

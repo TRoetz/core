@@ -252,11 +252,7 @@
 {#if !objectId}
   <div class="space-y-4">
     <div>
-      <TextField
-        label={t('settings.localizedObjects.baseName')}
-        required
-        bind:value={canonicalName}
-      />
+      <TextField label={t('settings.localizedObjects.baseName')} required bind:value={canonicalName} />
     </div>
     {#if includesDescription}
       <div>
