@@ -13,6 +13,7 @@
   import Button from '../../components/Button.svelte';
   import Label from '../../components/Label.svelte';
   import FormField from '../../components/FormField.svelte';
+  import GherkinField from './GherkinField.svelte';
   import Card from '../../components/Card.svelte';
   import Panel from '../../components/Panel.svelte';
   import Lozenge from '../../components/Lozenge.svelte';
@@ -81,8 +82,11 @@
     priority: 'medium',
     status: 'active',
     estimated_hours: 0,
-    estimated_minutes: 0
+    estimated_minutes: 0,
+    format: 'steps',
+    gherkin: ''
   });
+  let caseFormError = $state(null);
 
   // Priority options for test cases
   const priorityOptions = $derived([
@@ -253,13 +257,16 @@
   function showAddCaseForm() {
     showCaseForm = true;
     editingCase = null;
+    caseFormError = null;
     caseFormData = {
       title: '',
       preconditions: '',
       priority: 'medium',
       status: 'active',
       estimated_hours: 0,
-      estimated_minutes: 0
+      estimated_minutes: 0,
+      format: 'steps',
+      gherkin: ''
     };
 
     // Auto-focus the title field after the modal renders
@@ -270,9 +277,20 @@
     }, 100);
   }
 
-  function showEditCaseForm(testCase) {
+  async function showEditCaseForm(testCase) {
     showCaseForm = true;
     editingCase = testCase;
+    caseFormError = null;
+    // The list payload omits BDD content; fetch the detail for the source.
+    let bdd = testCase.bdd || null;
+    if (testCase.format === 'bdd' && !bdd) {
+      try {
+        const detail = await api.tests.testCases.get(workspaceId, testCase.id);
+        bdd = detail?.bdd || null;
+      } catch (err) {
+        console.error('Failed to load BDD content:', err);
+      }
+    }
     const { hours, minutes } = secondsToHoursMinutes(testCase.estimated_duration || 0);
     caseFormData = {
       title: testCase.title,
@@ -280,7 +298,9 @@
       priority: testCase.priority || 'medium',
       status: testCase.status || 'active',
       estimated_hours: hours,
-      estimated_minutes: minutes
+      estimated_minutes: minutes,
+      format: testCase.format || 'steps',
+      gherkin: bdd?.gherkin || ''
     };
 
     // Auto-focus the title field after the modal renders
@@ -314,6 +334,12 @@
   }
 
   async function handleCaseSubmit() {
+    caseFormError = null;
+    const isBdd = caseFormData.format === 'bdd';
+    if (isBdd && !caseFormData.gherkin.trim()) {
+      caseFormError = t('testing.gherkinRequired');
+      return;
+    }
     try {
       const payload = {
         title: caseFormData.title,
@@ -327,6 +353,19 @@
         folder_id: selectedFolder
       };
 
+      if (isBdd) {
+        // The scenario name is the title's source of truth: send Gherkin and
+        // let the backend derive (create) or re-sync (edit) the title.
+        if (!editingCase) {
+          payload.format = 'bdd';
+          payload.gherkin = caseFormData.gherkin;
+          delete payload.title;
+        } else {
+          payload.gherkin = caseFormData.gherkin;
+          delete payload.title;
+        }
+      }
+
       if (editingCase) {
         await api.tests.testCases.update(workspaceId, editingCase.id, payload);
       } else {
@@ -339,6 +378,7 @@
       showCaseForm = false;
     } catch (error) {
       console.error('Failed to save test case:', error);
+      caseFormError = error?.message || t('testing.failedToSaveCase');
     }
   }
 
@@ -1141,13 +1181,24 @@
   />
   <form onsubmit={(e) => { e.preventDefault(); handleCaseSubmit(); }}>
     <div class="p-6 pb-2">
-      <FormField label={t('common.title')} required>
+      {#if editingCase?.format === 'bdd'}
+        <div class="mb-4 flex items-center gap-2">
+          <Lozenge text={t('testing.formatBDD')} />
+          <span class="text-xs" style="color: var(--ds-text-subtle);">{t('testing.formatImmutableNote')}</span>
+        </div>
+      {/if}
+
+      <FormField label={t('common.title')} required={caseFormData.format !== 'bdd'}>
         <Input
           bind:value={caseFormData.title}
-          required
+          required={caseFormData.format !== 'bdd'}
+          disabled={caseFormData.format === 'bdd'}
           size="small"
           dataTestid="test-case-title"
         />
+        {#if caseFormData.format === 'bdd'}
+          <p class="text-xs mt-1" style="color: var(--ds-text-subtle);">{t('testing.titleFromScenarioNote')}</p>
+        {/if}
       </FormField>
 
       <!-- Priority, Status, and Duration row -->
@@ -1181,6 +1232,26 @@
         </FormField>
       </div>
 
+      <!-- Format picker (creation only — the backend has no format conversion) -->
+      {#if !editingCase}
+        <FormField label={t('testing.caseFormat')}>
+          <Select
+            bind:value={caseFormData.format}
+            size="small"
+            options={[
+              { value: 'steps', label: t('testing.formatSteps') },
+              { value: 'bdd', label: t('testing.formatBDD') }
+            ]}
+          />
+        </FormField>
+      {/if}
+
+      {#if caseFormData.format === 'bdd'}
+        <FormField label={t('testing.gherkinLabel')} required>
+          <GherkinField bind:value={caseFormData.gherkin} {workspaceId} />
+        </FormField>
+      {/if}
+
       <FormField label={t('testing.preconditions')}>
         <Textarea
           bind:value={caseFormData.preconditions}
@@ -1192,12 +1263,18 @@
       </FormField>
 
       <!-- Information for new test cases -->
-      {#if !editingCase}
+      {#if !editingCase && caseFormData.format !== 'bdd'}
         <div class="mb-6">
           <p class="text-sm" style="color: var(--ds-text-subtle);">
             {t('testing.testCaseStepsInfo')}
           </p>
         </div>
+      {/if}
+
+      {#if caseFormError}
+        <p class="mb-4 text-sm" style="color: var(--ds-text-danger);" data-testid="test-case-form-error">
+          {caseFormError}
+        </p>
       {/if}
     </div>
     <DialogFooter
