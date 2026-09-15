@@ -118,6 +118,7 @@ func (ec *EventCoordinator) emitItemCreatedInternal(item *models.Item, actorUser
 			WorkspaceID: item.WorkspaceID,
 			ItemID:      item.ID,
 			ActorUserID: actorUserID,
+			ItemTypeID:  item.ItemTypeID,
 			NewValues: map[string]any{
 				"title":        item.Title,
 				"status_id":    item.StatusID,
@@ -183,6 +184,7 @@ func (ec *EventCoordinator) emitItemUpdatedInternal(original, updated *models.It
 				WorkspaceID: updated.WorkspaceID,
 				ItemID:      updated.ID,
 				ActorUserID: actorUserID,
+				ItemTypeID:  updated.ItemTypeID,
 				OldValues:   oldVals,
 				NewValues:   newVals,
 			}

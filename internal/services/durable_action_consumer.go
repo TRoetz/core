@@ -260,6 +260,7 @@ func actionEventFromDomainEvent(event events.Event) (*models.ActionEvent, string
 		actionEvent.EventType = models.ActionTriggerItemCreated
 		actionEvent.WorkspaceID = payload.Item.WorkspaceID
 		actionEvent.ItemID = payload.Item.ID
+		actionEvent.ItemTypeID = payload.Item.ItemTypeID
 		actionEvent.NewValues = itemSnapshotValues(payload.Item)
 		applyAutomation(actionEvent, payload.Automation)
 	case itemevents.Updated:
@@ -270,6 +271,7 @@ func actionEventFromDomainEvent(event events.Event) (*models.ActionEvent, string
 		actionEvent.EventType = models.ActionTriggerItemUpdated
 		actionEvent.WorkspaceID = payload.Item.WorkspaceID
 		actionEvent.ItemID = payload.Item.ID
+		actionEvent.ItemTypeID = payload.Item.ItemTypeID
 		actionEvent.OldValues, actionEvent.NewValues = changedValues(payload.Changes)
 		applyAutomation(actionEvent, payload.Automation)
 	case itemevents.StatusChanged:
@@ -280,6 +282,7 @@ func actionEventFromDomainEvent(event events.Event) (*models.ActionEvent, string
 		actionEvent.EventType = models.ActionTriggerStatusTransition
 		actionEvent.WorkspaceID = payload.Item.WorkspaceID
 		actionEvent.ItemID = payload.Item.ID
+		actionEvent.ItemTypeID = payload.Item.ItemTypeID
 		actionEvent.OldValues = map[string]any{"status_id": payload.OldStatusID}
 		actionEvent.NewValues = itemSnapshotValues(payload.Item)
 		actionEvent.NewValues["status_id"] = payload.NewStatusID

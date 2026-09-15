@@ -984,8 +984,12 @@ type ActionEvent struct {
 	WorkspaceID int               `json:"workspace_id"`
 	ItemID      int               `json:"item_id"`
 	ActorUserID int               `json:"actor_user_id"`
-	OldValues   map[string]any    `json:"old_values,omitempty"` // Previous field values
-	NewValues   map[string]any    `json:"new_values,omitempty"` // New field values
+	// ItemTypeID is the item's type at event time. NewValues carries only
+	// changed fields for item.updated, so type-filter matching reads this
+	// instead. Nil on events that predate the field.
+	ItemTypeID *int           `json:"item_type_id,omitempty"`
+	OldValues  map[string]any `json:"old_values,omitempty"` // Previous field values
+	NewValues  map[string]any `json:"new_values,omitempty"` // New field values
 	// Cascade control fields for loop prevention
 	TriggeredByAction bool   `json:"triggered_by_action,omitempty"` // True if this event was emitted by an action
 	ExecutionChainID  string `json:"execution_chain_id,omitempty"`  // UUID to look up cached chain state for cycle detection

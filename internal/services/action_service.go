@@ -456,7 +456,13 @@ func (as *ActionService) matchesDestinationStatusCategory(isCompleted *bool, new
 
 func matchesItemActionTrigger(config models.ActionTriggerConfig, event *models.ActionEvent) bool {
 	if config.ItemTypeID != nil {
-		itemTypeID := utils.InterfaceToIntPtr(event.NewValues["item_type_id"])
+		// item.updated events carry only changed fields in NewValues, so the
+		// item's type must come from the event itself. Fall back to NewValues
+		// for events persisted before ItemTypeID existed.
+		itemTypeID := event.ItemTypeID
+		if itemTypeID == nil {
+			itemTypeID = utils.InterfaceToIntPtr(event.NewValues["item_type_id"])
+		}
 		if itemTypeID == nil || *itemTypeID != *config.ItemTypeID {
 			return false
 		}

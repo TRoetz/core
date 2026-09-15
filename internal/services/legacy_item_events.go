@@ -59,6 +59,7 @@ func (e *LegacyItemUpdatedEmitter) EmitItemUpdated(original, updated *models.Ite
 				WorkspaceID: updated.WorkspaceID,
 				ItemID:      updated.ID,
 				ActorUserID: actorUserID,
+				ItemTypeID:  updated.ItemTypeID,
 				OldValues: map[string]any{
 					"status_id":   original.StatusID,
 					"assignee_id": original.AssigneeID,

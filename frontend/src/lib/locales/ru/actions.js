@@ -283,6 +283,9 @@ export default {
       trigger: {
         itemId: 'ID элемента, вызвавшего действие',
         workspaceId: 'ID рабочего пространства',
+        actorUserId: 'Пользователь, вызвавший действие',
+        newField: 'Новое значение изменённого поля, например trigger.new_iteration_id',
+        oldField: 'Предыдущее значение изменённого поля, например trigger.old_iteration_id',
       },
     },
     switchToVertical: 'Расположить вертикально',

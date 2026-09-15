@@ -36,7 +36,10 @@
       key: 'trigger',
       items: [
         { placeholder: '{{trigger.item_id}}', descKey: 'trigger.itemId' },
-        { placeholder: '{{trigger.workspace_id}}', descKey: 'trigger.workspaceId' }
+        { placeholder: '{{trigger.workspace_id}}', descKey: 'trigger.workspaceId' },
+        { placeholder: '{{trigger.actor_user_id}}', descKey: 'trigger.actorUserId' },
+        { placeholder: '{{trigger.new_<field>}}', descKey: 'trigger.newField' },
+        { placeholder: '{{trigger.old_<field>}}', descKey: 'trigger.oldField' }
       ]
     }
   ];

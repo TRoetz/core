@@ -65,6 +65,7 @@ func newStatusTransitionActionEvent(original, updated *models.Item, actorUserID 
 		WorkspaceID: updated.WorkspaceID,
 		ItemID:      updated.ID,
 		ActorUserID: actorUserID,
+		ItemTypeID:  updated.ItemTypeID,
 		OldValues:   map[string]any{"status_id": original.StatusID},
 		NewValues: map[string]any{
 			"status_id":   updated.StatusID,

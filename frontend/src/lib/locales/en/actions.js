@@ -296,6 +296,9 @@ export default {
       trigger: {
         itemId: 'Triggering item ID',
         workspaceId: 'Workspace ID',
+        actorUserId: 'User who triggered the action',
+        newField: 'New value of a changed field, e.g. trigger.new_iteration_id',
+        oldField: 'Previous value of a changed field, e.g. trigger.old_iteration_id',
       },
     },
     switchToVertical: 'Switch to vertical layout',
