@@ -116,7 +116,7 @@ type roadmapHierarchyDatesRequest struct {
 	RootIDs []int `json:"root_ids"`
 }
 
-func registerItemRoutes(builder *routeBuilder, app *services.ItemApplicationService, detail *services.ItemDetailApplicationService, requestTimeout time.Duration) {
+func registerItemRoutes(builder *routeBuilder, app *services.ItemApplicationService, detail *services.ItemDetailApplicationService, rollupAccess resourceAccess, rollup storyPointRollupReader, requestTimeout time.Duration) {
 	collection := "/items"
 	builder.Page("/items/search", AuthAuthenticated, []string{"items:read"}, searchItems(app, requestTimeout))
 	builder.PageMetadata(collection, AuthAuthenticated, []string{"items:read"}, func(r *http.Request) ([]models.Item, Pagination, int, itemListMeta, error) {
@@ -206,6 +206,33 @@ func registerItemRoutes(builder *routeBuilder, app *services.ItemApplicationServ
 		}
 		result, err := detail.Get(r.Context(), user.ID, id, r.URL.Query().Get("surface"))
 		return result, itemError(err)
+	})
+	builder.Read(collection+"/story-points/by-assignee", AuthAuthenticated, []string{"items:read"}, func(r *http.Request) ([]repository.StoryPointsByAssigneeRow, error) {
+		user, err := principal(r)
+		if err != nil {
+			return nil, err
+		}
+		workspaceIDs, err := rollupAccess.GetAccessibleWorkspaceIDs(user.ID)
+		if err != nil {
+			return nil, internalError(err)
+		}
+		// Optional narrowing to one workspace; a non-accessible one 404s like
+		// other workspace-scoped reads (no existence leak).
+		if raw := r.URL.Query().Get("workspace_id"); raw != "" {
+			workspaceID, convErr := strconv.Atoi(raw)
+			if convErr != nil || workspaceID < 1 {
+				return nil, newError(http.StatusBadRequest, "invalid_request", "workspace_id must be a positive integer")
+			}
+			if !slices.Contains(workspaceIDs, workspaceID) {
+				return nil, newError(http.StatusNotFound, "not_found", "Workspace not found")
+			}
+			workspaceIDs = []int{workspaceID}
+		}
+		rows, err := rollup.GroupOpenStoryPointsByAssignee(workspaceIDs)
+		if err != nil {
+			return nil, internalError(err)
+		}
+		return rows, nil
 	})
 	builder.Read(collection+"/{item_id}", AuthAuthenticated, []string{"items:read"}, func(r *http.Request) (*models.Item, error) {
 		user, err := principal(r)

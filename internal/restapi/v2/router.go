@@ -294,6 +294,7 @@ type resourceAccess interface {
 	CanViewWorkspace(int, int) (bool, error)
 	CanEditWorkspace(int, int) (bool, error)
 	CanAdminWorkspace(int, int) (bool, error)
+	GetAccessibleWorkspaceIDs(int) ([]int, error)
 }
 
 type preferencesApplication interface {
@@ -531,6 +532,7 @@ type Deps struct {
 	WorkspaceRoles               *services.WorkspaceRoleProvisioningService
 	ConfigurationSetProvisioning *services.ConfigurationSetProvisioningService
 	ConfigurationSetExport       *services.ConfigSetExportService
+	StoryPointRollup             storyPointRollupReader
 	HierarchyLevels              *services.EnumService
 	Workspaces                   workspaceApplication
 	ItemTemplates                itemTemplateApplication
@@ -806,7 +808,7 @@ func buildRoutes(deps Deps) []route {
 	registerActionRoutes(&builder, deps.Actions)
 	registerTestManagementRoutes(&builder, deps.TestManagement)
 	registerAssetRoutes(&builder, deps.Assets)
-	registerItemRoutes(&builder, deps.ItemApplication, deps.ItemDetail, deps.DBRequestTimeout)
+	registerItemRoutes(&builder, deps.ItemApplication, deps.ItemDetail, deps.Access, deps.StoryPointRollup, deps.DBRequestTimeout)
 	applyEmbeddedContractMetadata(builder.routes, contractMetadataJSON)
 	return builder.routes
 }
@@ -1435,4 +1437,9 @@ func methodNotAllowed(methods []string) Handler {
 
 func notFound(http.ResponseWriter, *http.Request) error {
 	return newError(http.StatusNotFound, "not_found", "Resource not found")
+}
+
+// storyPointRollupReader exposes the open-item story-point aggregate (GH #255).
+type storyPointRollupReader interface {
+	GroupOpenStoryPointsByAssignee(workspaceIDs []int) ([]repository.StoryPointsByAssigneeRow, error)
 }

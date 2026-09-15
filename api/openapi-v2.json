@@ -22450,6 +22450,46 @@
         ],
         "type": "object"
       },
+      "GetItemsStoryPointsByAssigneeResult": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "assignee_id": {
+                  "description": "The assignee id value.",
+                  "type": "integer"
+                },
+                "display_name": {
+                  "description": "The display name value.",
+                  "type": "string"
+                },
+                "item_count": {
+                  "description": "The item count value.",
+                  "type": "integer"
+                },
+                "total_points": {
+                  "description": "The total points value.",
+                  "type": "number"
+                }
+              },
+              "required": [
+                "assignee_id",
+                "display_name",
+                "item_count",
+                "total_points"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
       "GetIterationsIterationIdBurndownResult": {
         "additionalProperties": false,
         "properties": {
@@ -87854,6 +87894,63 @@
           }
         ],
         "summary": "Search items",
+        "tags": [
+          "Work items"
+        ],
+        "x-required-scopes": [
+          "items:read"
+        ]
+      }
+    },
+    "/items/story-points/by-assignee": {
+      "get": {
+        "description": "Sum story points by assignee. Results include only resources visible to the authenticated caller; collections use their documented stable order and bounds.",
+        "operationId": "getItemsStoryPointsByAssignee",
+        "parameters": [
+          {
+            "description": "Narrow the aggregate to one workspace. Must be a workspace the caller can view; otherwise 404.",
+            "in": "query",
+            "name": "workspace_id",
+            "required": false,
+            "schema": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetItemsStoryPointsByAssigneeResult"
+                }
+              }
+            },
+            "description": "Sum story points by assignee response."
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationError"
+          },
+          "403": {
+            "$ref": "#/components/responses/PermissionError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Sum story points by assignee",
         "tags": [
           "Work items"
         ],

@@ -5068,6 +5068,34 @@
         ]
       }
     },
+    "/items/story-points/by-assignee": {
+      "get": {
+        "description": "Sum story points by assignee. Results include only resources visible to the authenticated caller; collections use their documented stable order and bounds.",
+        "parameters": [
+          {
+            "Name": "workspace_id",
+            "In": "query",
+            "Description": "Narrow the aggregate to one workspace. Must be a workspace the caller can view; otherwise 404.",
+            "Required": false,
+            "Schema": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "401": {},
+          "403": {},
+          "404": {},
+          "429": {},
+          "500": {}
+        },
+        "summary": "Sum story points by assignee",
+        "tags": [
+          "Work items"
+        ]
+      }
+    },
     "/items/{item_id}": {
       "delete": {
         "description": "Deletes only the item by default, detaching direct children so descendants survive. Set cascade=true to delete the entire subtree, including descendants in other workspaces. Requires item.delete in every workspace containing an item to delete; if the parent is deletable but the cascade is forbidden, returns 403 with \"This item can be deleted on its own, but cascade deletion is not permitted.\" and changes nothing. No blocking relationship details are disclosed. The operation locks the affected tree before authorization and deletion. Both modes return 204 with no response body. Unlike v1, cascading must be requested explicitly.",
