@@ -310,6 +310,7 @@ const (
 	ActionUserPasswordReset = "user.password_reset"
 	ActionUserActivate      = "user.activate"
 	ActionUserDeactivate    = "user.deactivate"
+	ActionUserErase         = "user.erase"
 
 	// Authentication
 	ActionLoginSuccess   = "login.success"

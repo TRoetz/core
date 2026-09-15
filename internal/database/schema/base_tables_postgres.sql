@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS users (
 	scim_managed BOOLEAN DEFAULT false, -- If true, user is managed via SCIM
 	scim_deleted_at TIMESTAMPTZ, -- Set when the IdP deprovisioned the user via SCIM DELETE; row retained but hidden from every SCIM query (RFC 7644 §3.6)
 	offboarded_at TIMESTAMPTZ, -- Set when the account is administratively offboarded; never cleared, every activation path must reject it
+	erased_at TIMESTAMPTZ, -- Set when the account completed Article 17 erasure; implies offboarded_at and is never cleared
 	is_agent BOOLEAN DEFAULT false, -- If true, user is a non-human agent (API-only; cannot log in)
 	agent_owner_user_id INTEGER REFERENCES users(id) ON DELETE CASCADE, -- NULL = service user (admin-provisioned); non-NULL = owned agent
 	-- Distinguishes how an agent row got created. 'user' covers both the

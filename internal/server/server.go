@@ -619,6 +619,17 @@ func (s *Server) initialize() error {
 		},
 		userDeactivationService.DeactivateUser,
 		sessionManager.InvalidateUserSessionValidation,
+		func(id int, actor services.AuditActor, input services.UserErasureInput) (services.UserErasureEvidence, error) {
+			evidence, result, err := services.EraseUser(s.db, id, actor, input, s.notificationService, authorizationCacheInvalidator)
+			if len(result.RevokedAPITokenIDs) > 0 {
+				tokenManager.InvalidateTokens(result.RevokedAPITokenIDs)
+			}
+			sessionManager.InvalidateUserSessionValidation(id)
+			if err == nil {
+				s.revokeUserRemoteGrants(result.RemoteRevocations)
+			}
+			return evidence, err
+		},
 	)
 	groupHandler := handlers.NewGroupHandler(repository.NewGroupRepository(s.db), permService, logger.NewAuditor(s.db), authorizationCacheInvalidator)
 	credentialHandler := handlers.NewCredentialHandler(repository.NewCredentialRepository(s.db), logger.NewAuditor(s.db), permService, cfg.SSH.Enabled)

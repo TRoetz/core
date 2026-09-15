@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"math/big"
 	"net/http"
+	"time"
 
 	"windshift/internal/logger"
 	"windshift/internal/models"
@@ -28,6 +29,7 @@ type UserHandler struct {
 	deactivateCascade  func(id int) (services.AgentDeactivationResult, error)
 	invalidateSessions func(id int)
 	workspaceUsers     *services.WorkspaceUserResolver
+	eraseUser          func(id int, actor services.AuditActor, input services.UserErasureInput) (services.UserErasureEvidence, error)
 }
 
 // SetWorkspaceUserResolver wires the shared picker and validation roster.
@@ -75,10 +77,10 @@ type UpdateRegionalSettingsRequest struct {
 	Language string `json:"language"`
 }
 
-// NewUserHandler creates a UserHandler. offboardUser and deactivateCascade are
-// dependency-injected closures over services.OffboardUser and
-// services.DeactivateOwnedAgentsAndTokens; injecting them at construction lets
-// the handler stay free of the database import.
+// NewUserHandler creates a UserHandler. offboardUser, deactivateCascade, and
+// eraseUser are dependency-injected closures over services.OffboardUser,
+// services.DeactivateOwnedAgentsAndTokens, and services.EraseUser; injecting
+// them at construction lets the handler stay free of the database import.
 func NewUserHandler(
 	repo *repository.UserRepository,
 	auditor *logger.Auditor,
@@ -88,6 +90,7 @@ func NewUserHandler(
 	offboardUser func(id int) error,
 	deactivateCascade func(id int) (services.AgentDeactivationResult, error),
 	invalidateSessions func(id int),
+	eraseUser func(id int, actor services.AuditActor, input services.UserErasureInput) (services.UserErasureEvidence, error),
 ) *UserHandler {
 	return &UserHandler{
 		repo:               repo,
@@ -98,6 +101,7 @@ func NewUserHandler(
 		offboardUser:       offboardUser,
 		deactivateCascade:  deactivateCascade,
 		invalidateSessions: invalidateSessions,
+		eraseUser:          eraseUser,
 	}
 }
 
@@ -469,6 +473,67 @@ func (h *UserHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	h.invalidateUserSessions(id)
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// UserErasureRequest is the DSAR intake payload for POST /users/{id}/erase.
+type UserErasureRequest struct {
+	// RequestedBy records where the erasure request came from — the data
+	// subject's email or an intake-channel reference. Required.
+	RequestedBy string `json:"requested_by"`
+	// RequestedAt is when the controller received the request; defaults to now.
+	RequestedAt *time.Time `json:"requested_at,omitempty"`
+	// Notes optionally records the controller's decision context.
+	Notes string `json:"notes,omitempty"`
+}
+
+// Erase executes an irreversible Article 17 erasure (DSAR) on top of the
+// security offboarding primitive and persists the DSAR completion evidence.
+// Distinct from Delete: erasure is a documented data-subject right execution,
+// not an administrative deactivation. Audit logs are intentionally untouched
+// — their pseudonymized user IDs are retained per the erasure policy.
+func (h *UserHandler) Erase(w http.ResponseWriter, r *http.Request) {
+	id, ok := requireIDParam(w, r, "id")
+	if !ok {
+		return
+	}
+
+	currentUser := utils.GetCurrentUser(r)
+	if currentUser != nil && currentUser.ID == id {
+		respondForbidden(w, r)
+		return
+	}
+
+	body, ok := decodeJSON[UserErasureRequest](w, r)
+	if !ok {
+		return
+	}
+
+	input := services.UserErasureInput{RequestedBy: body.RequestedBy, Notes: body.Notes}
+	if body.RequestedAt != nil {
+		input.RequestedAt = *body.RequestedAt
+	}
+
+	actor := services.NewAuditActorFromRequest(r, currentUser, nil, "")
+	evidence, err := h.eraseUser(id, actor, input)
+	if err != nil {
+		if errors.Is(err, services.ErrUserAlreadyErased) {
+			respondConflict(w, r, "User has already been erased")
+			return
+		}
+		if errors.Is(err, services.ErrUserOffboardingHasProtectedIntegrationLinks) {
+			respondConflict(w, r, "Cannot erase user while their personal workspace contains protected integration links")
+			return
+		}
+		if se, ok := err.(*services.ServiceError); ok {
+			handleServiceError(w, r, se)
+			return
+		}
+		respondInternalError(w, r, err)
+		return
+	}
+
+	h.invalidateUserSessions(id)
+	respondJSONCreated(w, evidence)
 }
 
 // ResetPasswordRequest represents the request to reset a user's password

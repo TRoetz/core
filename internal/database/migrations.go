@@ -1081,6 +1081,48 @@ var Catalog = []Migration{
 		Postgres:      `ALTER TABLE users ADD COLUMN IF NOT EXISTS scim_deleted_at TIMESTAMPTZ`,
 	},
 	{
+		Version:       "20260914_users_erased_at",
+		Name:          "Add irreversible Article 17 erasure state to users (WI-1307)",
+		CheckSQLite:   sqliteColumnCheck("users", "erased_at"),
+		CheckPostgres: pgColumnCheck("users", "erased_at"),
+		SQLite:        `ALTER TABLE users ADD COLUMN erased_at DATETIME`,
+		Postgres:      `ALTER TABLE users ADD COLUMN IF NOT EXISTS erased_at TIMESTAMPTZ`,
+	},
+	{
+		Version:       "20260914_user_erasure_records",
+		Name:          "Add DSAR erasure completion evidence table (WI-1307)",
+		CheckSQLite:   sqliteTableCheck("user_erasure_records"),
+		CheckPostgres: pgTableCheck("user_erasure_records"),
+		SQLite: `
+			CREATE TABLE IF NOT EXISTS user_erasure_records (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				user_id INTEGER NOT NULL,
+				requested_by TEXT NOT NULL,
+				requested_at DATETIME NOT NULL,
+				approved_by INTEGER NOT NULL,
+				executed_at DATETIME NOT NULL,
+				policy_version TEXT NOT NULL,
+				notes TEXT,
+				FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+			);
+			CREATE INDEX IF NOT EXISTS idx_user_erasure_records_user_id ON user_erasure_records(user_id);
+		`,
+		Postgres: `
+			CREATE TABLE IF NOT EXISTS user_erasure_records (
+				id SERIAL PRIMARY KEY,
+				user_id INTEGER NOT NULL,
+				requested_by TEXT NOT NULL,
+				requested_at TIMESTAMPTZ NOT NULL,
+				approved_by INTEGER NOT NULL,
+				executed_at TIMESTAMPTZ NOT NULL,
+				policy_version TEXT NOT NULL,
+				notes TEXT,
+				FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+			);
+			CREATE INDEX IF NOT EXISTS idx_user_erasure_records_user_id ON user_erasure_records(user_id);
+		`,
+	},
+	{
 		Version:       "20260905_notification_email_claims",
 		Name:          "Add recoverable notification email claims",
 		CheckSQLite:   sqliteColumnCheck("notifications", "email_delivery_state"),
