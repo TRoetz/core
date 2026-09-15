@@ -404,24 +404,19 @@ func (r *ApprovalSetRepository) IsWorkspacePersonal(ctx context.Context, workspa
 	return resolved.IsPersonal, nil
 }
 
-// ResolveForWorkspace mirrors the resolution order in
-// ApprovalService.GetApprovalSetIDForItem: item-type override on the
-// workspace's bound config-set → workspace-level default → global default.
+// ResolveForWorkspace returns the effective approval set for a workspace and
+// optional item type via the canonical configuration resolution: item-type
+// override on the assigned config set (else the global default config set).
 // Returns (nil, nil) when no approval set is configured.
 func (r *ApprovalSetRepository) ResolveForWorkspace(ctx context.Context, workspaceID int, itemTypeID *int) (*int, error) {
-	configRepo := NewConfigurationSetRepository(r.db)
-	resolved, err := configRepo.ResolveForWorkspace(ctx, workspaceID, itemTypeID)
-	if err != nil {
+	resolved, err := NewConfigurationSetRepository(r.db).ResolveEffective(ctx, workspaceID, itemTypeID)
+	if err != nil || resolved == nil {
 		return nil, err
 	}
-	if resolved != nil && resolved.ApprovalSetID != nil {
-		return resolved.ApprovalSetID, nil
+	if resolved.IsPersonal {
+		return nil, nil
 	}
-	defaultConfig, err := configRepo.ResolveDefault(ctx, itemTypeID)
-	if err != nil || defaultConfig == nil {
-		return nil, err
-	}
-	return defaultConfig.ApprovalSetID, nil
+	return resolved.ApprovalSetID, nil
 }
 
 // ============================================================================

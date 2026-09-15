@@ -3,7 +3,6 @@
   import { untrack } from 'svelte';
   import { t } from '../../stores/i18n.svelte.js';
   import { api } from '../../api.js';
-  import { resolveScreenId } from '../../utils/screenResolution.js';
   import { navigate } from '../../router.js';
   import { collectionStore, reloadCollection, refreshCollectionItem } from '../../stores/collectionContext.js';
   import { indexCollectionHierarchy } from './collectionHierarchy.js';
@@ -711,15 +710,10 @@
       customFields = cf?.data || cf || [];
 
       // Load screen fields to determine available date fields. The roadmap
-      // is workspace-scoped (not bound to a single item-type), so resolve
-      // against the config-set defaults; mode='edit' falls back through
-      // create_screen_id when no edit screen is configured.
-      let screenId = null;
-      if (workspace?.configuration_set_id) {
-        const configSet = await api.configurationSets.get(workspace.configuration_set_id);
-        screenId = resolveScreenId(configSet, null, 'edit');
-      }
-      if (!screenId) screenId = 1;
+      // is workspace-scoped (not bound to a single item-type), so resolve the
+      // effective edit screen through the workspace's shared config cache.
+      const config = await workspaceDataStore.screenConfig(null);
+      const screenId = config?.edit_screen?.id ?? 1;
       const screen = await api.screens.get(screenId);
       screenFields = screen?.fields || [];
     } catch (e) {

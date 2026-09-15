@@ -1,6 +1,6 @@
 import { api } from '../api.js';
 import { childItemTypesForParent } from '../utils/hierarchy.js';
-import { buildDetailScreenFieldConfig, resolveEffectiveScreenIds } from '../utils/screenFields.js';
+import { buildDetailScreenFieldConfig } from '../utils/screenFields.js';
 import { workspaceDataStore } from './workspaceDataStore.svelte.js';
 
 const FIELD_MAP = {
@@ -292,6 +292,13 @@ class ItemDetailStore {
       effectiveItemId = itemData.id;
       effectiveWorkspaceId = itemData.workspace_id;
       this.itemId = effectiveItemId;
+      // Screen field state must never outlive the item that produced it: clear
+      // it synchronously with the item assignment; #hydrateScreenFields refills
+      // it from the summary or the workspace cache.
+      this.workspaceScreenFields = [];
+      this.workspaceScreenSystemFields = [];
+      this.editableScreenFieldIds = null;
+      this.editableScreenSystemFields = null;
       this.item = itemData;
       if (this.item.assignee_id === undefined) {
         this.item.assignee_id = null;
@@ -346,15 +353,13 @@ class ItemDetailStore {
       this.availableSubIssueTypes = summary.available_sub_issue_types || [];
       this.manualActions = summary.manual_actions || [];
 
-      const fieldConfig = buildDetailScreenFieldConfig(
-        summary.screen_context?.edit,
-        summary.screen_context?.view
+      const fieldConfigPromise = this.#hydrateScreenFields(
+        summary.screen_context,
+        itemData.item_type_id ?? null,
+        token
       );
-      this.workspaceScreenFields = fieldConfig.visibleCustomFields;
-      this.workspaceScreenSystemFields = fieldConfig.visibleSystemFields;
+
       this.storyPointsRollup = summary.story_points_rollup || null;
-      this.editableScreenFieldIds = fieldConfig.editableCustomFieldIds;
-      this.editableScreenSystemFields = fieldConfig.editableSystemFields;
 
       this.parentHierarchy = (summary.ancestors || []).map((ancestor) => {
         const itemType = this.itemTypes.find((type) => type.id === ancestor.item_type_id);
@@ -364,6 +369,7 @@ class ItemDetailStore {
       // Heavy optional panels such as diagrams, worklogs, history, SCM detail,
       // and agent logs remain deferred behind their existing loaders.
       this.#syncEditingFromItem();
+      await fieldConfigPromise;
       return this.item;
     } catch (err) {
       if (token !== this.#loadToken || isAbortError(err)) return;
@@ -421,7 +427,7 @@ class ItemDetailStore {
       }
       if (previousItemTypeID !== this.item.item_type_id) {
         await this.#loadItemTypeData();
-        await this.#loadWorkspaceScreenFields();
+        await this.#hydrateScreenFields(null, this.item.item_type_id ?? null, this.#loadToken);
       }
       if (previousParentID !== this.item.parent_id) {
         if (this.item.parent_id) {
@@ -774,54 +780,40 @@ class ItemDetailStore {
   }
 
   /**
-   * @param {object|null} [configSet] Pre-resolved configuration set shared by
-   *   loadItem. Pass `undefined` to let this method fetch it itself (the
-   *   refresh path); `null` means "none configured / fetch failed".
+   * Resolve and apply the screen field configuration for the current item.
+   *
+   * Screen field state must never outlive the item that produced it, so the
+   * state is cleared synchronously here and hydrated either from the detail
+   * summary's screen context (same response as the item) or, when that section
+   * is unavailable, from the workspace-scoped effective-config cache.
+   *
+   * `loadToken` guards against applying a superseded load's resolution.
    */
-  async #loadWorkspaceScreenFields(configSet = undefined, requestOptions = {}) {
-    try {
-      let editScreenId = null;
-      let viewScreenId = null;
+  async #hydrateScreenFields(screenContext, itemTypeId, loadToken) {
+    this.workspaceScreenFields = [];
+    this.workspaceScreenSystemFields = [];
+    this.editableScreenFieldIds = null;
+    this.editableScreenSystemFields = null;
 
-      let cs = configSet;
-      if (cs === undefined) {
-        cs = this.workspace?.configuration_set_id
-          ? await api.configurationSets.get(this.workspace.configuration_set_id, requestOptions)
-          : null;
+    let fieldConfig = null;
+    if (screenContext?.edit) {
+      fieldConfig = buildDetailScreenFieldConfig(screenContext.edit, screenContext.view);
+    } else {
+      try {
+        const config = await workspaceDataStore.screenConfig(itemTypeId ?? null);
+        if (config?.edit_screen) {
+          fieldConfig = buildDetailScreenFieldConfig(config.edit_screen, config.view_screen);
+        }
+      } catch (err) {
+        console.error('Failed to resolve effective screen configuration:', err);
       }
-      if (cs) {
-        const itemTypeId = this.item?.item_type_id;
-        const screenIds = resolveEffectiveScreenIds(cs, itemTypeId, 1);
-        editScreenId = screenIds.edit;
-        viewScreenId = screenIds.view;
-      }
-
-      // Hardcoded fallback (preserves legacy behavior when nothing is
-      // configured). resolveEffectiveScreenIds already chains through create as
-      // the universal fallback, so a null here means truly nothing is set.
-      if (!editScreenId) editScreenId = 1;
-
-      // If view screen is missing or matches edit, only fetch one — same
-      // behavior as before (every visible field is editable).
-      const sameScreen = !viewScreenId || viewScreenId === editScreenId;
-      const [editScreen, viewScreen] = await Promise.all([
-        api.screens.get(editScreenId, requestOptions),
-        sameScreen ? Promise.resolve(null) : api.screens.get(viewScreenId, requestOptions),
-      ]);
-
-      const fieldConfig = buildDetailScreenFieldConfig(editScreen, sameScreen ? null : viewScreen);
-      this.workspaceScreenFields = fieldConfig.visibleCustomFields;
-      this.workspaceScreenSystemFields = fieldConfig.visibleSystemFields;
-      this.editableScreenFieldIds = fieldConfig.editableCustomFieldIds;
-      this.editableScreenSystemFields = fieldConfig.editableSystemFields;
-    } catch (err) {
-      if (isAbortError(err)) return;
-      console.error('Failed to load workspace screen fields:', err);
-      this.workspaceScreenFields = [];
-      this.workspaceScreenSystemFields = [];
-      this.editableScreenFieldIds = null;
-      this.editableScreenSystemFields = null;
     }
+
+    if (!fieldConfig || loadToken !== this.#loadToken) return;
+    this.workspaceScreenFields = fieldConfig.visibleCustomFields;
+    this.workspaceScreenSystemFields = fieldConfig.visibleSystemFields;
+    this.editableScreenFieldIds = fieldConfig.editableCustomFieldIds;
+    this.editableScreenSystemFields = fieldConfig.editableSystemFields;
   }
 
   // === Editing Methods ===

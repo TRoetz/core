@@ -14,6 +14,9 @@ const AUTO_REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes
  */
 class WorkspaceDataStore {
   workspaceId = $state(null);
+
+  /** @type {Map<string, Promise<object>>} */
+  #screenConfigPromises = new Map();
   workspace = $state(null);
   homepageLayout = $state(null);
   statuses = $state([]);
@@ -26,6 +29,9 @@ class WorkspaceDataStore {
   projects = $state([]);
   customFieldDefinitions = $state([]);
   labels = $state([]);
+  // Resolved effective configuration per item type, keyed by item type id or
+  // 'default'. Fetched once per workspace, invalidated on workspace switch.
+  screenConfigs = $state({});
 
   initialLoading = $state(false);
   initialized = $state(false);
@@ -164,6 +170,7 @@ class WorkspaceDataStore {
         } else {
           await this._fetchAll(id);
         }
+        await this.#refreshScreenConfigs(id);
         if (this.workspaceId === id) {
           this.lastRefreshedAt = Date.now();
         }
@@ -210,7 +217,72 @@ class WorkspaceDataStore {
     this.projects = [];
     this.customFieldDefinitions = [];
     this.labels = [];
+    this.screenConfigs = {};
+    this.#screenConfigPromises.clear();
     this.lastRefreshedAt = null;
+  }
+
+  /**
+   * Resolved effective configuration for the current workspace and optional
+   * item type: assigned config set (else the global default), its effective
+   * screens with fields, and config-set priorities. Cached per item type;
+   * in-flight requests are shared.
+   */
+  async screenConfig(itemTypeId = null) {
+    if (!this.workspaceId || this.workspaceId === 'global') return null;
+    const key = itemTypeId == null ? 'default' : String(itemTypeId);
+    const cached = this.screenConfigs[key];
+    if (cached) return cached;
+
+    const pending = this.#screenConfigPromises.get(key);
+    if (pending) return pending;
+
+    const workspaceId = this.workspaceId;
+    const promise = api.workspaces
+      .getEffectiveConfig(workspaceId, itemTypeId)
+      .then((config) => {
+        if (this.workspaceId === workspaceId) {
+          this.screenConfigs = { ...this.screenConfigs, [key]: config };
+        }
+        return config;
+      })
+      .finally(() => {
+        if (this.#screenConfigPromises.get(key) === promise) {
+          this.#screenConfigPromises.delete(key);
+        }
+      });
+    this.#screenConfigPromises.set(key, promise);
+    return promise;
+  }
+
+  /** Drop cached effective configurations (after admin config changes). */
+  invalidateScreenConfigs() {
+    this.screenConfigs = {};
+    this.#screenConfigPromises.clear();
+  }
+
+  // Silent re-fetch of cached screen configurations; keeps stale data on error.
+  async #refreshScreenConfigs(workspaceId) {
+    const keys = Object.keys(this.screenConfigs);
+    if (keys.length === 0) return;
+    await Promise.all(
+      keys.map(async (key) => {
+        const itemTypeId = key === 'default' ? null : Number(key);
+        try {
+          const config = await api.workspaces.getEffectiveConfig(workspaceId, itemTypeId);
+          if (this.workspaceId === workspaceId) {
+            this.screenConfigs = { ...this.screenConfigs, [key]: config };
+          }
+        } catch (err) {
+          if (!isExpectedBackgroundSyncError(err)) {
+            console.warn(
+              'WorkspaceDataStore: screen config refresh failed, keeping stale data',
+              err
+            );
+          }
+        }
+      })
+    );
   }
 
   /**

@@ -1,4 +1,4 @@
-/** Load status catalogs and every workflow transition with three requests. */
+/** Load status catalogs and every workflow's transitions from the v2 catalog API. */
 export async function loadStatusManagerData(apiClient) {
   const [statusCategories, statuses, workflows] = await Promise.all([
     apiClient.statusCategories.getAll(),

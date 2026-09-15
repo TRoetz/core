@@ -31,6 +31,14 @@ export const workspaces = {
   getItemTypes: (id) => fetchV2Data(`/workspaces/${id}/item-types`),
   getWorkflows: (id) => fetchV2Data(`/workspaces/${id}/workflows`),
   getPriorities: (id) => fetchV2Data(`/workspaces/${id}/priorities`),
+  // Resolved effective configuration: assigned config set (else the global
+  // default), its condition/approval sets, effective screens per mode with
+  // hydrated fields, and config-set priorities.
+  getEffectiveConfig: (id, itemTypeId = null, requestOptions = {}) =>
+    fetchV2Data(
+      `/workspaces/${id}/effective-config${itemTypeId != null ? `?item_type_id=${itemTypeId}` : ''}`,
+      requestOptions
+    ),
   getTemplates: () => fetchV2Data('/workspace-templates'),
   // Allowed status transitions for every (item_type_id, status_id) pair in the
   // workspace, keyed "<itemTypeId>:<statusId>". One request replaces the

@@ -972,15 +972,16 @@
     {/snippet}
 
     {#snippet estimateField()}
-      <div class="mb-3">
+      <div class="mb-3" data-testid="item-estimate-field">
         {#if editingEstimate}
           <div class="w-full flex items-center justify-between px-2 py-1.5 text-sm">
             <Text variant="subtle" size="sm">{t('items.estimate') || 'Estimate'}</Text>
             <Input
               type="text"
               placeholder="3d 4h"
-              class="w-24 text-right text-sm rounded px-1.5 py-0.5 border focus:outline-none focus:ring-1"
-              style="background: var(--ds-surface-sunken); border-color: {estimateError ? 'var(--ds-border-danger, #cc3344)' : 'var(--ds-border)'}; color: var(--ds-text); --tw-ring-color: var(--ds-border-focused);"
+              variant="ghost"
+              class="w-24 text-right text-sm px-1.5 py-0.5"
+              style="color: {estimateError ? 'var(--ds-text-danger, #cc3344)' : 'var(--ds-text)'};"
               value={estimateEditValue ?? ''}
               onfocus={(e) => e.currentTarget.select()}
               oninput={(e) => { estimateEditValue = e.currentTarget.value; estimateError = false; }}
@@ -1021,8 +1022,9 @@
               type="number"
               step="0.5"
               min="0"
-              class="w-20 text-right text-sm rounded px-1.5 py-0.5 border focus:outline-none focus:ring-1"
-              style="background: var(--ds-surface-sunken); border-color: var(--ds-border); color: var(--ds-text); --tw-ring-color: var(--ds-border-focused);"
+              variant="ghost"
+              class="w-20 text-right text-sm px-1.5 py-0.5"
+              style="color: var(--ds-text);"
               value={storyPointsEditValue ?? ''}
               onfocus={(e) => e.currentTarget.select()}
               oninput={(e) => storyPointsEditValue = e.currentTarget.value}

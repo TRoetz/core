@@ -14,9 +14,9 @@
   import {
     isCreateSystemFieldAutoManaged,
     isCreateSystemFieldRenderable,
-    resolveEffectiveScreenIds,
     systemFieldIdentifiers,
   } from '../utils/screenFields.js';
+  import { workspaceDataStore } from '../stores/workspaceDataStore.svelte.js';
   import { dateInputToISOString } from '../utils/dateFormatter.js';
   import { parseDuration } from '../utils/timeUtils.js';
   import { isBooleanCustomFieldType } from '../utils/customFieldTypes.js';
@@ -58,7 +58,6 @@
   // always visible; optional fields live in a collapsible section.
   let allCustomFields = $state([]);
   let customFieldsLoaded = $state(false);
-  let currentConfigSet = $state(null);
   let configSetLoadedForWorkspace = $state(null);
   let screenFields = $state([]);
   let screenFieldsLoadedForKey = $state(null);
@@ -348,19 +347,14 @@
     ]);
   }
 
-  // Same resolution the desktop PriorityPicker uses: the workspace's
-  // configured priority set when one exists, otherwise the global list.
+  // The workspace's configured priority set when one exists, otherwise the
+  // global list — resolved through the shared effective-config cache.
   async function loadPriorities(wsId) {
     try {
       let list = [];
-      const workspace = await api.workspaces.get(wsId);
-      if (workspace?.configuration_set_id) {
-        const configSet = await api.configurationSets.get(workspace.configuration_set_id);
-        const configured = configSet?.priorities_detailed || [];
-        list = configured.length > 0 ? configured : await api.priorities.getAll();
-      } else {
-        list = await api.priorities.getAll();
-      }
+      const config = await workspaceDataStore.screenConfig(null);
+      const configured = config?.priorities || [];
+      list = configured.length > 0 ? configured : await api.priorities.getAll();
       priorities = [...list].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
     } catch (err) {
       console.error('Failed to load priorities:', err);
@@ -418,27 +412,13 @@
   async function loadConfigSetForWorkspace(wsId) {
     if (configSetLoadedForWorkspace === wsId) return;
     try {
-      const response = await api.configurationSets.getAll();
-      const configSets = response?.configuration_sets || [];
-      let nextConfigSet = null;
-      let defaultConfigSet = null;
-
-      for (const configSet of configSets) {
-        if (configSet.is_default) defaultConfigSet = configSet;
-        if (configSet.workspace_ids?.includes(wsId)) {
-          nextConfigSet = await api.configurationSets.get(configSet.id);
-          break;
-        }
+      if (Number(workspaceDataStore.workspaceId) !== Number(wsId)) {
+        await workspaceDataStore.initialize(wsId);
       }
-
-      if (!nextConfigSet && defaultConfigSet) {
-        nextConfigSet = await api.configurationSets.get(defaultConfigSet.id);
-      }
-
-      currentConfigSet = nextConfigSet;
+      // Warm the shared cache; screen and priority loads resolve through it.
+      await workspaceDataStore.screenConfig(null);
     } catch (err) {
       console.error('Failed to load configuration set:', err);
-      currentConfigSet = null;
     } finally {
       configSetLoadedForWorkspace = wsId;
     }
@@ -451,7 +431,8 @@
     fieldsLoading = true;
     screenFieldsLoadingForKey = key;
     try {
-      const screenId = resolveEffectiveScreenIds(currentConfigSet, typeId, 1).create;
+      const config = await workspaceDataStore.screenConfig(typeId);
+      const screenId = config?.screens?.create ?? 1;
       const fields = (await api.screens.getFields(screenId)) || [];
       // Ignore an out-of-order response after a workspace/type change.
       if (`${workspaceId}-${itemTypeId}` !== key) return;

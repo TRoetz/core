@@ -7,11 +7,11 @@ import {
   isCreateSystemFieldAutoManaged,
   isCreateSystemFieldRenderable,
   isSystemFieldConfigured,
-  resolveEffectiveScreenIds,
   systemFieldIdentifiers,
 } from '../utils/screenFields.js';
 import { parseDuration } from '../utils/timeUtils.js';
 import { getSystemFieldName } from './fieldConfig.js';
+import { workspaceDataStore } from './workspaceDataStore.svelte.js';
 
 const STORAGE_KEYS = {
   workspace: 'vertex_create_modal_workspace',
@@ -479,28 +479,24 @@ class WorkItemFormStore {
   }
 
   /**
-   * Load configuration set for a workspace.
+   * Load the workspace's effective configuration (resolved once per workspace
+   * by the backend: assigned config set, else the global default) and project
+   * the parts the create flow needs onto currentConfigSet.
    */
   async loadConfigSetForWorkspace(workspaceId) {
     if (this.configSetLoadedForWorkspace === workspaceId) return;
     try {
-      const response = await api.configurationSets.getAll();
-      const configSets = response?.configuration_sets || [];
-      this.currentConfigSet = null;
-      let defaultConfigSet = null;
-
-      for (const configSet of configSets) {
-        if (configSet.is_default) defaultConfigSet = configSet;
-        if (configSet.workspace_ids?.includes(workspaceId)) {
-          this.currentConfigSet = await api.configurationSets.get(configSet.id);
-          break;
-        }
+      if (Number(workspaceDataStore.workspaceId) !== Number(workspaceId)) {
+        await workspaceDataStore.initialize(workspaceId);
       }
-
-      if (!this.currentConfigSet && defaultConfigSet) {
-        this.currentConfigSet = await api.configurationSets.get(defaultConfigSet.id);
-      }
-
+      const config = await workspaceDataStore.screenConfig(null);
+      this.currentConfigSet = config
+        ? {
+            priorities_detailed: config.priorities || [],
+            item_type_configs: (config.item_type_ids || []).map((id) => ({ item_type_id: id })),
+            default_item_type_id: config.default_item_type_id ?? null,
+          }
+        : null;
       this.configSetLoadedForWorkspace = workspaceId;
       this.#updateAvailableItemTypes();
     } catch (error) {
@@ -512,10 +508,12 @@ class WorkItemFormStore {
   }
 
   /**
-   * Resolve the create screen ID for an item type.
+   * Resolve the create screen ID for an item type through the shared
+   * effective-config cache (resolved server-side per workspace + type).
    */
-  #resolveCreateScreenId(itemTypeId) {
-    return resolveEffectiveScreenIds(this.currentConfigSet, itemTypeId, 1).create;
+  async #resolveCreateScreenId(itemTypeId) {
+    const config = await workspaceDataStore.screenConfig(itemTypeId);
+    return config?.screens?.create ?? 1;
   }
 
   /**
@@ -526,8 +524,8 @@ class WorkItemFormStore {
     if (this.loadingScreenFields || this.screenFieldsLoadedForKey === key) return;
     try {
       this.loadingScreenFields = true;
-      const createScreenId = this.#resolveCreateScreenId(itemTypeId);
-      const fields = await api.screens.getFields(createScreenId);
+      const createScreenId = await this.#resolveCreateScreenId(itemTypeId);
+      const fields = createScreenId ? await api.screens.getFields(createScreenId) : [];
       this.screenFields = fields || [];
 
       this.screenSystemFields = this.screenFields

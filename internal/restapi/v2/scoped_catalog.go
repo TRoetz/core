@@ -22,6 +22,7 @@ type catalogReader interface {
 	ListWorkspaceItemTypes(userID, workspaceID int) ([]services.ItemTypeResult, error)
 	ListWorkspaceWorkflows(userID, workspaceID int) ([]services.WorkflowResult, error)
 	ListWorkspacePriorities(userID, workspaceID int) ([]services.PriorityResult, error)
+	GetEffectiveConfig(userID, workspaceID int, itemTypeID *int) (*services.EffectiveConfigResult, error)
 	ListAssignableUsers(context.Context, int, int) ([]models.User, error)
 	ListUsers(int, services.CatalogPageParams) ([]models.User, int, error)
 	GetUser(userID, targetID int) (*models.User, error)
@@ -54,6 +55,7 @@ func registerScopedCatalogRoutes(builder *routeBuilder, catalog catalogReader, w
 	builder.Read("/workspaces/{workspace_id}/item-types", AuthAuthenticated, []string{"workspaces:read"}, listWorkspaceItemTypes(catalog))
 	builder.Read("/workspaces/{workspace_id}/workflows", AuthAuthenticated, []string{"workspaces:read"}, listWorkspaceWorkflows(catalog))
 	builder.Read("/workspaces/{workspace_id}/priorities", AuthAuthenticated, []string{"workspaces:read"}, listWorkspacePriorities(catalog))
+	builder.Read("/workspaces/{workspace_id}/effective-config", AuthAuthenticated, []string{"workspaces:read"}, getEffectiveConfig(catalog))
 	builder.Read("/workspaces/{workspace_id}/assignable-users", AuthAuthenticated, []string{"users:read"}, listAssignableUsers(catalog))
 	builder.Page("/users", AuthAuthenticated, []string{"users:read"}, listUsers(catalog))
 	builder.Read("/users/{user_id}", AuthAuthenticated, []string{"users:read"}, getUser(catalog))
@@ -282,6 +284,67 @@ func listWorkspaceStatuses(catalog catalogReader) readOperation[[]statusDTO] {
 			result[i] = statusFromResult(items[i])
 		}
 		return result, nil
+	}
+}
+
+type effectiveScreensDTO struct {
+	Create int `json:"create"`
+	Edit   int `json:"edit"`
+	View   int `json:"view"`
+}
+
+type effectiveConfigDTO struct {
+	ConfigSetID       *int                     `json:"config_set_id"`
+	ConditionSetID    *int                     `json:"condition_set_id"`
+	ApprovalSetID     *int                     `json:"approval_set_id"`
+	Screens           effectiveScreensDTO      `json:"screens"`
+	ItemTypeIDs       []int                    `json:"item_type_ids"`
+	DefaultItemTypeID *int                     `json:"default_item_type_id"`
+	EditScreen        *screenDTO               `json:"edit_screen"`
+	ViewScreen        *screenDTO               `json:"view_screen"`
+	Priorities        []models.PriorityDisplay `json:"priorities"`
+}
+
+func effectiveConfigDTOFromResult(result *services.EffectiveConfigResult) effectiveConfigDTO {
+	dto := effectiveConfigDTO{
+		ConfigSetID:       result.ConfigSetID,
+		ConditionSetID:    result.ConditionSetID,
+		ApprovalSetID:     result.ApprovalSetID,
+		ItemTypeIDs:       result.ItemTypeIDs,
+		DefaultItemTypeID: result.DefaultItemTypeID,
+		Screens: effectiveScreensDTO{
+			Create: result.CreateScreenID,
+			Edit:   result.EditScreenID,
+			View:   result.ViewScreenID,
+		},
+		Priorities: result.Priorities,
+	}
+	if result.EditScreen != nil {
+		editScreen := screenDTOFromModel(result.EditScreen)
+		dto.EditScreen = &editScreen
+	}
+	if result.ViewScreen != nil {
+		viewScreen := screenDTOFromModel(result.ViewScreen)
+		dto.ViewScreen = &viewScreen
+	}
+	return dto
+}
+
+func getEffectiveConfig(catalog catalogReader) readOperation[effectiveConfigDTO] {
+	return func(r *http.Request) (effectiveConfigDTO, error) {
+		user, workspaceID, err := principalAndWorkspace(r)
+		if err != nil {
+			return effectiveConfigDTO{}, err
+		}
+		itemTypeID, err := optionalPositiveQuery(r, "item_type_id")
+		if err != nil {
+			return effectiveConfigDTO{}, err
+		}
+		result, err := catalog.GetEffectiveConfig(user.ID, workspaceID, itemTypeID)
+		if err != nil {
+			return effectiveConfigDTO{}, scopedReadError(err, "Workspace was not found")
+		}
+		return effectiveConfigDTOFromResult(result), nil
 	}
 }
 

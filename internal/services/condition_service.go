@@ -329,25 +329,19 @@ func (s *ConditionService) evaluateScript(ctx context.Context, configJSON string
 	return s.scriptEngine.ExecuteBool(ctx, cfg.Script, vars, cfg.TimeoutMs)
 }
 
-// GetConditionSetIDForItem returns the condition set ID for an item's workspace/item type,
-// using the same fallback chain as workflows: item type override -> config set default -> nil.
+// GetConditionSetIDForItem returns the condition set ID for an item's workspace/item type
+// using the canonical configuration resolution: item type override → assigned config set
+// (else global default) → nil when unconfigured.
 func (s *ConditionService) GetConditionSetIDForItem(workspaceID int, itemTypeID *int) (*int, error) {
 	repo := repository.NewConfigurationSetRepository(s.db)
-	resolved, err := repo.ResolveForWorkspace(context.Background(), workspaceID, itemTypeID)
-	if err != nil {
+	resolved, err := repo.ResolveEffective(context.Background(), workspaceID, itemTypeID)
+	if err != nil || resolved == nil {
 		return nil, err
 	}
-	if resolved != nil && resolved.IsPersonal {
+	if resolved.IsPersonal {
 		return nil, nil
 	}
-	if resolved != nil && resolved.ConditionSetID != nil {
-		return resolved.ConditionSetID, nil
-	}
-	defaultConfig, err := repo.ResolveDefault(context.Background(), itemTypeID)
-	if err != nil || defaultConfig == nil {
-		return nil, err
-	}
-	return defaultConfig.ConditionSetID, nil
+	return resolved.ConditionSetID, nil
 }
 
 // toInt converts an any to int, returning 0 if not possible.

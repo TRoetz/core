@@ -38,8 +38,8 @@
         type="date"
         value={value ? value.split('T')[0] : ''}
         onchange={(event) => onSave(event.currentTarget.value || null)}
-        class="w-full px-2 py-1 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-        style="border-color: var(--ds-border); background-color: var(--ds-surface); color: var(--ds-text);"
+        class="w-full px-2 py-1 rounded-md text-sm focus:outline-none focus:ring-0"
+        style="background-color: transparent; color: var(--ds-text);"
         use:focusAndShowPicker
       />
     </div>

@@ -5,6 +5,7 @@
   import { priorityIconMap } from '../utils/icons.js';
   import ItemPicker from './ItemPicker.svelte';
   import { t } from '../stores/i18n.svelte.js';
+  import { workspaceDataStore } from '../stores/workspaceDataStore.svelte.js';
 
   // Props
   let {
@@ -58,17 +59,11 @@
       loading = true;
       error = null;
 
-      const workspace = await api.workspaces.get(workspaceId);
-
-      if (workspace.configuration_set_id) {
-        const configSet = await api.configurationSets.get(workspace.configuration_set_id);
-        const configuredPriorities = configSet.priorities_detailed || [];
-        priorities = configuredPriorities.length > 0
-          ? configuredPriorities
-          : await api.priorities.getAll();
-      } else {
-        priorities = await api.priorities.getAll();
-      }
+      const config = await workspaceDataStore.screenConfig(null);
+      const configuredPriorities = config?.priorities || [];
+      priorities = configuredPriorities.length > 0
+        ? configuredPriorities
+        : await api.priorities.getAll();
 
       // Sort by sort_order
       priorities = priorities.sort((a, b) => a.sort_order - b.sort_order);

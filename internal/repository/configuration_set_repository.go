@@ -13,6 +13,10 @@ import (
 	"windshift/internal/utils"
 )
 
+// FallbackScreenID is the absolute worst-case screen used when neither the
+// assigned nor the default configuration set resolves a screen for a mode.
+const FallbackScreenID = 1
+
 // ConfigurationSetRepository provides data access methods for configuration sets
 type ConfigurationSetRepository struct {
 	db database.Database
@@ -164,7 +168,7 @@ func (r *ConfigurationSetRepository) findByIDBasic(id int) (*models.Configuratio
 	var approvalSetName sql.NullString
 
 	query := fmt.Sprintf(`
-		SELECT cs.id, COALESCE(cs.builtin_key, ''), cs.name, cs.description, cs.is_default, cs.differentiate_by_item_type, cs.workflow_id,
+		SELECT cs.id, COALESCE(cs.builtin_key, ''), cs.name, COALESCE(cs.description, ''), cs.is_default, cs.differentiate_by_item_type, cs.workflow_id,
 		       cs.default_item_type_id, cs.condition_set_id, cs.approval_set_id,
 		       %s,
 		       cs.created_at, cs.updated_at,
@@ -235,7 +239,7 @@ func (r *ConfigurationSetRepository) List(page, limit int, search string) ([]mod
 	// Build data query with pagination
 	offset := (page - 1) * limit
 	query := fmt.Sprintf(`
-		SELECT cs.id, COALESCE(cs.builtin_key, ''), cs.name, cs.description, cs.is_default, cs.differentiate_by_item_type, cs.workflow_id,
+		SELECT cs.id, COALESCE(cs.builtin_key, ''), cs.name, COALESCE(cs.description, ''), cs.is_default, cs.differentiate_by_item_type, cs.workflow_id,
 		       cs.default_item_type_id, cs.condition_set_id, cs.approval_set_id,
 		       %s,
 		       cs.created_at, cs.updated_at,
@@ -760,6 +764,126 @@ func (r *ConfigurationSetRepository) ResolveDefault(ctx context.Context, itemTyp
 		return nil, fmt.Errorf("resolve default configuration: %w", err)
 	}
 	return &resolved, nil
+}
+
+// EffectiveConfig is the canonical workspace+item-type resolution for the
+// dimensions that follow the assigned→default config-set fallback chain.
+// Workflows are resolved separately by WorkflowService and are not included.
+type EffectiveConfig struct {
+	IsPersonal        bool
+	ConfigSetID       *int
+	ConditionSetID    *int
+	ApprovalSetID     *int
+	CreateScreenID    *int
+	EditScreenID      *int
+	ViewScreenID      *int
+	ItemTypeIDs       []int
+	DefaultItemTypeID *int
+	Priorities        []models.PriorityDisplay
+}
+
+// ResolveEffective resolves the effective configuration for a workspace and
+// optional item type. Resolution order: the config set assigned to the
+// workspace, else the global default config set; per dimension, the item-type
+// override wins, then the config-set-level value; edit/view screens fall back
+// to the create screen. Nil screen IDs mean nothing is configured and callers
+// should use FallbackScreenID. Returns nil when the workspace does not exist.
+func (r *ConfigurationSetRepository) ResolveEffective(ctx context.Context, workspaceID int, itemTypeID *int) (*EffectiveConfig, error) {
+	var isPersonal bool
+	var assigned sql.NullInt64
+	err := r.db.QueryRowContext(ctx, `
+		SELECT w.is_personal, wcs.configuration_set_id
+		FROM workspaces w
+		LEFT JOIN workspace_configuration_sets wcs ON wcs.workspace_id = w.id
+		WHERE w.id = ?
+	`, workspaceID).Scan(&isPersonal, &assigned)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("resolve workspace configuration: %w", err)
+	}
+
+	resolved := &EffectiveConfig{IsPersonal: isPersonal}
+	if isPersonal {
+		return resolved, nil
+	}
+
+	configSetID := utils.NullInt64ToPtr(assigned)
+	if configSetID == nil {
+		configSetID, err = r.defaultConfigSetID(ctx)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if configSetID == nil {
+		return resolved, nil
+	}
+
+	cs, err := r.FindByID(*configSetID)
+	if err != nil {
+		return nil, fmt.Errorf("load effective configuration set: %w", err)
+	}
+	applyEffectiveConfig(resolved, cs, itemTypeID)
+	return resolved, nil
+}
+
+func (r *ConfigurationSetRepository) defaultConfigSetID(ctx context.Context) (*int, error) {
+	var id sql.NullInt64
+	err := r.db.QueryRowContext(ctx, `
+		SELECT id FROM configuration_sets WHERE is_default = true ORDER BY id LIMIT 1
+	`).Scan(&id)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("resolve default configuration set: %w", err)
+	}
+	return utils.NullInt64ToPtr(id), nil
+}
+
+// applyEffectiveConfig projects a configuration set onto the resolved shape,
+// applying the item-type override and the edit/view → create screen chain.
+func applyEffectiveConfig(resolved *EffectiveConfig, cs *models.ConfigurationSet, itemTypeID *int) {
+	id := cs.ID
+	resolved.ConfigSetID = &id
+
+	var itc *models.ItemTypeConfig
+	if itemTypeID != nil {
+		for i := range cs.ItemTypeConfigs {
+			if cs.ItemTypeConfigs[i].ItemTypeID == *itemTypeID {
+				itc = &cs.ItemTypeConfigs[i]
+				break
+			}
+		}
+	}
+
+	first := func(ids ...*int) *int {
+		for _, id := range ids {
+			if id != nil {
+				return id
+			}
+		}
+		return nil
+	}
+
+	var itcCondition, itcApproval, itcCreate, itcEdit, itcView *int
+	if itc != nil {
+		itcCondition, itcApproval = itc.ConditionSetID, itc.ApprovalSetID
+		itcCreate, itcEdit, itcView = itc.CreateScreenID, itc.EditScreenID, itc.ViewScreenID
+	}
+
+	resolved.ConditionSetID = first(itcCondition, cs.ConditionSetID)
+	resolved.ApprovalSetID = first(itcApproval, cs.ApprovalSetID)
+	resolved.CreateScreenID = first(itcCreate, cs.CreateScreenID)
+	resolved.EditScreenID = first(itcEdit, itcCreate, cs.EditScreenID, cs.CreateScreenID)
+	resolved.ViewScreenID = first(itcView, itcCreate, cs.ViewScreenID, cs.CreateScreenID)
+	resolved.ItemTypeIDs = make([]int, 0, len(cs.ItemTypeConfigs))
+	for _, config := range cs.ItemTypeConfigs {
+		resolved.ItemTypeIDs = append(resolved.ItemTypeIDs, config.ItemTypeID)
+	}
+	resolved.DefaultItemTypeID = cs.DefaultItemTypeID
+	resolved.Priorities = cs.PrioritiesDetailed
 }
 
 // ItemTypeAllowed reports whether a workspace's configuration allows an item

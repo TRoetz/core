@@ -27,6 +27,7 @@ type CatalogAccess interface {
 
 // CatalogReadService owns the authorization and composition shared by API catalog readers.
 type CatalogReadService struct {
+	db             database.Database
 	workspaces     *WorkspaceService
 	workspaceRepo  *repository.WorkspaceRepository
 	workflows      *WorkflowService
@@ -37,14 +38,17 @@ type CatalogReadService struct {
 	templates      *ItemTemplateService
 	activity       *ActivityTracker
 	access         CatalogAccess
+	screens        *ScreenProvisioningService
 }
 
 func NewCatalogReadService(db database.Database, permissions *PermissionService, access CatalogAccess, activity *ActivityTracker) *CatalogReadService {
 	return &CatalogReadService{
+		db:         db,
 		workspaces: NewWorkspaceService(db), workspaceRepo: repository.NewWorkspaceRepository(db),
 		workflows: NewWorkflowService(db), statuses: NewStatusService(db), users: NewUserReadService(db),
 		workspaceUsers: NewWorkspaceUserResolver(db, permissions), labels: NewLabelApplicationService(db),
 		templates: NewItemTemplateService(db), activity: activity, access: access,
+		screens: NewScreenProvisioningService(db),
 	}
 }
 
@@ -352,6 +356,76 @@ func (s *CatalogReadService) requireEffectiveItemType(workspaceID, itemTypeID in
 		}
 	}
 	return ErrCatalogNotFound
+}
+
+// EffectiveConfigResult is the hydrated effective configuration for a
+// workspace and optional item type: resolved IDs, screens with fields, and
+// config-set priorities. ViewScreen is nil when it resolves to the edit screen.
+type EffectiveConfigResult struct {
+	WorkspaceID       int
+	ConfigSetID       *int
+	ConditionSetID    *int
+	ApprovalSetID     *int
+	CreateScreenID    int
+	EditScreenID      int
+	ViewScreenID      int
+	ItemTypeIDs       []int
+	DefaultItemTypeID *int
+	EditScreen        *models.Screen
+	ViewScreen        *models.Screen
+	Priorities        []models.PriorityDisplay
+}
+
+// GetEffectiveConfig returns the caller-visible effective configuration for a
+// workspace, following the canonical configuration resolution in
+// ConfigurationSetRepository.ResolveEffective.
+func (s *CatalogReadService) GetEffectiveConfig(userID, workspaceID int, itemTypeID *int) (*EffectiveConfigResult, error) {
+	if _, err := s.GetWorkspace(userID, workspaceID); err != nil {
+		return nil, err
+	}
+	resolved, err := repository.NewConfigurationSetRepository(s.db).ResolveEffective(context.Background(), workspaceID, itemTypeID)
+	if err != nil {
+		return nil, catalogReadError(err)
+	}
+
+	result := &EffectiveConfigResult{WorkspaceID: workspaceID, Priorities: []models.PriorityDisplay{}}
+	var createID, editID, viewID *int
+	if resolved != nil && !resolved.IsPersonal {
+		result.ConfigSetID = resolved.ConfigSetID
+		result.ConditionSetID = resolved.ConditionSetID
+		result.ApprovalSetID = resolved.ApprovalSetID
+		result.ItemTypeIDs = resolved.ItemTypeIDs
+		result.DefaultItemTypeID = resolved.DefaultItemTypeID
+		result.Priorities = append(result.Priorities, resolved.Priorities...)
+		createID, editID, viewID = resolved.CreateScreenID, resolved.EditScreenID, resolved.ViewScreenID
+	}
+	if result.ItemTypeIDs == nil {
+		result.ItemTypeIDs = []int{}
+	}
+	result.CreateScreenID = screenIDOrFallback(createID)
+	result.EditScreenID = screenIDOrFallback(editID)
+	result.ViewScreenID = screenIDOrFallback(viewID)
+
+	editScreen, err := s.screens.GetScreen(result.EditScreenID)
+	if err != nil {
+		return nil, err
+	}
+	result.EditScreen = editScreen
+	if result.ViewScreenID != result.EditScreenID {
+		viewScreen, err := s.screens.GetScreen(result.ViewScreenID)
+		if err != nil {
+			return nil, err
+		}
+		result.ViewScreen = viewScreen
+	}
+	return result, nil
+}
+
+func screenIDOrFallback(id *int) int {
+	if id != nil {
+		return *id
+	}
+	return repository.FallbackScreenID
 }
 
 func catalogReadError(err error) error {

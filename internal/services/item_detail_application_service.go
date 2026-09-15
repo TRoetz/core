@@ -298,76 +298,46 @@ func (s *ItemDetailApplicationService) loadTypeContext() ([]ItemTypeResult, []mo
 
 func (s *ItemDetailApplicationService) loadConfiguration(item *models.Item) ([]models.PriorityDisplay, ItemDetailScreenContext, error) {
 	repo := repository.NewConfigurationSetRepository(s.db)
-	configSetID, err := repo.GetWorkspaceConfigSetID(item.WorkspaceID)
+	resolved, err := repo.ResolveEffective(context.Background(), item.WorkspaceID, item.ItemTypeID)
 	if err != nil {
 		return nil, ItemDetailScreenContext{}, err
 	}
-	var config *models.ConfigurationSet
-	if configSetID != nil {
-		config, err = repo.FindByID(*configSetID)
-		if err != nil {
-			return nil, ItemDetailScreenContext{}, err
-		}
-	}
-	editID := itemDetailScreenID(config, item.ItemTypeID, "edit", 1)
-	viewID := itemDetailScreenID(config, item.ItemTypeID, "view", 1)
+	editID := effectiveScreenIDOrFallback(resolved, false)
+	viewID := effectiveScreenIDOrFallback(resolved, true)
 	edit, err := s.screens.LoadScreen(editID)
 	if err != nil {
 		return nil, ItemDetailScreenContext{}, err
 	}
 	screens := ItemDetailScreenContext{Edit: edit}
 	if viewID != editID {
-		screens.View, err = s.screens.LoadScreen(viewID)
+		view, err := s.screens.LoadScreen(viewID)
 		if err != nil {
 			return nil, ItemDetailScreenContext{}, err
 		}
+		screens.View = view
 	}
 	priorities := []models.PriorityDisplay{}
-	if config != nil && len(config.PrioritiesDetailed) > 0 {
-		priorities = config.PrioritiesDetailed
+	if resolved != nil && len(resolved.Priorities) > 0 {
+		priorities = resolved.Priorities
 	}
 	return priorities, screens, nil
 }
 
-func itemDetailScreenID(config *models.ConfigurationSet, itemTypeID *int, mode string, fallback int) int {
-	if config == nil {
-		return fallback
+// effectiveScreenIDOrFallback maps the canonical resolution onto the detail
+// summary's screen context. A nil resolution (personal workspace or nothing
+// configured) degrades to the absolute fallback screen.
+func effectiveScreenIDOrFallback(resolved *repository.EffectiveConfig, view bool) int {
+	if resolved == nil {
+		return repository.FallbackScreenID
 	}
-	if itemTypeID != nil {
-		for _, itemType := range config.ItemTypeConfigs {
-			if itemType.ItemTypeID != *itemTypeID {
-				continue
-			}
-			var screenID *int
-			switch mode {
-			case "edit":
-				screenID = itemType.EditScreenID
-			case "view":
-				screenID = itemType.ViewScreenID
-			}
-			if screenID != nil {
-				return *screenID
-			}
-			if itemType.CreateScreenID != nil {
-				return *itemType.CreateScreenID
-			}
-			break
-		}
+	id := resolved.ViewScreenID
+	if !view {
+		id = resolved.EditScreenID
 	}
-	var screenID *int
-	switch mode {
-	case "edit":
-		screenID = config.EditScreenID
-	case "view":
-		screenID = config.ViewScreenID
+	if id == nil {
+		return repository.FallbackScreenID
 	}
-	if screenID != nil {
-		return *screenID
-	}
-	if config.CreateScreenID != nil {
-		return *config.CreateScreenID
-	}
-	return fallback
+	return *id
 }
 
 func nonNilItemLinks(value []models.ItemLink) []models.ItemLink {
