@@ -43,6 +43,10 @@ export default {
         name: 'Assigned to Me',
         description: 'Open items assigned to you across all workspaces',
       },
+      storyPointsByAssignee: {
+        name: 'Story Points by Assignee',
+        description: 'Open story points per assignee to balance sprint workload',
+      },
       watchedItems: {
         name: 'Watched Items',
         description: 'Items you are following',
@@ -98,6 +102,8 @@ export default {
     states: {
       assignedLoadError: "Couldn't load your assigned items",
       assignedEmpty: 'Nothing assigned to you right now',
+      storyPointsLoadError: "Couldn't load the story points summary",
+      storyPointsEmpty: 'No open story points assigned yet',
       personalTasksLoadError: "Couldn't load your personal tasks",
       personalTasksEmpty: 'Your personal todo list is empty',
       dailyBriefingUnavailable: "Your daily briefing isn't available right now. It relies on an AI integration. If you've just set one up, check back in a bit.",

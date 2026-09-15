@@ -69,6 +69,15 @@ export const dashboardWidgetRegistry = [
     minWidth: 3,
   },
   {
+    type: 'story-points-by-assignee',
+    nameKey: 'dashboard.widgetCatalog.storyPointsByAssignee.name',
+    descriptionKey: 'dashboard.widgetCatalog.storyPointsByAssignee.description',
+    category: dashboardWidgetCategories.WORK,
+    icon: 'BarChart3',
+    defaultWidth: 6,
+    minWidth: 3,
+  },
+  {
     type: 'watched-items',
     nameKey: 'dashboard.widgetCatalog.watchedItems.name',
     descriptionKey: 'dashboard.widgetCatalog.watchedItems.description',

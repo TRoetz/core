@@ -164,6 +164,9 @@ export const items = {
     return results.flat();
   },
   getChanges: (filters = {}) => fetchV2Data(`/items/changes${buildQueryString(filters)}`),
+  /** Sum of open story points per assignee; optional workspace narrowing. */
+  getStoryPointsByAssignee: (filters = {}) =>
+    fetchV2Data(`/items/story-points/by-assignee${buildQueryString(filters)}`),
   create: withCrossTabNotice(
     (data) =>
       fetchV2Data('/items', {
