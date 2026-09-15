@@ -90,13 +90,13 @@ func (h *JiraImportHandler) importJiraBoards(ctx context.Context, jobID, project
 
 		jql := ""
 		filterMeta := map[string]any{}
-		if config != nil && config.Filter != nil && strings.TrimSpace(config.Filter.ID) != "" {
-			filter, filterErr := client.GetFilter(ctx, config.Filter.ID)
+		if config != nil && config.Filter != nil && strings.TrimSpace(string(config.Filter.ID)) != "" {
+			filter, filterErr := client.GetFilter(ctx, string(config.Filter.ID))
 			if filterErr != nil {
 				slog.Warn("Failed to load Jira board filter JQL",
 					slog.String("component", "jira"),
 					slog.Int("boardID", board.ID),
-					slog.String("filterID", config.Filter.ID),
+					slog.String("filterID", string(config.Filter.ID)),
 					slog.Any("error", filterErr))
 			} else if filter != nil {
 				jql = filter.JQL

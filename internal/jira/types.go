@@ -900,12 +900,14 @@ type JiraBoardConfiguration struct {
 	Ranking      map[string]any         `json:"ranking,omitempty"`
 }
 
-// JiraBoardFilter is the saved filter backing a board.
+// JiraBoardFilter is the saved filter backing a board. The agile API
+// serializes the filter id as a number on some deployments (WI-1156), so the
+// ID decodes flexibly like the other Jira ids.
 type JiraBoardFilter struct {
-	ID   string `json:"id"`
-	Self string `json:"self"`
-	Name string `json:"name,omitempty"`
-	JQL  string `json:"jql,omitempty"`
+	ID   cloudFlexibleID `json:"id"`
+	Self string          `json:"self"`
+	Name string          `json:"name,omitempty"`
+	JQL  string          `json:"jql,omitempty"`
 }
 
 // JiraBoardSubQuery preserves the board sub-query, if Jira exposes it.
