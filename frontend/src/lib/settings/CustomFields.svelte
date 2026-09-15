@@ -348,8 +348,14 @@
       config.multi = assetMulti;
     } else if (formData.field_type === 'linking') {
       // Mirrors are configured through their primary field, so editing a
-      // mirror only renames it and keeps the stored options.
-      const editingLinkingOptions = isLinkingMirror ? fieldOptionsObject(editingField?.options) : null;
+      // mirror only renames it and keeps the stored options. Primary fields
+      // pass their stored options through too, preserving the mirror linkage.
+      let editingLinkingOptions = null;
+      try {
+        editingLinkingOptions = fieldOptionsObject(editingField?.options || null);
+      } catch {
+        editingLinkingOptions = null;
+      }
       if (!isLinkingMirror && !linkingLinkTypeId) {
         throw new Error('Linking fields require a link type');
       }
