@@ -558,23 +558,37 @@ func (r *CustomFieldRepository) DriverName() string {
 }
 
 // CountRowsUsingField powers the delete guard across item, asset, and portal
-// values. Its quoted-ID text prefilter matches the async scrubber and casts for
-// SQLite/Postgres compatibility. It may over-count literal values, which safely
-// blocks deletion rather than risking live-data loss.
+// values. Keys are matched exactly against the CFV JSON object (engine-aware:
+// json_each on SQLite, jsonb_exists on Postgres) — the old quoted-ID LIKE
+// prefilter also matched string VALUES equal to the field id, which blocked
+// deleting the field indefinitely (WI-1160). The async scrubber keeps the
+// cheap LIKE prefilter; false positives there only waste IO.
+// CountRowsUsingField powers the delete guard across item, asset, and portal
+// values. Keys are matched exactly against the CFV JSON object (engine-aware:
+// json_each on SQLite, jsonb_exists on Postgres) — the old quoted-ID LIKE
+// prefilter also matched string VALUES equal to the field id, which blocked
+// deleting the field indefinitely (WI-1160). The async scrubber keeps the
+// cheap LIKE prefilter; false positives there only waste IO.
 func (r *CustomFieldRepository) CountRowsUsingField(fieldID int) (int, error) {
 	fieldKey := strconv.Itoa(fieldID)
-	likePattern := `%"` + fieldKey + `"%`
+	isPostgres := r.db.GetDriverName() == "postgres"
 
 	total := 0
 	for _, table := range []string{"items", "assets"} {
 		var count int
-		err := r.db.QueryRow(fmt.Sprintf(
-			`SELECT COUNT(*) FROM %s
+		var query string
+		if isPostgres {
+			query = fmt.Sprintf(`SELECT COUNT(*) FROM %s
+			  WHERE custom_field_values IS NOT NULL
+			    AND jsonb_exists(custom_field_values, ?)`, table)
+		} else {
+			query = fmt.Sprintf(`SELECT COUNT(*) FROM %s
 			  WHERE custom_field_values IS NOT NULL
 			    AND CAST(custom_field_values AS TEXT) != ''
-			    AND CAST(custom_field_values AS TEXT) LIKE ?`, table),
-			likePattern,
-		).Scan(&count)
+			    AND json_valid(CAST(custom_field_values AS TEXT))
+			    AND EXISTS (SELECT 1 FROM json_each(CAST(custom_field_values AS TEXT)) WHERE json_each.key = ?)`, table)
+		}
+		err := r.db.QueryRow(query, fieldKey).Scan(&count)
 		if err != nil {
 			return 0, fmt.Errorf("count %s using custom field: %w", table, err)
 		}
