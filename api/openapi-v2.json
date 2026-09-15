@@ -30556,6 +30556,358 @@
         ],
         "type": "object"
       },
+      "GetWorkspacesWorkspaceIdEffectiveConfigResult": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "additionalProperties": false,
+            "properties": {
+              "approval_set_id": {
+                "description": "The approval set id value.",
+                "nullable": true,
+                "type": "integer"
+              },
+              "condition_set_id": {
+                "description": "The condition set id value.",
+                "nullable": true,
+                "type": "integer"
+              },
+              "config_set_id": {
+                "description": "The config set id value.",
+                "nullable": true,
+                "type": "integer"
+              },
+              "default_item_type_id": {
+                "description": "The default item type id value.",
+                "nullable": true,
+                "type": "integer"
+              },
+              "edit_screen": {
+                "additionalProperties": false,
+                "description": "The edit screen value.",
+                "nullable": true,
+                "properties": {
+                  "builtin_key": {
+                    "description": "The builtin key value.",
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "created_at": {
+                    "description": "The created at value.",
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  "description": {
+                    "description": "The description value.",
+                    "type": "string"
+                  },
+                  "display_description": {
+                    "description": "The display description value.",
+                    "type": "string"
+                  },
+                  "display_name": {
+                    "description": "The display name value.",
+                    "type": "string"
+                  },
+                  "fields": {
+                    "description": "The fields value.",
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "display_order": {
+                          "description": "The display order value.",
+                          "type": "integer"
+                        },
+                        "field_config": {
+                          "additionalProperties": {
+                            "description": "Arbitrary JSON extension value."
+                          },
+                          "description": "The field config value.",
+                          "type": "object"
+                        },
+                        "field_identifier": {
+                          "description": "The field identifier value.",
+                          "type": "string"
+                        },
+                        "field_label": {
+                          "description": "The field label value.",
+                          "type": "string"
+                        },
+                        "field_name": {
+                          "description": "The field name value.",
+                          "type": "string"
+                        },
+                        "field_type": {
+                          "description": "The field type value.",
+                          "type": "string"
+                        },
+                        "field_width": {
+                          "description": "The field width value.",
+                          "type": "string"
+                        },
+                        "id": {
+                          "description": "The id value.",
+                          "type": "integer"
+                        },
+                        "is_required": {
+                          "description": "The is required value.",
+                          "type": "boolean"
+                        },
+                        "screen_id": {
+                          "description": "The screen id value.",
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "display_order",
+                        "field_identifier",
+                        "field_type",
+                        "field_width",
+                        "id",
+                        "is_required",
+                        "screen_id"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "id": {
+                    "description": "The id value.",
+                    "type": "integer"
+                  },
+                  "name": {
+                    "description": "The name value.",
+                    "type": "string"
+                  },
+                  "system_fields": {
+                    "description": "The system fields value.",
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "updated_at": {
+                    "description": "The updated at value.",
+                    "format": "date-time",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "created_at",
+                  "description",
+                  "display_name",
+                  "id",
+                  "name",
+                  "updated_at"
+                ],
+                "type": "object"
+              },
+              "item_type_ids": {
+                "description": "The item type ids value.",
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              "priorities": {
+                "description": "The priorities value.",
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "builtin_key": {
+                      "description": "The builtin key value.",
+                      "type": "string"
+                    },
+                    "color": {
+                      "description": "The color value.",
+                      "type": "string"
+                    },
+                    "icon": {
+                      "description": "The icon value.",
+                      "type": "string"
+                    },
+                    "id": {
+                      "description": "The id value.",
+                      "type": "integer"
+                    },
+                    "name": {
+                      "description": "The name value.",
+                      "type": "string"
+                    },
+                    "sort_order": {
+                      "description": "The sort order value.",
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "color",
+                    "icon",
+                    "id",
+                    "name",
+                    "sort_order"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "screens": {
+                "additionalProperties": false,
+                "description": "The screens value.",
+                "properties": {
+                  "create": {
+                    "description": "The create value.",
+                    "type": "integer"
+                  },
+                  "edit": {
+                    "description": "The edit value.",
+                    "type": "integer"
+                  },
+                  "view": {
+                    "description": "The view value.",
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "create",
+                  "edit",
+                  "view"
+                ],
+                "type": "object"
+              },
+              "view_screen": {
+                "additionalProperties": false,
+                "description": "The view screen value.",
+                "nullable": true,
+                "properties": {
+                  "builtin_key": {
+                    "description": "The builtin key value.",
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "created_at": {
+                    "description": "The created at value.",
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  "description": {
+                    "description": "The description value.",
+                    "type": "string"
+                  },
+                  "display_description": {
+                    "description": "The display description value.",
+                    "type": "string"
+                  },
+                  "display_name": {
+                    "description": "The display name value.",
+                    "type": "string"
+                  },
+                  "fields": {
+                    "description": "The fields value.",
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "display_order": {
+                          "description": "The display order value.",
+                          "type": "integer"
+                        },
+                        "field_config": {
+                          "additionalProperties": {
+                            "description": "Arbitrary JSON extension value."
+                          },
+                          "description": "The field config value.",
+                          "type": "object"
+                        },
+                        "field_identifier": {
+                          "description": "The field identifier value.",
+                          "type": "string"
+                        },
+                        "field_label": {
+                          "description": "The field label value.",
+                          "type": "string"
+                        },
+                        "field_name": {
+                          "description": "The field name value.",
+                          "type": "string"
+                        },
+                        "field_type": {
+                          "description": "The field type value.",
+                          "type": "string"
+                        },
+                        "field_width": {
+                          "description": "The field width value.",
+                          "type": "string"
+                        },
+                        "id": {
+                          "description": "The id value.",
+                          "type": "integer"
+                        },
+                        "is_required": {
+                          "description": "The is required value.",
+                          "type": "boolean"
+                        },
+                        "screen_id": {
+                          "description": "The screen id value.",
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "display_order",
+                        "field_identifier",
+                        "field_type",
+                        "field_width",
+                        "id",
+                        "is_required",
+                        "screen_id"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "id": {
+                    "description": "The id value.",
+                    "type": "integer"
+                  },
+                  "name": {
+                    "description": "The name value.",
+                    "type": "string"
+                  },
+                  "system_fields": {
+                    "description": "The system fields value.",
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "updated_at": {
+                    "description": "The updated at value.",
+                    "format": "date-time",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "created_at",
+                  "description",
+                  "display_name",
+                  "id",
+                  "name",
+                  "updated_at"
+                ],
+                "type": "object"
+              }
+            },
+            "required": [
+              "item_type_ids",
+              "priorities",
+              "screens"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
       "GetWorkspacesWorkspaceIdItemTemplatesResult": {
         "additionalProperties": false,
         "properties": {
@@ -99440,6 +99792,73 @@
         ],
         "x-required-scopes": [
           "collections:read"
+        ]
+      }
+    },
+    "/workspaces/{workspace_id}/effective-config": {
+      "get": {
+        "description": "Resolve effective workspace configuration. Results include only resources visible to the authenticated caller; collections use their documented stable order and bounds.",
+        "operationId": "getWorkspacesWorkspaceIdEffectiveConfig",
+        "parameters": [
+          {
+            "description": "The workspace identifier.",
+            "in": "path",
+            "name": "workspace_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Resolve screen and item-type overrides for this item type.",
+            "in": "query",
+            "name": "item_type_id",
+            "required": false,
+            "schema": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetWorkspacesWorkspaceIdEffectiveConfigResult"
+                }
+              }
+            },
+            "description": "Resolve effective workspace configuration response."
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationError"
+          },
+          "403": {
+            "$ref": "#/components/responses/PermissionError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Resolve effective workspace configuration",
+        "tags": [
+          "Workspace configuration"
+        ],
+        "x-required-scopes": [
+          "workspaces:read"
         ]
       }
     },

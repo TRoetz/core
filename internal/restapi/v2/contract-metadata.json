@@ -10596,6 +10596,44 @@
         ]
       }
     },
+    "/workspaces/{workspace_id}/effective-config": {
+      "get": {
+        "description": "Resolve effective workspace configuration. Results include only resources visible to the authenticated caller; collections use their documented stable order and bounds.",
+        "parameters": [
+          {
+            "Name": "workspace_id",
+            "In": "path",
+            "Description": "The workspace identifier.",
+            "Required": true,
+            "Schema": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "Name": "item_type_id",
+            "In": "query",
+            "Description": "Resolve screen and item-type overrides for this item type.",
+            "Required": false,
+            "Schema": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "401": {},
+          "403": {},
+          "404": {},
+          "429": {},
+          "500": {}
+        },
+        "summary": "Resolve effective workspace configuration",
+        "tags": [
+          "Workspace configuration"
+        ]
+      }
+    },
     "/workspaces/{workspace_id}/item-templates": {
       "get": {
         "description": "List workspace item templates. Results include only resources visible to the authenticated caller; collections use their documented stable order and bounds.",
@@ -12756,44 +12794,6 @@
           "500": {}
         },
         "summary": "List workspace priorities",
-        "tags": [
-          "Workspace configuration"
-        ]
-      }
-    },
-    "/workspaces/{workspace_id}/effective-config": {
-      "get": {
-        "description": "Resolve the effective configuration for a workspace: the assigned configuration set (else the global default), with condition set, approval set, screens per mode (create/edit/view; edit and view fall back to the create screen, absolute fallback screen 1), hydrated edit/view screens with fields (view omitted when identical to edit), and config-set priorities. Results include only resources visible to the authenticated caller.",
-        "parameters": [
-          {
-            "Name": "workspace_id",
-            "In": "path",
-            "Description": "The workspace identifier.",
-            "Required": true,
-            "Schema": {
-              "type": "integer",
-              "minimum": 1
-            }
-          },
-          {
-            "Name": "item_type_id",
-            "In": "query",
-            "Description": "Resolve screen and item-type overrides for this item type.",
-            "Required": false,
-            "Schema": {
-              "type": "integer",
-              "minimum": 1
-            }
-          }
-        ],
-        "responses": {
-          "401": {},
-          "403": {},
-          "404": {},
-          "429": {},
-          "500": {}
-        },
-        "summary": "Resolve effective workspace configuration",
         "tags": [
           "Workspace configuration"
         ]
