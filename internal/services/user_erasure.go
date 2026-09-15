@@ -73,6 +73,15 @@ func EraseUser(db database.Database, userID int, actor AuditActor, input UserEra
 		return evidence, offboard, ErrUserAlreadyErased
 	}
 
+	// Snapshot the pre-erasure identity for the audit trail. When this flow
+	// also offboards, the row is pseudonymized afterwards and the original
+	// email/name survive only in the audit details — mirroring the Delete
+	// handler's audit contract.
+	var priorUsername, priorEmail string
+	if err := db.QueryRow(`SELECT COALESCE(username, ''), COALESCE(email, '') FROM users WHERE id = ?`, userID).Scan(&priorUsername, &priorEmail); err != nil {
+		return evidence, offboard, fmt.Errorf("load user identity: %w", err)
+	}
+
 	// Deactivation precedes erasure. The offboarded_at lifecycle state blocks
 	// every reactivation path; erasure additionally records the DSAR decision.
 	var offboardedAt sql.NullTime
@@ -114,6 +123,8 @@ func EraseUser(db database.Database, userID int, actor AuditActor, input UserEra
 		"requested_at":   requestedAt.Format(time.RFC3339),
 		"policy_version": ErasurePolicyVersion,
 		"policy_summary": "audit_logs_retained_pseudonymized; work_history_retained_pseudonymized; backups_age_out_30d",
+		"prior_username": priorUsername,
+		"prior_email":    priorEmail,
 	}
 	_ = logger.LogAudit(db, logger.AuditEvent{
 		UserID:       actor.UserID,
