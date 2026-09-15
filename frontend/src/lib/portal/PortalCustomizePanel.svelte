@@ -23,6 +23,9 @@
   import { gradients, iconMap } from '../stores/portalPresentation.js';
   import ModalBackdrop from '../components/ModalBackdrop.svelte';
   import { api } from '../api.js';
+  import { portalAuthStore } from '../stores/portalAuth.svelte.js';
+  import { authStore } from '../stores';
+  import { loadPermissionProfile } from '../stores/permissionProfile.js';
   import { t } from '../stores/i18n.svelte.js';
   import { confirm } from '../composables/useConfirm.js';
   import DescriptionText from '../components/DescriptionText.svelte';
@@ -63,8 +66,27 @@
   let kbPages = $state([]);
   let kbPagesLoading = $state(false);
   let kbPageTitles = $state({});
+  // Workspace administration rights of the current manager, resolved from
+  // their permission profile. Null until loaded; the customize panel lives in
+  // the portal shell, which does not populate the main app's permission store.
+  let kbAdminWorkspaceIds = $state(null);
+  let kbIsSystemAdmin = $state(false);
 
   let kbAddReady = $derived(Boolean(kbWorkspaceId) && (kbScope !== 'subtree' || kbRootPageId));
+
+  // The picker only offers workspaces connected to this portal channel that
+  // the current manager administers — mirroring the backend validation in
+  // ChannelConfigUpdateService.validateKnowledgeBasePageSources so every
+  // selectable option can actually be saved.
+  let kbSelectableWorkspaces = $derived(
+    kbAdminWorkspaceIds === null
+      ? []
+      : kbWorkspaces.filter(
+          (workspace) =>
+            (portalStore.portalData?.workspace_ids ?? []).includes(workspace.id) &&
+            (kbIsSystemAdmin || kbAdminWorkspaceIds.has(workspace.id))
+        )
+  );
 
   async function loadKbWorkspaces() {
     try {
@@ -72,6 +94,26 @@
     } catch (err) {
       console.error('Failed to load workspaces for knowledge base wiring:', err);
       kbWorkspaces = [];
+    }
+  }
+
+  async function loadKbWorkspaceEligibility() {
+    if (kbAdminWorkspaceIds !== null) return;
+    const userId = $portalAuthStore.user?.id ?? $authStore.currentUser?.id;
+    if (!userId) return;
+    try {
+      const profile = await loadPermissionProfile(userId);
+      kbIsSystemAdmin = profile.has_system_admin === true;
+      const adminIds = new Set();
+      for (const wp of profile.workspace_permissions || []) {
+        if (wp.permission?.permission_key === 'workspace.admin') {
+          adminIds.add(Number(wp.workspace_id));
+        }
+      }
+      kbAdminWorkspaceIds = adminIds;
+    } catch (err) {
+      console.error('Failed to load workspace permissions for knowledge base wiring:', err);
+      kbAdminWorkspaceIds = new Set();
     }
   }
 
@@ -146,6 +188,7 @@
       portalStore.showCustomizePanel
     ) {
       if (kbWorkspaces.length === 0) void loadKbWorkspaces();
+      void loadKbWorkspaceEligibility();
       void loadKbPageTitles();
     }
   });
@@ -930,10 +973,15 @@
                   data-testid="kb-add-workspace"
                 >
                   <option value="">{t('portal.customize.workspacePagesPickWorkspacePlaceholder')}</option>
-                  {#each kbWorkspaces as workspace}
+                  {#each kbSelectableWorkspaces as workspace}
                     <option value={String(workspace.id)}>{workspace.name}</option>
                   {/each}
                 </select>
+                {#if kbAdminWorkspaceIds !== null && kbSelectableWorkspaces.length === 0}
+                  <p class="text-xs mt-1" style="color: var(--ds-text-subtle);" data-testid="kb-add-workspace-none">
+                    {t('portal.customize.workspacePagesNoEligible')}
+                  </p>
+                {/if}
               </div>
               {#if kbWorkspaceId}
                 <div>

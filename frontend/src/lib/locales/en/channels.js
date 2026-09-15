@@ -547,6 +547,8 @@ export default {
       workspacePagesEmpty: 'No workspace pages are published in this knowledge base yet.',
       workspacePagesPickWorkspace: 'Workspace',
       workspacePagesPickWorkspacePlaceholder: 'Choose a workspace\u2026',
+      workspacePagesNoEligible:
+        'No connected workspace is administered by you. Workspace administration rights are required to publish pages here.',
       workspacePagesScope: 'Scope',
       workspacePagesEntire: 'Entire pages tree',
       workspacePagesSubtree: 'Sub-page (with its sub-pages)',

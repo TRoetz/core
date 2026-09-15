@@ -505,6 +505,8 @@ export default {
       workspacePagesEmpty: 'Рабочие пространства пока не опубликованы в этой базе знаний.',
       workspacePagesPickWorkspace: 'Рабочее пространство',
       workspacePagesPickWorkspacePlaceholder: 'Выберите рабочее пространство…',
+      workspacePagesNoEligible:
+        'Нет подключённых рабочих пространств с правами администратора. Для публикации страниц здесь требуются права администратора рабочего пространства.',
       workspacePagesScope: 'Объём',
       workspacePagesEntire: 'Всё дерево страниц',
       workspacePagesSubtree: 'Подстраница (с её подстраницами)',
