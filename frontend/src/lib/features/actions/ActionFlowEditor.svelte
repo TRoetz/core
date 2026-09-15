@@ -844,6 +844,7 @@
         <label for="config-condition-field" class="block text-xs font-medium mb-1">{t('actions.config.fieldToCheck')}</label>
         <FieldSelector
           selectedField={getFieldSelectorValue(selectedNode.data?.config)}
+          includeAggregates
           onSelect={(field) => store.updateNodeConfig(selectedNode.id, { field_name: backendFieldName(field) })}
           onClear={() => store.updateNodeConfig(selectedNode.id, { field_name: '' })}
         />

@@ -1012,6 +1012,29 @@ func currentItemFieldValueResolved(itemRepo *repository.ItemRepository, ctx *mod
 		if workspaceID := currentActionWorkspaceID(ctx); workspaceID > 0 {
 			return workspaceID, true
 		}
+	case "open_child_count", "open_descendant_count":
+		// Aggregate pseudo-fields for condition nodes: lets an automation
+		// express "all children done" as open_child_count eq 0.
+		if itemRepo == nil || itemID <= 0 {
+			return 0, true
+		}
+		maxDepth := 1
+		if fieldName == "open_descendant_count" {
+			maxDepth = 0
+		}
+		if _, err := itemRepo.FindByID(itemID); err != nil {
+			// Unknown or deleted item: report no aggregate rather than a
+			// fabricated zero count.
+			return nil, false
+		}
+		count, err := itemRepo.CountOpenDescendants(itemID, maxDepth)
+		if err != nil {
+			slog.Warn("failed to count open children for action condition",
+				slog.String("component", "actions"), slog.Int("item_id", itemID),
+				slog.String("field", fieldName), slog.Any("error", err))
+			return nil, false
+		}
+		return count, true
 	}
 	if strings.HasPrefix(fieldName, "custom_field_") {
 		key := strings.TrimPrefix(fieldName, "custom_field_")

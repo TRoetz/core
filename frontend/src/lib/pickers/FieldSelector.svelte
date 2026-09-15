@@ -17,6 +17,7 @@
     fieldGroups = null,
     customFieldItems = null,
     excludedFieldIds = [],
+    includeAggregates = false,
     onSelect = () => {},
     onClear = () => {}
   } = $props();
@@ -74,6 +75,17 @@
         { id: 'labels', name: getFieldTranslation('labels').name, type: 'enum', description: getFieldTranslation('labels').description }
       ]
     },
+    ...(includeAggregates
+      ? [
+          {
+            category: t('pickers.fieldCategories.automation'),
+            fields: [
+              { id: 'open_child_count', name: getFieldTranslation('openChildCount').name, type: 'number', description: getFieldTranslation('openChildCount').description },
+              { id: 'open_descendant_count', name: getFieldTranslation('openDescendantCount').name, type: 'number', description: getFieldTranslation('openDescendantCount').description }
+            ]
+          }
+        ]
+      : []),
   ]).map((group) => ({
     ...group,
     fields: group.fields.map((field) => ({

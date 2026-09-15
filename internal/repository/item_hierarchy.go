@@ -540,6 +540,51 @@ func (r *ItemRepository) CountDescendants(itemID int) (int, error) {
 	return r.CountDescendantsContext(context.Background(), itemID)
 }
 
+// CountOpenChildren returns how many direct children are not in a completed
+// status category. Items without a status count as open.
+func (r *ItemRepository) CountOpenChildren(itemID int) (int, error) {
+	return r.CountOpenDescendantsContext(context.Background(), itemID, 1)
+}
+
+// CountOpenDescendants counts incomplete descendants down to the given depth
+// (1 = direct children only). Depth is capped at maxItemHierarchyDepth so a
+// stored cycle can't loop the DB.
+func (r *ItemRepository) CountOpenDescendants(itemID, maxDepth int) (int, error) {
+	return r.CountOpenDescendantsContext(context.Background(), itemID, maxDepth)
+}
+
+// CountOpenDescendantsContext is the request-aware form of CountOpenDescendants.
+func (r *ItemRepository) CountOpenDescendantsContext(ctx context.Context, itemID, maxDepth int) (int, error) {
+	if maxDepth <= 0 || maxDepth > maxItemHierarchyDepth {
+		maxDepth = maxItemHierarchyDepth
+	}
+	var count int
+	err := r.db.QueryRowContext(ctx, `
+		WITH RECURSIVE descendants AS (
+			SELECT id, parent_id, 1 as depth
+			FROM items
+			WHERE parent_id = ?
+
+			UNION ALL
+
+			SELECT i.id, i.parent_id, d.depth + 1
+			FROM items i
+			JOIN descendants d ON i.parent_id = d.id
+			WHERE d.depth < ?
+		)
+		SELECT COUNT(*)
+		FROM descendants d
+		JOIN items i ON i.id = d.id
+		LEFT JOIN statuses s ON i.status_id = s.id
+		LEFT JOIN status_categories sc ON s.category_id = sc.id
+		WHERE COALESCE(sc.is_completed, FALSE) = FALSE
+	`, itemID, maxDepth).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("failed to count open descendants: %w", err)
+	}
+	return count, nil
+}
+
 // CountDescendantsContext is the request-aware form of CountDescendants.
 func (r *ItemRepository) CountDescendantsContext(ctx context.Context, itemID int) (int, error) {
 	var count int

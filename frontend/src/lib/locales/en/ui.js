@@ -113,6 +113,7 @@ export default {
       dates: 'Date Fields',
       people: 'People',
       workflow: 'Workflow',
+      automation: 'Automation',
       custom: 'Custom Fields',
     },
     fields: {
@@ -128,6 +129,8 @@ export default {
       dueDate: { name: 'Due Date', description: 'When the item is due' },
       startDate: { name: 'Start Date', description: 'When work begins' },
       estimate: { name: 'Estimate', description: 'Estimated effort' },
+      openChildCount: { name: 'Open child count', description: 'Direct children not in a completed status' },
+      openDescendantCount: { name: 'Open descendant count', description: 'Descendants at any depth not in a completed status' },
       labels: { name: 'Labels', description: 'Item labels' },
       sprint: { name: 'Sprint', description: 'Associated sprint' },
       iteration: { name: 'Iteration', description: 'Associated iteration (sprint, release, etc.)' },

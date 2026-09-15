@@ -91,6 +91,7 @@ export default {
       dates: 'Поля дат',
       people: 'Пользователи',
       workflow: 'Рабочий процесс',
+      automation: 'Автоматизация',
       custom: 'Настраиваемые поля',
     },
     fields: {
@@ -106,6 +107,8 @@ export default {
       dueDate: { name: 'Срок', description: 'Когда элемент должен быть завершён' },
       startDate: { name: 'Дата начала', description: 'Когда начинается работа' },
       estimate: { name: 'Оценка', description: 'Оценка трудозатрат' },
+      openChildCount: { name: 'Открытых дочерних', description: 'Прямые дочерние элементы вне завершённых статусов' },
+      openDescendantCount: { name: 'Открытых потомков', description: 'Потомки на любой глубине вне завершённых статусов' },
       labels: { name: 'Метки', description: 'Метки элемента' },
       sprint: { name: 'Спринт', description: 'Связанный спринт' },
       iteration: { name: 'Итерация', description: 'Связанная итерация: спринт, выпуск и т. п.' },
