@@ -56,7 +56,13 @@ async function getWorkflow(id, requestOptions = {}) {
 }
 
 async function getAllWithTransitions() {
-  return fetchAPI('/workflows?include_transitions=true');
+  const workflowsList = await fetchV2Data('/workflows');
+  return Promise.all(
+    workflowsList.map(async (wf) => ({
+      ...wf,
+      transitions: await getTransitions(wf.id),
+    }))
+  );
 }
 
 export const workflows = {
