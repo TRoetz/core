@@ -17424,6 +17424,26 @@
                 },
                 "type": "array"
               },
+              "story_points_rollup": {
+                "additionalProperties": false,
+                "description": "The story points rollup value.",
+                "nullable": true,
+                "properties": {
+                  "contributors": {
+                    "description": "The contributors value.",
+                    "type": "integer"
+                  },
+                  "points": {
+                    "description": "The points value.",
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "contributors",
+                  "points"
+                ],
+                "type": "object"
+              },
               "transitions": {
                 "additionalProperties": false,
                 "description": "The transitions value.",
@@ -41379,6 +41399,26 @@
                   "type": "object"
                 },
                 "type": "array"
+              },
+              "story_points_rollup": {
+                "additionalProperties": false,
+                "description": "The story points rollup value.",
+                "nullable": true,
+                "properties": {
+                  "contributors": {
+                    "description": "The contributors value.",
+                    "type": "integer"
+                  },
+                  "points": {
+                    "description": "The points value.",
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "contributors",
+                  "points"
+                ],
+                "type": "object"
               },
               "transitions": {
                 "additionalProperties": false,

@@ -1721,7 +1721,8 @@ func (s *Server) initialize() error {
 		WithWorkflow(conditionService, eventCoordinator, issueSyncService).
 		WithMutationEffects(mentionService)
 	itemDetailApplication := services.NewItemDetailApplicationService(s.db, itemApplication, itemLinkService, permService).
-		WithContextReaders(screenHandler, requestTypeHandler, actionApplication)
+		WithContextReaders(screenHandler, requestTypeHandler, actionApplication).
+		WithStoryPointRollups(repository.NewItemRepository(s.db))
 	catalogMutations := services.NewCatalogMutationService(s.db, permService, workflowService)
 	governanceApplication := services.NewGovernanceApplicationService(s.db, permService, approvalSetService, approvalService)
 	if err := v2.RegisterRoutes(v2.Deps{

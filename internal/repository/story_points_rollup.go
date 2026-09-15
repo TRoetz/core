@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"fmt"
 	"strings"
 )
@@ -60,4 +61,40 @@ func (r *ItemRepository) GroupOpenStoryPointsByAssignee(workspaceIDs []int) ([]S
 		return nil, fmt.Errorf("group story points by assignee: %w", err)
 	}
 	return out, nil
+}
+
+// StoryPointsRollup is the recursive rollup of an item's descendants' story
+// points. Points sums every descendant that carries points; Contributors
+// counts those point-carrying descendants (at any depth).
+type StoryPointsRollup struct {
+	Points       float64 `json:"points"`
+	Contributors int     `json:"contributors"`
+}
+
+// SumDescendantStoryPoints aggregates story points across ALL descendants of
+// an item (multi-level) with one capped recursive CTE, mirroring the cycle
+// guard in GetDescendantsWithMaxDepthContext. Cost is bounded by the
+// subtree size — call sites must be per-item detail loads, never list
+// projections (GH #256).
+func (r *ItemRepository) SumDescendantStoryPoints(ctx context.Context, parentID int) (StoryPointsRollup, error) {
+	var rollup StoryPointsRollup
+	err := r.db.QueryRowContext(ctx, `
+		WITH RECURSIVE descendants AS (
+			SELECT id, parent_id, story_points, 1 as level
+			FROM items
+			WHERE parent_id = ?
+			UNION ALL
+			SELECT i.id, i.parent_id, i.story_points, d.level + 1
+			FROM items i
+			INNER JOIN descendants d ON i.parent_id = d.id
+			WHERE d.level < ?
+		)
+		SELECT COALESCE(SUM(story_points), 0), COUNT(*)
+		FROM descendants
+		WHERE story_points IS NOT NULL`, parentID, maxItemHierarchyDepth,
+	).Scan(&rollup.Points, &rollup.Contributors)
+	if err != nil {
+		return StoryPointsRollup{}, fmt.Errorf("sum descendant story points: %w", err)
+	}
+	return rollup, nil
 }

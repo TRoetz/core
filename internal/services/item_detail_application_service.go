@@ -36,24 +36,25 @@ type ItemDetailSectionError struct {
 }
 
 type ItemDetailSummary struct {
-	Item                   *models.Item              `json:"item"`
-	Links                  EntityLinks               `json:"links"`
-	LinkTypes              []models.LinkType         `json:"link_types"`
-	RequestTypeFields      []models.RequestTypeField `json:"request_type_fields"`
-	Transitions            ItemTransitionSummary     `json:"transitions"`
-	Watching               bool                      `json:"watching"`
-	Children               []models.Item             `json:"children"`
-	Ancestors              []models.Item             `json:"ancestors"`
-	CurrentItemType        *ItemTypeResult           `json:"current_item_type"`
-	CurrentHierarchyLevel  *models.HierarchyLevel    `json:"current_hierarchy_level"`
-	AvailableSubIssueTypes []ItemTypeResult          `json:"available_sub_issue_types"`
-	Priorities             []models.PriorityDisplay  `json:"priorities"`
-	ScreenContext          ItemDetailScreenContext   `json:"screen_context"`
-	ManualActions          []*models.Action          `json:"manual_actions"`
-	PersonalTaskCount      int                       `json:"personal_task_count"`
-	SCMAvailable           bool                      `json:"scm_available"`
-	HasAgentRuns           bool                      `json:"has_agent_runs"`
-	SectionErrors          []ItemDetailSectionError  `json:"section_errors"`
+	Item                   *models.Item                  `json:"item"`
+	Links                  EntityLinks                   `json:"links"`
+	LinkTypes              []models.LinkType             `json:"link_types"`
+	RequestTypeFields      []models.RequestTypeField     `json:"request_type_fields"`
+	Transitions            ItemTransitionSummary         `json:"transitions"`
+	Watching               bool                          `json:"watching"`
+	Children               []models.Item                 `json:"children"`
+	StoryPointsRollup      *repository.StoryPointsRollup `json:"story_points_rollup,omitempty"`
+	Ancestors              []models.Item                 `json:"ancestors"`
+	CurrentItemType        *ItemTypeResult               `json:"current_item_type"`
+	CurrentHierarchyLevel  *models.HierarchyLevel        `json:"current_hierarchy_level"`
+	AvailableSubIssueTypes []ItemTypeResult              `json:"available_sub_issue_types"`
+	Priorities             []models.PriorityDisplay      `json:"priorities"`
+	ScreenContext          ItemDetailScreenContext       `json:"screen_context"`
+	ManualActions          []*models.Action              `json:"manual_actions"`
+	PersonalTaskCount      int                           `json:"personal_task_count"`
+	SCMAvailable           bool                          `json:"scm_available"`
+	HasAgentRuns           bool                          `json:"has_agent_runs"`
+	SectionErrors          []ItemDetailSectionError      `json:"section_errors"`
 }
 
 type ItemDetailApplicationService struct {
@@ -64,6 +65,13 @@ type ItemDetailApplicationService struct {
 	screens       ItemDetailScreenReader
 	requestFields ItemDetailRequestFieldReader
 	manualActions ItemDetailManualActionReader
+	rollups       ItemStoryPointRollupReader
+}
+
+// ItemStoryPointRollupReader computes the recursive story-point rollup for one
+// item's descendants. Detail loads only — never list projections.
+type ItemStoryPointRollupReader interface {
+	SumDescendantStoryPoints(ctx context.Context, parentID int) (repository.StoryPointsRollup, error)
 }
 
 func NewItemDetailApplicationService(db database.Database, items *ItemApplicationService, links *ItemLinkService, permissions *PermissionService) *ItemDetailApplicationService {
@@ -72,6 +80,12 @@ func NewItemDetailApplicationService(db database.Database, items *ItemApplicatio
 
 func (s *ItemDetailApplicationService) WithContextReaders(screens ItemDetailScreenReader, requestFields ItemDetailRequestFieldReader, manualActions ItemDetailManualActionReader) *ItemDetailApplicationService {
 	s.screens, s.requestFields, s.manualActions = screens, requestFields, manualActions
+	return s
+}
+
+// WithStoryPointRollups wires the descendant story-point aggregate (GH #256).
+func (s *ItemDetailApplicationService) WithStoryPointRollups(reader ItemStoryPointRollupReader) *ItemDetailApplicationService {
+	s.rollups = reader
 	return s
 }
 
@@ -140,6 +154,18 @@ func (s *ItemDetailApplicationService) load(ctx context.Context, userID int, ite
 		}
 		return err
 	})
+	if s.rollups != nil {
+		// Detail loads only — never a list projection. The CTE is a no-op for
+		// leaf items (one indexed probe), so it runs unconditionally to avoid
+		// racing the parallel children loader.
+		run("story_points_rollup", func() error {
+			rollup, err := s.rollups.SumDescendantStoryPoints(ctx, item.ID)
+			if err == nil && rollup.Contributors > 0 {
+				result.StoryPointsRollup = &rollup
+			}
+			return err
+		})
+	}
 	if item.ParentID != nil {
 		run("ancestors", func() error {
 			value, err := s.items.Ancestors(ctx, userID, item.ID)
