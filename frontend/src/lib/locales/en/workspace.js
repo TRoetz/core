@@ -399,6 +399,7 @@ export default {
     labels: 'Labels',
     addLabel: '+ Add label',
     storyPoints: 'Story Points',
+    storyPointsChildRollup: '{points} pts rolled up from {count} child item{plural}',
     project: 'Project',
     clickToViewDetails: 'Click to view item details',
 

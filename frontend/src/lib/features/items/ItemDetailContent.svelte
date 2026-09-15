@@ -35,6 +35,7 @@
     loadingLinks = false,
     availableSubIssueTypes = [],
     childItems = [],
+    storyPointsRollup = null,
     loadingChildItems = false,
     itemTypes = [],
     tab = 'comments',
@@ -475,6 +476,7 @@
             {dropdownItems}
             onsaveField={onsaveField}
             oncancelEdit={oncancelEdit}
+            {storyPointsRollup}
             onstartEditingAssignee={onstartEditingAssignee}
             onstartEditingMilestone={onstartEditingMilestone}
             onstartEditingIteration={onstartEditingIteration}

@@ -109,6 +109,7 @@
     editingIteration = false,
     editingCustomFields = {},
     editCustomFieldValues = {},
+    storyPointsRollup = null,
     workspaceScreenFields = [],
     workspaceScreenSystemFields = [],
     editableScreenFieldIds = null,
@@ -252,6 +253,11 @@
     if (value === (item?.story_points ?? null)) return;
     onsaveField?.({ field: 'story_points', value });
   }
+
+  // Recursive descendant story-point rollup from the detail summary
+  // (GH #256), shown as a hint on the story-points row. Display-only —
+  // the parent's own points stay manually editable.
+  const childStoryPointRollup = $derived(storyPointsRollup);
 
   function saveEstimate() {
     const raw = (estimateEditValue ?? '').trim();
@@ -1044,6 +1050,11 @@
               {/if}
             </div>
           </button>
+          {#if childStoryPointRollup?.contributors > 0}
+            <p class="text-xs mt-0.5 text-right" style="color: var(--ds-text-subtle);" data-testid="story-points-child-rollup">
+              {t('items.storyPointsChildRollup', { points: childStoryPointRollup.points, count: childStoryPointRollup.contributors, plural: childStoryPointRollup.contributors === 1 ? '' : 's' })}
+            </p>
+          {/if}
         {/if}
       </div>
     {/snippet}

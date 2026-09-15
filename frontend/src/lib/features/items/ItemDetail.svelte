@@ -1225,6 +1225,7 @@ import NativeSelect from '../../components/NativeSelect.svelte';
     loadingLinks={itemDetailStore.loadingLinks}
     availableSubIssueTypes={itemDetailStore.availableSubIssueTypes}
     childItems={itemDetailStore.childItems}
+    storyPointsRollup={itemDetailStore.storyPointsRollup}
     loadingChildItems={itemDetailStore.loadingChildItems}
     itemTypes={itemDetailStore.itemTypes}
     {tab}

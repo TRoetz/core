@@ -142,6 +142,8 @@ class ItemDetailStore {
   customFieldDefinitions = $state([]);
   workspaceScreenFields = $state([]);
   workspaceScreenSystemFields = $state([]);
+  // Recursive descendant story-point rollup from the detail summary (GH #256).
+  storyPointsRollup = $state(null);
   // Virtual field metadata for the item's request type (read-only display only).
   requestTypeFields = $state([]);
   editableScreenFieldIds = $state(null);
@@ -350,6 +352,7 @@ class ItemDetailStore {
       );
       this.workspaceScreenFields = fieldConfig.visibleCustomFields;
       this.workspaceScreenSystemFields = fieldConfig.visibleSystemFields;
+      this.storyPointsRollup = summary.story_points_rollup || null;
       this.editableScreenFieldIds = fieldConfig.editableCustomFieldIds;
       this.editableScreenSystemFields = fieldConfig.editableSystemFields;
 
@@ -1337,6 +1340,7 @@ class ItemDetailStore {
 
     this.parentHierarchy = [];
     this.childItems = [];
+    this.storyPointsRollup = null;
     this.loadingChildItems = false;
     this.milestones = [];
     this.iterations = [];
