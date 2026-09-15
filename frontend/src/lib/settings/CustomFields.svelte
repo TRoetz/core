@@ -26,7 +26,7 @@
   import { fieldOptionsObject, parseFieldOptions, serializeOptions } from '../utils/optionUtils.js';
   import { X as XIcon } from '@lucide/svelte';
   import DescriptionText from '../components/DescriptionText.svelte';
-  import { customFieldFormData, linkingFieldOptions, loadCustomFieldsOverview } from './customFieldsData.js';
+  import { customFieldFormData, customFieldUpdatePayload, linkingFieldOptions, loadCustomFieldsOverview } from './customFieldsData.js';
   import { BOOLEAN_CUSTOM_FIELD_TYPE, canonicalCustomFieldType, isBooleanCustomFieldType } from '../utils/customFieldTypes.js';
   import { workspaceDataStore } from '../stores/workspaceDataStore.svelte.js';
 	import TextField from '../components/TextField.svelte';
@@ -378,14 +378,7 @@
       // Process field configuration based on type
       const processedConfig = processFieldConfig();
 
-      const data = {
-        name: formData.field_name,
-        field_type: formData.field_type,
-        description: formData.description || '',
-        required: formData.required || false,
-        applies_to_portal_customers: formData.applies_to_portal_customers || false,
-        applies_to_customer_organisations: formData.applies_to_customer_organisations || false
-      };
+      const data = customFieldUpdatePayload(formData, editingField);
 
       // Convert config to options format expected by backend
       if (processedConfig.selectOptions) {

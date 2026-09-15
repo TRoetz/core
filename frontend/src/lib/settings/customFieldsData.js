@@ -80,3 +80,23 @@ export function linkingFieldOptions({
   }
   return options;
 }
+
+/**
+ * Build the base update payload for the custom-field editor. The update
+ * endpoint stores display_order as sent and the edit form offers no
+ * reordering, so the stored order is carried through (WI-1169).
+ */
+export function customFieldUpdatePayload(formData, editingField = null) {
+  const payload = {
+    name: formData.field_name,
+    field_type: formData.field_type,
+    description: formData.description || '',
+    required: formData.required || false,
+    applies_to_portal_customers: formData.applies_to_portal_customers || false,
+    applies_to_customer_organisations: formData.applies_to_customer_organisations || false,
+  };
+  if (editingField) {
+    payload.display_order = editingField.display_order || 0;
+  }
+  return payload;
+}
