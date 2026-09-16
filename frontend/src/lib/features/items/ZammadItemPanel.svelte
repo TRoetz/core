@@ -3,6 +3,7 @@
   import Spinner from '../../components/Spinner.svelte';
   import { TicketCheck, Plus, RefreshCw, ExternalLink, AlertTriangle, Edit2, Trash2 } from '@lucide/svelte';
   import { api } from '../../api.js';
+  import { isExpectedBackgroundSyncError } from '../../utils/backgroundSync.js';
   import Button from '../../components/Button.svelte';
   import Text from '../../components/Text.svelte';
   import Modal from '../../dialogs/Modal.svelte';
@@ -183,8 +184,11 @@
       links = loadedLinks;
     } catch (err) {
       if (currentVersion !== loadVersion || !isCurrentContext(version, currentItemId, currentWorkspaceId)) return;
-      console.error('Failed to load Zammad links:', err);
-      error = t('zammad.loadLinksFailed');
+      // Navigating away aborts the in-flight fetch — expected control flow.
+      if (!isExpectedBackgroundSyncError(err)) {
+        console.error('Failed to load Zammad links:', err);
+        error = t('zammad.loadLinksFailed');
+      }
     } finally {
       if (currentVersion === loadVersion && isCurrentContext(version, currentItemId, currentWorkspaceId)) loading = false;
     }

@@ -18,14 +18,18 @@ export function canRunBackgroundSync(environment = {}) {
  * Failures caused by connectivity changes or page teardown are expected
  * control flow for background refreshes. Other errors still deserve logging.
  *
+ * Page teardown can reject in-flight fetches either as AbortError or as the
+ * browser's network-level "Failed to fetch" TypeError, so match both.
+ *
  * @param {unknown} error
  */
 export function isExpectedBackgroundSyncError(error) {
-  const candidate = /** @type {{ name?: string, code?: string }} */ (error);
+  const candidate = /** @type {{ name?: string, code?: string, message?: string }} */ (error);
   return (
     candidate?.name === 'AbortError' ||
     candidate?.code === 'NETWORK_ERROR' ||
-    candidate?.code === 'REQUEST_TIMEOUT'
+    candidate?.code === 'REQUEST_TIMEOUT' ||
+    /^failed to fetch\b/i.test(candidate?.message ?? '')
   );
 }
 

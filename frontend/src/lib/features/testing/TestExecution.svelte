@@ -3,6 +3,7 @@
   import ModalBackdrop from '../../components/ModalBackdrop.svelte';
   import { currentRoute, navigate } from '../../router.js';
   import { api } from '../../api.js';
+  import { isExpectedBackgroundSyncError } from '../../utils/backgroundSync.js';
   import { IconCheck, IconX, IconBug, IconArrowLeft, IconChevronRight, IconChevronLeft, IconPlus, IconLink, IconPlayerSkipForward } from '@tabler/icons-svelte-runes';
   import { confirm } from '../../composables/useConfirm.js';
   import Button from '../../components/Button.svelte';
@@ -85,7 +86,11 @@ import { parseScenarioSpec, flattenExamples } from './bddSpec.js';
       const response = await api.items.getAll({ workspace_id: workspaceId });
       workspaceItems = response?.data ?? [];
     } catch (error) {
-      console.error('Failed to load workspace items:', error);
+      // Navigating away aborts the in-flight fetch — expected control flow,
+      // not a failure to surface in the console.
+      if (!isExpectedBackgroundSyncError(error)) {
+        console.error('Failed to load workspace items:', error);
+      }
       workspaceItems = [];
     }
   }

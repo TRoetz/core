@@ -171,7 +171,10 @@ export const notificationActions = {
         )
       );
     } catch (error) {
-      console.error('Failed to mark item notifications as read:', error);
+      // Navigating away aborts the in-flight request — expected control flow.
+      if (!isExpectedBackgroundSyncError(error)) {
+        console.error('Failed to mark item notifications as read:', error);
+      }
     }
   },
 
