@@ -2579,15 +2579,27 @@ func (as *ActionService) executeAIAgent(node *models.ActionNode, ctx *models.Exe
 		return fmt.Errorf("ai_agent failed: %w", err)
 	}
 
+	stepResult.Output = map[string]any{
+		// Redacted like the http_request trace preview: the answer can echo
+		// tool-response content, and the execution trace is persisted.
+		"answer":      RedactString(agentResult.Answer),
+		"iterations":  agentResult.Iterations,
+		"tool_calls":  len(agentResult.ToolCalls),
+		"stop_reason": string(agentResult.StopReason),
+	}
+
+	// A budget-exhausted run ends in boilerplate ("I wasn't able to complete
+	// the task...") — other AI surfaces flag it as a warning, and posting it
+	// downstream as a real answer would be wrong. Fail the step so dependent
+	// nodes skip, leaving the partial output on the trace for diagnostics.
+	if agentResult.StopReason != llm.StopReasonDone {
+		return fmt.Errorf("ai_agent stopped early (%s) after %d iterations and %d tool calls",
+			agentResult.StopReason, agentResult.Iterations, len(agentResult.ToolCalls))
+	}
+
 	// Store the result
 	if config.OutputField != "" {
 		ctx.Variables[config.OutputField] = agentResult.Answer
-	}
-
-	stepResult.Output = map[string]any{
-		"answer":     agentResult.Answer,
-		"iterations": agentResult.Iterations,
-		"tool_calls": len(agentResult.ToolCalls),
 	}
 
 	slog.Debug("ai_agent completed",
