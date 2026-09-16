@@ -387,6 +387,7 @@
             {#each listColumns as column (column.field_identifier)}
               {#if sortableFields.has(column.field_identifier)}
                 <button
+                  data-testid={`list-sort-${column.field_identifier}`}
                   class="group inline-flex items-center gap-1 cursor-pointer select-none"
                   onclick={() => toggleSort(column.field_identifier)}
                 >
