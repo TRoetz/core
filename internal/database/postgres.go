@@ -774,6 +774,40 @@ func (p *PostgresDB) initializePostgresDefaultData() error {
 		}
 	}
 
+	// 12b. Link all priorities to the default configuration set, mirroring
+	// the SQLite seeding path. Without this the seeded config set has no
+	// priority list on PostgreSQL.
+	priorityRows, err := tx.Query("SELECT id FROM priorities")
+	if err != nil {
+		return fmt.Errorf("failed to query priorities: %w", err)
+	}
+	var priorityIDs []int64
+	for priorityRows.Next() {
+		var priorityID int64
+		if err = priorityRows.Scan(&priorityID); err != nil {
+			_ = priorityRows.Close()
+			return fmt.Errorf("failed to scan priority: %w", err)
+		}
+		priorityIDs = append(priorityIDs, priorityID)
+	}
+	if err := priorityRows.Err(); err != nil {
+		_ = priorityRows.Close()
+		return fmt.Errorf("failed to iterate priorities: %w", err)
+	}
+	if err := priorityRows.Close(); err != nil {
+		return fmt.Errorf("failed to close priority rows: %w", err)
+	}
+
+	for _, priorityID := range priorityIDs {
+		_, err = tx.Exec(
+			"INSERT INTO configuration_set_priorities (configuration_set_id, priority_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+			configSetID, priorityID,
+		)
+		if err != nil {
+			return fmt.Errorf("failed to link priority to default config set: %w", err)
+		}
+	}
+
 	// 16. Create default notification settings
 	// (built-in email templates are seeded by emailutil.SeedTemplates from
 	// the server bootstrap after Initialize completes — keeps the database
