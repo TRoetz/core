@@ -1,4 +1,4 @@
-import { fetchAPI, fetchV2Data } from './core.js';
+import { fetchV2Data } from './core.js';
 import { createCrudClient } from './createCrudClient.js';
 
 export const statusCategories = createCrudClient('/status-categories', { v2: true });
