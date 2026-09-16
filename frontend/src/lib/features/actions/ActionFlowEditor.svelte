@@ -27,7 +27,7 @@
   import PlaceholderReferenceModal from './PlaceholderReferenceModal.svelte';
   import BaseActionFlowEditor from './shared/BaseActionFlowEditor.svelte';
   import HttpHeadersEditor from './shared/HttpHeadersEditor.svelte';
-  import { getFieldSelectorValue, backendFieldName, standardFieldTypes, collectOutputFields, isValidOutputFieldName } from './shared/fieldNameMapping.js';
+  import { getFieldSelectorValue, backendFieldName, standardFieldTypes, collectOutputFields, isValidOutputFieldName, conditionFieldScope, stripConditionScope, scopeConditionFieldName } from './shared/fieldNameMapping.js';
   import { t } from '../../stores/i18n.svelte.js';
   import Checkbox from '../../components/Checkbox.svelte';
   import Input from '../../components/Input.svelte';
@@ -389,6 +389,28 @@
     };
     if (fieldName === 'milestone_ids') updates.value = '[]';
     return updates;
+  }
+
+  // Condition fields can evaluate against the trigger item's parent — the
+  // backend resolver honors a "parent." prefix (GH #267: "transition the
+  // parent when all its children are done").
+  function conditionScope(fieldName) {
+    return conditionFieldScope(fieldName);
+  }
+
+  // Applies the chosen scope while preserving the selected backend field key.
+  function applyConditionScope(fieldName, scope) {
+    return scopeConditionFieldName(fieldName, scope);
+  }
+
+  // Keeps the current scope when a different field is picked.
+  function withConditionScope(currentFieldName, backendName) {
+    return scopeConditionFieldName(backendName, conditionScope(currentFieldName));
+  }
+
+  // Hydrates the condition's field selection with the scope prefix stripped.
+  function getConditionSelectorValue(config) {
+    return getFieldSelectorValue({ ...config, field_name: stripConditionScope(config?.field_name) });
   }
 
   function isMilestoneSetField(config) {
@@ -842,12 +864,24 @@
     {:else if selectedNode.type === 'condition'}
       <div>
         <label for="config-condition-field" class="block text-xs font-medium mb-1">{t('actions.config.fieldToCheck')}</label>
-        <FieldSelector
-          selectedField={getFieldSelectorValue(selectedNode.data?.config)}
-          includeAggregates
-          onSelect={(field) => store.updateNodeConfig(selectedNode.id, { field_name: backendFieldName(field) })}
-          onClear={() => store.updateNodeConfig(selectedNode.id, { field_name: '' })}
-        />
+        <div class="flex items-center gap-2">
+          <Select
+            id="config-condition-scope"
+            options={[
+              { value: 'item', label: t('actions.config.scopeThisItem') },
+              { value: 'parent', label: t('actions.config.scopeParentItem') }
+            ]}
+            value={conditionScope(selectedNode.data?.config?.field_name)}
+            onchange={(v) => store.updateNodeConfig(selectedNode.id, { field_name: applyConditionScope(selectedNode.data?.config?.field_name || '', v) })}
+            size="small"
+          />
+          <FieldSelector
+            selectedField={getConditionSelectorValue(selectedNode.data?.config)}
+            includeAggregates
+            onSelect={(field) => store.updateNodeConfig(selectedNode.id, { field_name: withConditionScope(selectedNode.data?.config?.field_name, backendFieldName(field)) })}
+            onClear={() => store.updateNodeConfig(selectedNode.id, { field_name: '' })}
+          />
+        </div>
       </div>
       <div>
         <label for="config-condition-operator" class="block text-xs font-medium mb-1">{t('actions.config.operator')}</label>

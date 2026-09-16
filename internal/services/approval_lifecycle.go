@@ -456,6 +456,9 @@ func (s *ApprovalService) evaluateParallelRequestState(ctx context.Context, tx d
 // so it bypasses gating logic — going backwards via a system action must not
 // re-trigger an approval gate on the prior status.
 func (s *ApprovalService) Cancel(ctx context.Context, requestID, actorUserID int, comment, reason string) error {
+	if s == nil {
+		return nil
+	}
 	type cancelOutcome struct {
 		ran        bool
 		itemID     int

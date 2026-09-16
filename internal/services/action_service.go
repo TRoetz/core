@@ -1010,11 +1010,53 @@ func currentItemFieldValue(itemRepo *repository.ItemRepository, ctx *models.Exec
 	return value
 }
 
+// currentItemFieldValueResolved resolves a field against the execution item.
+// A "parent." prefix evaluates the field against the item's parent instead —
+// how automations express "transition the parent when all its children are
+// done" (parent.open_child_count eq 0). Only one parent hop is honored.
 func currentItemFieldValueResolved(itemRepo *repository.ItemRepository, ctx *models.ExecutionContext, fieldName string) (any, bool) {
 	if ctx == nil {
 		return nil, false
 	}
+	if rest, ok := strings.CutPrefix(fieldName, "parent."); ok && !strings.HasPrefix(rest, "parent.") {
+		return parentItemFieldValueResolved(itemRepo, ctx, rest)
+	}
+	return itemFieldValueResolved(itemRepo, ctx, currentActionItemID(ctx), ctx.Item, fieldName)
+}
+
+// parentItemFieldValueResolved resolves <field> against the current item's
+// parent. The parent is read with details so names, custom fields, and
+// aggregates resolve against fresh, mutated state.
+func parentItemFieldValueResolved(itemRepo *repository.ItemRepository, ctx *models.ExecutionContext, fieldName string) (any, bool) {
+	if itemRepo == nil {
+		return nil, false
+	}
 	itemID := currentActionItemID(ctx)
+	if itemID <= 0 {
+		return nil, false
+	}
+	lookupContext := ctx.Context
+	if lookupContext == nil {
+		lookupContext = context.Background()
+	}
+	item, err := itemRepo.FindByIDWithDetailsContext(lookupContext, itemID)
+	if err != nil || item == nil || item.ParentID == nil || *item.ParentID <= 0 {
+		return nil, false
+	}
+	parent, err := itemRepo.FindByIDWithDetailsContext(lookupContext, *item.ParentID)
+	if err != nil {
+		slog.Warn("failed to resolve action parent item",
+			slog.String("component", "actions"), slog.Int("item_id", itemID),
+			slog.Int("parent_id", *item.ParentID), slog.Any("error", err))
+		return nil, false
+	}
+	return itemFieldValueResolved(itemRepo, ctx, parent.ID, parent, fieldName)
+}
+
+// itemFieldValueResolved resolves fieldName for a specific item. item may be
+// a hydrated snapshot (iterator item or parent); when names or joined fields
+// are needed it is re-read fresh so later nodes observe mutations.
+func itemFieldValueResolved(itemRepo *repository.ItemRepository, ctx *models.ExecutionContext, itemID int, item *models.Item, fieldName string) (any, bool) {
 	switch fieldName {
 	case "id", "item_id":
 		if itemID > 0 {
@@ -1047,6 +1089,20 @@ func currentItemFieldValueResolved(itemRepo *repository.ItemRepository, ctx *mod
 			return nil, false
 		}
 		return count, true
+	case "milestone_ids", "milestone_id":
+		// Milestones live in a join table, so they never appear among the
+		// item columns. Conditions compare the attached IDs as CSV; an empty
+		// attachment renders as "" so is_empty/is_not_empty behave naturally.
+		if itemRepo == nil || itemID <= 0 {
+			return "", true
+		}
+		ids, err := itemRepo.GetMilestoneIDs(itemID)
+		if err != nil {
+			slog.Warn("failed to load milestones for action condition",
+				slog.String("component", "actions"), slog.Int("item_id", itemID), slog.Any("error", err))
+			return nil, false
+		}
+		return joinIntsCSV(ids), true
 	}
 	if strings.HasPrefix(fieldName, "custom_field_") {
 		key := strings.TrimPrefix(fieldName, "custom_field_")
@@ -1056,8 +1112,8 @@ func currentItemFieldValueResolved(itemRepo *repository.ItemRepository, ctx *mod
 				return val, true
 			}
 		}
-		if ctx.Item != nil && ctx.Item.CustomFieldValues != nil {
-			val, ok := ctx.Item.CustomFieldValues[key]
+		if item != nil && item.CustomFieldValues != nil {
+			val, ok := item.CustomFieldValues[key]
 			return val, ok
 		}
 	}
@@ -1066,58 +1122,57 @@ func currentItemFieldValueResolved(itemRepo *repository.ItemRepository, ctx *mod
 			return val, true
 		}
 	}
-	// Only joined names need hydration. Resolve them without pinning ctx.Item:
-	// later nodes must see mutations, including inside iterator snapshots.
+	// Only joined names need hydration. Resolve them without pinning the
+	// passed snapshot: later nodes must see mutations, including inside
+	// iterator snapshots.
 	if (fieldName == "status" || fieldName == "priority") && itemRepo != nil && itemID > 0 {
 		lookupContext := ctx.Context
 		if lookupContext == nil {
 			lookupContext = context.Background()
 		}
-		item, err := itemRepo.FindByIDWithDetailsContext(lookupContext, itemID)
+		hydrated, err := itemRepo.FindByIDWithDetailsContext(lookupContext, itemID)
 		if err != nil {
 			slog.Warn("failed to resolve action item name", slog.String("component", "actions"),
 				slog.Int("item_id", itemID), slog.String("field", fieldName), slog.Any("error", err))
 			// Do not silently substitute a stale iterator name after a failed read.
 			return nil, false
 		}
-		resolved := *ctx
-		resolved.Item = item
-		ctx = &resolved
+		item = hydrated
 	}
-	if ctx.Item != nil {
+	if item != nil {
 		switch fieldName {
 		case "title":
-			return ctx.Item.Title, true
+			return item.Title, true
 		case "description":
-			return ctx.Item.Description, true
+			return item.Description, true
 		case "status":
-			return ctx.Item.StatusName, true
+			return item.StatusName, true
 		case "priority":
-			return ctx.Item.PriorityName, true
+			return item.PriorityName, true
 		case "status_id":
-			return derefIntPtr(ctx.Item.StatusID), true
+			return derefIntPtr(item.StatusID), true
 		case "priority_id":
-			return derefIntPtr(ctx.Item.PriorityID), true
+			return derefIntPtr(item.PriorityID), true
 		case "assignee_id":
-			return derefIntPtr(ctx.Item.AssigneeID), true
+			return derefIntPtr(item.AssigneeID), true
 		case "creator_id":
-			return derefIntPtr(ctx.Item.CreatorID), true
+			return derefIntPtr(item.CreatorID), true
 		case "item_type_id":
-			return derefIntPtr(ctx.Item.ItemTypeID), true
+			return derefIntPtr(item.ItemTypeID), true
 		case "iteration_id":
-			return derefIntPtr(ctx.Item.IterationID), true
+			return derefIntPtr(item.IterationID), true
 		case "project_id":
-			return derefIntPtr(ctx.Item.ProjectID), true
+			return derefIntPtr(item.ProjectID), true
 		case "parent_id":
-			return derefIntPtr(ctx.Item.ParentID), true
+			return derefIntPtr(item.ParentID), true
 		case "story_points":
-			return derefFloatPtr(ctx.Item.StoryPoints), true
+			return derefFloatPtr(item.StoryPoints), true
 		case "due_date":
-			return derefTimePtr(ctx.Item.DueDate), true
+			return derefTimePtr(item.DueDate), true
 		case "start_date":
-			return derefTimePtr(ctx.Item.StartDate), true
+			return derefTimePtr(item.StartDate), true
 		case "end_date":
-			return derefTimePtr(ctx.Item.EndDate), true
+			return derefTimePtr(item.EndDate), true
 		}
 	}
 	if val, ok := ctx.Variables[fieldName]; ok {
@@ -2087,6 +2142,19 @@ func (as *ActionService) resolveExecutionValue(ctx *models.ExecutionContext, pat
 	case "trigger":
 		if value, ok := ctx.Variables[parts[1]]; ok {
 			return nestedExecutionValue(value, parts[2:])
+		}
+		// {{trigger.<field>}} falls back to the new_<field> value so natural
+		// spellings like trigger.iteration_id resolve to what the trigger
+		// event just set.
+		if value, ok := ctx.Variables["new_"+parts[1]]; ok {
+			return nestedExecutionValue(value, parts[2:])
+		}
+		return nil, false
+	case "parent":
+		// {{parent.<field>}} mirrors the parent.-prefixed condition fields:
+		// e.g. {{parent.open_child_count}} in a comment or set_field value.
+		if len(parts) >= 2 {
+			return parentItemFieldValueResolved(as.itemRepo, ctx, strings.Join(parts[1:], "."))
 		}
 		return nil, false
 	case "old":

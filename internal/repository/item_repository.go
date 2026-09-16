@@ -922,6 +922,11 @@ func (r *ItemRepository) TouchChanged(exec execer, itemID int, now time.Time) er
 	return nil
 }
 
+// GetMilestoneIDs returns the IDs of the milestones attached to an item.
+func (r *ItemRepository) GetMilestoneIDs(itemID int) ([]int, error) {
+	return NewMilestoneAttachRepository(r.db).MilestoneIDsForItem(itemID)
+}
+
 // GetItemCustomFieldValue returns a decoded field value, or nil when absent.
 func (r *ItemRepository) GetItemCustomFieldValue(itemID, customFieldID int) (any, error) {
 	var raw sql.NullString

@@ -25,7 +25,7 @@ func NewMilestoneAttachRepository(db database.Database) *MilestoneAttachReposito
 // ListForItem returns the milestones currently attached to an item, ordered by name.
 func (r *MilestoneAttachRepository) ListForItem(itemID int) ([]models.Milestone, error) {
 	rows, err := r.db.Query(`
-		SELECT m.id, m.name, m.description, m.target_date, m.status,
+		SELECT m.id, m.name, COALESCE(m.description, ''), m.target_date, m.status,
 		       m.category_id, m.is_global, m.workspace_id, m.created_at, m.updated_at
 		FROM item_milestones im
 		JOIN milestones m ON im.milestone_id = m.id
@@ -38,6 +38,21 @@ func (r *MilestoneAttachRepository) ListForItem(itemID int) ([]models.Milestone,
 	defer func() { _ = rows.Close() }()
 
 	return scanMilestoneAttachRows(rows)
+}
+
+// MilestoneIDsForItem returns the IDs of the milestones attached to an item,
+// in the same name order as ListForItem. Used by action conditions, which
+// compare attachment as a CSV of ids.
+func (r *MilestoneAttachRepository) MilestoneIDsForItem(itemID int) ([]int, error) {
+	milestones, err := r.ListForItem(itemID)
+	if err != nil {
+		return nil, err
+	}
+	ids := make([]int, 0, len(milestones))
+	for _, milestone := range milestones {
+		ids = append(ids, milestone.ID)
+	}
+	return ids, nil
 }
 
 // ReplaceItemMilestones swaps the milestone set for an item atomically: deletes
@@ -132,7 +147,7 @@ func (r *MilestoneAttachRepository) LoadForItemsContext(ctx context.Context, ite
 	}
 
 	query := fmt.Sprintf(`
-		SELECT im.item_id, m.id, m.name, m.description, m.target_date, m.status,
+		SELECT im.item_id, m.id, m.name, COALESCE(m.description, ''), m.target_date, m.status,
 		       m.category_id, m.is_global, m.workspace_id, m.created_at, m.updated_at
 		FROM item_milestones im
 		JOIN milestones m ON im.milestone_id = m.id

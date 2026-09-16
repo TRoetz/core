@@ -52,6 +52,9 @@ func (s *ApprovalService) SetEventCoordinator(ec *EventCoordinator) {
 // item-type override → workspace config-set default → global default.
 // Returns (nil, nil) for personal workspaces or when no approval set is configured.
 func (s *ApprovalService) GetApprovalSetIDForItem(ctx context.Context, workspaceID int, itemTypeID *int) (*int, error) {
+	if s == nil {
+		return nil, nil
+	}
 	isPersonal, err := s.templateRepo.IsWorkspacePersonal(ctx, workspaceID)
 	if err != nil {
 		return nil, err

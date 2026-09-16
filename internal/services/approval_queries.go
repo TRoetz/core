@@ -15,6 +15,9 @@ import (
 // deny_transition_id of an in-flight pending approval on this item. Returns
 // nil if not gated.
 func (s *ApprovalService) IsTransitionGatedByApproval(ctx context.Context, itemID, fromStatusID, toStatusID int) (*int, error) {
+	if s == nil {
+		return nil, nil
+	}
 	return s.runtimeRepo.FindGatedRequestForTransition(ctx, itemID, fromStatusID, toStatusID)
 }
 
@@ -50,8 +53,12 @@ func (s *ApprovalService) GetGatedTransitionsForItem(ctx context.Context, itemID
 // MaybeOpenForStatusEntry opens a new approval request iff the (workspace,
 // item-type, status) tuple resolves to an approval_set_status. If no approval
 // is configured for the destination status, returns (nil, nil) — safe to call
-// for every transition.
+// for every transition. A nil service is a no-op: approval gating is optional
+// wiring.
 func (s *ApprovalService) MaybeOpenForStatusEntry(ctx context.Context, itemID, statusID, fromStatusID, actorUserID int) (*models.ApprovalRequest, error) {
+	if s == nil {
+		return nil, nil
+	}
 	item, err := repository.NewItemRepository(s.db).FindByID(itemID)
 	if err != nil {
 		return nil, err
@@ -72,6 +79,9 @@ func (s *ApprovalService) MaybeOpenForStatusEntry(ctx context.Context, itemID, s
 
 // GetPendingForItem returns the single pending approval request for an item, or nil.
 func (s *ApprovalService) GetPendingForItem(ctx context.Context, itemID int) (*models.ApprovalRequest, error) {
+	if s == nil {
+		return nil, nil
+	}
 	id, err := s.runtimeRepo.FindPendingRequestIDForItem(ctx, itemID)
 	if err != nil {
 		return nil, err
