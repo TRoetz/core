@@ -265,20 +265,6 @@ function createSSOStore() {
       return null;
     },
 
-    // Check for email verification pending state in URL (after SSO callback)
-    checkForEmailVerificationPending() {
-      const urlParams = new URLSearchParams(window.location.search);
-      const verifyEmail = urlParams.get('verify_email');
-      if (verifyEmail === 'pending') {
-        // Clear the param from URL
-        const url = new URL(window.location.href);
-        url.searchParams.delete('verify_email');
-        window.history.replaceState({}, '', url.toString());
-        return true;
-      }
-      return false;
-    },
-
     // Get email verification status for current user (with caching)
     async getVerificationStatus() {
       // Return cached result if available

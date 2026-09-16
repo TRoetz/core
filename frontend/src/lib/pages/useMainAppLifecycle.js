@@ -91,11 +91,6 @@ export function useMainAppLifecycle({
       () => workspacesStore.loadPersonalWorkspace(),
       () => loadAuthenticatedShellUI(userId),
       async () => {
-        if (ssoStore.checkForEmailVerificationPending()) {
-          onEmailVerificationChange(true);
-          return;
-        }
-
         try {
           const status = await ssoStore.getVerificationStatus();
           onEmailVerificationChange(Boolean(status.configured && !status.email_verified));

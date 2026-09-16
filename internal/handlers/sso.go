@@ -99,7 +99,7 @@ type SSOProviderResponse struct {
 	HasClientSecret      bool   `json:"has_client_secret"`
 	Scopes               string `json:"scopes"`
 	AutoProvisionUsers   bool   `json:"auto_provision_users"`
-	RequireVerifiedEmail bool   `json:"require_verified_email"` // Trust provider email when verification status is absent.
+	RequireVerifiedEmail bool   `json:"require_verified_email"` // Provider is authoritative for email; skips Windshift email verification.
 	AttributeMapping     string `json:"attribute_mapping"`
 	// SAML-specific fields
 	SAMLIdPMetadataURL string    `json:"saml_idp_metadata_url,omitempty"`
@@ -482,14 +482,13 @@ func (h *SSOHandler) Callback(w http.ResponseWriter, r *http.Request) {
 
 		user := result.User
 
-		// If IdP verified the email, update our DB to reflect that
-		if !result.NeedsEmailVerification && !user.EmailVerified {
-			if h.emailVerificationService != nil {
-				if err := h.emailVerificationService.SetEmailVerified(user.ID, true); err != nil {
-					slog.Warn("failed to set email verified from IdP", slog.String("component", "sso"), slog.Int("user_id", user.ID), slog.Any("error", err))
-				} else {
-					user.EmailVerified = true
-				}
+		// SSO authentication is itself evidence of account ownership: keep the
+		// verification column aligned so informational UI reflects the login.
+		if !user.EmailVerified && h.emailVerificationService != nil {
+			if err := h.emailVerificationService.SetEmailVerified(user.ID, true); err != nil {
+				slog.Warn("failed to mark SSO user email verified", slog.String("component", "sso"), slog.Int("user_id", user.ID), slog.Any("error", err))
+			} else {
+				user.EmailVerified = true
 			}
 		}
 
@@ -497,28 +496,6 @@ func (h *SSOHandler) Callback(w http.ResponseWriter, r *http.Request) {
 		if !user.IsActive {
 			h.redirectWithError(w, r, "Account is disabled")
 			return
-		}
-
-		// Handle email verification if needed
-		if result.NeedsEmailVerification && !user.EmailVerified {
-			// User needs email verification - send verification email
-			if h.emailVerificationService != nil {
-				var token string
-				token, err = h.emailVerificationService.GenerateVerificationToken(user.ID)
-				if err != nil {
-					slog.Warn("failed to generate verification token", slog.String("component", "sso"), slog.Int("user_id", user.ID), slog.Any("error", err))
-					// Continue with login but log the error
-				} else {
-					if err = h.emailVerificationService.SendVerificationEmail(user, token); err != nil {
-						slog.Warn("failed to send verification email", slog.String("component", "sso"), slog.Int("user_id", user.ID), slog.Any("error", err))
-						// Continue with login but log the error
-					} else {
-						slog.Info("sent verification email", slog.String("component", "sso"), slog.Int("user_id", user.ID), slog.String("email", user.Email))
-					}
-				}
-			} else {
-				slog.Warn("user needs email verification but SMTP is not configured", slog.String("component", "sso"), slog.Int("user_id", user.ID))
-			}
 		}
 
 		// Get client IP for session
@@ -568,13 +545,8 @@ func (h *SSOHandler) Callback(w http.ResponseWriter, r *http.Request) {
 		}
 		slog.Debug("session cookie set, redirecting", slog.String("component", "sso"))
 
-		// Redirect based on email verification status
-		if result.NeedsEmailVerification && !user.EmailVerified {
-			http.Redirect(w, r, "/?verify_email=pending", http.StatusFound)
-		} else {
-			// storedRedirectURI is validated above by isValidRedirectURI (relative path only).
-			http.Redirect(w, r, storedRedirectURI, http.StatusFound) // #nosec G710
-		}
+		// storedRedirectURI is validated above by isValidRedirectURI (relative path only).
+		http.Redirect(w, r, storedRedirectURI, http.StatusFound) // #nosec G710
 	})
 
 	callbackHandler(w, r)

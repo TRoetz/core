@@ -21,11 +21,10 @@ var (
 	ErrAccountLinkingRequiresVerification = errors.New("account linking requires verified email from identity provider")
 )
 
-// FindOrCreateResult contains the result of FindOrCreateUser with verification status
+// FindOrCreateResult contains the result of FindOrCreateUser
 type FindOrCreateResult struct {
-	User                   *models.User
-	NeedsEmailVerification bool // True when Windshift must verify the email.
-	IsNewUser              bool // True if user was just created
+	User      *models.User
+	IsNewUser bool // True if user was just created
 }
 
 // ExternalAccount represents a user's linked external SSO identity
@@ -235,18 +234,17 @@ func (s *UserStore) CreateUser(claims *OIDCClaims, emailVerified bool) (*models.
 // 3. If auto-provision enabled -> create user -> link account -> return user
 // 4. If auto-provision disabled -> return error
 //
-// Email verification logic:
-// - A verified claim is always accepted.
-// - An explicitly unverified claim uses Windshift verification.
-// - A missing claim is accepted only when the provider is trusted to manage email.
+// Email and linking policy:
+//   - SSO authentication is itself evidence that the identity controls the
+//     account: every user returned from a successful login is treated as
+//     email-verified. Nothing in the app gates on the verification column.
+//   - require_verified_email only governs auto-linking to pre-existing
+//     accounts: when disabled, linking requires a verified email claim from
+//     the provider.
 func (s *UserStore) FindOrCreateUser(provider *SSOProvider, claims *OIDCClaims) (*FindOrCreateResult, error) {
 	result := &FindOrCreateResult{}
 
-	emailIsVerified := claims.Email != "" && claims.EmailVerifiedProvided && claims.EmailVerified
-	if claims.Email != "" && !claims.EmailVerifiedProvided && provider.RequireVerifiedEmail {
-		emailIsVerified = true
-	}
-	needsOurVerification := !emailIsVerified
+	claimVerifiesEmail := claims.Email != "" && claims.EmailVerifiedProvided && claims.EmailVerified
 
 	// 1. Check if external account already linked
 	extAccount, err := s.FindExternalAccount(provider.ID, claims.Subject)
@@ -259,20 +257,16 @@ func (s *UserStore) FindOrCreateUser(provider *SSOProvider, claims *OIDCClaims) 
 			return nil, err
 		}
 		result.User = user
-		// Verify locally only when the stored email is still unverified and the
-		// current provider evidence does not verify that same address.
-		emailMatchesUser := strings.EqualFold(strings.TrimSpace(claims.Email), strings.TrimSpace(user.Email))
-		result.NeedsEmailVerification = (!emailIsVerified || !emailMatchesUser) && !user.EmailVerified
 		return result, nil
 	}
 
-	// 2. Link by email only when the provider claim or provider trust verifies it.
+	// 2. Link by email only when the claim verifies it or the provider is trusted.
 	if claims.Email != "" {
 		var existingUser *models.User
 		existingUser, err = s.FindUserByEmail(claims.Email)
 		if err == nil {
 			// Never grant an unverified SSO identity access to an existing account.
-			if !emailIsVerified {
+			if !claimVerifiesEmail && !provider.RequireVerifiedEmail {
 				return nil, fmt.Errorf("%w: cannot automatically link to existing account '%s' without verified email from identity provider", ErrAccountLinkingRequiresVerification, claims.Email)
 			}
 			// Link the external account to existing user
@@ -280,9 +274,6 @@ func (s *UserStore) FindOrCreateUser(provider *SSOProvider, claims *OIDCClaims) 
 				return nil, fmt.Errorf("%w: %w", ErrAccountLinkingFailed, err)
 			}
 			result.User = existingUser
-			// The callback promotes an unverified local row when this login supplies
-			// trusted verification evidence.
-			result.NeedsEmailVerification = needsOurVerification && !existingUser.EmailVerified
 			return result, nil
 		}
 	}
@@ -297,7 +288,8 @@ func (s *UserStore) FindOrCreateUser(provider *SSOProvider, claims *OIDCClaims) 
 		return nil, fmt.Errorf("%w: email is required for user provisioning", ErrOIDCMissingClaims)
 	}
 
-	// Record explicit negative verification before creating an unverified user.
+	// Record explicit negative verification before creating the user; the row
+	// is still created verified because SSO authentication just happened.
 	if claims.EmailVerifiedProvided && !claims.EmailVerified {
 		slog.Warn("SSO auto-provisioning a new user from an IdP-unverified email claim",
 			slog.String("component", "sso"),
@@ -307,8 +299,8 @@ func (s *UserStore) FindOrCreateUser(provider *SSOProvider, claims *OIDCClaims) 
 			slog.String("subject", claims.Subject))
 	}
 
-	// Create user with email_verified set based on IdP claim
-	newUser, err := s.CreateUser(claims, emailIsVerified)
+	// Create the user; SSO authentication verifies account ownership.
+	newUser, err := s.CreateUser(claims, true)
 	if err != nil {
 		return nil, err
 	}
@@ -320,7 +312,6 @@ func (s *UserStore) FindOrCreateUser(provider *SSOProvider, claims *OIDCClaims) 
 
 	result.User = newUser
 	result.IsNewUser = true
-	result.NeedsEmailVerification = needsOurVerification
 	return result, nil
 }
 

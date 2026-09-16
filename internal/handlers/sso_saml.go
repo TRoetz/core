@@ -213,32 +213,19 @@ func (h *SSOHandler) SAMLAssertionConsumerService(w http.ResponseWriter, r *http
 
 	user := result.User
 
-	// If IdP verified the email, update our DB to reflect that
-	if !result.NeedsEmailVerification && !user.EmailVerified {
-		if h.emailVerificationService != nil {
-			if err := h.emailVerificationService.SetEmailVerified(user.ID, true); err != nil {
-				slog.Warn("failed to set email verified from IdP", slog.String("component", "sso"), slog.Int("user_id", user.ID), slog.Any("error", err))
-			} else {
-				user.EmailVerified = true
-			}
+	// SSO authentication is itself evidence of account ownership: keep the
+	// verification column aligned so informational UI reflects the login.
+	if !user.EmailVerified && h.emailVerificationService != nil {
+		if err := h.emailVerificationService.SetEmailVerified(user.ID, true); err != nil {
+			slog.Warn("failed to mark SSO user email verified", slog.String("component", "sso"), slog.Int("user_id", user.ID), slog.Any("error", err))
+		} else {
+			user.EmailVerified = true
 		}
 	}
 
 	if !user.IsActive {
 		h.redirectWithError(w, r, "Account is disabled")
 		return
-	}
-
-	// Handle email verification if needed
-	if result.NeedsEmailVerification && !user.EmailVerified {
-		if h.emailVerificationService != nil {
-			token, tokenErr := h.emailVerificationService.GenerateVerificationToken(user.ID)
-			if tokenErr == nil {
-				if sendErr := h.emailVerificationService.SendVerificationEmail(user, token); sendErr != nil {
-					slog.Warn("failed to send verification email", "user_id", user.ID, "error", sendErr)
-				}
-			}
-		}
 	}
 
 	// Get client IP
@@ -288,16 +275,12 @@ func (h *SSOHandler) SAMLAssertionConsumerService(w http.ResponseWriter, r *http
 	}
 
 	// Redirect - validate redirect URI before using it
-	if result.NeedsEmailVerification && !user.EmailVerified {
-		http.Redirect(w, r, "/?verify_email=pending", http.StatusFound)
-	} else {
-		target := redirectURI
-		if target == "" || !isValidRedirectURI(target) {
-			target = "/"
-		}
-		// target is validated by isValidRedirectURI (relative path only).
-		http.Redirect(w, r, target, http.StatusFound) // #nosec G710
+	target := redirectURI
+	if target == "" || !isValidRedirectURI(target) {
+		target = "/"
 	}
+	// target is validated by isValidRedirectURI (relative path only).
+	http.Redirect(w, r, target, http.StatusFound) // #nosec G710
 }
 
 // samlAssertionToClaims converts SAML assertion attributes to OIDCClaims

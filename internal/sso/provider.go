@@ -36,7 +36,7 @@ type SSOProvider struct {
 	ClientSecret          string `json:"client_secret,omitempty"` // Only used for input, never stored
 	Scopes                string `json:"scopes"`
 	AutoProvisionUsers    bool   `json:"auto_provision_users"`
-	RequireVerifiedEmail  bool   `json:"require_verified_email"` // Trust provider-managed email when verification status is absent.
+	RequireVerifiedEmail  bool   `json:"require_verified_email"` // Provider is authoritative for email; skips Windshift email verification.
 	AttributeMapping      string `json:"attribute_mapping"`
 	// SAML-specific fields
 	SAMLIdPMetadataURL string    `json:"saml_idp_metadata_url,omitempty"` // IdP metadata URL for auto-configuration

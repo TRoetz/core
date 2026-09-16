@@ -561,13 +561,13 @@ export default {
       autoProvisionUsers: 'Auto-provision users',
       autoProvisionUsersDesc: 'Automatically create user accounts on first SSO login',
       manualUserCreationOnly: 'Manual user creation only',
-      trustIdpEmailVerification: 'Trust provider-managed email addresses',
+      trustIdpEmailVerification: 'Link accounts without IdP email verification',
       trustIdpEmailVerificationDesc:
-        'Skip Windshift email verification when this provider omits verification status. Explicitly unverified addresses still require verification.',
-      idpVerificationNotEnforced: 'Windshift verifies unconfirmed email',
+        'When enabled, identities from this provider are linked to existing Windshift accounts by email even when the provider does not verify the address. When disabled, account linking requires a verified email claim from the provider.',
+      idpVerificationNotEnforced: 'Verified email required for account linking',
       unsafeProvisioningWarningTitle: 'Provider email trust enabled',
       unsafeProvisioningWarningBody:
-        "Users whose provider omits email verification can be linked to existing accounts by email. Enable this only when the provider controls its users' email addresses.",
+        "Identities from this provider are linked to existing accounts by email even when the provider reports the address unverified. Enable this only when the provider controls its users' email addresses.",
       testConnection: 'Test Connection',
       testing: 'Testing...',
       connectionSuccessful: 'Connection successful',
