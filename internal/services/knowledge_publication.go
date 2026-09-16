@@ -161,16 +161,21 @@ type PublishedPageHit struct {
 	Score       float64
 }
 
-// SearchPublishedPages full-text searches the pages published by enabled
-// portals and returns ranked hits. Only pages inside a wired workspace
-// (and inside a wired subtree when the wiring names a root) match.
-func (s *KnowledgePublicationService) SearchPublishedPages(query string, limit int) ([]PublishedPageHit, error) {
+// SearchPublishedPagesForPortal full-text searches the pages published by
+// this portal's knowledge-base wiring and returns ranked hits. Only pages
+// inside a wired workspace (and inside a wired subtree when the wiring
+// names a root) match. Sources come from the given channel config so one
+// portal never sees pages wired into a different portal.
+func (s *KnowledgePublicationService) SearchPublishedPagesForPortal(config models.ChannelConfig, query string, limit int) ([]PublishedPageHit, error) {
 	if limit <= 0 || limit > 100 {
 		limit = 25
 	}
-	sources, err := s.PublishedSources()
-	if err != nil {
-		return nil, err
+	sources := make([]PublishedSource, 0, len(config.KnowledgeBasePageSources))
+	for _, src := range config.KnowledgeBasePageSources {
+		sources = append(sources, PublishedSource{
+			WorkspaceID: src.WorkspaceID,
+			RootPageID:  src.RootPageID,
+		})
 	}
 	if len(sources) == 0 {
 		return nil, nil

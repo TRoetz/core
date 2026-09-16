@@ -881,7 +881,7 @@ func (h *PortalHandler) SearchKnowledgeBase(w http.ResponseWriter, r *http.Reque
 		}
 	}
 	if pagesWired {
-		if err := h.appendWorkspacePageHits(searchRequest.Query, &data); err != nil {
+		if err := h.appendWorkspacePageHits(config, searchRequest.Query, &data); err != nil {
 			slog.Error("failed to search published workspace pages",
 				slog.String("component", "portal"), slog.Any("error", err))
 		}
@@ -958,9 +958,10 @@ func (h *PortalHandler) searchDocmostKnowledgeBase(ctx context.Context, config m
 
 // appendWorkspacePageHits searches the workspace pages wired into this
 // portal's knowledge base and appends them to data marked with the
-// workspace_page source.
-func (h *PortalHandler) appendWorkspacePageHits(query string, data *[]map[string]any) error {
-	hits, err := h.publication.SearchPublishedPages(query, knowledgeBasePageSearchLimit)
+// workspace_page source. The config scopes the search to this portal's
+// wiring; other portals' sources are never included.
+func (h *PortalHandler) appendWorkspacePageHits(config models.ChannelConfig, query string, data *[]map[string]any) error {
+	hits, err := h.publication.SearchPublishedPagesForPortal(config, query, knowledgeBasePageSearchLimit)
 	if err != nil {
 		return err
 	}
