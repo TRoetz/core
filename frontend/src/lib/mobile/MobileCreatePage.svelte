@@ -60,8 +60,9 @@
   let customFieldsLoaded = $state(false);
   let configSetLoadedForWorkspace = $state(null);
   let screenFields = $state([]);
-  let screenFieldsLoadedForKey = $state(null);
-  let screenFieldsLoadingForKey = $state(null);
+  // Non-reactive sync guards — see templatesInFlightKey above.
+  let screenFieldsLoadedForKey = null;
+  let screenFieldsLoadingForKey = null;
   let fieldsLoading = $state(false);
   let customFieldValues = $state({});
   let milestones = $state([]);
@@ -103,7 +104,10 @@
   let mandatoryTemplate = $state(null);
   let selectedTemplateId = $state(null);
   let templatesLoading = $state(false);
-  let templatesInFlightKey = $state(null);
+  // Non-reactive sync guards: read (and written) inside the template-loading
+  // effect's call path, so $state here would make the effect a dependency of
+  // itself and loop forever.
+  let templatesInFlightKey = null;
 
   const templateLocked = $derived(!!mandatoryTemplate);
   const isChild = $derived(!!parent);
