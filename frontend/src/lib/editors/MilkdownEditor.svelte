@@ -60,6 +60,27 @@
   let isFocused = $state(false);
   const toolbarVisible = $derived(showToolbar && !readonly && (!hideToolbarUntilFocus || isFocused));
 
+  // Blur collapses the focus-revealed toolbar, which reflows everything below
+  // the editor. Hide it on a short delay instead so a click that started on a
+  // control under the editor (e.g. the comment submit button) lands before the
+  // shift; refocusing cancels the pending hide (WI-1349).
+  let toolbarHideTimer = null;
+
+  function handleEditorFocusIn() {
+    clearTimeout(toolbarHideTimer);
+    toolbarHideTimer = null;
+    isFocused = true;
+  }
+
+  function handleEditorFocusOut(e) {
+    if (e.currentTarget.contains(/** @type {Node | null} */ (e.relatedTarget))) return;
+    clearTimeout(toolbarHideTimer);
+    toolbarHideTimer = setTimeout(() => {
+      toolbarHideTimer = null;
+      isFocused = false;
+    }, 250);
+  }
+
   let editorElement = $state(null);
   let fileInput = $state(null);
   let editor = $state(null);
@@ -587,6 +608,10 @@
     if (hideCardTimeout) {
       clearTimeout(hideCardTimeout);
     }
+    if (toolbarHideTimer) {
+      clearTimeout(toolbarHideTimer);
+      toolbarHideTimer = null;
+    }
     if (editor) {
       try {
         await editor.destroy();
@@ -721,8 +746,8 @@
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div class="milkdown-wrapper" class:has-toolbar={toolbarVisible}
-  onfocusin={() => isFocused = true}
-  onfocusout={(e) => { if (!e.currentTarget.contains(/** @type {Node | null} */ (e.relatedTarget))) isFocused = false; }}
+  onfocusin={handleEditorFocusIn}
+  onfocusout={handleEditorFocusOut}
 >
   {#if toolbarVisible}
     <div class="milkdown-toolbar" tabindex="-1">
