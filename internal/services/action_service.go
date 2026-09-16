@@ -469,6 +469,18 @@ func matchesItemActionTrigger(config models.ActionTriggerConfig, event *models.A
 	}
 	if event.EventType == models.ActionTriggerItemUpdated && config.FieldName != "" {
 		_, changed := event.NewValues[config.FieldName]
+		if !changed {
+			// Editors save filter spellings that differ from the event's change
+			// keys; normalize before giving up. Custom fields are keyed
+			// "cf_<id>" in change events while the editor saves the filter as
+			// "custom_field_<id>" (the spelling the condition and set_field
+			// executors resolve). Milestone changes are keyed "milestones".
+			if customFieldID, ok := strings.CutPrefix(config.FieldName, "custom_field_"); ok {
+				_, changed = event.NewValues["cf_"+customFieldID]
+			} else if config.FieldName == "milestone_id" || config.FieldName == "milestone_ids" {
+				_, changed = event.NewValues["milestones"]
+			}
+		}
 		return changed
 	}
 	return true

@@ -283,9 +283,9 @@ func actionEventFromDomainEvent(event events.Event) (*models.ActionEvent, string
 		actionEvent.WorkspaceID = payload.Item.WorkspaceID
 		actionEvent.ItemID = payload.Item.ID
 		actionEvent.ItemTypeID = payload.Item.ItemTypeID
-		actionEvent.OldValues = map[string]any{"status_id": payload.OldStatusID}
+		actionEvent.OldValues = map[string]any{"status_id": nullableInt(payload.OldStatusID)}
 		actionEvent.NewValues = itemSnapshotValues(payload.Item)
-		actionEvent.NewValues["status_id"] = payload.NewStatusID
+		actionEvent.NewValues["status_id"] = nullableInt(payload.NewStatusID)
 		applyAutomation(actionEvent, payload.Automation)
 	case itemevents.Linked:
 		var payload itemevents.LinkChangedV1
@@ -311,11 +311,21 @@ func actionEventFromDomainEvent(event events.Event) (*models.ActionEvent, string
 func itemSnapshotValues(item itemevents.ItemSnapshot) map[string]any {
 	return map[string]any{
 		"id": item.ID, "workspace_id": item.WorkspaceID, "workspace_item_number": item.WorkspaceItemNumber,
-		"item_type_id": item.ItemTypeID, "title": item.Title, "description": item.Description,
-		"status_id": item.StatusID, "priority_id": item.PriorityID, "assignee_id": item.AssigneeID,
-		"creator_id": item.CreatorID, "parent_id": item.ParentID, "iteration_id": item.IterationID,
-		"project_id": item.ProjectID, "request_type_id": item.RequestTypeID,
+		"item_type_id": nullableInt(item.ItemTypeID), "title": item.Title, "description": item.Description,
+		"status_id": nullableInt(item.StatusID), "priority_id": nullableInt(item.PriorityID), "assignee_id": nullableInt(item.AssigneeID),
+		"creator_id": nullableInt(item.CreatorID), "parent_id": nullableInt(item.ParentID), "iteration_id": nullableInt(item.IterationID),
+		"project_id": nullableInt(item.ProjectID), "request_type_id": nullableInt(item.RequestTypeID),
 	}
+}
+
+// nullableInt dereferences an optional id for action-event value maps so
+// template substitution and numeric coercion see numbers instead of pointer
+// addresses or rejected pointer types.
+func nullableInt(v *int) any {
+	if v == nil {
+		return nil
+	}
+	return *v
 }
 
 func changedValues(changes []itemevents.FieldChange) (oldValues, newValues map[string]any) {
