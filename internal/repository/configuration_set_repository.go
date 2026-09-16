@@ -684,7 +684,9 @@ func (r *ConfigurationSetRepository) ResolveForWorkspace(ctx context.Context, wo
 			SELECT w.is_personal, cs.id, cs.workflow_id, cs.condition_set_id, cs.approval_set_id
 			FROM workspaces w
 			LEFT JOIN workspace_configuration_sets wcs ON wcs.workspace_id = w.id
-			LEFT JOIN configuration_sets cs ON cs.id = wcs.configuration_set_id
+			LEFT JOIN configuration_sets cs
+			  ON cs.id = COALESCE(wcs.configuration_set_id,
+			    (SELECT id FROM configuration_sets WHERE is_default = true ORDER BY id LIMIT 1))
 			WHERE w.id = ?
 		`
 		args = append(args, workspaceID)
@@ -696,7 +698,9 @@ func (r *ConfigurationSetRepository) ResolveForWorkspace(ctx context.Context, wo
 			       COALESCE(csit.approval_set_id, cs.approval_set_id)
 			FROM workspaces w
 			LEFT JOIN workspace_configuration_sets wcs ON wcs.workspace_id = w.id
-			LEFT JOIN configuration_sets cs ON cs.id = wcs.configuration_set_id
+			LEFT JOIN configuration_sets cs
+			  ON cs.id = COALESCE(wcs.configuration_set_id,
+			    (SELECT id FROM configuration_sets WHERE is_default = true ORDER BY id LIMIT 1))
 			LEFT JOIN configuration_set_item_types csit
 			  ON csit.configuration_set_id = cs.id AND csit.item_type_id = ?
 			WHERE w.id = ?

@@ -36,7 +36,9 @@ func (r *StatusRepository) ListForWorkspaces(workspaceIDs []int) ([]models.Statu
 			         (SELECT id FROM workflows WHERE is_default = true ORDER BY id LIMIT 1)) AS workflow_id
 			FROM target_workspaces target
 			LEFT JOIN workspace_configuration_sets wcs ON wcs.workspace_id = target.id
-			LEFT JOIN configuration_sets cs ON cs.id = wcs.configuration_set_id
+			LEFT JOIN configuration_sets cs
+			  ON cs.id = COALESCE(wcs.configuration_set_id,
+			    (SELECT id FROM configuration_sets WHERE is_default = true ORDER BY id LIMIT 1))
 			LEFT JOIN configuration_set_item_types csit ON csit.configuration_set_id = cs.id
 		), available_statuses AS (
 			SELECT wt.from_status_id AS status_id FROM effective_workflows ew
