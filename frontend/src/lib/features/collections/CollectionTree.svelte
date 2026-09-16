@@ -543,6 +543,7 @@
               {@const selectedPriority = priorities.find(p => p.id === item.priority_id)}
               {@const testCaseCount = (showTestCases && itemTestCaseLinksStore.get(item.id)) ? itemTestCaseLinksStore.get(item.id).length : 0}
               <div
+                data-testid={`tree-row-${item.id}`}
                 class="flex items-center gap-4 px-4 py-3 transition-colors group tree-row"
                 style="border-top: 1px solid var(--ctx-border, var(--ds-border));{idx === 0 ? 'border-top: none;' : ''}"
               >

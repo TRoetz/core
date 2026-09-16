@@ -185,7 +185,7 @@ func (r *ItemRepository) GetAncestorsForHierarchyContext(ctx context.Context, it
 	rows, err := r.db.QueryContext(ctx, `
 		WITH RECURSIVE ancestors AS (
 			SELECT i.id, i.workspace_id, i.workspace_item_number, i.item_type_id, i.title, i.description, i.is_task,
-			       i.assignee_id, i.creator_id, i.custom_field_values, i.parent_id,
+			       i.assignee_id, i.creator_id, i.status_id, i.priority_id, i.custom_field_values, i.parent_id,
 			       i.created_at, i.updated_at,
 			       w.name as workspace_name, w.key as workspace_key, it.name as item_type_name, it.color as item_type_color, it.icon as item_type_icon,
 			       0 as level, it.hierarchy_level
@@ -197,7 +197,7 @@ func (r *ItemRepository) GetAncestorsForHierarchyContext(ctx context.Context, it
 			UNION ALL
 
 			SELECT p.id, p.workspace_id, p.workspace_item_number, p.item_type_id, p.title, p.description, p.is_task,
-			       p.assignee_id, p.creator_id, p.custom_field_values, p.parent_id,
+			       p.assignee_id, p.creator_id, p.status_id, p.priority_id, p.custom_field_values, p.parent_id,
 			       p.created_at, p.updated_at,
 			       w.name as workspace_name, w.key as workspace_key, it.name as item_type_name, it.color as item_type_color, it.icon as item_type_icon,
 			       a.level + 1 as level, it.hierarchy_level
@@ -209,7 +209,7 @@ func (r *ItemRepository) GetAncestorsForHierarchyContext(ctx context.Context, it
 			  AND COALESCE(a.hierarchy_level, -999) != 0
 		)
 		SELECT id, workspace_id, workspace_item_number, item_type_id, title, description, is_task,
-		       assignee_id, creator_id, custom_field_values, parent_id,
+		       assignee_id, creator_id, status_id, priority_id, custom_field_values, parent_id,
 		       created_at, updated_at,
 		       workspace_name, workspace_key, item_type_name, item_type_color, item_type_icon, level
 		FROM ancestors
@@ -234,12 +234,13 @@ func (r *ItemRepository) GetAncestorsForHierarchyContext(ctx context.Context, it
 
 // scanAncestorItem reads one row of the shared ancestor SELECT column list:
 // id, workspace_id, workspace_item_number, item_type_id, title, description,
-// is_task, assignee_id, creator_id, custom_field_values, parent_id,
-// created_at, updated_at, workspace_name, workspace_key, item_type_name,
-// item_type_color, item_type_icon, level. Leading targets, when given, precede
-// the shared columns (the batch query prefixes each row with its start id).
+// is_task, assignee_id, creator_id, status_id, priority_id,
+// custom_field_values, parent_id, created_at, updated_at, workspace_name,
+// workspace_key, item_type_name, item_type_color, item_type_icon, level.
+// Leading targets, when given, precede the shared columns (the batch query
+// prefixes each row with its start id).
 func scanAncestorItem(rows *sql.Rows, item *models.Item, leading ...any) error {
-	var itemTypeID, assigneeID, creatorID, parentID sql.NullInt64
+	var itemTypeID, assigneeID, creatorID, statusID, priorityID, parentID sql.NullInt64
 	var customFieldValuesJSON sql.NullString
 	var workspaceName, workspaceKey, itemTypeName, itemTypeColor, itemTypeIcon sql.NullString
 	var level int
@@ -247,7 +248,7 @@ func scanAncestorItem(rows *sql.Rows, item *models.Item, leading ...any) error {
 	dest = append(dest, leading...)
 	dest = append(dest,
 		&item.ID, &item.WorkspaceID, &item.WorkspaceItemNumber, &itemTypeID, &item.Title, &item.Description, &item.IsTask,
-		&assigneeID, &creatorID, &customFieldValuesJSON, &parentID,
+		&assigneeID, &creatorID, &statusID, &priorityID, &customFieldValuesJSON, &parentID,
 		&item.CreatedAt, &item.UpdatedAt,
 		&workspaceName, &workspaceKey, &itemTypeName, &itemTypeColor, &itemTypeIcon, &level,
 	)
@@ -260,6 +261,8 @@ func scanAncestorItem(rows *sql.Rows, item *models.Item, leading ...any) error {
 	assignNullableInt(&item.ItemTypeID, itemTypeID)
 	assignNullableInt(&item.AssigneeID, assigneeID)
 	assignNullableInt(&item.CreatorID, creatorID)
+	assignNullableInt(&item.StatusID, statusID)
+	assignNullableInt(&item.PriorityID, priorityID)
 	assignNullableInt(&item.ParentID, parentID)
 	assignNullableString(&item.WorkspaceName, workspaceName)
 	assignNullableString(&item.WorkspaceKey, workspaceKey)
@@ -290,7 +293,7 @@ func (r *ItemRepository) GetAncestorsForItemsContext(ctx context.Context, itemID
 	rows, err := r.db.QueryContext(ctx, `
 		WITH RECURSIVE ancestors AS (
 			SELECT i.id AS start_id, i.id, i.workspace_id, i.workspace_item_number, i.item_type_id, i.title, i.description, i.is_task,
-			       i.assignee_id, i.creator_id, i.custom_field_values, i.parent_id,
+			       i.assignee_id, i.creator_id, i.status_id, i.priority_id, i.custom_field_values, i.parent_id,
 			       i.created_at, i.updated_at,
 			       w.name as workspace_name, w.key as workspace_key, it.name as item_type_name, it.color as item_type_color, it.icon as item_type_icon,
 			       0 as level, it.hierarchy_level
@@ -302,7 +305,7 @@ func (r *ItemRepository) GetAncestorsForItemsContext(ctx context.Context, itemID
 			UNION ALL
 
 			SELECT a.start_id, p.id, p.workspace_id, p.workspace_item_number, p.item_type_id, p.title, p.description, p.is_task,
-			       p.assignee_id, p.creator_id, p.custom_field_values, p.parent_id,
+			       p.assignee_id, p.creator_id, p.status_id, p.priority_id, p.custom_field_values, p.parent_id,
 			       p.created_at, p.updated_at,
 			       w.name as workspace_name, w.key as workspace_key, it.name as item_type_name, it.color as item_type_color, it.icon as item_type_icon,
 			       a.level + 1 as level, it.hierarchy_level
@@ -314,7 +317,7 @@ func (r *ItemRepository) GetAncestorsForItemsContext(ctx context.Context, itemID
 			  AND COALESCE(a.hierarchy_level, -999) != 0
 		)
 		SELECT start_id, id, workspace_id, workspace_item_number, item_type_id, title, description, is_task,
-		       assignee_id, creator_id, custom_field_values, parent_id,
+		       assignee_id, creator_id, status_id, priority_id, custom_field_values, parent_id,
 		       created_at, updated_at,
 		       workspace_name, workspace_key, item_type_name, item_type_color, item_type_icon, level
 		FROM ancestors
