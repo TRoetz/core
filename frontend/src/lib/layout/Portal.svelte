@@ -29,6 +29,7 @@
   import RequestTypeModal from '../dialogs/RequestTypeModal.svelte';
   import AssetReportModal from '../dialogs/AssetReportModal.svelte';
   import AssetReportFormModal from '../dialogs/AssetReportFormModal.svelte';
+  import GlobalConfirmDialog from '../dialogs/GlobalConfirmDialog.svelte';
 
   /** @type {any} */
   const AlertCircleIcon = AlertCircle;
@@ -695,4 +696,9 @@
       </div>
     </ModalBackdrop>
   {/if}
+
+  <!-- Shared confirm() composable target — the portal does not mount the
+       main app overlays, so the dialog must live here too. Mounted outside
+       the portal-state branches so confirm() works in every state. -->
+  <GlobalConfirmDialog />
 </div>
