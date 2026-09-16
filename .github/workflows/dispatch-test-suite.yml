@@ -21,7 +21,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.TESTS_REPO_PAT }}
         run: |
-          gh api repos/Windshiftapp/core-tests/dispatches \
+          gh api repos/Windshiftapp/core-tests-internal/dispatches \
             -f event_type=core-pushed \
             -f "client_payload[sha]=${GITHUB_SHA}" \
             -f "client_payload[ref]=${GITHUB_REF_NAME}"
