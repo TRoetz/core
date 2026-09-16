@@ -336,12 +336,23 @@ export async function fetchAllV2Pages(endpoint, options = {}) {
   const url = new URL(endpoint, 'https://windshift.invalid');
   url.searchParams.set('page_size', '100');
   const items = [];
+  const seenIds = new Set();
   let page = 1;
   let totalPages = 1;
   do {
     url.searchParams.set('page', String(page));
     const document = await fetchAPIV2(`${url.pathname}${url.search}`, options);
-    items.push(...(document?.data ?? []));
+    for (const item of document?.data ?? []) {
+      // Offset pagination drifts when rows shift between page fetches, so the
+      // same row can appear on two consecutive pages. Keep the first copy.
+      const key = item?.id ?? item?.key;
+      if (key !== undefined && key !== null) {
+        const dedupeKey = String(key);
+        if (seenIds.has(dedupeKey)) continue;
+        seenIds.add(dedupeKey);
+      }
+      items.push(item);
+    }
     totalPages = document?.pagination?.total_pages ?? 0;
     page += 1;
   } while (page <= totalPages);
