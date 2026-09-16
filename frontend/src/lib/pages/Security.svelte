@@ -5,6 +5,7 @@
 	import { User, Shield, Key, Smartphone, Plus, Trash2, Code, Copy, Terminal, AlertTriangle, X } from '@lucide/svelte';
 	import Button from '../components/Button.svelte';
 	import Input from '../components/Input.svelte';
+	import TextField from '../components/TextField.svelte';
 	import EmptyState from '../components/EmptyState.svelte';
 	import SectionHeader from '../layout/SectionHeader.svelte';
 	import PageHeader from '../layout/PageHeader.svelte';
@@ -488,8 +489,10 @@
 		{:else}
 			<div class="space-y-4">
 				<div>
-					<Label for="current-password" color="default" class="mb-1">{t('auth.currentPassword')}</Label>
-					<Input
+					<TextField
+						label={t('auth.currentPassword')}
+						labelColor="default"
+						labelClass="mb-1"
 						id="current-password"
 						type="password"
 						value={changePasswordData.current_password}
@@ -499,8 +502,10 @@
 				</div>
 
 				<div>
-					<Label for="new-password" color="default" class="mb-1">{t('auth.newPassword')}</Label>
-					<Input
+					<TextField
+						label={t('auth.newPassword')}
+						labelColor="default"
+						labelClass="mb-1"
 						id="new-password"
 						type="password"
 						value={changePasswordData.new_password}
@@ -510,8 +515,10 @@
 				</div>
 
 				<div>
-					<Label for="confirm-password" color="default" class="mb-1">{t('auth.confirmPassword')}</Label>
-					<Input
+					<TextField
+						label={t('auth.confirmPassword')}
+						labelColor="default"
+						labelClass="mb-1"
 						id="confirm-password"
 						type="password"
 						value={changePasswordData.confirm_password}
@@ -590,10 +597,11 @@
 
 		<div class="space-y-4">
 			<div>
-				<Label for="credential-name" color="default" class="mb-1">{credentialType === 'fido' ? 'Security Key Name' : 'SSH Key Name'}</Label>
-				<Input
+				<TextField
+					label={credentialType === 'fido' ? 'Security Key Name' : 'SSH Key Name'}
+					labelColor="default"
+					labelClass="mb-1"
 					id="credential-name"
-					type="text"
 					value={newCredentialName}
 					oninput={(e) => setNewCredentialName(/** @type {HTMLInputElement} */ (e.target).value)}
 					placeholder={credentialType === 'fido' ? 'e.g., YubiKey, iPhone Touch ID' : 'e.g., MacBook Pro, CI Server'}
@@ -652,10 +660,11 @@
 
 		<div class="space-y-5">
 			<div>
-				<Label for="token-name" color="default" class="mb-1">{t('security.tokenName')}</Label>
-				<Input
+				<TextField
+					label={t('security.tokenName')}
+					labelColor="default"
+					labelClass="mb-1"
 					id="token-name"
-					type="text"
 					value={newTokenName}
 					oninput={(e) => setNewTokenName(/** @type {HTMLInputElement} */ (e.target).value)}
 					placeholder="e.g., Mobile App, CI/CD Pipeline"

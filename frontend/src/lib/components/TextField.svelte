@@ -25,6 +25,8 @@
    *   title?: string,
    *   labelColor?: 'default' | 'subtle',
    *   labelClass?: string,
+   *   labelSize?: 'xs' | 'sm' | 'md',
+   *   inputClass?: string,
    *   dataTestid?: string,
    *   inputRef?: any,
    *   oninput?: (e?: any) => void,
@@ -58,6 +60,8 @@
     title = undefined,
     labelColor = 'subtle', // 'default' | 'subtle'
     labelClass = 'mb-2',
+    labelSize = 'sm',
+    inputClass = '',
     dataTestid = undefined,
     inputRef = $bindable(null),
     oninput = undefined,
@@ -72,7 +76,7 @@
 
 <div class={className}>
   {#if label}
-    <Label for={id} {required} color={labelColor} class={labelClass}>{label}</Label>
+    <Label for={id} {required} color={labelColor} size={labelSize} class={labelClass}>{label}</Label>
   {/if}
   <Input
     {type}
@@ -84,6 +88,7 @@
     {disabled}
     {autofocus}
     {size}
+    class={inputClass}
     {min}
     {max}
     {step}

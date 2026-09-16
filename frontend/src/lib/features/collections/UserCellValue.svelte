@@ -1,5 +1,6 @@
 <script>
   import { User } from '@lucide/svelte';
+  import Avatar from '../../components/Avatar.svelte';
 
   let {
     user = null,
@@ -14,18 +15,11 @@
       ? `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.username || fallbackName
       : fallbackName,
   );
-  const initials = $derived(
-    user
-      ? (user.first_name?.[0] || '') + (user.last_name?.[0] || '') || user.username?.[0]?.toUpperCase() || '?'
-      : fallbackName.split(' ').map((part) => part[0]).join('').toUpperCase().slice(0, 2) || '?',
-  );
 </script>
 
 <div class="flex items-center gap-2 {interactive ? 'cursor-pointer' : ''}" data-testid={testId}>
   {#if user || fallbackAvatar}
-    <div class="w-5 h-5 rounded-full bg-ds-accent-blue flex items-center justify-center text-ds-text-inverse text-[10px] font-medium">
-      {initials}
-    </div>
+    <Avatar size="2xs" variant="blue" name={userName} />
   {:else}
     <User class="w-4 h-4" style="color: var(--ds-text-subtle);" />
   {/if}

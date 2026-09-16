@@ -10,9 +10,9 @@
   import { confirm } from '../composables/useConfirm.js';
   import { formatDateSimple } from '../utils/dateFormatter.js';
   import Button from '../components/Button.svelte';
+  import TextField from '../components/TextField.svelte';
   import Input from '../components/Input.svelte';
-  import Textarea from '../components/Textarea.svelte';
-  import Label from '../components/Label.svelte';
+  import TextareaField from '../components/TextareaField.svelte';
   import DataTable from '../components/DataTable.svelte';
   import PageHeader from '../layout/PageHeader.svelte';
   import Modal from '../dialogs/Modal.svelte';
@@ -357,9 +357,10 @@
           {:else}
           <div class="grid grid-cols-1 gap-6">
             <div>
-              <Label for="screen-name" required class="mb-2">{t('screensPage.screenName')}</Label>
-              <Input
+              <TextField
+                label={t('screensPage.screenName')}
                 id="screen-name"
+                labelClass="mb-2"
                 value={formData.name}
                 oninput={(e) => setFormData('name', e.target.value)}
                 placeholder={t('screensPage.screenNamePlaceholder')}
@@ -368,9 +369,10 @@
             </div>
 
             <div>
-              <Label for="screen-description" class="mb-2">{t('screensPage.description')}</Label>
-              <Textarea
+              <TextareaField
+                label={t('screensPage.description')}
                 id="screen-description"
+                labelClass="mb-2"
                 value={formData.description}
                 oninput={(e) => setFormData('description', e.target.value)}
                 rows={3}

@@ -5,6 +5,7 @@
   import { AlertCircle, CheckCircle, X, Plus, Paperclip } from '@lucide/svelte';
   import Button from '../components/Button.svelte';
   import Input from '../components/Input.svelte';
+  import TextField from '../components/TextField.svelte';
   import PageHeader from '../layout/PageHeader.svelte';
   import Lozenge from '../components/Lozenge.svelte';
   import Label from '../components/Label.svelte';
@@ -294,14 +295,16 @@
 
             <!-- Max File Size -->
             <div>
-              <Label for="max-file-size" color="default" class="mb-1">{t('settings.attachments.maxFileSize')}</Label>
-              <Input
+              <TextField
+                label={t('settings.attachments.maxFileSize')}
+                labelColor="default"
+                labelClass="mb-1"
                 type="number"
                 id="max-file-size"
                 bind:value={maxFileSizeMB}
                 min="1"
                 max="1024"
-                class="w-32"
+                inputClass="w-32"
                 size="small"
               />
               <DescriptionText>

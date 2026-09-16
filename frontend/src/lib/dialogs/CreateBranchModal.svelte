@@ -2,6 +2,7 @@
   import { api } from '../api.js';
   import Input from '../components/Input.svelte';
   import Label from '../components/Label.svelte';
+  import TextField from '../components/TextField.svelte';
   import { GitBranch } from '@lucide/svelte';
   import { successToast, errorToast } from '../stores/toasts.svelte.js';
   import { t } from '../stores/i18n.svelte.js';
@@ -110,12 +111,14 @@
 
         <!-- Base Branch -->
         <div>
-          <Label color="default" class="mb-1.5">{t('scm.baseBranch')}</Label>
-          <Input
+          <TextField
+            label={t('scm.baseBranch')}
+            labelColor="default"
+            labelClass="mb-1.5"
             type="text"
             bind:value={baseBranch}
             placeholder={selectedRepo?.default_branch || 'main'}
-            class="font-mono"
+            inputClass="font-mono"
             size="small"
           />
           <DescriptionText variant="subtlest">

@@ -9,6 +9,7 @@
   import { confirm } from '../../composables/useConfirm.js';
   import Input from '../../components/Input.svelte';
   import Button from '../../components/Button.svelte';
+  import TextField from '../../components/TextField.svelte';
   import Label from '../../components/Label.svelte';
   import IconSelector from '../../pickers/IconSelector.svelte';
 
@@ -161,8 +162,10 @@
       </h4>
       <div class="flex gap-3 items-start">
         <div class="flex-1">
-          <Label class="block text-xs font-medium mb-1">{t('common.name') || 'Name'}</Label>
-          <Input
+          <TextField
+            label={t('common.name') || 'Name'}
+            labelSize="xs"
+            labelClass="mb-1"
             dataTestid="personal-label-name"
             bind:value={formName}
             placeholder={t('users.labels.namePlaceholder') || 'e.g. urgent'}

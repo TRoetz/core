@@ -8,6 +8,7 @@
   import WaveBackground from '../components/WaveBackground.svelte';
   import { APP_NAME } from '../constants.js';
   import Toggle from '../components/Toggle.svelte';
+  import Progress from '../components/Progress.svelte';
   import { i18n, SUPPORTED_LOCALES, t } from '../stores/i18n.svelte.js';
 	import TextField from '../components/TextField.svelte';
 	import SelectField from '../components/SelectField.svelte';
@@ -183,12 +184,7 @@
           <span class="text-sm font-medium" style="color: var(--ds-text);">{t('setup.setupProgress')}</span>
           <span class="text-sm" style="color: var(--ds-text-subtle);">{t('setup.step')} {currentStep} {t('setup.of')} {totalSteps}</span>
         </div>
-        <div class="w-full rounded-full h-2" style="background-color: var(--ds-surface);">
-          <div
-            class="h-2 rounded-full transition-all duration-300"
-            style="width: {progressPercentage}%; background: linear-gradient(90deg, #1388E7 0%, #1AB1BC 100%);"
-          ></div>
-        </div>
+        <Progress value={progressPercentage} />
       </div>
 
       <!-- Error Message -->

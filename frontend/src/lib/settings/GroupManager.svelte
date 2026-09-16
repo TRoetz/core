@@ -3,6 +3,7 @@
 	import { api } from '../api.js';
 	import { Plus, Edit, Trash2, UserStar, UserPlus, UserMinus, Circle, X } from '@lucide/svelte';
 	import Button from '../components/Button.svelte';
+	import Avatar from '../components/Avatar.svelte';
 	import Input from '../components/Input.svelte';
 	import Textarea from '../components/Textarea.svelte';
 	import DataTable from '../components/DataTable.svelte';
@@ -367,12 +368,7 @@
 							<div class="space-y-2">
 								{#each currentMembers as member}
 									<div class="flex items-center justify-between p-3 rounded border" style="background-color: var(--ds-surface); border-color: var(--ds-border)">
-										<div class="flex items-center">
-											<div class="h-8 w-8 rounded-full flex items-center justify-center mr-3" style="background-color: var(--ds-background-neutral)">
-												<span class="text-xs font-medium" style="color: var(--ds-text)">
-													{member.full_name ? member.full_name.split(' ').map(n => n.charAt(0)).join('') : '?'}
-												</span>
-											</div>
+											<Avatar size="sm" variant="neutral" name={member.full_name || '?'} class="mr-3" />
 											<div>
 												<div class="text-sm font-medium" style="color: var(--ds-text)">
 													{member.full_name || t('settings.groups.unknownUser')}
@@ -381,8 +377,7 @@
 													{member.email}
 												</div>
 											</div>
-										</div>
-										<Button
+											<Button
 												variant="danger-ghost"
 												size="sm"
 												icon={UserMinus}
@@ -417,11 +412,7 @@
 										{#each selectedUsersToAdd as user}
 											<div class="flex items-center justify-between p-2 bg-ds-accent-blue-subtle rounded border">
 												<div class="flex items-center">
-													<div class="h-6 w-6 rounded-full bg-ds-accent-blue flex items-center justify-center mr-2">
-														<span class="text-xs font-medium text-ds-text-inverse">
-															{user.first_name.charAt(0)}{user.last_name.charAt(0)}
-														</span>
-													</div>
+													<Avatar size="xs" variant="blue" firstName={user.first_name} lastName={user.last_name} class="mr-2" />
 													<div>
 														<div class="text-sm font-medium" style="color: var(--ds-text)">
 															{user.first_name} {user.last_name}
