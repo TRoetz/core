@@ -563,7 +563,7 @@ export default {
       trustIdpEmailVerification: 'Vincular cuentas sin verificación de correo del IdP',
       trustIdpEmailVerificationDesc: 'Cuando está activado, las identidades de este proveedor se vinculan por correo con cuentas de Windshift existentes incluso cuando el proveedor no verifica la dirección. Cuando está desactivado, la vinculación requiere un correo verificado por el proveedor.',
       idpVerificationNotEnforced: 'Se requiere correo verificado para vincular cuentas',
-      unsafeProvisioningWarningTitle: 'Confianza en el correo del proveedor activada',
+      unsafeProvisioningWarningTitle: 'Vinculación sin verificación activada',
       unsafeProvisioningWarningBody:
         'Las identidades de este proveedor se vinculan por correo con cuentas existentes incluso cuando el proveedor marca la dirección como no verificada. Actívalo solo si el proveedor controla las direcciones de correo de sus usuarios.',
       testConnection: 'Probar conexión',

@@ -568,7 +568,7 @@ export default {
       trustIdpEmailVerification: 'Konten auch ohne IdP-E-Mail-Verifizierung verknüpfen',
       trustIdpEmailVerificationDesc: 'Wenn aktiviert, werden Identitäten dieses Anbieters auch dann per E-Mail mit bestehenden Windshift-Konten verknüpft, wenn der Anbieter die Adresse nicht verifiziert. Wenn deaktiviert, erfordert die Verknüpfung eine vom Anbieter verifizierte E-Mail.',
       idpVerificationNotEnforced: 'Verifizierte E-Mail für Kontoverknüpfung erforderlich',
-      unsafeProvisioningWarningTitle: 'Vertrauen in Anbieter-E-Mail aktiviert',
+      unsafeProvisioningWarningTitle: 'Verknüpfung ohne Verifizierung aktiviert',
       unsafeProvisioningWarningBody:
         'Identitäten dieses Anbieters werden auch dann per E-Mail mit bestehenden Konten verknüpft, wenn der Anbieter die Adresse als nicht verifiziert meldet. Nur aktivieren, wenn der Anbieter die E-Mail-Adressen seiner Benutzer kontrolliert.',
       testConnection: 'Verbindung testen',

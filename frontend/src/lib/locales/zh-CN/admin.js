@@ -464,7 +464,7 @@ export default {
       trustIdpEmailVerification: '在 IdP 未验证邮箱的情况下关联账户',
       trustIdpEmailVerificationDesc: '启用后，即使提供商未验证邮箱地址，其身份也会通过邮箱与现有 Windshift 账户关联。禁用后，账户关联需要提供商验证过的邮箱。',
       idpVerificationNotEnforced: '关联账户需要已验证的邮箱',
-      unsafeProvisioningWarningTitle: '已启用提供商邮箱信任',
+      unsafeProvisioningWarningTitle: '已启用未验证邮箱关联',
       unsafeProvisioningWarningBody:
         '即使提供商报告地址未验证，其身份也会通过邮箱与现有账户关联。仅当提供商控制其用户邮箱地址时启用。',
       testConnection: '测试连接',
