@@ -30,6 +30,7 @@ type Config struct {
 	MaxAttempts                int
 	BaseRetryDelay             time.Duration
 	MaxRetryDelay              time.Duration
+	FullReconcileInterval      time.Duration
 	RetentionInterval          time.Duration
 	CompletedDeliveryRetention time.Duration
 	EventRetention             time.Duration
@@ -47,6 +48,7 @@ func DefaultConfig() Config {
 		MaxAttempts:                8,
 		BaseRetryDelay:             time.Second,
 		MaxRetryDelay:              5 * time.Minute,
+		FullReconcileInterval:      time.Minute,
 		RetentionInterval:          6 * time.Hour,
 		CompletedDeliveryRetention: 30 * 24 * time.Hour,
 		EventRetention:             90 * 24 * time.Hour,
@@ -69,6 +71,9 @@ func (c Config) validate() error {
 	}
 	if c.ReconcileBatch <= 0 || c.MaxAttempts <= 0 {
 		return errors.New("reconcile batch and max attempts must be positive")
+	}
+	if c.FullReconcileInterval <= 0 {
+		return errors.New("full reconcile interval must be positive")
 	}
 	if c.BaseRetryDelay <= 0 || c.MaxRetryDelay < c.BaseRetryDelay {
 		return errors.New("retry delays are invalid")
@@ -99,6 +104,11 @@ type Engine struct {
 	workerWake    chan struct{}
 	wg            sync.WaitGroup
 
+	// reconcileCursors tracks, per consumer, the highest event id a short
+	// (exhaustive) scan has covered. Only the reconcile goroutine touches it.
+	reconcileCursors  map[string]int64
+	lastFullReconcile time.Time
+
 	now    func() time.Time
 	jitter func(time.Duration) time.Duration
 	// leaseRenewed is a test observation hook set before engine startup.
@@ -108,13 +118,14 @@ type Engine struct {
 // NewEngine creates a stopped engine. Register handlers before Start.
 func NewEngine(db database.Database, config Config) *Engine {
 	return &Engine{
-		store:         NewStore(db),
-		config:        config,
-		owner:         "domain-events-" + uuid.New().String(),
-		handlers:      make(map[string]Handler),
-		reconcileWake: make(chan struct{}, 1),
-		workerWake:    make(chan struct{}, max(config.WorkerCount, 1)),
-		now:           time.Now,
+		store:            NewStore(db),
+		config:           config,
+		owner:            "domain-events-" + uuid.New().String(),
+		handlers:         make(map[string]Handler),
+		reconcileCursors: make(map[string]int64),
+		reconcileWake:    make(chan struct{}, 1),
+		workerWake:       make(chan struct{}, max(config.WorkerCount, 1)),
+		now:              time.Now,
 		jitter: func(delay time.Duration) time.Duration {
 			window := max(delay/4, time.Nanosecond)
 			return rand.N(window) //nolint:gosec // Retry jitter does not protect a secret.
@@ -264,7 +275,7 @@ func (e *Engine) reconcileLoop(ctx context.Context) {
 	ticker := time.NewTicker(e.config.PollInterval)
 	defer ticker.Stop()
 	for {
-		if err := e.reconcile(ctx); err != nil && ctx.Err() == nil {
+		if _, err := e.reconcile(ctx); err != nil && ctx.Err() == nil {
 			slog.Error("domain event reconciliation failed", "error", err)
 		}
 		select {
@@ -276,19 +287,52 @@ func (e *Engine) reconcileLoop(ctx context.Context) {
 	}
 }
 
-func (e *Engine) reconcile(ctx context.Context) error {
-	for {
-		created, err := e.store.Reconcile(ctx, e.config.ReconcileBatch)
-		if err != nil {
-			return err
-		}
-		if created > 0 {
-			e.signalWorkers()
-		}
-		if created < int64(e.config.ReconcileBatch) {
-			return nil
+// reconcile creates missing deliveries. Per consumer it normally scans only
+// events past the in-memory cursor; a full history scan runs periodically to
+// bound the delay of events whose inserting transaction was still in flight
+// when a cursor advanced past their (lower) id.
+func (e *Engine) reconcile(ctx context.Context) (int64, error) {
+	keys, err := e.store.ActiveConsumerKeys(ctx)
+	if err != nil {
+		return 0, err
+	}
+	for key := range e.reconcileCursors {
+		if !slices.Contains(keys, key) {
+			delete(e.reconcileCursors, key)
 		}
 	}
+	full := e.fullReconcileDue()
+	var total int64
+	for _, key := range keys {
+		afterID := e.reconcileCursors[key]
+		if full {
+			afterID = 0
+		}
+		for {
+			created, maxSeen, err := e.store.reconcileConsumer(ctx, key, afterID, int64(e.config.ReconcileBatch))
+			if err != nil {
+				return total, err
+			}
+			total += created
+			if created > 0 {
+				e.signalWorkers()
+			}
+			if created < int64(e.config.ReconcileBatch) {
+				e.reconcileCursors[key] = maxSeen
+				break
+			}
+		}
+	}
+	return total, nil
+}
+
+func (e *Engine) fullReconcileDue() bool {
+	now := e.now()
+	if e.lastFullReconcile.IsZero() || now.Sub(e.lastFullReconcile) >= e.config.FullReconcileInterval {
+		e.lastFullReconcile = now
+		return true
+	}
+	return false
 }
 
 func (e *Engine) workerLoop(ctx context.Context) {
