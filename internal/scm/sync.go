@@ -42,6 +42,12 @@ const (
 	// every one of them on the very first tick.
 	smartCommitFirstSyncWindow = 7 * 24 * time.Hour
 
+	// defaultPRLinkRefreshPageSize bounds how many refreshable PR links one
+	// keyset page of RefreshAllPRLinkStates reads into memory. item_scm_links
+	// grows without bound, so the periodic refresh must never materialize the
+	// whole table.
+	defaultPRLinkRefreshPageSize = 200
+
 	// syncPerConnectionConcurrency bounds how many repos are synced in
 	// parallel for a single connection. Per-connection (not global) so
 	// one noisy connection cannot starve others; capped low so we don't
@@ -70,6 +76,9 @@ type SyncService struct {
 	detector                *ItemKeyDetector
 	healthRepo              *repository.SCMHealthRepository
 	resolveProviderOverride func(context.Context, int) (Provider, error)
+	// prLinkPageSize overrides the RefreshAllPRLinkStates keyset page size;
+	// zero uses defaultPRLinkRefreshPageSize. White-box test knob.
+	prLinkPageSize int
 
 	// syncMu guards SyncAllRepositories and refreshMu guards
 	// RefreshAllPRLinkStates so that an overrunning scheduler tick (>5
@@ -1821,10 +1830,12 @@ func (s *SyncService) RefreshOAuthLinksForItem(ctx context.Context, itemID, user
 }
 
 // RefreshAllPRLinkStates refreshes the state of all non-merged PR links.
-// This should be called periodically by the scheduler. Links are bucketed
-// by connection so the per-connection concurrency cap applies per-token
-// (a single noisy connection cannot exhaust its own rate-limit budget,
-// nor starve refresh attempts on other connections).
+// This should be called periodically by the scheduler. Connections are
+// processed one at a time and each connection's links are read in bounded
+// keyset pages, so the refresh never materializes the whole ever-growing
+// item_scm_links table. Per-connection processing keeps the concurrency cap
+// per token (a single noisy connection cannot exhaust its own rate-limit
+// budget, nor starve refresh attempts on other connections).
 func (s *SyncService) RefreshAllPRLinkStates(ctx context.Context) error {
 	if !s.refreshMu.TryLock() {
 		slog.Info("SCM PR refresh skipped: previous run still active", slog.String("component", "scm"))
@@ -1834,63 +1845,102 @@ func (s *SyncService) RefreshAllPRLinkStates(ctx context.Context) error {
 
 	// Include every enabled non-OAuth connection, even when it currently has no
 	// refreshable links. A zero-link successful attempt can clear stale health
-	// after a broken link is removed.
+	// after a broken link is removed. The connection count is tiny; the link
+	// population is the unbounded dimension and is read per connection below.
+	connectionIDs, err := s.listPRRefreshConnections(ctx)
+	if err != nil {
+		return err
+	}
+
+	pageSize := s.prLinkPageSize
+	if pageSize <= 0 {
+		pageSize = defaultPRLinkRefreshPageSize
+	}
+
+	for _, connectionID := range connectionIDs {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		checked, failed, lastError, err := s.refreshConnectionPRLinks(ctx, connectionID, pageSize)
+		if err != nil {
+			return err
+		}
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		s.recordConnectionHealth(ctx, repository.SCMHealthResult{
+			ConnectionID:     connectionID,
+			Operation:        repository.SCMHealthOperationPRLinkRefresh,
+			AttemptedAt:      time.Now().UTC(),
+			CheckedResources: checked,
+			FailedResources:  failed,
+			LastError:        lastError,
+		})
+	}
+
+	return nil
+}
+
+// listPRRefreshConnections returns the enabled non-OAuth connection IDs.
+func (s *SyncService) listPRRefreshConnections(ctx context.Context) ([]int, error) {
 	rows, err := s.db.QueryContext(ctx, `
-		SELECT wsc.id, isl.id, wr.repository_name, isl.external_id
+		SELECT wsc.id
 		FROM workspace_scm_connections wsc
 		JOIN scm_providers sp ON sp.id = wsc.scm_provider_id
-		LEFT JOIN workspace_repositories wr
-			ON wr.workspace_scm_connection_id = wsc.id AND wr.is_active = true
-		LEFT JOIN item_scm_links isl
-			ON isl.workspace_repository_id = wr.id
-			AND isl.link_type = 'pull_request'
-			AND (isl.state IS NULL OR isl.state != 'merged')
 		WHERE wsc.enabled = true AND sp.auth_method != 'oauth'
 	`)
 	if err != nil {
-		return fmt.Errorf("failed to query PR links: %w", err)
+		return nil, fmt.Errorf("failed to query SCM connections for PR refresh: %w", err)
 	}
 	defer func() { _ = rows.Close() }()
-
-	linksByConnection := make(map[int][]prRefreshTarget)
-	totalLinks := 0
+	var connectionIDs []int
 	for rows.Next() {
-		var connectionID int
-		var linkID sql.NullInt64
-		var repositoryName, externalID sql.NullString
-		if err := rows.Scan(&connectionID, &linkID, &repositoryName, &externalID); err != nil {
-			return fmt.Errorf("scan PR refresh connection: %w", err)
+		var id int
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("scan SCM connection for PR refresh: %w", err)
 		}
-		if _, exists := linksByConnection[connectionID]; !exists {
-			linksByConnection[connectionID] = nil
-		}
-		if linkID.Valid {
-			linksByConnection[connectionID] = append(linksByConnection[connectionID], prRefreshTarget{
-				LinkID:         int(linkID.Int64),
-				RepositoryName: repositoryName.String,
-				ExternalID:     externalID.String,
-			})
-			totalLinks++
-		}
+		connectionIDs = append(connectionIDs, id)
 	}
 	if err := rows.Err(); err != nil {
-		return fmt.Errorf("iterate PR links: %w", err)
+		return nil, fmt.Errorf("iterate SCM connections for PR refresh: %w", err)
 	}
-	if len(linksByConnection) == 0 {
-		return nil
-	}
+	return connectionIDs, nil
+}
 
-	slog.Debug("Refreshing state for PR links", slog.String("component", "scm"), slog.Int("count", totalLinks), slog.Int("connections", len(linksByConnection)))
-
-	for connectionID, targets := range linksByConnection {
-		if ctx.Err() != nil {
-			return ctx.Err()
+// refreshConnectionPRLinks refreshes one connection's non-merged PR links in
+// keyset pages of at most pageSize rows and returns the checked/failed totals
+// plus the joined refresh error for the connection health record.
+func (s *SyncService) refreshConnectionPRLinks(ctx context.Context, connectionID, pageSize int) (checked, failed int, lastError string, err error) {
+	var refreshErrors []error
+	lastLinkID := 0
+	for {
+		rows, err := s.db.QueryContext(ctx, `
+			SELECT isl.id, wr.repository_name, isl.external_id
+			FROM item_scm_links isl
+			JOIN workspace_repositories wr ON wr.id = isl.workspace_repository_id
+			WHERE wr.workspace_scm_connection_id = ?
+			  AND wr.is_active = true
+			  AND isl.link_type = 'pull_request'
+			  AND (isl.state IS NULL OR isl.state != 'merged')
+			  AND isl.id > ?
+			ORDER BY isl.id
+			LIMIT ?
+		`, connectionID, lastLinkID, pageSize)
+		if err != nil {
+			return checked, failed, "", fmt.Errorf("failed to query PR links: %w", err)
+		}
+		targets, err := scanPRRefreshTargets(rows)
+		if err != nil {
+			return checked, failed, "", err
+		}
+		if len(targets) == 0 {
+			break
 		}
 
 		sem := make(chan struct{}, syncPerConnectionConcurrency)
 		var wg sync.WaitGroup
 		var mu sync.Mutex
-		var refreshErrors []error
+		var pageErrors []error
 		for _, target := range targets {
 			if ctx.Err() != nil {
 				break
@@ -1902,26 +1952,39 @@ func (s *SyncService) RefreshAllPRLinkStates(ctx context.Context) error {
 				defer func() { <-sem }()
 				if err := s.RefreshItemSCMLink(ctx, target.LinkID); err != nil {
 					mu.Lock()
-					refreshErrors = append(refreshErrors, fmt.Errorf("repository %s PR #%s: %w", target.RepositoryName, strings.TrimPrefix(target.ExternalID, "#"), err))
+					pageErrors = append(pageErrors, fmt.Errorf("repository %s PR #%s: %w", target.RepositoryName, strings.TrimPrefix(target.ExternalID, "#"), err))
 					mu.Unlock()
 				}
 			}(target)
 		}
 		wg.Wait()
-		if ctx.Err() != nil {
-			return ctx.Err()
-		}
-		s.recordConnectionHealth(ctx, repository.SCMHealthResult{
-			ConnectionID:     connectionID,
-			Operation:        repository.SCMHealthOperationPRLinkRefresh,
-			AttemptedAt:      time.Now().UTC(),
-			CheckedResources: len(targets),
-			FailedResources:  len(refreshErrors),
-			LastError:        joinedError(refreshErrors),
-		})
-	}
 
-	return nil
+		checked += len(targets)
+		failed += len(pageErrors)
+		refreshErrors = append(refreshErrors, pageErrors...)
+		lastLinkID = targets[len(targets)-1].LinkID
+		if len(targets) < pageSize {
+			break
+		}
+	}
+	return checked, failed, joinedError(refreshErrors), nil
+}
+
+// scanPRRefreshTargets drains one bounded page of refreshable links.
+func scanPRRefreshTargets(rows *sql.Rows) ([]prRefreshTarget, error) {
+	defer func() { _ = rows.Close() }()
+	var targets []prRefreshTarget
+	for rows.Next() {
+		var target prRefreshTarget
+		if err := rows.Scan(&target.LinkID, &target.RepositoryName, &target.ExternalID); err != nil {
+			return nil, fmt.Errorf("scan PR refresh target: %w", err)
+		}
+		targets = append(targets, target)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate PR refresh targets: %w", err)
+	}
+	return targets, nil
 }
 
 func (s *SyncService) recordConnectionHealth(ctx context.Context, result repository.SCMHealthResult) {
