@@ -384,6 +384,8 @@ export default {
     repoSettingsSaveFailed: 'Не удалось сохранить настройки репозитория',
     loadFailed: 'Не удалось загрузить настройки SCM',
     oauthFailed: 'Не удалось повторно запустить OAuth-подключение',
+    oauthConnected: 'Источник кода подключён',
+    oauthFailedCallback: 'Не удалось подключить источник кода',
     connectedTo: 'Подключено: {name}',
     connectFailed: 'Не удалось подключить SCM-сервис',
     disconnectMessage: 'Отключить {name}? Связи со всеми репозиториями этого сервиса также будут удалены.',

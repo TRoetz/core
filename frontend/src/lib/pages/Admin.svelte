@@ -237,7 +237,7 @@
     // Load plugin extensions into component-local state for proper reactivity
     loadedExtensions = (await loadExtensions()) || {};
 
-    if (!$currentRoute.params?.tab && !isNestedRoute && !$currentRoute.path.startsWith('/admin/channels')) {
+    if (!$currentRoute.params?.tab && !$currentRoute.query?.tab && !isNestedRoute && !$currentRoute.path.startsWith('/admin/channels')) {
       navigate('/admin/custom-fields');
     }
   });

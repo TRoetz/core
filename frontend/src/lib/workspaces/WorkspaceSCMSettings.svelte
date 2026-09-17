@@ -8,6 +8,7 @@
   import { GitMerge, Plus, Trash2, ExternalLink, ChevronDown, ChevronRight, Check, X, KeyRound, AlertTriangle, Settings, Webhook, RotateCw } from '@lucide/svelte';
   import RepositorySelector from '../pickers/RepositorySelector.svelte';
   import { successToast, errorToast } from '../stores/toasts.svelte.js';
+  import { setOAuthReturnURL } from '../utils/oauthReturn.js';
   import { t } from '../stores/i18n.svelte.js';
   import { confirm } from '../composables/useConfirm.js';
   import DescriptionText from '../components/DescriptionText.svelte';
@@ -74,6 +75,16 @@
 
 
   onMount(async () => {
+    // Landed back from the OAuth callback (via the app shell's return
+    // navigation): acknowledge the outcome and clean the URL.
+    const oauthParams = new URLSearchParams(window.location.search);
+    if (oauthParams.get('oauth') === 'success') {
+      successToast(t('scmSettings.oauthConnected'));
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (oauthParams.get('oauth') === 'error') {
+      errorToast(oauthParams.get('message') || t('scmSettings.oauthFailedCallback'));
+      window.history.replaceState({}, '', window.location.pathname);
+    }
     await loadData();
   });
 
@@ -94,7 +105,7 @@
 
   async function reconnectOAuth(conn) {
     try {
-      sessionStorage.setItem('scm_oauth_return', window.location.href);
+      setOAuthReturnURL();
       const result = await api.workspaceSCM.startOAuth(workspaceId, conn.id);
       if (result?.auth_url) {
         window.location.href = result.auth_url;

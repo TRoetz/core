@@ -1,6 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import Spinner from '../components/Spinner.svelte';
+  import { setOAuthReturnURL } from '../utils/oauthReturn.js';
   import StateDisplay from '../components/StateDisplay.svelte';
   import { useDebounce } from 'runed';
   import { api } from '../api.js';
@@ -123,7 +124,7 @@
   }
 
   function startOAuthConnect() {
-    sessionStorage.setItem('scm_oauth_return', window.location.href);
+    setOAuthReturnURL();
     api.workspaceSCM.startOAuth(workspaceId, connection.id).then(result => {
       if (result?.auth_url) {
         window.location.href = result.auth_url;

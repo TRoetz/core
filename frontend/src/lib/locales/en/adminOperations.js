@@ -376,6 +376,8 @@ export default {
     repoSettingsSaveFailed: 'Failed to save repository settings',
     loadFailed: 'Failed to load SCM settings',
     oauthFailed: 'Failed to start OAuth reconnection',
+    oauthConnected: 'Source control account connected',
+    oauthFailedCallback: 'Source control connection failed',
     connectedTo: 'Connected to {name}',
     connectFailed: 'Failed to connect provider',
     disconnectMessage: 'Disconnect {name}? This will also unlink all repositories.',

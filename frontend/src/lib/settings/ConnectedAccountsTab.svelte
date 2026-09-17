@@ -1,6 +1,7 @@
 <script>
 	import { onMount } from 'svelte';
   import StateDisplay from '../components/StateDisplay.svelte';
+  import { setOAuthReturnURL } from '../utils/oauthReturn.js';
 	import { api } from '../api.js';
  import { GitBranch, CheckCircle, XCircle, LogOut, ExternalLink } from '@lucide/svelte';
 	import { IconBrandGithub as Github } from '@tabler/icons-svelte-runes';
@@ -9,6 +10,7 @@
 	import EmptyState from '../components/EmptyState.svelte';
 	import TodoistSyncSettings from './TodoistSyncSettings.svelte';
 	import { t } from '../stores/i18n.svelte.js';
+	import { successToast } from '../stores/toasts.svelte.js';
 	import { formatDateSimple } from '../utils/dateFormatter.js';
 
 	let loading = $state(true);
@@ -24,6 +26,16 @@
 	let intDisconnecting = $state(null);
 
 	onMount(() => {
+		// Landed back from the OAuth callback (via the app shell's return
+		// navigation): acknowledge the outcome and clean the URL.
+		const oauthParams = new URLSearchParams(window.location.search);
+		if (oauthParams.get('oauth') === 'success') {
+			successToast(t('settings.connectedAccounts.oauthConnected'));
+			window.history.replaceState({}, '', window.location.pathname);
+		} else if (oauthParams.get('oauth') === 'error') {
+			error = oauthParams.get('message') || t('settings.connectedAccounts.oauthFailedCallback');
+			window.history.replaceState({}, '', window.location.pathname);
+		}
 		loadProviders();
 		loadIntegrations();
 	});
@@ -62,7 +74,7 @@
 		api.scmProviders.startOAuth(provider.slug).then(result => {
 			if (result?.auth_url) {
 				// Store return URL so we come back here
-				sessionStorage.setItem('scm_oauth_return', window.location.href);
+				setOAuthReturnURL();
 				window.location.href = result.auth_url;
 			}
 		}).catch(err => {

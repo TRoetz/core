@@ -8,6 +8,7 @@
   import { themeStore } from './lib/stores/theme.svelte.js';
   import { i18n, SUPPORTED_LOCALES, t } from './lib/stores/i18n.svelte.js';
   import { safeLoginReturnPath } from './lib/utils/loginReturnPath.js';
+  import { consumeOAuthReturnURL } from './lib/utils/oauthReturn.js';
   import { getStartupCopy } from './lib/utils/startupCopy.js';
   import { toMobileUrl } from './lib/mobile/mobileUrls.js';
   import {
@@ -116,6 +117,12 @@
       if (!setupCompleted) {
         moduleSettings.load();
       } else if ($authStore.isAuthenticated) {
+        // An OAuth callback just landed here: send the user back to the
+        // page that started the flow (replaces the callback redirect entry).
+        const oauthReturn = consumeOAuthReturnURL(window.location.search);
+        if (oauthReturn) {
+          navigate(oauthReturn, { replace: true });
+        }
         // Phone viewport landing on the desktop root → mobile surface. Runs here
         // for SSO returns, reload logins, and existing sessions too.
         maybeRedirectToMobile();

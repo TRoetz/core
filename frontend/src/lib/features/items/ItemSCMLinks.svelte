@@ -1,6 +1,7 @@
 <script>
   import { onDestroy, onMount } from 'svelte';
   import Spinner from '../../components/Spinner.svelte';
+  import { setOAuthReturnURL } from '../../utils/oauthReturn.js';
   import { useEventListener } from 'runed';
   import { api } from '../../api.js';
   import { GitMerge, GitBranch, GitCommit, ExternalLink, Plus, RefreshCw, Trash2, ChevronDown, ChevronRight, GitBranchPlus, Link2 } from '@lucide/svelte';
@@ -83,8 +84,7 @@
     if (!connectionStatus?.provider_slug) return;
 
     // Store return URL so we come back to this item
-    const returnUrl = window.location.href;
-    sessionStorage.setItem('scm_oauth_return', returnUrl);
+    setOAuthReturnURL();
 
     // Start OAuth flow
     api.scmProviders.startOAuth(connectionStatus.provider_slug).then(result => {

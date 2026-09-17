@@ -114,6 +114,13 @@
   }
 
   onMount(async () => {
+    // Surface OAuth callback errors redirected here by the backend
+    // (/admin/scm-providers?oauth=error&message=...), then clean the URL.
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('oauth') === 'error') {
+      error = params.get('message') || t('settings.scmProviders.oauthCallbackError');
+      window.history.replaceState({}, '', window.location.pathname);
+    }
     await loadProviders();
   });
 
