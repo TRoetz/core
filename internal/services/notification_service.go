@@ -98,6 +98,11 @@ const (
 	notificationEmailClaimed = "claimed"
 	notificationEmailSent    = "sent"
 	notificationEmailFailed  = "failed"
+
+	// maxNotificationEmailRecipients caps how many distinct recipients one
+	// batching tick resolves. Recipients beyond the cap are served on the
+	// next tick; their notifications stay eligible until then.
+	maxNotificationEmailRecipients = 200
 )
 
 var ErrNotificationEmailClaimLost = errors.New("notification email claim lost")
@@ -154,6 +159,8 @@ func (ns *NotificationService) UnreadEmailBatches(maxBatchSize int) (map[string]
 }
 
 func (ns *NotificationService) unreadEmailBatches(maxBatchSize int, now time.Time) (map[string]*UserNotificationBatch, error) {
+	// The cap keeps each tick's recipient scan bounded; recipients beyond it
+	// are served on the next tick.
 	rows, err := ns.db.Query(`
 		SELECT DISTINCT u.id, u.email, u.first_name, u.last_name
 		FROM notifications n
@@ -162,8 +169,10 @@ func (ns *NotificationService) unreadEmailBatches(maxBatchSize int, now time.Tim
 		  AND (n.email_delivery_state IN (?, ?) OR
 		       (n.email_delivery_state = ? AND (n.email_claim_expires_at IS NULL OR n.email_claim_expires_at <= ?)))
 		  AND n.authorization_scope IN (?, ?, ?)
+		LIMIT ?
 	`, notificationEmailPending, notificationEmailFailed, notificationEmailClaimed, now,
-		models.NotificationScopeSystem, models.NotificationScopeWorkspace, models.NotificationScopeAsset)
+		models.NotificationScopeSystem, models.NotificationScopeWorkspace, models.NotificationScopeAsset,
+		maxNotificationEmailRecipients)
 	if err != nil {
 		return nil, fmt.Errorf("query notification email recipients: %w", err)
 	}
@@ -216,7 +225,53 @@ func (ns *NotificationService) unreadEmailBatches(maxBatchSize int, now time.Tim
 	return batches, nil
 }
 
+// notificationPageCursor is the (timestamp, id) keyset for paging one
+// recipient's eligible backlog.
+type notificationPageCursor struct {
+	timestamp time.Time
+	id        int
+}
+
+// unreadEmailNotificationsForUser collects up to limit visible notifications
+// for one recipient. Each SQL page reads at most the remaining row count;
+// authorization filtering happens in Go between pages, so a backlog full of
+// invisible rows still never loads more than one bounded page per query.
 func (ns *NotificationService) unreadEmailNotificationsForUser(userID int, snapshot *NotificationAuthorizationSnapshot, limit int, now time.Time) ([]models.Notification, error) {
+	notifications := make([]models.Notification, 0, limit)
+	seen := make(map[int]bool, limit)
+	cursor := notificationPageCursor{}
+	for len(notifications) < limit {
+		pageSize := limit - len(notifications)
+		page, err := ns.queryUnreadEmailNotificationPage(userID, pageSize, now, cursor)
+		if err != nil {
+			return nil, err
+		}
+		if len(page) == 0 {
+			break
+		}
+		previous := cursor
+		for _, notification := range page {
+			cursor = notificationPageCursor{timestamp: notification.Timestamp, id: notification.ID}
+			if seen[notification.ID] {
+				continue
+			}
+			seen[notification.ID] = true
+			visible, err := snapshot.Visible(notification)
+			if err != nil {
+				return nil, err
+			}
+			if visible {
+				notifications = append(notifications, notification)
+			}
+		}
+		if len(page) < pageSize || cursor == previous {
+			break
+		}
+	}
+	return notifications, nil
+}
+
+func (ns *NotificationService) queryUnreadEmailNotificationPage(userID, pageSize int, now time.Time, cursor notificationPageCursor) ([]models.Notification, error) {
 	rows, err := ns.db.Query(`
 		SELECT n.id, n.user_id, n.title, n.message, n.type, n.timestamp, n.read,
 		       n.sent_at, n.avatar, n.action_url, n.metadata, n.authorization_scope,
@@ -228,15 +283,18 @@ func (ns *NotificationService) unreadEmailNotificationsForUser(userID int, snaps
 		  AND (n.email_delivery_state IN (?, ?) OR
 		       (n.email_delivery_state = ? AND (n.email_claim_expires_at IS NULL OR n.email_claim_expires_at <= ?)))
 		  AND n.authorization_scope IN (?, ?, ?)
+		  AND (n.timestamp > ? OR (n.timestamp = ? AND n.id > ?))
 		ORDER BY n.timestamp ASC, n.id ASC
+		LIMIT ?
 	`, userID, notificationEmailPending, notificationEmailFailed, notificationEmailClaimed, now,
-		models.NotificationScopeSystem, models.NotificationScopeWorkspace, models.NotificationScopeAsset)
+		models.NotificationScopeSystem, models.NotificationScopeWorkspace, models.NotificationScopeAsset,
+		cursor.timestamp, cursor.timestamp, cursor.id, pageSize)
 	if err != nil {
 		return nil, fmt.Errorf("query unread notifications for user %d: %w", userID, err)
 	}
 	defer rows.Close()
 
-	notifications := make([]models.Notification, 0, limit)
+	page := make([]models.Notification, 0, pageSize)
 	for rows.Next() {
 		var notification models.Notification
 		var avatar, actionURL, metadata, sourceType, referencedEntityType, referencedPermission *string
@@ -267,22 +325,12 @@ func (ns *NotificationService) unreadEmailNotificationsForUser(userID int, snaps
 		if referencedPermission != nil {
 			notification.ReferencedWorkspacePermission = *referencedPermission
 		}
-		visible, err := snapshot.Visible(notification)
-		if err != nil {
-			return nil, err
-		}
-		if !visible {
-			continue
-		}
-		notifications = append(notifications, notification)
-		if len(notifications) >= limit {
-			break
-		}
+		page = append(page, notification)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("iterate unread notifications for user %d: %w", userID, err)
 	}
-	return notifications, nil
+	return page, nil
 }
 
 // ClaimUnreadEmailBatches atomically fences each selected recipient batch.
