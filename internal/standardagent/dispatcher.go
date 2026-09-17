@@ -363,16 +363,15 @@ func (d *Dispatcher) drain(key repository.StandardQueueKey) {
 			return
 		}
 		// Close the enqueue-vs-worker-exit race without polling or sleeps.
-		keys, err := d.opts.Runs.ListQueuedStandardKeys(d.ctx)
+		// The existence check targets this queue's key so a worker exit costs a
+		// pointed index lookup, not a whole-table DISTINCT.
+		queued, err := d.opts.Runs.HasQueuedStandardRun(d.ctx, key.BindingID, key.ItemID)
 		if err != nil {
 			slog.Error("failed to recheck Standard queue", "binding_id", key.BindingID, "item_id", key.ItemID, "error", err)
 			return
 		}
-		for _, queued := range keys {
-			if queued == key {
-				d.kick(key)
-				return
-			}
+		if queued {
+			d.kick(key)
 		}
 	}()
 

@@ -464,6 +464,22 @@ func (r *AgentRunRepository) ListQueuedStandardKeys(ctx context.Context) ([]Stan
 	return out, rows.Err()
 }
 
+// HasQueuedStandardRun reports whether one Standard queue still has queued
+// work. The targeted EXISTS keeps the worker-exit recheck off the whole-table
+// DISTINCT that ListQueuedStandardKeys performs for startup resume.
+func (r *AgentRunRepository) HasQueuedStandardRun(ctx context.Context, bindingID, itemID int) (bool, error) {
+	var exists bool
+	if err := r.db.QueryRowContext(ctx, `
+		SELECT EXISTS (
+			SELECT 1 FROM agent_runs
+			WHERE job_kind = ? AND status = ? AND binding_id = ? AND item_id = ?
+		)
+	`, models.JobKindStandardAgent, models.AgentRunStatusQueued, bindingID, itemID).Scan(&exists); err != nil {
+		return false, fmt.Errorf("check queued Standard run: %w", err)
+	}
+	return exists, nil
+}
+
 // FailOrphanedStandardRuns makes restart behavior explicit: in-process runs
 // cannot be resumed mid-LLM call, while their queued successors remain durable.
 func (r *AgentRunRepository) FailOrphanedStandardRuns(ctx context.Context, now time.Time) (int64, error) {
