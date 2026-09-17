@@ -31,6 +31,9 @@
     noResultsSnippet = null,
     searchTestid = undefined,
     optionTestid = null,
+    // (value) => string | null. Labels the selected value when it is not in
+    // items yet (options may load lazily on open).
+    resolveMissingLabel = null,
     onOpen = null,
     onSelect = null,
     onCancel = null
@@ -113,6 +116,7 @@
             {/if}
           {:else}
             {@const selItem = items.find(i => finalConfig.getValue(i) === value)}
+            {@const missingLabel = selItem || !showSelectedInTrigger ? '' : (resolveMissingLabel?.(value) || '')}
             {#if selItem && showSelectedInTrigger}
               {#if finalConfig.icon?.type === 'color-dot'}
                 {@const color = finalConfig.icon.source(selItem)}
@@ -124,6 +128,8 @@
                 {/if}
               {/if}
               <span class="truncate">{finalConfig.getLabel(selItem)}</span>
+            {:else if missingLabel}
+              <span class="truncate">{missingLabel}</span>
             {:else}
               <span style="color: var(--ds-text-subtle);">{placeholder || t('pickers.select')}</span>
             {/if}

@@ -18,6 +18,9 @@
     autoOpen = false,
     multiple = false,
     optionLoader = null,
+    // (value) => string | null. Labels a selected asset id that is not in the
+    // loaded options (options load lazily on open).
+    resolveMissingLabel = null,
     class: className = '',
     onSelect = () => {},
     onCancel = () => {},
@@ -127,8 +130,10 @@
   {showUnassigned}
   unassignedLabel={t('common.none')}
   {multiple}
+  {autoOpen}
   class={className}
   serverSearch
+  {resolveMissingLabel}
   onOpen={handleOpen}
   onSearchChange={handleSearchChange}
   getValue={(asset) => asset?.id}

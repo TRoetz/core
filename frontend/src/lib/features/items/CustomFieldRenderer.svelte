@@ -43,7 +43,11 @@
     noPadding = false, itemId = null, users: providedUsers = null, fieldLinks = null,
     onFieldLinksChanged = null,
     optionData = {}, optionLoading = {}, onRequestOptions = null, loadAssetOptions = null,
-    displayAlignment = 'start', truncateDisplay = false, displayTestId = undefined
+    displayAlignment = 'start', truncateDisplay = false, displayTestId = undefined,
+    // Self-editing mode: the component owns the display→editor toggle, the
+    // way list cells need it. Callers that drive editing externally (item
+    // detail sidebar) keep using onStartEdit + readonly and leave this off.
+    selfEditing = false
   } = $props();
 
   const users = $derived(providedUsers ?? referenceDisplayCache.users);
@@ -200,18 +204,17 @@
   function handleKeydown(event) {
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
-      onCommit?.(/** @type {HTMLInputElement} */ (event.currentTarget).value);
+      commitFromInput(/** @type {HTMLInputElement} */ (event.currentTarget).value);
     } else if (event.key === 'Escape') {
       event.preventDefault();
-      onCancel?.();
+      handleEditorCancel();
     }
   }
 
-  // Handle click on read mode to start editing
-  function handleClick() {
-    if (!disabled && onStartEdit) {
-      onStartEdit();
-    }
+  // Free-form inputs keep focus while typing; commit once focus leaves so a
+  // partially typed value is never saved.
+  function handleCommitBlur(event) {
+    commitFromInput(/** @type {HTMLInputElement | HTMLTextAreaElement} */ (event.currentTarget).value);
   }
 
   // Get iteration data for icon rendering
@@ -301,6 +304,146 @@
     const milestone = milestones.find(m => m.id === parseInt(value));
     return milestone || null;
   })());
+
+  // --- Self-editing plumbing ------------------------------------------------
+  // In self-editing mode the component starts in display form and swaps to
+  // the editor on click, commit-on-change for single-value types and commit
+  // on Enter/blur for free-form inputs, Escape or outside click to cancel.
+  let editorOpen = $state(false);
+  let lastExitAt = 0;
+  // Free-form inputs stage keystrokes in a draft so self-editing surfaces
+  // commit once (Enter/blur) instead of on every character.
+  let draftValue = $state(null);
+
+  const isSelfEditing = $derived(selfEditing && !disabled && readonly);
+  // Booleans edit in place — render the checkbox directly instead of routing
+  // through a display→editor swap.
+  const renderLiveEditor = $derived(isSelfEditing && isBooleanCustomFieldType(field.field_type));
+  // Opening the editor means the user already clicked the cell, so menus open
+  // immediately instead of needing a second click on the picker trigger.
+  const pickerAutoOpen = $derived(autoOpenPickers || editorOpen);
+  const editorValue = $derived(draftValue !== null ? draftValue : value);
+
+  function enterEdit() {
+    // The blur-commit that exits the editor re-renders the display under the
+    // pointer; swallow that stray click so the cell does not re-open.
+    if (Date.now() - lastExitAt < 200) return;
+    draftValue = null;
+    editorOpen = true;
+  }
+
+  function exitEditing() {
+    if (!editorOpen && draftValue === null) return;
+    lastExitAt = Date.now();
+    editorOpen = false;
+    draftValue = null;
+  }
+
+  function handleActivate() {
+    if (disabled) return;
+    if (onStartEdit) {
+      onStartEdit();
+      return;
+    }
+    if (isSelfEditing) enterEdit();
+  }
+
+  function handleEditorChange(newValue) {
+    onChange(newValue);
+    // Multi-value editors stay open so several entries can be picked in a
+    // row; everything else returns to display right after the commit.
+    const multiValue = ['multi_user', 'multiselect', 'combobox'].includes(field.field_type)
+      || (field.field_type === 'asset' && isMultiAssetField);
+    if (!multiValue) exitEditing();
+  }
+
+  function handleEditorCancel() {
+    onCancel?.();
+    exitEditing();
+  }
+
+  function commitFromInput(rawValue) {
+    if (isSelfEditing) {
+      // Blur fires even when nothing changed — only commit real edits.
+      if (rawValue !== (value ?? '')) onChange(rawValue);
+      exitEditing();
+      return;
+    }
+    onCommit?.(rawValue);
+  }
+
+  // Edit-input keystrokes: free-form fields stage a draft in self-editing
+  // mode and keep the live onChange behavior everywhere else.
+  function handleEditorInput(newValue) {
+    if (!isSelfEditing) {
+      onChange(newValue);
+      return;
+    }
+    if (field.field_type === 'date') {
+      // A date is committed as a whole — there is no useful partial state.
+      handleEditorChange(newValue);
+      return;
+    }
+    draftValue = newValue;
+  }
+
+  // Labels a selected value that is missing from a picker's option list.
+  // Options load lazily in list cells, so the stored value object or the
+  // shared display cache is the only reliable source for the label.
+  const storedObjectByID = $derived.by(() => {
+    const byID = new Map();
+    const raw = /** @type {any} */ (value);
+    if (!raw) return byID;
+    const entries = Array.isArray(raw) ? raw : [raw];
+    entries.forEach((entry) => {
+      if (entry && typeof entry === 'object' && entry.id != null) byID.set(String(entry.id), entry);
+    });
+    return byID;
+  });
+
+  function resolveMissingLabel(missingValue) {
+    if (missingValue == null || missingValue === '') return '';
+    switch (field.field_type) {
+      case 'asset': {
+        const id = assetID(missingValue);
+        const stored = id ? storedObjectByID.get(String(id)) : null;
+        if (stored) return assetDisplayName(stored);
+        const cached = id ? referenceDisplayCache.getAsset(id) : null;
+        if (cached) return assetDisplayName(cached);
+        return `Asset #${id ?? missingValue}`;
+      }
+      case 'portalcustomer':
+      case 'customerorganisation': {
+        if (typeof missingValue === 'object') return missingValue.name || '';
+        const stored = storedObjectByID.get(String(missingValue));
+        if (stored?.name) return stored.name;
+        const noun = field.field_type === 'portalcustomer' ? 'Customer' : 'Organisation';
+        return `${noun} #${missingValue}`;
+      }
+      case 'user': {
+        const user = users.find((u) => u.id === parseInt(missingValue));
+        return user ? `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.username : '';
+      }
+      case 'milestone':
+        return milestoneData?.name || '';
+      case 'iteration': {
+        const iteration = iterations?.find((i) => i.id === parseInt(missingValue));
+        return iteration ? iteration.name : '';
+      }
+      case 'select':
+        return field.options ? resolveOptionLabel(field.options, missingValue) : '';
+      case 'multiselect': {
+        if (!field.options) return '';
+        const values = Array.isArray(missingValue) ? missingValue : [missingValue];
+        return values.map((entry) => resolveOptionLabel(field.options, entry)).filter(Boolean).join(', ');
+      }
+      case 'combobox':
+        return typeof missingValue === 'string' ? missingValue.split(',').map((entry) => entry.trim()).filter(Boolean).join(', ') : '';
+      default:
+        return '';
+    }
+  }
+  // --------------------------------------------------------------------------
 
   // Get combobox labels array
   function getComboboxLabels(val) {
@@ -437,13 +580,13 @@
   {/if}
 {/snippet}
 
-{#if readonly}
+{#if readonly && !editorOpen && !renderLiveEditor}
   <div>
-    {#if onStartEdit && !disabled}
+    {#if (onStartEdit || isSelfEditing) && !disabled}
       <button
         type="button"
         class="flex w-full min-w-0 items-center gap-2 {displayAlignment === 'end' ? 'justify-end text-right' : 'justify-start text-left'} {truncateDisplay ? 'whitespace-nowrap overflow-hidden' : ''} {noPadding ? '' : 'px-3'} py-2 text-sm hover:bg-ds-background-neutral-hovered transition-colors rounded"
-        onclick={handleClick}
+        onclick={handleActivate}
         data-testid={displayTestId}
       >
         {@render readOnlyContent(true)}
@@ -468,11 +611,12 @@
         placeholder={t('pickers.selectMilestone')}
         showUnassigned={true}
         unassignedLabel={t('pickers.noMilestone')}
-        autoOpen={autoOpenPickers}
+        autoOpen={pickerAutoOpen}
         class="w-full"
         {disabled}
-        onSelect={(item) => onChange(item?.id || null)}
-        onCancel={() => onCancel?.()}
+        {resolveMissingLabel}
+        onSelect={(item) => handleEditorChange(item?.id || null)}
+        onCancel={handleEditorCancel}
       />
     {:else if field.field_type === 'user'}
       {@const userValue = value && typeof value === 'object' ? /** @type {any} */ (value).id : (value ?? null)}
@@ -483,16 +627,18 @@
         {showSelectedInTrigger}
         class="w-full"
         {disabled}
-        users={providedUsers}
+        users={providedUsers === null ? (users.length ? users : null) : providedUsers}
         loading={optionLoading.users ?? false}
+        autoOpen={pickerAutoOpen}
+        {resolveMissingLabel}
         onOpen={() => onRequestOptions?.('users')}
         onSelect={(selectedUser) => {
-          onChange(selectedUser ? {
+          handleEditorChange(selectedUser ? {
             id: selectedUser.id,
             name: `${selectedUser.first_name} ${selectedUser.last_name}`.trim() || selectedUser.username
           } : null);
         }}
-        onCancel={() => onCancel?.()}
+        onCancel={handleEditorCancel}
       />
     {:else if field.field_type === 'multi_user'}
       <div class="space-y-2">
@@ -513,11 +659,12 @@
           showSelectedInTrigger={false}
           class="w-full"
           {disabled}
-          users={providedUsers}
+          users={providedUsers === null ? (users.length ? users : null) : providedUsers}
           loading={optionLoading.users ?? false}
+          autoOpen={pickerAutoOpen}
           onOpen={() => onRequestOptions?.('users')}
           onSelect={addMultiUser}
-          onCancel={() => onCancel?.()}
+          onCancel={handleEditorCancel}
         />
       </div>
     {:else if field.field_type === 'iteration'}
@@ -528,11 +675,12 @@
         placeholder={t('items.selectIteration')}
         showUnassigned={true}
         unassignedLabel={t('items.noIteration')}
-        autoOpen={autoOpenPickers}
+        autoOpen={pickerAutoOpen}
         class="w-full"
         {disabled}
-        onSelect={(item) => onChange(item?.id || null)}
-        onCancel={() => onCancel?.()}
+        {resolveMissingLabel}
+        onSelect={(item) => handleEditorChange(item?.id || null)}
+        onCancel={handleEditorCancel}
       />
     {:else if field.field_type === 'asset'}
       {@const assetValue = isMultiAssetField ? normalizedAssetIDs() : (value && typeof value === 'object' ? /** @type {any} */ (value).id : (value ?? null))}
@@ -542,10 +690,11 @@
         cqlQuery={assetConfig.cql_query || assetConfig.ql_query}
         placeholder={t('pickers.selectAsset')}
         showUnassigned={!isMultiAssetField}
-        autoOpen={autoOpenPickers}
+        autoOpen={pickerAutoOpen}
         multiple={isMultiAssetField}
         class="w-full"
         {disabled}
+        {resolveMissingLabel}
         optionLoader={loadAssetOptions
           ? (search) => loadAssetOptions(
               assetConfig.asset_set_id,
@@ -554,14 +703,14 @@
             )
           : null}
         onSelect={(asset) => {
-          onChange(asset ? {
+          handleEditorChange(asset ? {
             id: asset.id,
             title: asset.title,
             asset_tag: asset.asset_tag || ''
           } : null);
         }}
-        onChange={(assets) => onChange(assets)}
-        onCancel={() => onCancel?.()}
+        onChange={(assets) => handleEditorChange(assets)}
+        onCancel={handleEditorCancel}
       />
     {:else if field.field_type === 'portalcustomer'}
       {@const customerValue = value && typeof value === 'object' ? /** @type {any} */ (value).id : (value ?? null)}
@@ -571,17 +720,19 @@
         showUnassigned={true}
         class="w-full"
         {disabled}
+        autoOpen={pickerAutoOpen}
+        {resolveMissingLabel}
         customers={optionData.portalCustomers ?? null}
         loading={optionLoading.portalCustomers ?? false}
         onOpen={() => onRequestOptions?.('portalCustomers')}
         onSelect={(customer) => {
-          onChange(customer ? {
+          handleEditorChange(customer ? {
             id: customer.id,
             name: customer.name,
             email: customer.email
           } : null);
         }}
-        onCancel={() => onCancel?.()}
+        onCancel={handleEditorCancel}
       />
     {:else if field.field_type === 'customerorganisation'}
       {@const orgValue = value && typeof value === 'object' ? /** @type {any} */ (value).id : (value ?? null)}
@@ -591,23 +742,25 @@
         showUnassigned={true}
         class="w-full"
         {disabled}
+        autoOpen={pickerAutoOpen}
+        {resolveMissingLabel}
         organisations={optionData.customerOrganisations ?? null}
         loading={optionLoading.customerOrganisations ?? false}
         onOpen={() => onRequestOptions?.('customerOrganisations')}
         onSelect={(org) => {
-          onChange(org ? {
+          handleEditorChange(org ? {
             id: org.id,
             name: org.name
           } : null);
         }}
-        onCancel={() => onCancel?.()}
+        onCancel={handleEditorCancel}
       />
     {:else if field.field_type === 'linking'}
       <LinkingFieldPicker
         fieldId={field.id}
         {itemId}
         fieldOptions={field.options}
-        {readonly}
+        readonly={false}
         {disabled}
         links={fieldLinks}
         onChanged={(change) => onFieldLinksChanged?.(change)}
@@ -624,9 +777,9 @@
         onOpen={() => onRequestOptions?.('personalLabels')}
         onSelect={(result) => {
           const labelArray = result.value || [];
-          onChange(labelArray.join(','));
+          handleEditorChange(labelArray.join(','));
         }}
-        onCancel={() => onCancel?.()}
+        onCancel={handleEditorCancel}
       />
     {:else if field.field_type === 'select'}
       <BasePicker
@@ -637,8 +790,10 @@
         unassignedLabel={t('items.selectField', { field: field.name.toLowerCase() })}
         getValue={(item) => item.id}
         getLabel={(item) => item.label}
+        autoOpen={pickerAutoOpen}
         {disabled}
-        onSelect={(item) => onChange(item ? item.id : null)}
+        {resolveMissingLabel}
+        onSelect={(item) => handleEditorChange(item ? item.id : null)}
       />
     {:else if field.field_type === 'multiselect'}
       <BasePicker
@@ -648,17 +803,19 @@
         getValue={(item) => item.id}
         getLabel={(item) => item.label}
         multiple={true}
+        autoOpen={pickerAutoOpen}
         {disabled}
-        onChange={(selected) => onChange(selected)}
+        {resolveMissingLabel}
+        onChange={(selected) => handleEditorChange(selected)}
       />
     {:else if field.field_type === 'date'}
-      <div use:clickOutside onclickOutside={() => onCancel?.()}>
+      <div use:clickOutside onclickOutside={handleEditorCancel}>
         <!-- svelte-ignore a11y_autofocus -->
         <Input
           type="date"
-          value={formatDateForInput(value)}
+          value={formatDateForInput(editorValue)}
           dataTestid={`custom-field-input-${field.id}`}
-          oninput={(e) => onChange(formatDateFromInput(/** @type {HTMLInputElement} */ (e.target).value))}
+          oninput={(e) => handleEditorInput(formatDateFromInput(/** @type {HTMLInputElement} */ (e.target).value))}
           class="w-full px-3 py-2 text-sm hover:bg-ds-background-neutral-hovered focus:outline-none transition-colors bg-transparent border rounded"
           style="background-color: {isDarkMode ? '#1e293b' : 'var(--ds-background-input)'}; border-color: {isDarkMode ? '#475569' : 'var(--ds-border)'}; color: {isDarkMode ? '#e2e8f0' : 'var(--ds-text)'};"
           onkeydown={handleKeydown}
@@ -668,12 +825,12 @@
         />
       </div>
     {:else if field.field_type === 'textarea'}
-      <div use:clickOutside onclickOutside={() => onCancel?.()}>
+      <div use:clickOutside onclickOutside={handleEditorCancel}>
         <!-- svelte-ignore a11y_autofocus -->
         <Textarea
-          {value}
+          value={editorValue}
           data-testid={`custom-field-input-${field.id}`}
-          oninput={(e) => onChange(/** @type {HTMLTextAreaElement} */ (e.target).value)}
+          oninput={(e) => handleEditorInput(/** @type {HTMLTextAreaElement} */ (e.target).value)}
           class="w-full px-3 py-2 text-sm hover:bg-ds-background-neutral-hovered focus:outline-none transition-colors bg-transparent border rounded"
           style="background-color: {isDarkMode ? '#1e293b' : 'var(--ds-background-input)'}; border-color: {isDarkMode ? '#475569' : 'var(--ds-border)'}; color: {isDarkMode ? '#e2e8f0' : 'var(--ds-text)'};"
           placeholder={t('items.enterField', { field: field.name.toLowerCase() })}
@@ -682,21 +839,23 @@
           required={isRequired}
           autofocus
           size="small"
+          onblur={handleCommitBlur}
         />
       </div>
     {:else if field.field_type === 'number'}
-      <div use:clickOutside onclickOutside={() => onCancel?.()}>
+      <div use:clickOutside onclickOutside={handleEditorCancel}>
         <!-- svelte-ignore a11y_autofocus -->
         <Input
           type="number"
           step="any"
-          {value}
+          value={editorValue}
           dataTestid={`custom-field-input-${field.id}`}
-          oninput={(e) => onChange(/** @type {HTMLInputElement} */ (e.target).value)}
+          oninput={(e) => handleEditorInput(/** @type {HTMLInputElement} */ (e.target).value)}
           class="w-full px-3 py-2 text-sm hover:bg-ds-background-neutral-hovered focus:outline-none transition-colors bg-transparent border rounded tabular-nums"
           style="background-color: {isDarkMode ? '#1e293b' : 'var(--ds-background-input)'}; border-color: {isDarkMode ? '#475569' : 'var(--ds-border)'}; color: {isDarkMode ? '#e2e8f0' : 'var(--ds-text)'};"
           placeholder={t('items.enterField', { field: field.name.toLowerCase() })}
           onkeydown={handleKeydown}
+          onblur={handleCommitBlur}
           {disabled}
           required={isRequired}
           autofocus
@@ -705,7 +864,7 @@
     {:else if isBooleanCustomFieldType(field.field_type)}
       <div
         use:clickOutside
-        onclickOutside={() => onCancel?.()}
+        onclickOutside={handleEditorCancel}
         class="px-3 py-2"
         data-testid={`custom-field-input-${field.id}`}
       >
@@ -716,34 +875,36 @@
         />
       </div>
     {:else if field.field_type === 'email'}
-      <div use:clickOutside onclickOutside={() => onCancel?.()}>
+      <div use:clickOutside onclickOutside={handleEditorCancel}>
         <!-- svelte-ignore a11y_autofocus -->
         <Input
           type="email"
-          {value}
+          value={editorValue}
           dataTestid={`custom-field-input-${field.id}`}
-          oninput={(e) => onChange(/** @type {HTMLInputElement} */ (e.target).value)}
+          oninput={(e) => handleEditorInput(/** @type {HTMLInputElement} */ (e.target).value)}
           class="w-full px-3 py-2 text-sm hover:bg-ds-background-neutral-hovered focus:outline-none transition-colors bg-transparent border rounded"
           style="background-color: {isDarkMode ? '#1e293b' : 'var(--ds-background-input)'}; border-color: {isDarkMode ? '#475569' : 'var(--ds-border)'}; color: {isDarkMode ? '#e2e8f0' : 'var(--ds-text)'};"
           placeholder={t('items.enterField', { field: field.name.toLowerCase() })}
           onkeydown={handleKeydown}
+          onblur={handleCommitBlur}
           {disabled}
           required={isRequired}
           autofocus
         />
       </div>
     {:else if field.field_type === 'url'}
-      <div use:clickOutside onclickOutside={() => onCancel?.()}>
+      <div use:clickOutside onclickOutside={handleEditorCancel}>
         <!-- svelte-ignore a11y_autofocus -->
         <Input
           type="url"
-          {value}
+          value={editorValue}
           dataTestid={`custom-field-input-${field.id}`}
-          oninput={(e) => onChange(/** @type {HTMLInputElement} */ (e.target).value)}
+          oninput={(e) => handleEditorInput(/** @type {HTMLInputElement} */ (e.target).value)}
           class="w-full px-3 py-2 text-sm hover:bg-ds-background-neutral-hovered focus:outline-none transition-colors bg-transparent border rounded"
           style="background-color: {isDarkMode ? '#1e293b' : 'var(--ds-background-input)'}; border-color: {isDarkMode ? '#475569' : 'var(--ds-border)'}; color: {isDarkMode ? '#e2e8f0' : 'var(--ds-text)'};"
           placeholder={t('items.enterField', { field: field.name.toLowerCase() })}
           onkeydown={handleKeydown}
+          onblur={handleCommitBlur}
           {disabled}
           required={isRequired}
           autofocus
@@ -751,17 +912,18 @@
       </div>
     {:else}
       <!-- Default: text input -->
-      <div use:clickOutside onclickOutside={() => onCancel?.()}>
+      <div use:clickOutside onclickOutside={handleEditorCancel}>
         <!-- svelte-ignore a11y_autofocus -->
         <Input
           type="text"
-          {value}
+          value={editorValue}
           dataTestid={`custom-field-input-${field.id}`}
-          oninput={(e) => onChange(/** @type {HTMLInputElement} */ (e.target).value)}
+          oninput={(e) => handleEditorInput(/** @type {HTMLInputElement} */ (e.target).value)}
           class="w-full px-3 py-2 text-sm hover:bg-ds-background-neutral-hovered focus:outline-none transition-colors bg-transparent border rounded"
           style="background-color: {isDarkMode ? '#1e293b' : 'var(--ds-background-input)'}; border-color: {isDarkMode ? '#475569' : 'var(--ds-border)'}; color: {isDarkMode ? '#e2e8f0' : 'var(--ds-text)'};"
           placeholder={t('items.enterField', { field: field.name.toLowerCase() })}
           onkeydown={handleKeydown}
+          onblur={handleCommitBlur}
           {disabled}
           required={isRequired}
           autofocus

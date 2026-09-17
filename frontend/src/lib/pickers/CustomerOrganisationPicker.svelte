@@ -14,6 +14,10 @@
     organisations: providedOrganisations = null,
     loading = false,
     onOpen = null,
+    autoOpen = false,
+    // (value) => string | null. Labels a selected organisation id that is not
+    // in the loaded options (options load lazily on mount/open).
+    resolveMissingLabel = null,
     class: className = '',
     onSelect = () => {},
     onCancel = () => {}
@@ -44,11 +48,13 @@
   {unassignedLabel}
   {disabled}
   allowClear={true}
+  {autoOpen}
   class={className}
   itemSnippet={organisationRow}
   searchFields={['name', 'email', 'description']}
   getValue={(item) => item?.id}
   getLabel={(item) => item?.name || ''}
+  {resolveMissingLabel}
   onOpen={() => onOpen?.()}
   onSelect={(item) => onSelect(item)}
   onCancel={() => onCancel()}

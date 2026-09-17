@@ -24,6 +24,9 @@
     autoOpen = false,
     allowClear = true,
     positioning = null,
+    // (value) => string | null. Labels the selected user when it is not in
+    // usersList yet (options may load lazily).
+    resolveMissingLabel = null,
     onOpen = null,
     onSelect = () => {},
     onCancel = () => {}
@@ -111,6 +114,8 @@
           {#if selectedUser && showSelectedInTrigger}
             <Avatar src={selectedUser.avatar_url} firstName={selectedUser.first_name} lastName={selectedUser.last_name} size="xs" />
             <span class="truncate">{selectedUser.first_name} {selectedUser.last_name}</span>
+          {:else if !selectedUser && showSelectedInTrigger && value != null && (resolveMissingLabel?.(value) || '')}
+            <span class="truncate">{resolveMissingLabel(value)}</span>
           {:else}
             <span style="color: var(--ds-text-subtle);">{resolvedPlaceholder}</span>
           {/if}

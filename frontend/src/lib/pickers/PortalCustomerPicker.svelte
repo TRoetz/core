@@ -14,6 +14,10 @@
     customers: providedCustomers = null,
     loading = false,
     onOpen = null,
+    autoOpen = false,
+    // (value) => string | null. Labels a selected customer id that is not in
+    // the loaded options (options load lazily on mount/open).
+    resolveMissingLabel = null,
     class: className = '',
     onSelect = () => {},
     onCancel = () => {}
@@ -44,11 +48,13 @@
   {unassignedLabel}
   {disabled}
   allowClear={true}
+  {autoOpen}
   class={className}
   itemSnippet={customerRow}
   searchFields={['name', 'email', 'customer_organisation_name']}
   getValue={(item) => item?.id}
   getLabel={(item) => item?.name || ''}
+  {resolveMissingLabel}
   onOpen={() => onOpen?.()}
   onSelect={(item) => onSelect(item)}
   onCancel={() => onCancel()}

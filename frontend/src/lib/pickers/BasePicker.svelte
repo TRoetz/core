@@ -31,6 +31,10 @@
     searchFields = ['name'],
     getValue = (item) => item?.id,
     getLabel = (item) => item?.name ?? '',
+    // (value) => string | null. Labels a selected value that is not present in
+    // items (options load lazily in pickers/editors); null falls back to the
+    // empty label/placeholder behavior.
+    resolveMissingLabel = null,
 
     // Snippets for customization
     itemSnippet = null,
@@ -175,12 +179,24 @@
     return opts;
   });
 
-  // For multi-select: get array of selected items
+  function labelFor(item) {
+    if (item && item.__unresolved) return item.label;
+    return getLabel(item);
+  }
+
+  // For multi-select: get array of selected items. Values missing from items
+  // render as unresolved chips labeled via resolveMissingLabel so a set value
+  // never silently disappears from the trigger.
   const selectedItems = $derived.by(() => {
     if (!multiple) return [];
     const valueArray = popoverMode ? (Array.isArray(values) ? values : []) : (Array.isArray(value) ? value : []);
     return valueArray
-      .map(v => items.find(item => getValue(item) === v))
+      .map(v => {
+        const found = items.find(item => getValue(item) === v);
+        if (found) return found;
+        const missingLabel = resolveMissingLabel?.(v);
+        return missingLabel ? { __unresolved: true, value: v, label: missingLabel } : null;
+      })
       .filter(Boolean);
   });
 
@@ -213,9 +229,7 @@
     if (!multiple && !$touchedInput && !popoverMode) {
       if (value != null && showSelectedInTrigger) {
         const item = items.find(i => getValue(i) === value);
-        if (item) {
-          $inputValue = getLabel(item);
-        }
+        $inputValue = item ? getLabel(item) : (resolveMissingLabel?.(value) ?? '');
       } else {
         $inputValue = '';
       }
@@ -506,7 +520,7 @@
           {#if chipSnippet}
             {@render chipSnippet({ item })}
           {:else}
-            <span class="font-medium truncate max-w-[150px]">{getLabel(item)}</span>
+            <span class="font-medium truncate max-w-[150px]">{labelFor(item)}</span>
           {/if}
           <button type="button" onclick={(e) => removeItem(e, getValue(item))}
                   class="picker-clear rounded p-0.5 transition-colors" {disabled}>

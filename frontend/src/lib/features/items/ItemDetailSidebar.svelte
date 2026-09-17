@@ -462,6 +462,10 @@
     return editableScreenFieldIds.has(fieldId);
   }
 
+  // Free-form controls hold focus while the user types and only save when the
+  // edit is committed (Enter or blur), so partial values are never persisted.
+  const DEFERRED_SAVE_CUSTOM_FIELD_TYPES = new Set(['text', 'textarea', 'number', 'email', 'url']);
+
   // Status helpers
   function startEditingStatus() {
     if (!canEdit || !isSystemFieldEditable('status')) return;
@@ -1254,7 +1258,7 @@
                     required={screenField.is_required}
                     onChange={(val) => {
                       editCustomFieldValues[screenField.field_identifier] = val;
-                      if (fieldDef.field_type !== 'text') {
+                      if (!DEFERRED_SAVE_CUSTOM_FIELD_TYPES.has(fieldDef.field_type)) {
                         onsaveField?.({ field: `custom_field_${screenField.field_identifier}` });
                       }
                     }}
