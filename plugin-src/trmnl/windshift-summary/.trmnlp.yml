@@ -11,6 +11,7 @@ custom_fields:
   windshift_url: '{{ env.WINDSHIFT_URL }}'
   api_token: '{{ env.WINDSHIFT_TOKEN }}'
   scope_query: assignee = currentUser() AND status != Done
+  milestone_workspace_id: '2'
 
 variables:
   trmnl: {}

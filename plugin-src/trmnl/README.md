@@ -11,7 +11,7 @@ through the public REST API.
 | Directory | Screen | Shows |
 |---|---|---|
 | `windshift-tasks/` | Task list | Open work items matching a query, newest first |
-| `windshift-summary/` | Daily summary | Open / due today / overdue / closed today, next up, and what moved today |
+| `windshift-summary/` | Daily summary | Open / due today / overdue / closed today, next up (work item + milestone), and what moved today |
 
 They are separate plugins rather than two views of one, because a TRMNL
 plugin renders a single screen per refresh — the four `.liquid` files in each
@@ -32,15 +32,21 @@ form (or in `.trmnlp.yml` for local dev):
   with `crw_`. It needs the `items:read` and `users:read` scopes and nothing
   else.
 
-Plus one query each (`Query` / `Scope`), written in Windshift QL. Both default
-to:
-
+Plus one query each (`Query` / `Scope`), written in Windshift QL, defaulting
+to the same value in both plugins. The summary adds one optional field:
 ```
 assignee = currentUser() AND status != Done
 ```
 
 `currentUser()` resolves server-side to the token's owner, so the same query
 works for everyone without hardcoding a user id.
+
+- **Milestone workspace ID** (summary only, optional) — the numeric ID of the
+  workspace whose roadmap feeds the "Next up" milestone row (the first
+  in-progress or planned milestone in the workspace's manual ordering). Leave
+  blank to hide the row; the workspace-scoped milestones endpoint reuses the
+  `items:read` scope, so no extra token scope is needed. The numeric ID is
+  visible in the workspace URL in Windshift.
 
 ### Query notes
 
@@ -116,16 +122,20 @@ TRMNL's poller fetches each line of `polling_url` and exposes the responses as
 `IDX_0`, `IDX_1`, … Both plugins use `IDX_0` for `/users/me` — it supplies the
 display name and doubles as an auth check.
 
-`windshift-tasks` adds one item query. `windshift-summary` adds three: the
-backlog it computes from, a closed-today count, and today's activity across
-every workspace the token can see. The two count-only queries use `page_size=1`
-and read just `pagination.total_items`, so they stay cheap regardless of backlog
-size.
+`windshift-tasks` adds one item query. `windshift-summary` adds seven: the open
+count (whose single item doubles as the no-due-dates "Next up" fallback), the
+overdue and due-or-overdue counts, the soonest-due "Next up" item, a
+closed-today count (items that entered Done today and are assigned to the token
+owner), today's activity across every workspace the token can see, and — when a
+milestone workspace is configured — the workspace's first in-progress and first
+planned milestone. Every count query uses `page_size=1` and reads just
+`pagination.total_items`, so they stay cheap regardless of backlog size —
+TRMNL rejects polled payloads over 100 KB, so counting in Liquid over a large
+item window is not an option.
 
-Counts that come from `pagination.total_items` (open, closed today, moved today) are
-exact at any size. Due-today and overdue are counted in Liquid from a 100-item
-window, so they are exact as long as the scope query returns 100 items or
-fewer — which the default per-assignee query will.
+All counters come from `pagination.total_items` and are exact at any backlog
+size. Due-today is derived as due-or-overdue minus overdue, both server-side
+counts taken moments apart.
 
 ## Failure behaviour
 

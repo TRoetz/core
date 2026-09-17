@@ -7,6 +7,7 @@ strategy: polling
 name: Windshift Tasks
 description: Open work items from Windshift
 refresh_interval: 15
+id: 479343
 polling_verb: get
 framework_version: latest
 no_screen_padding: 'no'
@@ -56,5 +57,5 @@ custom_fields:
     name: Maximum items
     default: 20
     description: Upper bound on items fetched
-    help_text: The screen shows as many as fit and counts the rest.
+    help_text: The screen shows as many as fit and counts the rest. Keep at or below 45 — TRMNL rejects polled responses over 100 KB.
     required: true

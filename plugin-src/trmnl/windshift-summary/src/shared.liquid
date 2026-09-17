@@ -4,23 +4,30 @@
 
   Polled responses (see settings.yml polling_url):
     IDX_0 = /users/me
-    IDX_1 = the open backlog the stats are computed from (window of 100)
-    IDX_2 = closed-today count (only pagination.total_items is read)
-    IDX_3 = today's activity across all visible workspaces
+    IDX_1 = the scope query, page_size 1, newest first — supplies open_total,
+            and its item is the Next-up fallback when nothing has a due date
+    IDX_2 = overdue count    (scope AND due_date <  today)
+    IDX_3 = due-or-overdue   (scope AND due_date <= today)
+    IDX_4 = soonest-due open item — the real Next up
+    IDX_5 = closed-today count (status entered Done today; only pagination.total_items is read)
+    IDX_6 = today's activity across all visible workspaces
+    IDX_7/IDX_8 = next in-progress / planned milestone of the configured
+            workspace (optional poll — both lines vanish when the milestone
+            workspace ID field is blank)
 
-  Accuracy note: open_total, closed_today and activity_total come from
-  pagination.total_items and are exact for any backlog size. due_today_count and
-  overdue_count are counted from the 100-item window, so they are exact only
-  while the scope query returns 100 items or fewer — which the default
-  per-assignee query always will.
+  Accuracy note: every counter comes from pagination.total_items and is exact
+  for any backlog size. due_today_count is derived as IDX_3 minus IDX_2, both
+  server-side counts taken moments apart, so an item whose due date lands on
+  today is counted correctly even with a backlog far larger than any window.
 {%- endcomment -%}
 
 {%- assign me = IDX_0.data -%}
-{%- assign open_items = IDX_1.data -%}
 {%- assign open_total = IDX_1.pagination.total_items -%}
-{%- assign closed_today = IDX_2.pagination.total_items -%}
-{%- assign activity = IDX_3.data -%}
-{%- assign activity_total = IDX_3.pagination.total_items -%}
+{%- assign overdue_count = IDX_2.pagination.total_items -%}
+{%- assign due_today_count = IDX_3.pagination.total_items | minus: overdue_count -%}
+{%- assign closed_today = IDX_5.pagination.total_items -%}
+{%- assign activity = IDX_6.data -%}
+{%- assign activity_total = IDX_6.pagination.total_items -%}
 
 {%- comment -%}
   A failed poll yields {} rather than an exception, so an unreachable server
@@ -32,49 +39,30 @@
   {%- assign fault = 'Cannot reach Windshift. Check the server URL and API token.' -%}
 {%- endunless -%}
 {%- if fault == '' -%}
-  {%- unless IDX_1.pagination -%}
+  {%- unless IDX_1.pagination and IDX_2.pagination and IDX_3.pagination and IDX_4.pagination -%}
     {%- assign fault = 'Windshift rejected the scope query. Check the QL syntax.' -%}
   {%- endunless -%}
 {%- endif -%}
 
 {%- comment -%}
-  Dates arrive as RFC 3339. Collapsing them to a YYYYMMDD integer makes the
-  comparisons unambiguous, and a missing due date lands on 0 — which is never
-  "overdue", because every real date compares greater.
+  Next up is the soonest-due open item that is not overdue (IDX_4, server-side
+  sort by due date ascending, overdue already excluded by the query). With no
+  due dates anywhere, fall back to the most recently touched item so the
+  "Next up" slot still says something useful.
 {%- endcomment -%}
-{%- assign today_num = 'now' | date: '%Y%m%d' | plus: 0 -%}
+{%- assign next_up = IDX_4.data.first -%}
+{%- unless next_up -%}{%- assign next_up = IDX_1.data.first -%}{%- endunless -%}
 
 {%- comment -%}
-  A single pass over the backlog produces every counter the layouts need.
-  next_up is the soonest-due item that is not already overdue.
+  Next milestone is the first in-progress or planned milestone in the
+  configured workspace's manual ordering, whichever sorts first. The poll is
+  optional, so a blank field or a failed request just hides the row.
 {%- endcomment -%}
-{%- assign overdue_count = 0 -%}
-{%- assign due_today_count = 0 -%}
-{%- assign next_up_num = 99999999 -%}
-{%- assign next_up_found = false -%}
-{%- for item in open_items -%}
-  {%- assign due_num = item.due_date | date: '%Y%m%d' | plus: 0 -%}
-  {%- if due_num > 0 -%}
-    {%- if due_num < today_num -%}
-      {%- assign overdue_count = overdue_count | plus: 1 -%}
-    {%- else -%}
-      {%- if due_num == today_num -%}
-        {%- assign due_today_count = due_today_count | plus: 1 -%}
-      {%- endif -%}
-      {%- if due_num < next_up_num -%}
-        {%- assign next_up_num = due_num -%}
-        {%- assign next_up = item -%}
-        {%- assign next_up_found = true -%}
-      {%- endif -%}
-    {%- endif -%}
-  {%- endif -%}
-{%- endfor -%}
-
-{%- comment -%}
-  With no due dates anywhere, fall back to the most recently touched item so
-  the "Next up" slot still says something useful.
-{%- endcomment -%}
-{%- unless next_up_found -%}{%- assign next_up = open_items | first -%}{%- endunless -%}
+{%- assign next_milestone = IDX_7.data.first -%}
+{%- if IDX_8.data.first and IDX_8.data.first.position < next_milestone.position -%}
+  {%- assign next_milestone = IDX_8.data.first -%}
+{%- endif -%}
+{%- unless next_milestone -%}{%- assign next_milestone = IDX_8.data.first -%}{%- endunless -%}
 
 {%- assign owner_name = me.first_name -%}
 {%- if owner_name == blank -%}{%- assign owner_name = me.full_name | split: ' ' | first -%}{%- endif -%}

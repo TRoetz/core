@@ -17,7 +17,16 @@
         <span class="label label--small">{{ next_up.key }}</span>
       </div>
     </div>
-  {%- else -%}
+  {%- endif -%}
+  {%- if next_milestone -%}
+    <div class="item">
+      <div class="content">
+        <span class="title title--small" data-clamp="1">{{ next_milestone.name }}</span>
+        <span class="label label--small">Milestone · {{ next_milestone.status | replace: '-', ' ' | capitalize }}</span>
+      </div>
+    </div>
+  {%- endif -%}
+  {%- if next_up == blank and next_milestone == blank -%}
     <span class="description">Nothing open</span>
   {%- endif -%}
 </div>

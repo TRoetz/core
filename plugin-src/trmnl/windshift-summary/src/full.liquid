@@ -10,8 +10,8 @@
     {% render 'stat', number: closed_today,    caption: 'Closed today', size: 'large' %}
   </div>
 
-  <div class="columns">
-    <div class="column">
+  <div class="columns" style="flex: 1 1 auto; align-items: stretch">
+    <div class="column" style="justify-content: flex-start">
       <span class="label label--underline">Next up</span>
       {%- if next_up -%}
         <div class="item">
@@ -24,14 +24,27 @@
             </div>
           </div>
         </div>
-      {%- else -%}
+      {%- endif -%}
+      {%- if next_milestone -%}
+        <div class="item">
+          <div class="content">
+            <span class="title title--small" data-clamp="2">{{ next_milestone.name }}</span>
+            <div class="flex gap--small">
+              <span class="label label--small">Milestone</span>
+              <span class="label label--small">{{ next_milestone.status | replace: '-', ' ' | capitalize }}</span>
+              {%- if next_milestone.target_date %}<span class="label label--small label--underline">Target {{ next_milestone.target_date | date: '%b %-d' }}</span>{% endif -%}
+            </div>
+          </div>
+        </div>
+      {%- endif -%}
+      {%- if next_up == blank and next_milestone == blank -%}
         <span class="description">Nothing open</span>
       {%- endif -%}
     </div>
 
-    <div class="column">
+    <div class="column" style="justify-content: flex-start">
       <span class="label label--underline">Moved today ({{ activity_total }})</span>
-      <div data-overflow="true" data-overflow-counter="true">
+      <div data-overflow="true" data-overflow-counter="true" style="flex: 1 1 auto; min-height: 0; overflow: hidden">
         {%- for item in activity -%}
           <div class="item">
             <div class="content">
