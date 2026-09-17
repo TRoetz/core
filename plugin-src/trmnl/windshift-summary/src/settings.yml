@@ -1,7 +1,3 @@
-#
-# TRMNL private plugin definition. `trmnlp pull` overwrites this file, so keep
-# edits in sync with the hosted plugin if you ever push it.
-#
 ---
 strategy: polling
 no_screen_padding: 'no'
@@ -21,11 +17,6 @@ polling_url: |-
   {% if milestone_workspace_id != blank %}{{ windshift_url | strip | append: '/rest/api/v2/workspaces/' | append: milestone_workspace_id | append: '/milestones' | replace: '//rest/', '/rest/' }}?status=in-progress&page_size=1
   {{ windshift_url | strip | append: '/rest/api/v2/workspaces/' | append: milestone_workspace_id | append: '/milestones' | replace: '//rest/', '/rest/' }}?status=planning&page_size=1{% endif %}
 polling_headers: Authorization=Bearer {{ api_token | strip }}&Accept=application/json
-#
-# Nine requests per refresh when a milestone workspace is configured, seven
-# otherwise (the two milestone lines are emitted only when the
-# milestone_workspace_id field is set — see the IDX legend in shared.liquid).
-#
 polling_body:
 id: 479344
 oauth_enabled: 'false'
