@@ -1,6 +1,10 @@
 package routes
 
-import "net/http"
+import (
+	"net/http"
+
+	"windshift/internal/models"
+)
 
 // RegisterUserRoutes registers user-related routes (users, groups, permissions, credentials, tokens).
 func RegisterUserRoutes(deps *Deps) {
@@ -44,19 +48,23 @@ func RegisterUserRoutes(deps *Deps) {
 	api.HandleH("POST /permission-sets/{id}/assignments", admin(http.HandlerFunc(deps.Users.PermissionSet.CreateAssignment)))
 	api.HandleH("DELETE /permission-sets/{id}/assignments/{assignmentId}", admin(http.HandlerFunc(deps.Users.PermissionSet.DeleteAssignment)))
 
-	// Workspace Role routes
+	// Workspace Role routes. Assignment listing and revocation are workspace-scoped
+	// (workspaceId in the path), so they are gated on workspace.admin via middleware.
+	// The two POST /workspace-roles/assign* endpoints carry the workspace in the body,
+	// so their handlers enforce workspace.admin themselves.
+	wsAdmin := deps.PermissionMiddleware.RequireWorkspacePermission(models.PermissionWorkspaceAdmin)
 	api.HandleH("GET /workspace-roles", auth(http.HandlerFunc(deps.Users.WorkspaceRole.GetAll)))
 	api.HandleH("GET /workspace-roles/{id}", auth(http.HandlerFunc(deps.Users.WorkspaceRole.Get)))
 	api.HandleH("POST /workspace-roles", admin(http.HandlerFunc(deps.Users.WorkspaceRole.Create)))
 	api.HandleH("PUT /workspace-roles/{id}", admin(http.HandlerFunc(deps.Users.WorkspaceRole.Update)))
 	api.HandleH("DELETE /workspace-roles/{id}", admin(http.HandlerFunc(deps.Users.WorkspaceRole.Delete)))
-	api.HandleH("POST /workspace-roles/assign", admin(http.HandlerFunc(deps.Users.WorkspaceRole.AssignRoleToUser)))
-	api.HandleH("DELETE /users/{userId}/workspaces/{workspaceId}/roles/{roleId}", admin(http.HandlerFunc(deps.Users.WorkspaceRole.RevokeRoleFromUser)))
+	api.HandleH("POST /workspace-roles/assign", auth(http.HandlerFunc(deps.Users.WorkspaceRole.AssignRoleToUser)))
+	api.HandleH("DELETE /users/{userId}/workspaces/{workspaceId}/roles/{roleId}", auth(wsAdmin(http.HandlerFunc(deps.Users.WorkspaceRole.RevokeRoleFromUser))))
 	api.HandleH("GET /users/{userId}/workspaces/{workspaceId}/roles", admin(http.HandlerFunc(deps.Users.WorkspaceRole.GetUserRolesInWorkspace)))
-	api.HandleH("GET /workspaces/{workspaceId}/role-assignments", admin(http.HandlerFunc(deps.Users.WorkspaceRole.GetWorkspaceRoleAssignments)))
-	api.HandleH("POST /workspace-roles/assign-group", admin(http.HandlerFunc(deps.Users.WorkspaceRole.AssignRoleToGroup)))
-	api.HandleH("DELETE /groups/{groupId}/workspaces/{workspaceId}/roles/{roleId}", admin(http.HandlerFunc(deps.Users.WorkspaceRole.RevokeRoleFromGroup)))
-	api.HandleH("GET /workspaces/{workspaceId}/group-role-assignments", admin(http.HandlerFunc(deps.Users.WorkspaceRole.GetWorkspaceGroupRoleAssignments)))
+	api.HandleH("GET /workspaces/{workspaceId}/role-assignments", auth(wsAdmin(http.HandlerFunc(deps.Users.WorkspaceRole.GetWorkspaceRoleAssignments))))
+	api.HandleH("POST /workspace-roles/assign-group", auth(http.HandlerFunc(deps.Users.WorkspaceRole.AssignRoleToGroup)))
+	api.HandleH("DELETE /groups/{groupId}/workspaces/{workspaceId}/roles/{roleId}", auth(wsAdmin(http.HandlerFunc(deps.Users.WorkspaceRole.RevokeRoleFromGroup))))
+	api.HandleH("GET /workspaces/{workspaceId}/group-role-assignments", auth(wsAdmin(http.HandlerFunc(deps.Users.WorkspaceRole.GetWorkspaceGroupRoleAssignments))))
 
 	// User Credential endpoints
 	api.HandleH("GET /users/{userId}/credentials", auth(http.HandlerFunc(deps.Users.Credential.GetUserCredentials)))

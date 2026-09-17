@@ -103,6 +103,14 @@ func (h *WorkspaceRoleHandler) AssignRoleToUser(w http.ResponseWriter, r *http.R
 		return
 	}
 
+	// Assigning a role is a workspace-admin action. The workspace comes from the
+	// body, so the route middleware cannot check it; respond 404 like the shared
+	// helper so workspace existence is not disclosed to non-admins.
+	if h.permissionService != nil &&
+		!RequireWorkspacePermission(w, r, granterID, req.WorkspaceID, models.PermissionWorkspaceAdmin, h.permissionService) {
+		return
+	}
+
 	// Check if role exists
 	roleExists, err := h.repo.Exists(req.RoleID)
 	if err != nil || !roleExists {
@@ -359,6 +367,12 @@ func (h *WorkspaceRoleHandler) AssignRoleToGroup(w http.ResponseWriter, r *http.
 	granterID := h.getSessionUserID(r)
 	if granterID == 0 {
 		respondUnauthorized(w, r)
+		return
+	}
+
+	// Same workspace-admin gate as AssignRoleToUser (workspace in the body).
+	if h.permissionService != nil &&
+		!RequireWorkspacePermission(w, r, granterID, req.WorkspaceID, models.PermissionWorkspaceAdmin, h.permissionService) {
 		return
 	}
 
