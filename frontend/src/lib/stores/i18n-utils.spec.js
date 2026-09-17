@@ -1,3 +1,5 @@
+// @vitest-environment jsdom
+
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   buildDefaultDashboardLayout,
@@ -206,5 +208,60 @@ describe('locale-aware relative time', () => {
     expect(formatRelativeTime('2026-07-14T12:00:00Z')).toBe('1 month ago');
     expect(formatRelativeTime('2026-08-27T02:00:00Z')).toBe('1 day ago');
     expect(formatRelativeTime('2026-09-05T12:00:00Z')).toBe('in 1 week');
+  });
+});
+
+describe('Korean locale', () => {
+  afterEach(async () => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+    await i18n.setLocale('en');
+    localStorage.removeItem('windshift-locale');
+  });
+
+  it('loads Korean for a ko-KR browser and persists the selection', async () => {
+    localStorage.removeItem('windshift-locale');
+    vi.spyOn(navigator, 'language', 'get').mockReturnValue('ko-KR');
+
+    await i18n.init();
+
+    expect(i18n.locale).toBe('ko');
+    expect(i18n.t('common.save')).toBe('저장');
+    expect(i18n.t('auth.login')).toBe('로그인');
+    expect(localStorage.getItem('windshift-locale')).toBe('ko');
+    expect(document.documentElement.lang).toBe('ko');
+    expect(document.documentElement.dir).toBe('ltr');
+  });
+
+  it('restores saved Korean even when the browser uses English', async () => {
+    localStorage.setItem('windshift-locale', 'ko');
+    vi.spyOn(navigator, 'language', 'get').mockReturnValue('en-US');
+
+    await i18n.init();
+
+    expect(i18n.locale).toBe('ko');
+    expect(i18n.t('common.cancel')).toBe('취소');
+  });
+
+  it.each([0, 1, 2])('formats %d items without an English plural suffix', async (count) => {
+    await i18n.setLocale('ko');
+    const plural = count === 1 ? '' : 's';
+
+    expect(i18n.t('statuses.statuses', { count })).toBe(`상태 ${count}개`);
+    expect(i18n.t('collections.childItems', { count, plural })).toBe(`하위 작업 ${count}개`);
+    expect(i18n.t('collections.showingItems', { count, type: '작업', plural })).toBe(
+      `작업 ${count}개 표시 중`
+    );
+    expect(i18n.t('items.storyPointsChildRollup', { count, points: 8, plural })).toBe(
+      `하위 작업 ${count}개에서 8포인트 합산`
+    );
+  });
+
+  it('formats relative dates in Korean', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-08-28T12:00:00Z'));
+    await i18n.setLocale('ko');
+
+    expect(formatRelativeTime('2026-08-28T11:39:00Z')).toBe('21분 전');
   });
 });
