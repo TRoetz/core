@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"windshift/internal/database"
@@ -189,6 +190,85 @@ func (r *TodoistSyncRepository) GetLinkByTodoistID(userID, todoistTaskID string)
 // ListLinksByUser returns all task links for a user.
 func (r *TodoistSyncRepository) ListLinksByUser(userID string) ([]models.TodoistTaskLink, error) {
 	rows, err := r.db.Query("SELECT "+todoistTaskLinkColumns+" FROM todoist_task_links WHERE user_id = ?", userID)
+	if err != nil {
+		return nil, fmt.Errorf("list todoist_task_links: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	var links []models.TodoistTaskLink
+	for rows.Next() {
+		link, scanErr := scanTodoistTaskLink(rows)
+		if scanErr != nil {
+			return nil, fmt.Errorf("scan todoist_task_link: %w", scanErr)
+		}
+		links = append(links, link)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate todoist_task_links: %w", err)
+	}
+	return links, nil
+}
+
+// TodoistLinkQueryChunk caps the IN-list size for targeted link lookups so
+// bound parameters stay well under any driver variable limit.
+const TodoistLinkQueryChunk = 500
+
+// ListLinksByTodoistIDs returns the links for the given Todoist task IDs. The
+// delta sync only needs mappings for tasks the delta touched.
+func (r *TodoistSyncRepository) ListLinksByTodoistIDs(userID string, todoistTaskIDs []string) ([]models.TodoistTaskLink, error) {
+	keys := make([]any, len(todoistTaskIDs))
+	for i, id := range todoistTaskIDs {
+		keys[i] = id
+	}
+	return r.listLinksByKeys(userID, "todoist_task_id", keys)
+}
+
+// ListLinksByItemIDs returns the links for the given Windshift item IDs, so a
+// reconcile pass can load mappings per chunk of workspace tasks.
+func (r *TodoistSyncRepository) ListLinksByItemIDs(userID string, itemIDs []int) ([]models.TodoistTaskLink, error) {
+	keys := make([]any, len(itemIDs))
+	for i, id := range itemIDs {
+		keys[i] = id
+	}
+	return r.listLinksByKeys(userID, "item_id", keys)
+}
+
+func (r *TodoistSyncRepository) listLinksByKeys(userID, column string, keys []any) ([]models.TodoistTaskLink, error) {
+	var out []models.TodoistTaskLink
+	for start := 0; start < len(keys); start += TodoistLinkQueryChunk {
+		end := min(start+TodoistLinkQueryChunk, len(keys))
+		chunk := keys[start:end]
+		placeholders := strings.TrimSuffix(strings.Repeat("?,", len(chunk)), ",")
+		query := "SELECT " + todoistTaskLinkColumns + " FROM todoist_task_links WHERE user_id = ? AND " + column + " IN (" + placeholders + ")"
+		args := make([]any, 0, len(chunk)+1)
+		args = append(args, userID)
+		args = append(args, chunk...)
+		rows, err := r.db.Query(query, args...)
+		if err != nil {
+			return nil, fmt.Errorf("list todoist_task_links by %s: %w", column, err)
+		}
+		for rows.Next() {
+			link, scanErr := scanTodoistTaskLink(rows)
+			if scanErr != nil {
+				_ = rows.Close()
+				return nil, fmt.Errorf("scan todoist_task_link: %w", scanErr)
+			}
+			out = append(out, link)
+		}
+		if err := rows.Err(); err != nil {
+			_ = rows.Close()
+			return nil, fmt.Errorf("iterate todoist_task_links: %w", err)
+		}
+		_ = rows.Close()
+	}
+	return out, nil
+}
+
+// ListLinksByUserAfter returns up to limit links for a user, ordered by
+// todoist task ID, starting after afterID. The keyset lets callers sweep all
+// links in bounded pages instead of materializing the whole mapping table.
+func (r *TodoistSyncRepository) ListLinksByUserAfter(userID, afterID string, limit int) ([]models.TodoistTaskLink, error) {
+	rows, err := r.db.Query("SELECT "+todoistTaskLinkColumns+" FROM todoist_task_links WHERE user_id = ? AND todoist_task_id > ? ORDER BY todoist_task_id LIMIT ?", userID, afterID, limit)
 	if err != nil {
 		return nil, fmt.Errorf("list todoist_task_links: %w", err)
 	}

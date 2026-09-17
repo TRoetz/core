@@ -38,6 +38,10 @@ const syncLockLease = 10 * time.Minute
 // date/datetime due object.
 const dueDateLayout = "2006-01-02"
 
+// todoistOrphanPageSize bounds each keyset page of the orphan-link sweep so
+// Pass C never materializes the whole mapping table.
+const todoistOrphanPageSize = 500
+
 // taskState is the canonical, side-agnostic view of a task that the reconciler
 // compares. Each of the three inputs to a merge — the Windshift item, the
 // Todoist task, and the last-synced snapshot — is projected to a taskState.
@@ -164,15 +168,20 @@ func (s *TodoistSyncService) reconcile(cfg models.TodoistSyncConfig, api todoist
 	if err != nil {
 		return stats, newToken, fmt.Errorf("list personal tasks: %w", err)
 	}
-	links, err := s.syncRepo.ListLinksByUser(cfg.UserID)
+
+	// Delta links only: the Todoist delta is small, so load mappings for the
+	// tasks it touched instead of the user's whole link table.
+	deltaTaskIDs := make([]string, 0, len(resp.Items))
+	for i := range resp.Items {
+		deltaTaskIDs = append(deltaTaskIDs, resp.Items[i].ID)
+	}
+	deltaLinks, err := s.syncRepo.ListLinksByTodoistIDs(cfg.UserID, deltaTaskIDs)
 	if err != nil {
-		return stats, newToken, fmt.Errorf("list task links: %w", err)
+		return stats, newToken, fmt.Errorf("list delta task links: %w", err)
 	}
 
-	linkByItem := make(map[int]models.TodoistTaskLink, len(links))
-	linkByTD := make(map[string]models.TodoistTaskLink, len(links))
-	for _, l := range links {
-		linkByItem[l.ItemID] = l
+	linkByTD := make(map[string]models.TodoistTaskLink, len(deltaLinks))
+	for _, l := range deltaLinks {
 		linkByTD[l.TodoistTaskID] = l
 	}
 	wsByItem := make(map[int]repository.PersonalWorkspaceTask, len(wsTasks))
@@ -223,6 +232,9 @@ func (s *TodoistSyncService) reconcile(cfg models.TodoistSyncConfig, api todoist
 				continue
 			}
 			s.saveSnapshot(cfg.UserID, itemID, td.ID, td.ProjectID, tdState)
+			// The link postdates the task snapshot, so the Pass C sweep and the
+			// Pass B chunks must not touch this item again this run.
+			handledItems[itemID] = true
 			stats.CreatedInWS++
 			continue
 		}
@@ -246,47 +258,82 @@ func (s *TodoistSyncService) reconcile(cfg models.TodoistSyncConfig, api todoist
 	}
 
 	// --- Pass B: Windshift tasks -> Todoist (items the delta didn't touch) ---
-	for _, ws := range wsTasks {
-		if handledItems[ws.ItemID] {
-			continue
-		}
-		link, linked := linkByItem[ws.ItemID]
-		if !linked {
-			st := stateFromWS(ws)
-			cmd, tempID := todoist.NewAddItemCommand(addArgs(cfg, st))
-			cmds = append(cmds, cmd)
-			capturedWS := ws
-			onSuccess[cmd.UUID] = func(r *todoist.SyncResponse) {
-				realID := r.TempIDMapping[tempID]
-				if realID == "" {
-					return
-				}
-				s.saveSnapshot(cfg.UserID, capturedWS.ItemID, realID, cfg.TodoistProjectID, stateFromWS(capturedWS))
-				stats.CreatedInTD++
+	// Links load per chunk of workspace tasks so no pass materializes the
+	// user's whole mapping table.
+	for start := 0; start < len(wsTasks); start += repository.TodoistLinkQueryChunk {
+		end := min(start+repository.TodoistLinkQueryChunk, len(wsTasks))
+		chunk := wsTasks[start:end]
+		chunkItemIDs := make([]int, 0, len(chunk))
+		for _, ws := range chunk {
+			if !handledItems[ws.ItemID] {
+				chunkItemIDs = append(chunkItemIDs, ws.ItemID)
 			}
-			continue
 		}
-		// Existing pair the Todoist delta didn't include: Todoist is unchanged, so
-		// its current state equals the snapshot. reconcilePair then pushes any
-		// Windshift-side change outward (and no-ops when nothing changed).
-		s.reconcilePair(cfg, link, stateFromWS(ws), stateFromSnapshot(link), link.TodoistTaskID, link.TodoistProjectID, store, &cmds, onSuccess, &stats)
+		chunkLinks, err := s.syncRepo.ListLinksByItemIDs(cfg.UserID, chunkItemIDs)
+		if err != nil {
+			return stats, newToken, fmt.Errorf("list task links for workspace tasks: %w", err)
+		}
+		linkByItem := make(map[int]models.TodoistTaskLink, len(chunkLinks))
+		for _, l := range chunkLinks {
+			linkByItem[l.ItemID] = l
+		}
+		for _, ws := range chunk {
+			if handledItems[ws.ItemID] {
+				continue
+			}
+			link, linked := linkByItem[ws.ItemID]
+			if !linked {
+				st := stateFromWS(ws)
+				cmd, tempID := todoist.NewAddItemCommand(addArgs(cfg, st))
+				cmds = append(cmds, cmd)
+				capturedWS := ws
+				onSuccess[cmd.UUID] = func(r *todoist.SyncResponse) {
+					realID := r.TempIDMapping[tempID]
+					if realID == "" {
+						return
+					}
+					s.saveSnapshot(cfg.UserID, capturedWS.ItemID, realID, cfg.TodoistProjectID, stateFromWS(capturedWS))
+					stats.CreatedInTD++
+				}
+				continue
+			}
+			// Existing pair the Todoist delta didn't include: Todoist is unchanged, so
+			// its current state equals the snapshot. reconcilePair then pushes any
+			// Windshift-side change outward (and no-ops when nothing changed).
+			s.reconcilePair(cfg, link, stateFromWS(ws), stateFromSnapshot(link), link.TodoistTaskID, link.TodoistProjectID, store, &cmds, onSuccess, &stats)
+		}
 	}
 
 	// --- Pass C: Windshift deletions (link whose item is gone) ---
-	for _, link := range links {
-		if handledItems[link.ItemID] {
-			continue
+	// Links page by keyset so the sweep never loads the whole mapping table.
+	lastTodoistID := ""
+	for {
+		page, err := s.syncRepo.ListLinksByUserAfter(cfg.UserID, lastTodoistID, todoistOrphanPageSize)
+		if err != nil {
+			return stats, newToken, fmt.Errorf("sweep task links: %w", err)
 		}
-		if _, exists := wsByItem[link.ItemID]; exists {
-			continue
+		if len(page) == 0 {
+			break
 		}
-		cmd := todoist.NewDeleteItemCommand(link.TodoistTaskID)
-		cmds = append(cmds, cmd)
-		capturedLink := link
-		onSuccess[cmd.UUID] = func(*todoist.SyncResponse) {
-			_ = s.syncRepo.DeleteLink(capturedLink.ID)
-			stats.DeletedInTD++
+		for _, link := range page {
+			if handledItems[link.ItemID] {
+				continue
+			}
+			if _, exists := wsByItem[link.ItemID]; exists {
+				continue
+			}
+			cmd := todoist.NewDeleteItemCommand(link.TodoistTaskID)
+			cmds = append(cmds, cmd)
+			capturedLink := link
+			onSuccess[cmd.UUID] = func(*todoist.SyncResponse) {
+				_ = s.syncRepo.DeleteLink(capturedLink.ID)
+				stats.DeletedInTD++
+			}
 		}
+		if len(page) < todoistOrphanPageSize {
+			break
+		}
+		lastTodoistID = page[len(page)-1].TodoistTaskID
 	}
 
 	if len(cmds) == 0 {
