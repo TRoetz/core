@@ -292,15 +292,12 @@ func (h *SCMProviderHandler) OAuthCallback(w http.ResponseWriter, r *http.Reques
 		}
 	}
 
-	// Redirect based on context
+	// Redirect based on context. The workspace segment must be the numeric
+	// workspace ID: the SPA shell and workspace settings only resolve IDs,
+	// not keys (the v2 API rejects non-numeric workspace IDs).
 	if workspaceID.Valid {
-		// Came from workspace settings - redirect back there
-		var workspaceKey string
-		if err := h.db.QueryRow("SELECT key FROM workspaces WHERE id = ?", workspaceID.Int64).Scan(&workspaceKey); err != nil {
-			slog.Warn("failed to get workspace key for redirect", slog.String("component", "scm"), slog.Any("error", err))
-		}
-		http.Redirect(w, r, fmt.Sprintf("/workspaces/%s/settings/source-control?oauth=success&provider=%s",
-			url.QueryEscape(workspaceKey), url.QueryEscape(providerSlug)), http.StatusFound)
+		http.Redirect(w, r, fmt.Sprintf("/workspaces/%d/settings/source-control?oauth=success&provider=%s",
+			workspaceID.Int64, url.QueryEscape(providerSlug)), http.StatusFound)
 		return
 	}
 
@@ -535,5 +532,8 @@ func (h *SCMProviderHandler) getOAuthRedirectURI(slug string) (string, error) {
 }
 
 func (h *SCMProviderHandler) redirectWithOAuthError(w http.ResponseWriter, r *http.Request, message string) {
-	http.Redirect(w, r, "/admin?tab=scm-providers&oauth=error&message="+url.QueryEscape(message), http.StatusFound)
+	// Path-param form: the admin page force-navigates /admin to a default
+	// tab and drops query strings, so the error target must carry its tab
+	// in the path to survive.
+	http.Redirect(w, r, "/admin/scm-providers?oauth=error&message="+url.QueryEscape(message), http.StatusFound)
 }
