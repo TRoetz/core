@@ -171,20 +171,18 @@ func (w *GlobalRankMigrationWorker) Run(ctx context.Context) (GlobalRankMigratio
 	}
 
 	state.Frontier = stringPointer(rows[len(rows)-1].rank)
-	remaining, err := countRemainingGlobalRankRows(tx, state)
-	if err != nil {
-		return GlobalRankMigrationBatchResult{}, err
+	// Advance progress incrementally from the migration-start snapshot instead
+	// of re-counting the whole items table every batch; each COUNT scan cost
+	// more than the batch rewrite itself once the table grew large. Completion
+	// is decided by the batch read draining the active bucket (fewer rows than
+	// the limit means none remain past the frontier), so concurrent creates or
+	// deletes that skew the estimate can neither stall nor shortcut it.
+	state.MigratedCount += int64(len(rows))
+	remaining := state.TotalCount - state.MigratedCount
+	if remaining < 0 {
+		remaining = 0
 	}
-	state.TotalCount, err = countItems(tx)
-	if err != nil {
-		return GlobalRankMigrationBatchResult{}, err
-	}
-	// Recompute progress from current durable membership rather than adding the
-	// batch size. Concurrent creates/deletes between batches can change the
-	// population; derived progress stays bounded and includes rows born directly
-	// in the target bucket.
-	state.MigratedCount = state.TotalCount - remaining
-	completed := remaining == 0
+	completed := len(rows) < w.batchSize
 	if completed {
 		if w.beforeCompletion != nil {
 			w.beforeCompletion()
@@ -349,22 +347,6 @@ func globalRankMigrationRowsQuery(state GlobalRankState, limit int, driver strin
 		query += " FOR UPDATE"
 	}
 	return query, args, nil
-}
-
-func countRemainingGlobalRankRows(tx database.Tx, state GlobalRankState) (int64, error) {
-	if state.Frontier == nil || state.Direction == nil {
-		return 0, nil
-	}
-	operator := ">"
-	if *state.Direction == GlobalRankDirectionHighToLow {
-		operator = "<"
-	}
-	lowerBucketBound, upperBucketBound := globalRankBucketBounds(state.ActiveBucket)
-	var count int64
-	if err := tx.QueryRow("SELECT COUNT(*) FROM items WHERE frac_index >= ? AND frac_index < ? AND frac_index "+operator+" ?", lowerBucketBound, upperBucketBound, *state.Frontier).Scan(&count); err != nil {
-		return 0, fmt.Errorf("count remaining global rank rows: %w", err)
-	}
-	return count, nil
 }
 
 func globalRankBucketBounds(bucket GlobalRankBucket) (lower, upper string) {
