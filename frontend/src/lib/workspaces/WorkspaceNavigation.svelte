@@ -89,12 +89,14 @@
   const canViewTests = $derived.by(() => workspacePermissions.canViewTests(workspaceId));
   const canManageActions = $derived.by(() => workspacePermissions.canManageActions(workspaceId));
   const canAdmin = $derived.by(() => workspacePermissions.canAdminWorkspace(workspaceId));
+  const canViewPages = $derived.by(() => workspacePermissions.hasPermission(workspaceId, 'page.view'));
 
   // Filter workspace-only views based on permissions
   const filteredWorkspaceOnlyViews = $derived.by(() => {
     return workspaceOnlyViews.filter(view => {
       if (view.id === 'agents') return canAdmin;
       if (view.id === 'actions') return canManageActions;
+      if (view.id === 'pages') return canViewPages;
       return true;
     });
   });

@@ -100,6 +100,7 @@ export const workspaceOnlyViews = [
     labelKey: 'pages.treeHeading',
     icon: Book,
     activeViews: ['workspace-pages'],
+    testId: 'workspace-nav-pages',
   },
 ];
 
