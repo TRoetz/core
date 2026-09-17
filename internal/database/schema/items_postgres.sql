@@ -115,8 +115,10 @@ CREATE INDEX IF NOT EXISTS idx_items_workspace_frac_index ON items(workspace_id,
 CREATE INDEX IF NOT EXISTS idx_items_workspace_parent_frac_index ON items(workspace_id, parent_id, frac_index);
 
 -- Durable singleton coordination state for the 0.8.5 global rank
--- normalization. The legacy phase is intentional on pre-checkpoint installs;
--- the checkpoint converter changes it to stable after all ranks are bucketed.
+-- normalization. The 'legacy' phase stays admitted here only so databases
+-- converted by the retired 0.8.5 checkpoint converter still load; the
+-- application refuses any database whose phase is not a post-checkpoint
+-- state.
 CREATE TABLE IF NOT EXISTS global_rank_state (
 	id INTEGER PRIMARY KEY CHECK (id = 1),
 	active_bucket INTEGER NOT NULL CHECK (active_bucket IN (0, 1, 2)),

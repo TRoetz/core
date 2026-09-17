@@ -91,9 +91,6 @@ func (w *GlobalRankMigrationWorker) Run(ctx context.Context) (GlobalRankMigratio
 		return GlobalRankMigrationBatchResult{}, err
 	}
 
-	if state.Phase == GlobalRankPhaseLegacy {
-		return GlobalRankMigrationBatchResult{}, fmt.Errorf("global rank migration requires the canonical checkpoint")
-	}
 	if state.Phase == GlobalRankPhaseFailed {
 		return GlobalRankMigrationBatchResult{}, fmt.Errorf("global rank migration is failed: %s", globalRankLastError(state))
 	}

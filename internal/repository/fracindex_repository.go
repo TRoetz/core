@@ -169,7 +169,7 @@ func (r *FracIndexRepository) GetGlobalRankIntegrity(state GlobalRankState, now 
 	if state.Phase == GlobalRankPhasePaused && (state.LeaseOwner != nil || state.LeaseExpiresAt != nil) {
 		out.Issues = append(out.Issues, "paused migration still owns a lease")
 	}
-	if (state.Phase == GlobalRankPhaseStable || state.Phase == GlobalRankPhaseLegacy) &&
+	if state.Phase == GlobalRankPhaseStable &&
 		(state.Frontier != nil || state.LeaseOwner != nil || state.LeaseExpiresAt != nil) {
 		out.Issues = append(out.Issues, "inactive rank state retains migration markers")
 	}
@@ -182,9 +182,6 @@ func (r *FracIndexRepository) GetGlobalRankIntegrity(state GlobalRankState, now 
 		if state.LastError == nil || *state.LastError == "" {
 			out.Issues = append(out.Issues, "failed migration has no failure reason")
 		}
-	}
-	if state.Phase == GlobalRankPhaseLegacy {
-		out.Issues = append(out.Issues, "legacy rank conversion is incomplete")
 	}
 	if out.NullRankCount > 0 {
 		out.Issues = append(out.Issues, "NULL item ranks exist")

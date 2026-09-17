@@ -423,38 +423,47 @@ func GenerateFracIndexForNewItem(tx database.Tx, drivers ...string) (string, err
 	}
 
 	var base string
-	var bucket *GlobalRankBucket
-	if !last.Valid {
-		base, err = KeyBetween("", "")
-		if state, stateErr := loadGlobalRankState(tx); stateErr == nil && state.Phase != GlobalRankPhaseLegacy {
-			activeBucket := state.ActiveBucket
-			bucket = &activeBucket
-		}
-	} else {
+	var bucket GlobalRankBucket
+	if last.Valid {
 		if parsed, parseErr := ParseGlobalRank(last.String); parseErr == nil {
 			base, err = KeyBetween(parsed.Fraction, "")
-			parsedBucket := parsed.Bucket
-			bucket = &parsedBucket
+			if err != nil {
+				return "", err
+			}
+			bucket = parsed.Bucket
 		} else {
-			// The canonical schema only permits bucketed ranks. A legacy or
-			// hand-written unbucketed value should not leak into a newly created
-			// row once the global rank state is stable; start a fresh valid key
-			// in the active bucket instead.
-			base, err = KeyBetween("", "")
-			if state, stateErr := loadGlobalRankState(tx); stateErr == nil && state.Phase != GlobalRankPhaseLegacy {
-				activeBucket := state.ActiveBucket
-				bucket = &activeBucket
+			// The canonical schema only permits bucketed ranks. A MAX rank that
+			// fails to parse must not leak into a newly created row; start a
+			// fresh valid key in the active bucket instead.
+			base, bucket, err = freshGlobalRankKey(tx)
+			if err != nil {
+				return "", err
 			}
 		}
-	}
-	if err != nil {
-		return "", err
+	} else {
+		base, bucket, err = freshGlobalRankKey(tx)
+		if err != nil {
+			return "", err
+		}
 	}
 	base += fracIndexJitter()
-	if bucket == nil {
-		return base, nil
+	return EncodeGlobalRank(bucket, base)
+}
+
+// freshGlobalRankKey derives the base of a first rank for an empty table from
+// the durable active bucket. The state row always exists on a canonical
+// database, so a load failure fails the write instead of emitting an
+// unbucketed key.
+func freshGlobalRankKey(tx database.Tx) (string, GlobalRankBucket, error) {
+	base, err := KeyBetween("", "")
+	if err != nil {
+		return "", 0, err
 	}
-	return EncodeGlobalRank(*bucket, base)
+	state, err := loadGlobalRankState(tx)
+	if err != nil {
+		return "", 0, fmt.Errorf("load global rank active bucket: %w", err)
+	}
+	return base, state.ActiveBucket, nil
 }
 
 // GenerateFracIndexesForBatch returns count strictly increasing frac_index
@@ -486,18 +495,21 @@ func GenerateFracIndexesForBatch(tx database.Tx, count int, drivers ...string) (
 	}
 
 	prev := ""
-	var bucket *GlobalRankBucket
+	var bucket GlobalRankBucket
+	bucketFromLast := false
 	if last.Valid {
 		if parsed, parseErr := ParseGlobalRank(last.String); parseErr == nil {
 			prev = parsed.Fraction
-			parsedBucket := parsed.Bucket
-			bucket = &parsedBucket
+			bucket = parsed.Bucket
+			bucketFromLast = true
 		}
 	}
-	if bucket == nil {
-		if state, stateErr := loadGlobalRankState(tx); stateErr == nil && state.Phase != GlobalRankPhaseLegacy {
-			activeBucket := state.ActiveBucket
-			bucket = &activeBucket
+	if !bucketFromLast {
+		// An empty table (or a corrupt MAX rank) has no bucket to continue;
+		// derive fresh keys from the durable active bucket.
+		_, bucket, err = freshGlobalRankKey(tx)
+		if err != nil {
+			return nil, err
 		}
 	}
 
@@ -508,19 +520,16 @@ func GenerateFracIndexesForBatch(tx database.Tx, count int, drivers ...string) (
 			return nil, err
 		}
 		base += fracIndexJitter()
-		key := base
-		if bucket != nil {
-			key, err = EncodeGlobalRank(*bucket, base)
-			if err != nil {
-				return nil, err
-			}
+		key, err := EncodeGlobalRank(bucket, base)
+		if err != nil {
+			return nil, err
 		}
 		keys = append(keys, key)
-		if parsed, parseErr := ParseGlobalRank(key); parseErr == nil {
-			prev = parsed.Fraction
-		} else {
-			prev = key
+		parsed, parseErr := ParseGlobalRank(key)
+		if parseErr != nil {
+			return nil, fmt.Errorf("reparse generated rank %q: %w", key, parseErr)
 		}
+		prev = parsed.Fraction
 	}
 	return keys, nil
 }
@@ -578,22 +587,17 @@ func MoveItemBetween(db database.Database, itemID int, prevID, nextID *int) (str
 				return "", fmt.Errorf("compute key between %q and %q: %w", prev, next, kerr)
 			}
 			if len(newKey) > fracIndexRebalanceLengthThreshold {
-				rebalanced := false
-				if rank, parseErr := ParseGlobalRank(newKey); parseErr == nil {
-					if globalRankBoundsWithinBucket(prev, next, rank.Bucket) {
-						if rerr := rebalanceLocalGlobalRankWindow(tx, itemID, prev, next, rank.Bucket, driver); rerr != nil {
-							return "", rerr
-						}
-						rebalanced = true
-						requestGlobalMigration = true
-					}
-				} else {
-					if rerr := rebalanceLocalFracIndexWindow(tx, itemID, prev, next, driver); rerr != nil {
+				rank, parseErr := ParseGlobalRank(newKey)
+				if parseErr != nil {
+					return "", fmt.Errorf("parse overlong move key %q: %w", newKey, parseErr)
+				}
+				// A window straddling the migration frontier cannot be rebalanced
+				// locally; the scheduled global migration normalizes it instead.
+				if globalRankBoundsWithinBucket(prev, next, rank.Bucket) {
+					if rerr := rebalanceLocalGlobalRankWindow(tx, itemID, prev, next, rank.Bucket, driver); rerr != nil {
 						return "", rerr
 					}
-					rebalanced = true
-				}
-				if rebalanced {
+					requestGlobalMigration = true
 					// Re-read explicit neighbors because the local rebalance may have
 					// rewritten their frac_index values while preserving order.
 					prev, perr = readFracIndexForUpdate(tx, prevID, driver)
@@ -663,69 +667,36 @@ func requestGlobalRankMigrationAfterHotGap(db database.Database, itemID int) {
 		slog.String("component", "fracindex"))
 }
 
-// chooseMoveFracIndex finds a globally unique key within filtered-view bounds.
-// It uses the nearest global neighbor to avoid deterministic collisions with
-// items outside the view while preserving the requested open interval.
+// chooseMoveFracIndex finds a globally unique bucket-prefixed key within
+// filtered-view bounds. It uses the nearest global neighbor to avoid
+// deterministic collisions with items outside the view while preserving the
+// requested open interval.
 func chooseMoveFracIndex(tx database.Tx, itemID int, prev, next, driver string) (string, error) {
-	if hasGlobalRankPrefix(prev) || hasGlobalRankPrefix(next) {
-		return chooseMoveGlobalRank(tx, itemID, prev, next, driver)
-	}
 	if prev == "" && next == "" {
+		// Move to the global end: continue after the current maximum.
 		maxKey, found, err := readGlobalBoundaryFracIndexForUpdate(tx, itemID, "DESC", driver)
 		if err != nil {
 			return "", err
 		}
 		if !found {
-			fraction, err := KeyBetween("", "")
+			base, bucket, err := freshGlobalRankKey(tx)
 			if err != nil {
 				return "", err
 			}
-			state, stateErr := loadGlobalRankState(tx)
-			if stateErr == nil && state.Phase != GlobalRankPhaseLegacy {
-				return EncodeGlobalRank(state.ActiveBucket, fraction)
-			}
-			return fraction, nil
+			base += fracIndexJitter()
+			return EncodeGlobalRank(bucket, base)
 		}
-		if rank, parseErr := ParseGlobalRank(maxKey); parseErr == nil {
-			fraction, err := KeyBetween(rank.Fraction, "")
-			if err != nil {
-				return "", err
-			}
-			return EncodeGlobalRank(rank.Bucket, fraction)
+		rank, err := ParseGlobalRank(maxKey)
+		if err != nil {
+			return "", fmt.Errorf("parse max rank %q: %w", maxKey, err)
 		}
-		return KeyBetween(maxKey, "")
-	}
-
-	if prev == "" {
-		lower := ""
-		maxBelowNext, found, err := readBoundedFracIndexForUpdate(tx, itemID, "frac_index < ?", []any{next}, "DESC", driver)
+		fraction, err := KeyBetween(rank.Fraction, "")
 		if err != nil {
 			return "", err
 		}
-		if found {
-			lower = maxBelowNext
-		}
-		return KeyBetween(lower, next)
+		return EncodeGlobalRank(rank.Bucket, fraction)
 	}
 
-	upper := next
-	where := "frac_index > ?"
-	args := []any{prev}
-	if next != "" {
-		where += " AND frac_index < ?"
-		args = append(args, next)
-	}
-	minAbovePrev, found, err := readBoundedFracIndexForUpdate(tx, itemID, where, args, "ASC", driver)
-	if err != nil {
-		return "", err
-	}
-	if found {
-		upper = minAbovePrev
-	}
-	return KeyBetween(prev, upper)
-}
-
-func chooseMoveGlobalRank(tx database.Tx, itemID int, prev, next, driver string) (string, error) {
 	// Narrow filtered-view bounds to the nearest actual global neighbor. This
 	// prevents deterministic collisions with an item hidden by the view.
 	effectivePrev := prev
@@ -827,10 +798,6 @@ func globalRankBetween(tx database.Tx, lowerValue, upperValue string) (string, e
 	return EncodeGlobalRank(bucket, fraction)
 }
 
-func hasGlobalRankPrefix(value string) bool {
-	return len(value) >= 2 && value[1] == '|' && value[0] >= '0' && value[0] <= '2'
-}
-
 func splitGlobalRankBound(value string) (string, *GlobalRankBucket, error) {
 	if value == "" {
 		return "", nil, nil
@@ -848,63 +815,13 @@ type fracIndexWindowRow struct {
 	key string
 }
 
-// rebalanceLocalFracIndexWindow resequences a small contiguous global window
-// around the intended insertion point. It preserves the relative order of every
-// existing row in the window, but assigns balanced midpoint keys between the
-// rows just outside the window. This is the cheap hot-gap escape hatch: repeated
-// insertion into the same gap can make the immediate midpoint very long, and a
-// full-table rebalance would be excessive for an interactive drag.
-func rebalanceLocalFracIndexWindow(tx database.Tx, movingItemID int, prev, next, driver string) error {
-	rows, err := readLocalRebalanceWindowForUpdate(tx, movingItemID, prev, next, driver)
-	if err != nil {
-		return err
-	}
-	if len(rows) == 0 {
-		return nil
-	}
-
-	left, right, err := readWindowOutsideBoundsForUpdate(tx, movingItemID, rows[0].key, rows[len(rows)-1].key, driver)
-	if err != nil {
-		return err
-	}
-	keys, err := generateEvenlySpacedFracKeys(left, right, len(rows))
-	if err != nil {
-		return fmt.Errorf("generate local rebalance keys: %w", err)
-	}
-
-	// Temporarily move the moving row and the window rows out of the UNIQUE
-	// index. Temporary non-null keys keep this path compatible with the
-	// canonical items.frac_index NOT NULL constraint; the final rewrite can
-	// otherwise fail when a new key equals another window row's old key. The
-	// transaction restores final keys before commit, and the temporary prefix
-	// is outside the validated fractional/bucket key grammar.
-	ids := make([]int, 0, len(rows)+1)
-	ids = append(ids, movingItemID)
-	for _, row := range rows {
-		ids = append(ids, row.id)
-	}
-	if err := setFracIndexTemporaryForIDs(tx, ids); err != nil {
-		return err
-	}
-
-	updates := make([]fracIndexUpdate, 0, len(rows))
-	for index, row := range rows {
-		updates = append(updates, fracIndexUpdate{id: int64(row.id), key: keys[index]})
-	}
-	if err := updateFracIndexes(tx, updates); err != nil {
-		return fmt.Errorf("write local rebalance keys: %w", err)
-	}
-
-	slog.Info("rebalanced local frac_index window",
-		slog.Int("rows", len(rows)),
-		slog.Int("moving_item_id", movingItemID),
-		slog.String("component", "fracindex"))
-	return nil
-}
-
-// rebalanceLocalGlobalRankWindow is the canonical bucket-aware equivalent of
-// rebalanceLocalFracIndexWindow. It scopes every boundary query to one bucket,
-// balances only the fractional payloads, then restores the bucket prefix.
+// rebalanceLocalGlobalRankWindow resequences a small contiguous window of one
+// bucket around the intended insertion point. It preserves the relative order
+// of every existing row in the window, but assigns balanced midpoint fractional
+// payloads between the rows just outside the window, then restores the bucket
+// prefix. This is the cheap hot-gap escape hatch: repeated insertion into the
+// same gap can make the immediate midpoint very long, and a global migration
+// would be excessive for an interactive drag.
 func rebalanceLocalGlobalRankWindow(tx database.Tx, movingItemID int, prev, next string, bucket GlobalRankBucket, driver string) error {
 	rows, err := readLocalGlobalRankWindowForUpdate(tx, movingItemID, prev, next, bucket, driver)
 	if err != nil {
@@ -1067,88 +984,6 @@ func globalRankFractionForBucket(value string, bucket GlobalRankBucket) (string,
 		return "", fmt.Errorf("global rank %q is outside local rebalance bucket %d", value, bucket)
 	}
 	return rank.Fraction, nil
-}
-
-func readLocalRebalanceWindowForUpdate(tx database.Tx, movingItemID int, prev, next, driver string) ([]fracIndexWindowRow, error) {
-	beforeLimit := fracIndexLocalRebalanceWindowSize / 2
-	afterLimit := fracIndexLocalRebalanceWindowSize - beforeLimit
-
-	var before, after []fracIndexWindowRow
-	var err error
-	switch {
-	case prev != "":
-		before, err = readWindowRowsForUpdate(tx, `frac_index <= ?`, []any{prev}, "DESC", beforeLimit, movingItemID, driver)
-		if err != nil {
-			return nil, err
-		}
-		after, err = readWindowRowsForUpdate(tx, `frac_index > ?`, []any{prev}, "ASC", afterLimit, movingItemID, driver)
-		if err != nil {
-			return nil, err
-		}
-		reverseWindowRows(before)
-	case next != "":
-		before, err = readWindowRowsForUpdate(tx, `frac_index < ?`, []any{next}, "DESC", beforeLimit, movingItemID, driver)
-		if err != nil {
-			return nil, err
-		}
-		after, err = readWindowRowsForUpdate(tx, `frac_index >= ?`, []any{next}, "ASC", afterLimit, movingItemID, driver)
-		if err != nil {
-			return nil, err
-		}
-		reverseWindowRows(before)
-	default:
-		before, err = readWindowRowsForUpdate(tx, `frac_index IS NOT NULL`, nil, "DESC", fracIndexLocalRebalanceWindowSize, movingItemID, driver)
-		if err != nil {
-			return nil, err
-		}
-		reverseWindowRows(before)
-	}
-
-	rows := make([]fracIndexWindowRow, 0, len(before)+len(after))
-	rows = append(rows, before...)
-	rows = append(rows, after...)
-	return rows, nil
-}
-
-func readWindowRowsForUpdate(tx database.Tx, where string, args []any, direction string, limit, movingItemID int, driver string) ([]fracIndexWindowRow, error) {
-	q := `SELECT id, frac_index FROM items
-		WHERE ` + where + ` AND id <> ?
-		ORDER BY frac_index ` + direction + `
-		LIMIT ?`
-	args = append(args, movingItemID, limit)
-	if database.IsPostgresDriver(driver) {
-		q += " FOR UPDATE"
-	}
-	rows, err := tx.Query(q, args...)
-	if err != nil {
-		return nil, fmt.Errorf("read local rebalance window: %w", err)
-	}
-	defer rows.Close()
-
-	out := make([]fracIndexWindowRow, 0, limit)
-	for rows.Next() {
-		var row fracIndexWindowRow
-		if err := rows.Scan(&row.id, &row.key); err != nil {
-			return nil, fmt.Errorf("scan local rebalance window: %w", err)
-		}
-		out = append(out, row)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterate local rebalance window: %w", err)
-	}
-	return out, nil
-}
-
-func readWindowOutsideBoundsForUpdate(tx database.Tx, movingItemID int, firstKey, lastKey, driver string) (left, right string, err error) {
-	left, _, err = readBoundedFracIndexForUpdate(tx, movingItemID, "frac_index < ?", []any{firstKey}, "DESC", driver)
-	if err != nil {
-		return "", "", err
-	}
-	right, _, err = readBoundedFracIndexForUpdate(tx, movingItemID, "frac_index > ?", []any{lastKey}, "ASC", driver)
-	if err != nil {
-		return "", "", err
-	}
-	return left, right, nil
 }
 
 func setFracIndexTemporaryForIDs(tx database.Tx, ids []int) error {

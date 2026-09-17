@@ -40,12 +40,11 @@ func acquireGlobalRankMigrationLock(tx database.Tx, driver string) error {
 }
 
 // GlobalRankPhase describes the durable lifecycle of the singleton rank
-// state. Legacy is used until the 0.8.5 checkpoint converter has rewritten
-// existing unprefixed ranks into bucketed form.
+// state. Every supported database has completed the 0.8.5 checkpoint, so
+// startup refuses phases outside this set.
 type GlobalRankPhase string
 
 const (
-	GlobalRankPhaseLegacy    GlobalRankPhase = "legacy"
 	GlobalRankPhaseStable    GlobalRankPhase = "stable"
 	GlobalRankPhaseMigrating GlobalRankPhase = "migrating"
 	GlobalRankPhasePaused    GlobalRankPhase = "paused"
@@ -91,7 +90,7 @@ func (s GlobalRankState) Validate() error {
 		return err
 	}
 	switch s.Phase {
-	case GlobalRankPhaseLegacy, GlobalRankPhaseStable, GlobalRankPhaseMigrating, GlobalRankPhasePaused, GlobalRankPhaseFailed:
+	case GlobalRankPhaseStable, GlobalRankPhaseMigrating, GlobalRankPhasePaused, GlobalRankPhaseFailed:
 	default:
 		return fmt.Errorf("invalid global rank phase %q", s.Phase)
 	}
@@ -106,7 +105,7 @@ func (s GlobalRankState) Validate() error {
 	if s.Direction != nil && *s.Direction != GlobalRankDirectionHighToLow && *s.Direction != GlobalRankDirectionLowToHigh {
 		return fmt.Errorf("invalid global rank direction %q", *s.Direction)
 	}
-	if s.Phase == GlobalRankPhaseLegacy || s.Phase == GlobalRankPhaseStable {
+	if s.Phase == GlobalRankPhaseStable {
 		if s.TargetBucket != nil || s.Direction != nil {
 			return fmt.Errorf("%s global rank state cannot have a target or direction", s.Phase)
 		}

@@ -42,8 +42,6 @@ func ValidateCanonicalSchemaCheckpoint(db Database) error {
 		// These are all post-checkpoint operational states. In particular, a
 		// process must be allowed to restart while migrating so the resumable
 		// worker can reclaim an expired lease and continue from its frontier.
-	case "legacy":
-		return fmt.Errorf("database schema checkpoint %s is incomplete: global rank conversion is %s", CanonicalSchemaCheckpointVersion, phase)
 	default:
 		return fmt.Errorf("database schema checkpoint %s has invalid global rank phase %q", CanonicalSchemaCheckpointVersion, phase)
 	}
