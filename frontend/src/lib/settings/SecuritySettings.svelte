@@ -48,6 +48,7 @@
   });
   let authPolicyStats = $state(null);
   let affectedUsers = $state([]);
+  let affectedUsersCount = $state(0);
   let showAffectedUsers = $state(false);
   let loadingPolicy = $state(false);
   let savingPolicy = $state(false);
@@ -138,9 +139,12 @@
       authPolicyConfig = config;
       authPolicyStats = stats;
 
-      // Load affected users if not password policy
+      // Load affected users if not password policy (bounded page; the
+      // response carries the full total separately)
       if (config.policy !== 'password') {
-        affectedUsers = await authPolicy.getAffected();
+        const page = await authPolicy.getAffected();
+        affectedUsers = page.users;
+        affectedUsersCount = page.total_count;
       }
     } catch (err) {
       console.error('Failed to load auth policy:', err);
@@ -580,7 +584,7 @@
                   style="color: var(--ds-text);"
                 >
                   <AlertTriangle class="w-4 h-4" style="color: var(--ds-icon-warning);" />
-                  {t('securitySettings.affectedUsers', { count: affectedUsers.length })}
+                  {t('securitySettings.affectedUsers', { count: affectedUsersCount })}
                   {#if showAffectedUsers}
                     <ChevronUp class="w-4 h-4" />
                   {:else}

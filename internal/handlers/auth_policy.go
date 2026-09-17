@@ -4,8 +4,10 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -59,6 +61,14 @@ type AffectedUser struct {
 	HasPasskey bool   `json:"has_passkey"`
 	HasSSO     bool   `json:"has_sso"`
 	IsAdmin    bool   `json:"is_admin"`
+}
+
+// AffectedUsersPage is one bounded page of the affected-users listing.
+type AffectedUsersPage struct {
+	Users      []AffectedUser `json:"users"`
+	TotalCount int            `json:"total_count"`
+	HasMore    bool           `json:"has_more"`
+	NextCursor string         `json:"next_cursor"`
 }
 
 // AuthPolicyHandler handles authentication policy endpoints
@@ -293,8 +303,24 @@ func (h *AuthPolicyHandler) GetAuthPolicyStats(w http.ResponseWriter, r *http.Re
 	respondJSONOK(w, stats)
 }
 
-// GetAffectedUsers returns users who would be affected by the current policy
+// GetAffectedUsers returns a bounded page of users who would be affected by
+// the current policy. Query params: limit (default 50, max 500) and cursor
+// (the last email of the previous page). The response carries total_count and
+// next_cursor so admins can page through large sets without one unbounded
+// response or scan.
 func (h *AuthPolicyHandler) GetAffectedUsers(w http.ResponseWriter, r *http.Request) {
+	const defaultAffectedLimit = 50
+	const maxAffectedLimit = 500
+
+	limit := defaultAffectedLimit
+	if raw := r.URL.Query().Get("limit"); raw != "" {
+		if parsed, err := strconv.Atoi(raw); err == nil {
+			limit = parsed
+		}
+	}
+	limit = min(max(limit, 1), maxAffectedLimit)
+	cursor := r.URL.Query().Get("cursor")
+
 	// Get current policy
 	var policy = AuthPolicyPassword
 	var policyStr string
@@ -305,49 +331,52 @@ func (h *AuthPolicyHandler) GetAffectedUsers(w http.ResponseWriter, r *http.Requ
 
 	// If policy is just password, no users are affected
 	if policy == AuthPolicyPassword {
-		respondJSONOK(w, []AffectedUser{})
+		respondJSONOK(w, AffectedUsersPage{Users: []AffectedUser{}})
 		return
 	}
 
-	// Build query based on policy
-	var query string
+	// Predicate selecting the users the policy would affect
+	var affectedPredicate string
 	switch policy {
 	case AuthPolicyPasskeyOnly, AuthPolicyPasswordPasskey2FA:
 		// Users without passkeys (excluding system admins who have fallback)
-		query = `
-			SELECT u.id, u.email, u.username, u.first_name, u.last_name,
-				EXISTS(SELECT 1 FROM webauthn_credentials wc WHERE wc.user_id = u.id) as has_passkey,
-				EXISTS(SELECT 1 FROM user_external_accounts sea WHERE sea.user_id = u.id) as has_sso,
-				(
-					EXISTS(SELECT 1 FROM user_global_permissions ugp JOIN permissions gp ON ugp.permission_id = gp.id WHERE ugp.user_id = u.id AND gp.permission_key = 'system.admin')
-					OR EXISTS(SELECT 1 FROM group_members gm JOIN groups g ON gm.group_id = g.id JOIN group_global_permissions ggp ON gm.group_id = ggp.group_id JOIN permissions gp ON ggp.permission_id = gp.id WHERE gm.user_id = u.id AND gp.permission_key = 'system.admin' AND g.is_active = true)
-				) as is_admin
-			FROM users u
-			WHERE u.is_active = true
-			AND NOT EXISTS(SELECT 1 FROM webauthn_credentials wc WHERE wc.user_id = u.id)
-			ORDER BY u.email
-		`
+		affectedPredicate = `NOT EXISTS(SELECT 1 FROM webauthn_credentials wc WHERE wc.user_id = u.id)`
 	case AuthPolicySSOPrimary:
 		// Users without SSO linked (excluding system admins who have fallback)
-		query = `
-			SELECT u.id, u.email, u.username, u.first_name, u.last_name,
-				EXISTS(SELECT 1 FROM webauthn_credentials wc WHERE wc.user_id = u.id) as has_passkey,
-				EXISTS(SELECT 1 FROM user_external_accounts sea WHERE sea.user_id = u.id) as has_sso,
-				(
-					EXISTS(SELECT 1 FROM user_global_permissions ugp JOIN permissions gp ON ugp.permission_id = gp.id WHERE ugp.user_id = u.id AND gp.permission_key = 'system.admin')
-					OR EXISTS(SELECT 1 FROM group_members gm JOIN groups g ON gm.group_id = g.id JOIN group_global_permissions ggp ON gm.group_id = ggp.group_id JOIN permissions gp ON ggp.permission_id = gp.id WHERE gm.user_id = u.id AND gp.permission_key = 'system.admin' AND g.is_active = true)
-				) as is_admin
-			FROM users u
-			WHERE u.is_active = true
-			AND NOT EXISTS(SELECT 1 FROM user_external_accounts sea WHERE sea.user_id = u.id)
-			ORDER BY u.email
-		`
+		affectedPredicate = `NOT EXISTS(SELECT 1 FROM user_external_accounts sea WHERE sea.user_id = u.id)`
 	default:
-		respondJSONOK(w, []AffectedUser{})
+		respondJSONOK(w, AffectedUsersPage{Users: []AffectedUser{}})
 		return
 	}
 
-	rows, err := h.db.Query(query)
+	whereClause := "WHERE u.is_active = true AND " + affectedPredicate
+	args := []any{}
+	if cursor != "" {
+		whereClause += " AND u.email > ?"
+		args = append(args, cursor)
+	}
+
+	var totalCount int
+	if err := h.db.QueryRow("SELECT COUNT(*) FROM users u "+whereClause, args...).Scan(&totalCount); err != nil {
+		respondInternalError(w, r, fmt.Errorf("count affected users: %w", err))
+		return
+	}
+
+	query := `
+		SELECT u.id, u.email, u.username, u.first_name, u.last_name,
+			EXISTS(SELECT 1 FROM webauthn_credentials wc WHERE wc.user_id = u.id) as has_passkey,
+			EXISTS(SELECT 1 FROM user_external_accounts sea WHERE sea.user_id = u.id) as has_sso,
+			(
+				EXISTS(SELECT 1 FROM user_global_permissions ugp JOIN permissions gp ON ugp.permission_id = gp.id WHERE ugp.user_id = u.id AND gp.permission_key = 'system.admin')
+				OR EXISTS(SELECT 1 FROM group_members gm JOIN groups g ON gm.group_id = g.id JOIN group_global_permissions ggp ON gm.group_id = ggp.group_id JOIN permissions gp ON ggp.permission_id = gp.id WHERE gm.user_id = u.id AND gp.permission_key = 'system.admin' AND g.is_active = true)
+			) as is_admin
+		FROM users u
+		` + whereClause + `
+		ORDER BY u.email
+		LIMIT ?`
+	args = append(args, limit)
+
+	rows, err := h.db.Query(query, args...)
 	if err != nil {
 		respondInternalError(w, r, err)
 		return
@@ -369,7 +398,17 @@ func (h *AuthPolicyHandler) GetAffectedUsers(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	respondJSONOK(w, users)
+	hasMore := len(users) == limit
+	nextCursor := ""
+	if hasMore {
+		nextCursor = users[len(users)-1].Email
+	}
+	respondJSONOK(w, AffectedUsersPage{
+		Users:      users,
+		TotalCount: totalCount,
+		HasMore:    hasMore,
+		NextCursor: nextCursor,
+	})
 }
 
 // isSSOConfigured checks if any SSO provider is configured and enabled

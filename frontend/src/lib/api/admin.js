@@ -68,8 +68,14 @@ export const authPolicy = {
   // Get statistics for policy planning
   getStats: () => fetchAPI('/admin/auth-policy/stats'),
 
-  // Get list of users affected by current policy
-  getAffected: () => fetchAPI('/admin/auth-policy/affected'),
+  // Get a bounded page of users affected by current policy.
+  // Supports `limit` and `cursor` (the previous page's next_cursor); the
+  // response carries `users`, `total_count`, `has_more`, and `next_cursor`.
+  getAffected: ({ limit = 50, cursor = '' } = {}) => {
+    const params = new URLSearchParams({ limit: String(limit) });
+    if (cursor) params.set('cursor', cursor);
+    return fetchAPI(`/admin/auth-policy/affected?${params}`);
+  },
 
   // Get public policy status (no auth required - for login page)
   getPublicStatus: () => fetchAPI('/auth/policy-status'),
