@@ -568,8 +568,10 @@ func (h *ItemHandler) Create(w http.ResponseWriter, r *http.Request) {
 		h.RespondError(w, r, restapi.NewAPIError(http.StatusBadRequest, restapi.ErrCodeMissingField, "title is required"))
 		return
 	}
-	canEdit, err := h.Perms.CanEditWorkspace(user.ID, req.WorkspaceID)
-	if err != nil || !canEdit {
+	// Creation is gated by item.create, not item.edit — Testers hold
+	// item.create so they can file defects without broad editing rights.
+	canCreate, err := h.Perms.CanCreateItems(user.ID, req.WorkspaceID)
+	if err != nil || !canCreate {
 		h.RespondError(w, r, restapi.ErrInsufficientPermission)
 		return
 	}

@@ -59,6 +59,15 @@ func (a *Authz) CanViewWorkspace(userID, workspaceID int) (bool, error) {
 	return a.canViewWorkspaceFallback(userID, workspaceID), nil
 }
 
+// CanCreateItems checks if a user can create items in a workspace.
+// Equivalent to HasWorkspacePermission(userID, workspaceID, PermissionItemCreate).
+func (a *Authz) CanCreateItems(userID, workspaceID int) (bool, error) {
+	if a.permissionService != nil {
+		return a.permissionService.HasWorkspacePermission(userID, workspaceID, models.PermissionItemCreate)
+	}
+	return a.canEditWorkspaceFallback(userID, workspaceID)
+}
+
 // CanEditWorkspace checks if a user can edit items in a workspace.
 // Equivalent to HasWorkspacePermission(userID, workspaceID, PermissionItemEdit).
 func (a *Authz) CanEditWorkspace(userID, workspaceID int) (bool, error) {

@@ -319,7 +319,9 @@ func init() {
 			if !env.HasWorkspaceAccess(args.WorkspaceID) {
 				return map[string]string{"error": "workspace not found"}, nil
 			}
-			ok, err := env.PermService.HasWorkspacePermission(env.UserID, args.WorkspaceID, models.PermissionItemEdit)
+			// item.create, not item.edit — Testers hold item.create so they
+			// can file defects without broad editing rights.
+			ok, err := env.PermService.HasWorkspacePermission(env.UserID, args.WorkspaceID, models.PermissionItemCreate)
 			if err != nil {
 				return nil, err
 			}

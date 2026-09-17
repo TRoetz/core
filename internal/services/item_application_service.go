@@ -595,7 +595,10 @@ func (s *ItemApplicationService) Batch(ctx context.Context, userID int, ids []in
 }
 
 func (s *ItemApplicationService) Create(ctx context.Context, actor AuditActor, input ItemCreateInput) (*models.Item, error) {
-	if err := s.require(actor.UserID, input.WorkspaceID, models.PermissionItemEdit); err != nil {
+	// Creation is gated by item.create (held by Editor, Administrator, and
+	// Tester) — not item.edit, so Testers can file defects without broad
+	// editing rights.
+	if err := s.require(actor.UserID, input.WorkspaceID, models.PermissionItemCreate); err != nil {
 		return nil, err
 	}
 	result, err := s.create.Create(actor.UserID, actor.Username, input)
