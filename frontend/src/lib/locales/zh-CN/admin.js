@@ -205,6 +205,7 @@ export default {
       previewUnavailable: '没有可用的配置集',
       previewUnavailableDescription: '请创建默认配置集以配置此工作区。',
       assignerDescription: '选择用于定义此工作区中工作项创建、编辑和查看流程及屏幕的配置集。只能分配一个配置集。',
+      migrationRequiresSystemAdmin: '切换到此配置集需要数据迁移，仅系统管理员可以执行。',
       select: '选择配置集',
       updating: '正在更新配置…',
       configured: '已配置',

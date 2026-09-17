@@ -283,6 +283,7 @@ export default {
       previewUnavailable: 'No configuration set available',
       previewUnavailableDescription: 'Create a default configuration set to configure this workspace.',
       assignerDescription: 'Select the configuration set that defines the workflow and screens for creating, editing, and viewing items in this workspace. Only one set can be assigned.',
+      migrationRequiresSystemAdmin: 'Switching to this configuration set requires a data migration that only a system administrator can run.',
       select: 'Select configuration set',
       updating: 'Updating configuration…',
       configured: 'Configured',

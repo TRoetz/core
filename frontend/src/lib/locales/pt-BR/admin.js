@@ -304,6 +304,7 @@ export default {
       previewUnavailable: 'Nenhum conjunto de configuração disponível',
       previewUnavailableDescription: 'Crie um conjunto de configuração padrão para configurar este espaço de trabalho.',
       assignerDescription: 'Selecione o conjunto que define o workflow e as telas para criar, editar e visualizar itens neste espaço. Apenas um conjunto pode ser atribuído.',
+      migrationRequiresSystemAdmin: 'Mudar para este conjunto de configuração exige uma migração de dados que somente um administrador do sistema pode executar.',
       select: 'Selecionar conjunto de configuração',
       updating: 'Atualizando configuração…',
       configured: 'Configurado',

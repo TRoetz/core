@@ -625,6 +625,34 @@ func (r *ConfigurationSetRepository) WorkspaceExists(workspaceID int) (bool, err
 	return exists, nil
 }
 
+// AssignWorkspace atomically attaches a workspace to one configuration set,
+// detaching it from any previous set. A nil configSetID clears the assignment.
+// Used by the workspace-scoped assignment endpoint (WI-1359); it deliberately
+// touches no other configuration-set state.
+func (r *ConfigurationSetRepository) AssignWorkspace(workspaceID int, configSetID *int) error {
+	tx, err := r.db.BeginTx(context.Background(), nil)
+	if err != nil {
+		return fmt.Errorf("failed to begin assignment transaction: %w", err)
+	}
+	if _, err := tx.ExecWrite(`DELETE FROM workspace_configuration_sets WHERE workspace_id = ?`, workspaceID); err != nil {
+		_ = tx.Rollback()
+		return fmt.Errorf("failed to detach workspace from configuration sets: %w", err)
+	}
+	if configSetID != nil {
+		if _, err := tx.ExecWrite(`
+			INSERT INTO workspace_configuration_sets (workspace_id, configuration_set_id, created_at)
+			VALUES (?, ?, ?)
+		`, workspaceID, *configSetID, time.Now()); err != nil {
+			_ = tx.Rollback()
+			return fmt.Errorf("failed to attach workspace to configuration set: %w", err)
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit configuration set assignment: %w", err)
+	}
+	return nil
+}
+
 // ListWorkspaceIDsForConfigSet returns all workspace IDs currently attached to a
 // configuration set. Used to snapshot state before reassignment so cache
 // invalidation can target both the workspaces being detached and those being

@@ -25,6 +25,13 @@ export const configurationSets = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+  // Workspace-scoped assignment (WI-1359): workspace admins pick the set their
+  // workspace uses; pass null to unassign. Server touches only the join rows.
+  assignToWorkspace: (workspaceId, configurationSetId) =>
+    fetchAPI(`/workspaces/${workspaceId}/configuration-set`, {
+      method: 'PUT',
+      body: JSON.stringify({ configuration_set_id: configurationSetId }),
+    }),
   // Direct download URL for the export endpoint. Browsers carry the session
   // cookie automatically; bind this to an <a download> rather than calling
   // fetchAPI so the response streams to a file.

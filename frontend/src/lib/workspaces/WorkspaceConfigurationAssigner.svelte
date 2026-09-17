@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { api } from '../api.js';
   import { t } from '../stores/i18n.svelte.js';
+  import { isSystemAdmin } from '../stores/permissions.svelte.js';
   import { errorToast } from '../stores/toasts.svelte.js';
   import Label from '../components/Label.svelte';
   import Card from '../components/Card.svelte';
@@ -73,6 +74,13 @@
           const migrationAnalysis = await api.configurationSets.analyzeComprehensiveMigration(newConfigSet.id, parseInt(workspaceId));
           
           if (migrationAnalysis.requires_migration) {
+            // Migrations mutate shared configuration state and are executed
+            // through system-admin-only endpoints (WI-1359). Non-admins get a
+            // clear refusal instead of a wizard that cannot succeed.
+            if (!$isSystemAdmin) {
+              errorToast(t('settings.configSets.migrationRequiresSystemAdmin'));
+              return;
+            }
             // Store the pending configuration change
             pendingConfigurationChange = {
               currentConfigSet,
@@ -118,60 +126,12 @@
     }
   }
 
-  // Separate function to apply the actual configuration change
+  // Separate function to apply the actual configuration change. The server
+  // endpoint swaps the workspace-assignment join rows atomically; a required
+  // data migration surfaces as a 409 before anything is written.
   async function applyConfigurationChange(newConfigSetId, currentConfigSet, newConfigSet) {
-    // First, remove this workspace from all configuration sets
-    const updatePromises = configurationSets
-      .filter(cs => cs.workspace_ids && cs.workspace_ids.includes(parseInt(workspaceId)))
-      .map(cs => {
-        const updatedWorkspaceIds = cs.workspace_ids.filter(id => id !== parseInt(workspaceId));
-        return api.configurationSets.update(cs.id, {
-          name: cs.name,
-          description: cs.description,
-          workspace_ids: updatedWorkspaceIds,
-          workflow_id: cs.workflow_id,
-          create_screen_id: cs.create_screen_id,
-          edit_screen_id: cs.edit_screen_id,
-          view_screen_id: cs.view_screen_id,
-          notification_setting_id: cs.notification_setting_id,
-          condition_set_id: cs.condition_set_id,
-          approval_set_id: cs.approval_set_id,
-          is_default: cs.is_default,
-          item_type_configs: cs.item_type_configs || [],
-          priority_ids: cs.priority_ids || [],
-          differentiate_by_item_type: cs.differentiate_by_item_type || false,
-          default_item_type_id: cs.default_item_type_id || null
-        });
-      });
-    
-    // Wait for all removals to complete
-    await Promise.all(updatePromises);
-    
-    // If a configuration set is selected, assign this workspace to it
-    if (newConfigSetId) {
-      const selectedConfigSet = configurationSets.find(cs => cs.id === newConfigSetId);
-      if (selectedConfigSet) {
-        const updatedWorkspaceIds = [...(selectedConfigSet.workspace_ids || []), parseInt(workspaceId)];
-        await api.configurationSets.update(newConfigSetId, {
-          name: selectedConfigSet.name,
-          description: selectedConfigSet.description,
-          workspace_ids: updatedWorkspaceIds,
-          workflow_id: selectedConfigSet.workflow_id,
-          create_screen_id: selectedConfigSet.create_screen_id,
-          edit_screen_id: selectedConfigSet.edit_screen_id,
-          view_screen_id: selectedConfigSet.view_screen_id,
-          notification_setting_id: selectedConfigSet.notification_setting_id,
-          condition_set_id: selectedConfigSet.condition_set_id,
-          approval_set_id: selectedConfigSet.approval_set_id,
-          is_default: selectedConfigSet.is_default,
-          item_type_configs: selectedConfigSet.item_type_configs || [],
-          priority_ids: selectedConfigSet.priority_ids || [],
-          differentiate_by_item_type: selectedConfigSet.differentiate_by_item_type || false,
-          default_item_type_id: selectedConfigSet.default_item_type_id || null
-        });
-      }
-    }
-    
+    await api.configurationSets.assignToWorkspace(parseInt(workspaceId), newConfigSetId);
+
     await loadData(); // Reload to refresh the data
     
     // Notify parent component about the change

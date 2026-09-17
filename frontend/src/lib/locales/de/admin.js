@@ -309,6 +309,7 @@ export default {
       previewUnavailable: 'Kein Konfigurationsset verfügbar',
       previewUnavailableDescription: 'Erstellen Sie ein Standard-Konfigurationsset für diesen Arbeitsbereich.',
       assignerDescription: 'Wählen Sie das Konfigurationsset aus, das Workflow und Masken zum Erstellen, Bearbeiten und Anzeigen von Aufgaben in diesem Arbeitsbereich festlegt. Es kann nur ein Set zugewiesen werden.',
+      migrationRequiresSystemAdmin: 'Der Wechsel zu diesem Konfigurationsset erfordert eine Datenmigration, die nur ein Systemadministrator ausführen kann.',
       select: 'Konfigurationsset auswählen',
       updating: 'Konfiguration wird aktualisiert…',
       configured: 'Konfiguriert',

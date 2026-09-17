@@ -283,6 +283,7 @@ export default {
       previewUnavailable: 'Aucun ensemble de configuration disponible',
       previewUnavailableDescription: 'Créez un ensemble de configuration par défaut pour configurer cet espace de travail.',
       assignerDescription: 'Sélectionnez l\'ensemble de configuration qui définit le flux de travail et les écrans pour cet espace de travail. Un seul ensemble peut être attribué.',
+      migrationRequiresSystemAdmin: 'Passer à cet ensemble de configuration nécessite une migration de données qu\'un administrateur système seul peut exécuter.',
       select: 'Sélectionner un ensemble de configuration',
       updating: 'Mise à jour de la configuration…',
       configured: 'Configuré',

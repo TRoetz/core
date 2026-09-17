@@ -30,6 +30,12 @@ func RegisterWorkspaceRoutes(deps *Deps) {
 	api.HandleH("PUT /screens/{id}/fields", admin(http.HandlerFunc(deps.Workspaces.Screen.UpdateFields)))
 	api.HandleH("PUT /screens/{id}/system-fields", admin(http.HandlerFunc(deps.Workspaces.Screen.UpdateSystemFields)))
 
+	// Workspace-scoped configuration set assignment (WI-1359): workspace admins
+	// may choose which configuration set their workspace uses. All other
+	// configuration-set mutations stay system-admin-only.
+	workspaceAdmin := deps.PermissionMiddleware.RequireWorkspacePermission(models.PermissionWorkspaceAdmin)
+	api.HandleH("PUT /workspaces/{workspaceId}/configuration-set", auth(workspaceAdmin(http.HandlerFunc(deps.Workspaces.ConfigSet.AssignWorkspaceConfigurationSet))))
+
 	// Configuration Set endpoints
 	api.HandleH("GET /configuration-sets", auth(http.HandlerFunc(deps.Workspaces.ConfigSet.GetAll)))
 	api.HandleH("POST /configuration-sets", admin(http.HandlerFunc(deps.Workspaces.ConfigSet.Create)))
