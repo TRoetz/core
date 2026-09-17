@@ -409,13 +409,16 @@ func (r *PermissionRepository) ListUserGroupGlobalGrants(userID int) ([]models.U
 
 // ListUserWorkspaceRoleGrants returns the workspace permissions a user
 // holds through explicit workspace role assignments, with Permission and
-// Workspace populated. Rows that fail to scan are skipped.
+// Workspace populated. Aligns with the permission cache by ignoring roles
+// with permissions_enabled = false (label-only custom roles); rows that
+// fail to scan are skipped.
 func (r *PermissionRepository) ListUserWorkspaceRoleGrants(userID int) ([]models.UserWorkspacePermission, error) {
 	rows, err := r.db.Query(`
 		SELECT uwr.workspace_id, uwr.role_id, uwr.granted_by, uwr.granted_at,
 		       p.id, p.permission_key, p.permission_name, p.description, p.scope, p.is_system, p.created_at, p.updated_at,
 		       w.id, w.name, w.description, w.key
 		FROM user_workspace_roles uwr
+		JOIN workspace_roles wr ON wr.id = uwr.role_id AND wr.permissions_enabled = true
 		JOIN role_permissions rp ON uwr.role_id = rp.role_id
 		JOIN permissions p ON rp.permission_id = p.id
 		JOIN workspaces w ON uwr.workspace_id = w.id
