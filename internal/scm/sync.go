@@ -233,7 +233,6 @@ func (s *SyncService) SyncAllRepositories(ctx context.Context) error {
 		JOIN workspaces w ON w.id = wsc.workspace_id
 		JOIN scm_providers sp ON sp.id = wsc.scm_provider_id
 		WHERE wr.is_active = true AND wsc.enabled = true
-		  AND sp.auth_method != 'oauth'
 	`)
 	if err != nil {
 		return fmt.Errorf("failed to query repositories: %w", err)
@@ -275,7 +274,7 @@ func (s *SyncService) SyncAllRepositories(ctx context.Context) error {
 		SELECT wsc.id
 		FROM workspace_scm_connections wsc
 		JOIN scm_providers sp ON sp.id = wsc.scm_provider_id
-		WHERE wsc.enabled = true AND sp.auth_method != 'oauth'
+		WHERE wsc.enabled = true
 	`)
 	if err != nil {
 		return fmt.Errorf("query SCM connections: %w", err)
@@ -351,9 +350,12 @@ func (s *SyncService) SyncAllRepositories(ctx context.Context) error {
 			LastError:        joinedError(syncErrors),
 		})
 	}
-	// OAuth has no workspace-level principal. Repositories with an agent-owned
-	// PR are synced using the user who opened that PR, so review polling and
-	// token refresh work without reintroducing a shared "last user" token.
+	// OAuth connections are included. Sync uses the workspace connection's
+	// OAuth token (the workspace-level principal written when someone
+	// connects the workspace); resolveProvider fails cleanly for connections
+	// without one and health reporting surfaces the "connect via OAuth"
+	// action. syncOAuthAgentRepositories below covers the remaining
+	// user-token-only case for agent-owned PR repos.
 	if err := s.syncOAuthAgentRepositories(ctx); err != nil {
 		slog.Error("Failed to sync OAuth agent repositories", slog.String("component", "scm"), slog.Any("error", err))
 	}
@@ -374,6 +376,7 @@ func (s *SyncService) syncOAuthAgentRepositories(ctx context.Context) error {
 		JOIN workspaces w ON w.id = wsc.workspace_id
 		JOIN scm_providers sp ON sp.id = wsc.scm_provider_id
 		WHERE wr.is_active = true AND wsc.enabled = true AND sp.auth_method = 'oauth'
+		  AND wsc.oauth_access_token_encrypted IS NULL
 		  AND EXISTS (SELECT 1 FROM agent_pr_ownerships o WHERE o.workspace_repository_id = wr.id AND o.triggered_by_user_id IS NOT NULL)
 	`)
 	if err != nil {
@@ -1835,7 +1838,10 @@ func (s *SyncService) RefreshOAuthLinksForItem(ctx context.Context, itemID, user
 // keyset pages, so the refresh never materializes the whole ever-growing
 // item_scm_links table. Per-connection processing keeps the concurrency cap
 // per token (a single noisy connection cannot exhaust its own rate-limit
-// budget, nor starve refresh attempts on other connections).
+// budget, nor starve refresh attempts on other connections). OAuth
+// connections are included: credentials resolve from the workspace-level
+// token, so a failed refresh means the connection genuinely needs
+// reconnecting, which is what health reporting should surface.
 func (s *SyncService) RefreshAllPRLinkStates(ctx context.Context) error {
 	if !s.refreshMu.TryLock() {
 		slog.Info("SCM PR refresh skipped: previous run still active", slog.String("component", "scm"))
@@ -1881,13 +1887,13 @@ func (s *SyncService) RefreshAllPRLinkStates(ctx context.Context) error {
 	return nil
 }
 
-// listPRRefreshConnections returns the enabled non-OAuth connection IDs.
+// listPRRefreshConnections returns the enabled connection IDs.
 func (s *SyncService) listPRRefreshConnections(ctx context.Context) ([]int, error) {
 	rows, err := s.db.QueryContext(ctx, `
 		SELECT wsc.id
 		FROM workspace_scm_connections wsc
 		JOIN scm_providers sp ON sp.id = wsc.scm_provider_id
-		WHERE wsc.enabled = true AND sp.auth_method != 'oauth'
+		WHERE wsc.enabled = true
 	`)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query SCM connections for PR refresh: %w", err)
