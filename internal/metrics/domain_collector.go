@@ -3,6 +3,7 @@ package metrics
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"windshift/internal/database"
@@ -11,7 +12,14 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-const collectionTimeout = 2 * time.Second
+const (
+	collectionTimeout = 2 * time.Second
+
+	// agent_runs and webhook_deliveries grow forever, so the full-table
+	// aggregates behind these gauges are refreshed at most once per interval
+	// instead of on every scrape.
+	domainRefreshInterval = 5 * time.Minute
+)
 
 var terminalAgentRunStatuses = []string{
 	models.AgentRunStatusSucceeded,
@@ -29,11 +37,33 @@ type domainCollector struct {
 	agentRunDurationAverage *prometheus.Desc
 	agentRunDurationSamples *prometheus.Desc
 	webhookDispatches       *prometheus.Desc
+
+	refreshInterval time.Duration
+	now             func() time.Time
+
+	mu          sync.Mutex
+	summary     *domainSummary
+	refreshedAt time.Time
+}
+
+// domainSummary is immutable once published; readers may hold the pointer
+// without the collector lock.
+type domainSummary struct {
+	agentRunStatusCounts map[string]int64
+	agentRunDurations    map[string]agentRunDuration
+	webhookCounts        map[bool]int64
+}
+
+type agentRunDuration struct {
+	samples    int64
+	sumSeconds float64
 }
 
 func newDomainCollector(db database.Database) prometheus.Collector {
 	return &domainCollector{
-		db: db,
+		db:              db,
+		refreshInterval: domainRefreshInterval,
+		now:             time.Now,
 		agentRunQueueDepth: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, "agent", "run_queue_depth"),
 			"Current number of queued agent runs.", nil, nil,
@@ -71,57 +101,119 @@ func (c *domainCollector) Describe(ch chan<- *prometheus.Desc) {
 }
 
 func (c *domainCollector) Collect(ch chan<- prometheus.Metric) {
-	ctx, cancel := context.WithTimeout(context.Background(), collectionTimeout)
-	defer cancel()
+	summary, err := c.currentSummary()
+	if err != nil {
+		for _, desc := range []*prometheus.Desc{
+			c.agentRunQueueDepth,
+			c.agentRunsInFlight,
+			c.agentRunOutcomes,
+			c.agentRunDurationAverage,
+			c.agentRunDurationSamples,
+			c.webhookDispatches,
+		} {
+			ch <- prometheus.NewInvalidMetric(desc, fmt.Errorf("collect domain metrics: %w", err))
+		}
+		return
+	}
 
-	if err := c.collectAgentRuns(ctx, ch); err != nil {
-		ch <- prometheus.NewInvalidMetric(c.agentRunOutcomes, fmt.Errorf("collect agent run metrics: %w", err))
+	ch <- prometheus.MustNewConstMetric(c.agentRunQueueDepth, prometheus.GaugeValue,
+		float64(summary.agentRunStatusCounts[models.AgentRunStatusQueued]))
+	ch <- prometheus.MustNewConstMetric(c.agentRunsInFlight, prometheus.GaugeValue,
+		float64(summary.agentRunStatusCounts[models.AgentRunStatusRunning]))
+	for _, status := range terminalAgentRunStatuses {
+		ch <- prometheus.MustNewConstMetric(c.agentRunOutcomes, prometheus.GaugeValue,
+			float64(summary.agentRunStatusCounts[status]), status)
 	}
-	if err := c.collectWebhookDispatches(ctx, ch); err != nil {
-		ch <- prometheus.NewInvalidMetric(c.webhookDispatches, fmt.Errorf("collect webhook metrics: %w", err))
+
+	for _, status := range terminalAgentRunStatuses {
+		duration := summary.agentRunDurations[status]
+		if duration.samples <= 0 {
+			continue
+		}
+		average := duration.sumSeconds / float64(duration.samples)
+		if average < 0 {
+			average = 0
+		}
+		ch <- prometheus.MustNewConstMetric(c.agentRunDurationAverage, prometheus.GaugeValue, average, status)
+		ch <- prometheus.MustNewConstMetric(c.agentRunDurationSamples, prometheus.GaugeValue,
+			float64(duration.samples), status)
 	}
+
+	ch <- prometheus.MustNewConstMetric(c.webhookDispatches, prometheus.GaugeValue,
+		float64(summary.webhookCounts[true]), "success")
+	ch <- prometheus.MustNewConstMetric(c.webhookDispatches, prometheus.GaugeValue,
+		float64(summary.webhookCounts[false]), "failure")
 }
 
-func (c *domainCollector) collectAgentRuns(ctx context.Context, ch chan<- prometheus.Metric) error {
-	counts := map[string]int64{
-		models.AgentRunStatusQueued:    0,
-		models.AgentRunStatusRunning:   0,
-		models.AgentRunStatusSucceeded: 0,
-		models.AgentRunStatusFailed:    0,
-		models.AgentRunStatusCanceled:  0,
-		models.AgentRunStatusKilled:    0,
+// currentSummary serves the cached summary until it is older than
+// refreshInterval; only then does a scrape pay for the aggregate queries. A
+// failed refresh keeps the previous summary so a slow or broken database never
+// drops the metrics entirely.
+func (c *domainCollector) currentSummary() (*domainSummary, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if c.summary != nil && c.now().Sub(c.refreshedAt) < c.refreshInterval {
+		return c.summary, nil
 	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), collectionTimeout)
+	defer cancel()
+	summary, err := c.querySummary(ctx)
+	if err != nil {
+		if c.summary != nil {
+			return c.summary, nil
+		}
+		return nil, err
+	}
+	c.summary = summary
+	c.refreshedAt = c.now()
+	return c.summary, nil
+}
+
+func (c *domainCollector) querySummary(ctx context.Context) (*domainSummary, error) {
+	summary := &domainSummary{
+		agentRunStatusCounts: map[string]int64{
+			models.AgentRunStatusQueued:    0,
+			models.AgentRunStatusRunning:   0,
+			models.AgentRunStatusSucceeded: 0,
+			models.AgentRunStatusFailed:    0,
+			models.AgentRunStatusCanceled:  0,
+			models.AgentRunStatusKilled:    0,
+		},
+		agentRunDurations: map[string]agentRunDuration{},
+		webhookCounts:     map[bool]int64{false: 0, true: 0},
+	}
+	if err := c.queryAgentRunStatusCounts(ctx, summary); err != nil {
+		return nil, fmt.Errorf("query agent run status counts: %w", err)
+	}
+	if err := c.queryAgentRunDurations(ctx, summary); err != nil {
+		return nil, fmt.Errorf("query agent run durations: %w", err)
+	}
+	if err := c.queryWebhookCounts(ctx, summary); err != nil {
+		return nil, fmt.Errorf("query webhook counts: %w", err)
+	}
+	return summary, nil
+}
+
+func (c *domainCollector) queryAgentRunStatusCounts(ctx context.Context, summary *domainSummary) error {
 	rows, err := c.db.QueryContext(ctx, `SELECT status, COUNT(*) FROM agent_runs GROUP BY status`)
 	if err != nil {
 		return err
 	}
+	defer func() { _ = rows.Close() }()
 	for rows.Next() {
 		var status string
 		var count int64
 		if err := rows.Scan(&status, &count); err != nil {
-			_ = rows.Close()
 			return err
 		}
-		counts[status] = count
+		summary.agentRunStatusCounts[status] = count
 	}
-	if err := rows.Err(); err != nil {
-		_ = rows.Close()
-		return err
-	}
-	if err := rows.Close(); err != nil {
-		return err
-	}
-
-	ch <- prometheus.MustNewConstMetric(c.agentRunQueueDepth, prometheus.GaugeValue, float64(counts[models.AgentRunStatusQueued]))
-	ch <- prometheus.MustNewConstMetric(c.agentRunsInFlight, prometheus.GaugeValue, float64(counts[models.AgentRunStatusRunning]))
-	for _, status := range terminalAgentRunStatuses {
-		ch <- prometheus.MustNewConstMetric(c.agentRunOutcomes, prometheus.GaugeValue, float64(counts[status]), status)
-	}
-
-	return c.collectAgentRunDurations(ctx, ch)
+	return rows.Err()
 }
 
-func (c *domainCollector) collectAgentRunDurations(ctx context.Context, ch chan<- prometheus.Metric) error {
+func (c *domainCollector) queryAgentRunDurations(ctx context.Context, summary *domainSummary) error {
 	durationExpression := "(julianday(ended_at) - julianday(started_at)) * 86400.0"
 	if database.IsPostgresDriver(c.db.GetDriverName()) {
 		durationExpression = "EXTRACT(EPOCH FROM (ended_at - started_at))"
@@ -147,18 +239,12 @@ func (c *domainCollector) collectAgentRunDurations(ctx context.Context, ch chan<
 		if count <= 0 || !models.IsAgentRunTerminal(status) {
 			continue
 		}
-		average := durationSum / float64(count)
-		if average < 0 {
-			average = 0
-		}
-		ch <- prometheus.MustNewConstMetric(c.agentRunDurationAverage, prometheus.GaugeValue, average, status)
-		ch <- prometheus.MustNewConstMetric(c.agentRunDurationSamples, prometheus.GaugeValue, float64(count), status)
+		summary.agentRunDurations[status] = agentRunDuration{samples: count, sumSeconds: durationSum}
 	}
 	return rows.Err()
 }
 
-func (c *domainCollector) collectWebhookDispatches(ctx context.Context, ch chan<- prometheus.Metric) error {
-	counts := map[bool]int64{false: 0, true: 0}
+func (c *domainCollector) queryWebhookCounts(ctx context.Context, summary *domainSummary) error {
 	rows, err := c.db.QueryContext(ctx, `SELECT success, COUNT(*) FROM webhook_deliveries GROUP BY success`)
 	if err != nil {
 		return err
@@ -170,12 +256,7 @@ func (c *domainCollector) collectWebhookDispatches(ctx context.Context, ch chan<
 		if err := rows.Scan(&success, &count); err != nil {
 			return err
 		}
-		counts[success] = count
+		summary.webhookCounts[success] = count
 	}
-	if err := rows.Err(); err != nil {
-		return err
-	}
-	ch <- prometheus.MustNewConstMetric(c.webhookDispatches, prometheus.GaugeValue, float64(counts[true]), "success")
-	ch <- prometheus.MustNewConstMetric(c.webhookDispatches, prometheus.GaugeValue, float64(counts[false]), "failure")
-	return nil
+	return rows.Err()
 }
