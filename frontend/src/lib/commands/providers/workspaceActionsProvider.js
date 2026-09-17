@@ -13,7 +13,13 @@ export function workspaceActionsProvider(ctx) {
   const name = workspace?.name || 'Workspace';
   const out = [];
 
-  if (collectionId) {
+  // Board configuration saves are gated server-side: workspace scope requires
+  // workspace.admin, collection scope requires the creator. Match the
+  // CollectionViewSwitcher entry point and gate both commands on
+  // canAdminWorkspace so non-admins don't reach a page they can't save.
+  const canConfigureBoard = workspacePermissions.canAdminWorkspace(workspaceId);
+
+  if (collectionId && canConfigureBoard) {
     out.push(
       createCommand({
         id: 'collection-configure-board',
@@ -24,7 +30,7 @@ export function workspaceActionsProvider(ctx) {
         url: `/workspaces/${workspaceId}/collections/${collectionId}/board/configure`,
       })
     );
-  } else {
+  } else if (canConfigureBoard) {
     out.push(
       createCommand({
         id: 'workspace-configure-board',
