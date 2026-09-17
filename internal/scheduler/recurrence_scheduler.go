@@ -205,8 +205,9 @@ func (rs *RecurrenceScheduler) generateInstancesForRule(rule *models.RecurrenceR
 		return 0, fmt.Errorf("template item not found: %w", err)
 	}
 
-	// Get existing instance dates to avoid duplicates
-	existingDates, err := rs.recurrenceRepo.GetExistingInstanceDates(rule.ID)
+	// Get existing instance dates inside the generation window to avoid
+	// duplicates without loading the rule's full instance history.
+	existingDates, err := rs.recurrenceRepo.GetExistingInstanceDates(rule.ID, startFrom, generateUntil)
 	if err != nil {
 		return 0, fmt.Errorf("failed to get existing dates: %w", err)
 	}

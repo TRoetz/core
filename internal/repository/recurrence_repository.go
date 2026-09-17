@@ -349,11 +349,21 @@ func (r *RecurrenceRepository) UpdateNextCheck(id int, nextCheck time.Time) erro
 	return nil
 }
 
-// GetExistingInstanceDates returns a map of dates that already have instances for a rule
-func (r *RecurrenceRepository) GetExistingInstanceDates(ruleID int) (map[string]bool, error) {
+// GetExistingInstanceDates returns a map of dates that already have instances
+// for a rule within the given generation window (inclusive day bounds). The
+// window keeps the lookup off the rule's full instance history, which grows
+// forever while each pass only deduplicates occurrences between lastGeneratedUntil
+// and now + lead time.
+func (r *RecurrenceRepository) GetExistingInstanceDates(ruleID int, windowStart, windowEnd time.Time) (map[string]bool, error) {
+	if windowEnd.Before(windowStart) {
+		windowStart, windowEnd = windowEnd, windowStart
+	}
+	from := time.Date(windowStart.Year(), windowStart.Month(), windowStart.Day(), 0, 0, 0, 0, windowStart.Location())
+	until := time.Date(windowEnd.Year(), windowEnd.Month(), windowEnd.Day(), 0, 0, 0, 0, windowEnd.Location()).AddDate(0, 0, 1)
 	rows, err := r.db.Query(`
-		SELECT scheduled_date FROM recurrence_instances WHERE recurrence_rule_id = ?
-	`, ruleID)
+		SELECT scheduled_date FROM recurrence_instances
+		WHERE recurrence_rule_id = ? AND scheduled_date >= ? AND scheduled_date < ?
+	`, ruleID, from, until)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query existing instance dates: %w", err)
 	}
