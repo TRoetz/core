@@ -39,7 +39,15 @@
         { placeholder: '{{trigger.workspace_id}}', descKey: 'trigger.workspaceId' },
         { placeholder: '{{trigger.actor_user_id}}', descKey: 'trigger.actorUserId' },
         { placeholder: '{{trigger.new_<field>}}', descKey: 'trigger.newField' },
+        { placeholder: '{{trigger.<field>}}', descKey: 'trigger.fieldFallback' },
         { placeholder: '{{trigger.old_<field>}}', descKey: 'trigger.oldField' }
+      ]
+    },
+    {
+      key: 'parent',
+      items: [
+        { placeholder: '{{parent.open_child_count}}', descKey: 'parent.openChildCount' },
+        { placeholder: '{{parent.*}}', descKey: 'parent.any' }
       ]
     }
   ];

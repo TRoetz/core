@@ -130,6 +130,27 @@ export function collectOutputFields(nodes = []) {
 // referenced as {{name}} / {{name.field}} downstream.
 export const OUTPUT_FIELD_PATTERN = /^[a-z_][a-z0-9_]*$/;
 
+// Condition fields can evaluate against the trigger item's parent — the
+// backend resolver honors a "parent." prefix (GH #267: "transition the parent
+// when all its children are done").
+export const CONDITION_SCOPE_PREFIX = 'parent.';
+
+export function conditionFieldScope(fieldName) {
+  return fieldName?.startsWith(CONDITION_SCOPE_PREFIX) ? 'parent' : 'item';
+}
+
+export function stripConditionScope(fieldName) {
+  return fieldName?.startsWith(CONDITION_SCOPE_PREFIX)
+    ? fieldName.slice(CONDITION_SCOPE_PREFIX.length)
+    : fieldName || '';
+}
+
+// Applies the chosen scope while preserving the selected backend field key.
+export function scopeConditionFieldName(fieldName, scope) {
+  const bare = stripConditionScope(fieldName);
+  return scope === 'parent' ? `${CONDITION_SCOPE_PREFIX}${bare}` : bare;
+}
+
 export function isValidOutputFieldName(name) {
   return typeof name === 'string' && OUTPUT_FIELD_PATTERN.test(name.trim());
 }
