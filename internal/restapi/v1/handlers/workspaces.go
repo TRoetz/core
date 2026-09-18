@@ -3,7 +3,6 @@ package handlers
 import (
 	"errors"
 	"net/http"
-	"regexp"
 	"strings"
 
 	"windshift/internal/authz"
@@ -16,10 +15,6 @@ import (
 	"windshift/internal/sanitize"
 	"windshift/internal/services"
 )
-
-// Workspace keys are uppercase alphanumeric, 2-10 chars — the same contract
-// item-key rendering and KEY-NUMBER parsing rely on.
-var workspaceKeyUpdatePattern = regexp.MustCompile(`^[A-Z0-9]+$`)
 
 // WorkspaceHandler handles public API requests for workspaces
 type WorkspaceHandler struct {
@@ -345,7 +340,7 @@ func (h *WorkspaceHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.Key != nil {
 		*req.Key = strings.ToUpper(strings.TrimSpace(*req.Key))
-		if len(*req.Key) < 2 || len(*req.Key) > 10 || !workspaceKeyUpdatePattern.MatchString(*req.Key) {
+		if !services.ValidWorkspaceKey(*req.Key) {
 			h.RespondError(w, r, restapi.NewAPIError(http.StatusBadRequest, restapi.ErrCodeInvalidInput,
 				"Workspace key must contain 2 to 10 alphanumeric characters"))
 			return

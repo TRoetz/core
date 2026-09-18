@@ -22,6 +22,14 @@ var (
 
 var workspaceKeyPattern = regexp.MustCompile(`^[A-Za-z0-9]+$`)
 
+// ValidWorkspaceKey reports whether key satisfies the shared workspace key
+// contract: 2-10 alphanumeric characters. Callers normalize input (trim,
+// uppercase) before validating; mixed case is accepted so raw client values can
+// be checked before sanitization.
+func ValidWorkspaceKey(key string) bool {
+	return len(key) >= 2 && len(key) <= 10 && workspaceKeyPattern.MatchString(key)
+}
+
 type WorkspaceMutationAccess interface {
 	WorkspaceSourceAccess
 	CanAdminWorkspace(int, int) (bool, error)
@@ -91,6 +99,15 @@ func (s *WorkspaceApplicationService) Update(actor AuditActor, params UpdateWork
 	if err != nil {
 		return nil, err
 	}
+	// The key contract is enforced on the raw client value: sanitizing first
+	// would silently rewrite invalid keys ("bad key!" -> "BADKEY") instead of
+	// rejecting them the way v1 does.
+	if params.Key != nil {
+		normalized := strings.ToUpper(strings.TrimSpace(*params.Key))
+		if !ValidWorkspaceKey(normalized) {
+			return nil, fmt.Errorf("%w: key must contain 2 to 10 alphanumeric characters", ErrWorkspaceMutationInvalid)
+		}
+	}
 	sanitizeWorkspaceUpdate(&params)
 	if err := validateWorkspaceUpdate(params); err != nil {
 		return nil, err
@@ -136,7 +153,7 @@ func validateWorkspaceCreate(params CreateWorkspaceParams) error {
 	if params.Name == "" || len(params.Name) > 100 {
 		return fmt.Errorf("%w: name must contain 1 to 100 characters", ErrWorkspaceMutationInvalid)
 	}
-	if len(params.Key) < 2 || len(params.Key) > 10 || !workspaceKeyPattern.MatchString(params.Key) {
+	if !ValidWorkspaceKey(params.Key) {
 		return fmt.Errorf("%w: key must contain 2 to 10 alphanumeric characters", ErrWorkspaceMutationInvalid)
 	}
 	if len(params.Description) > 500 {
@@ -149,7 +166,7 @@ func validateWorkspaceUpdate(params UpdateWorkspaceParams) error {
 	if params.Name != nil && (*params.Name == "" || len(*params.Name) > 100) {
 		return fmt.Errorf("%w: name must contain 1 to 100 characters", ErrWorkspaceMutationInvalid)
 	}
-	if params.Key != nil && (len(*params.Key) < 2 || len(*params.Key) > 10 || !workspaceKeyPattern.MatchString(*params.Key)) {
+	if params.Key != nil && !ValidWorkspaceKey(*params.Key) {
 		return fmt.Errorf("%w: key must contain 2 to 10 alphanumeric characters", ErrWorkspaceMutationInvalid)
 	}
 	if params.Description != nil && len(*params.Description) > 500 {
