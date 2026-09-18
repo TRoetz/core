@@ -11818,6 +11818,34 @@
         ]
       }
     },
+    "/workspaces/{workspace_id}/pages/effective-levels": {
+      "get": {
+        "description": "List page permission levels. Results include only resources visible to the authenticated caller; collections use their documented stable order and bounds.",
+        "parameters": [
+          {
+            "Name": "workspace_id",
+            "In": "path",
+            "Description": "The workspace identifier.",
+            "Required": true,
+            "Schema": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "401": {},
+          "403": {},
+          "404": {},
+          "429": {},
+          "500": {}
+        },
+        "summary": "List page permission levels",
+        "tags": [
+          "Knowledge"
+        ]
+      }
+    },
     "/workspaces/{workspace_id}/pages/search": {
       "get": {
         "description": "Search pages. Results include only resources visible to the authenticated caller; collections use their documented stable order and bounds.",

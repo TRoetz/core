@@ -10,6 +10,10 @@ export const pages = {
   /** Fetch every visible page as an ordered, flat metadata list. */
   getAll: (workspaceId) => fetchV2Data(`/workspaces/${workspaceId}/pages`),
 
+  /** Caller's effective page permission level per visible page, keyed by page ID. */
+  getEffectiveLevels: (workspaceId) =>
+    fetchV2Data(`/workspaces/${workspaceId}/pages/effective-levels`),
+
   /** Portal knowledge-base publication state of a page. */
   getPublication: (workspaceId, pageId) =>
     fetchV2Data(`/workspaces/${workspaceId}/pages/${pageId}/publication`),

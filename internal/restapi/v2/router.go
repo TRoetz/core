@@ -327,6 +327,7 @@ type pageReader interface {
 
 type pageApplication interface {
 	List(int, int) ([]models.Page, error)
+	EffectiveLevels(int, int) (map[int]string, error)
 	Get(int, int, int) (*models.Page, error)
 	Search(int, int, string, int) ([]models.Page, error)
 	ListArchived(int, int) ([]repository.ArchivedPageRow, error)

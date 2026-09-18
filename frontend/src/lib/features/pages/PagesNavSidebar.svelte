@@ -37,6 +37,10 @@
   let { workspaceId, embedded = false } = $props();
 
   let pages = $state([]);
+  // Caller's effective level per page id ('view'|'edit'|'admin'), loaded
+  // alongside the tree. Empty while loading or on failure; gates the row
+  // kebab so viewers don't see actions the server would reject.
+  let effectiveLevels = $state(/** @type {Map<number, string>} */ (new Map()));
   let loading = $state(true);
   let creating = $state(false);
   let moveDialogOpen = $state(false);
@@ -363,7 +367,16 @@
   async function loadTree() {
     loading = true;
     try {
-      pages = orderPagesDepthFirst((await api.pages.getAll(workspaceId)) || []);
+      const [tree, levels] = await Promise.all([
+        api.pages.getAll(workspaceId),
+        api.pages.getEffectiveLevels(workspaceId).catch(() => null),
+      ]);
+      pages = orderPagesDepthFirst(tree || []);
+      // A failed levels lookup degrades to hiding management actions for
+      // this pass; the server still enforces everything.
+      effectiveLevels = new Map(
+        Object.entries(levels || {}).map(([id, level]) => [Number(id), String(level)]),
+      );
       // Cache every label we encounter so the filter row can render names
       // + colors for active filters without an extra round-trip.
       for (const page of pages) {
@@ -452,15 +465,35 @@
     pagesFocusTitle.request(page.id);
   }
 
+  // Effective level of a page for the current caller: 'view' | 'edit' |
+  // 'admin'. Levels lagging behind a failed lookup read as no access.
+  function levelOf(page) {
+    return effectiveLevels.get(page.id) || '';
+  }
+
   function kebabItems(page) {
-    return [
-      { id: 'add-child', type: 'regular', icon: Plus, title: t('pages.menuAddChild'), onClick: () => createPage(page.id) },
-      { id: 'rename', type: 'regular', title: t('pages.menuRename'), onClick: () => requestRename(page) },
-      { id: 'move', type: 'regular', title: t('pages.menuMove'), onClick: () => { moveDialogPage = page; moveDialogOpen = true; } },
-      { id: 'permissions', type: 'regular', title: t('pages.menuPermissions'), onClick: () => { permsDialogPage = page; permsDialogOpen = true; } },
-      { id: 'divider', type: 'divider' },
-      { id: 'archive', type: 'regular', title: t('pages.menuArchive'), color: 'var(--ds-text-danger)', onClick: () => archivePage(page) },
-    ];
+    // Mirror the server's write contract: rename/move need edit on the
+    // page, add-child needs a create-capable caller plus edit on the
+    // parent, permissions need admin, archive needs admin and page.delete.
+    const level = levelOf(page);
+    const canEdit = level === 'edit' || level === 'admin';
+    const canCreate = canEdit && workspacePermissions.canCreatePages(workspaceId);
+    const items = [];
+    if (canCreate) {
+      items.push({ id: 'add-child', type: 'regular', icon: Plus, title: t('pages.menuAddChild'), testid: 'page-kebab-add-child', onClick: () => createPage(page.id) });
+    }
+    if (canEdit) {
+      items.push({ id: 'rename', type: 'regular', title: t('pages.menuRename'), testid: 'page-kebab-rename', onClick: () => requestRename(page) });
+      items.push({ id: 'move', type: 'regular', title: t('pages.menuMove'), testid: 'page-kebab-move', onClick: () => { moveDialogPage = page; moveDialogOpen = true; } });
+    }
+    if (level === 'admin') {
+      items.push({ id: 'permissions', type: 'regular', title: t('pages.menuPermissions'), testid: 'page-kebab-permissions', onClick: () => { permsDialogPage = page; permsDialogOpen = true; } });
+    }
+    if (level === 'admin' && workspacePermissions.canDeletePages(workspaceId)) {
+      if (items.length > 0) items.push({ id: 'divider', type: 'divider' });
+      items.push({ id: 'archive', type: 'regular', title: t('pages.menuArchive'), color: 'var(--ds-text-danger)', testid: 'page-kebab-archive', onClick: () => archivePage(page) });
+    }
+    return items;
   }
 
   // --- DnD ---
@@ -683,18 +716,20 @@
             </button>
           </Tooltip>
         {/if}
-        <Tooltip content={t('pages.addPageAria')} placement="bottom" class="inline-flex">
-          <button
-            id="pages-add-button"
-            class="header-button"
-            type="button"
-            onclick={() => createPage(null)}
-            disabled={creating}
-            aria-label={t('pages.addPageAria')}
-          >
-            <Plus size={16} />
-          </button>
-        </Tooltip>
+        {#if workspacePermissions.canCreatePages(workspaceId)}
+          <Tooltip content={t('pages.addPageAria')} placement="bottom" class="inline-flex">
+            <button
+              id="pages-add-button"
+              class="header-button"
+              type="button"
+              onclick={() => createPage(null)}
+              disabled={creating}
+              aria-label={t('pages.addPageAria')}
+            >
+              <Plus size={16} />
+            </button>
+          </Tooltip>
+        {/if}
       </div>
     </div>
   </header>
@@ -852,18 +887,20 @@
             <span class="page-button__title">{page.title}</span>
           </button>
           <span class="kebab-slot">
-            <Tooltip content={t('common.actions')} placement="bottom" class="inline-flex">
-              <DropdownMenu
-                triggerIcon={Dots}
-                triggerIconClass="w-4 h-4"
-                items={kebabItems(page)}
-                showChevron={false}
-                iconOnly={true}
-                placement="bottom-end"
-                triggerClass="kebab-trigger"
-                triggerTestid="page-kebab"
-              />
-            </Tooltip>
+            {#if kebabItems(page).length > 0}
+              <Tooltip content={t('common.actions')} placement="bottom" class="inline-flex">
+                <DropdownMenu
+                  triggerIcon={Dots}
+                  triggerIconClass="w-4 h-4"
+                  items={kebabItems(page)}
+                  showChevron={false}
+                  iconOnly={true}
+                  placement="bottom-end"
+                  triggerClass="kebab-trigger"
+                  triggerTestid="page-kebab"
+                />
+              </Tooltip>
+            {/if}
           </span>
         </li>
       {/each}

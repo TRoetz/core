@@ -102,6 +102,24 @@ class WorkspacePermissionStore {
     return this.hasPermission(workspaceId, 'workspace.admin');
   }
 
+  // Page permissions. Create mirrors the server's canCreate fallback chain;
+  // archive additionally requires per-page admin on the target page.
+  canViewPages(workspaceId) {
+    return this.hasPermission(workspaceId, 'page.view');
+  }
+
+  canCreatePages(workspaceId) {
+    return (
+      this.hasPermission(workspaceId, 'page.create') ||
+      this.hasPermission(workspaceId, 'page.admin') ||
+      this.hasPermission(workspaceId, 'workspace.admin')
+    );
+  }
+
+  canDeletePages(workspaceId) {
+    return this.hasPermission(workspaceId, 'page.delete');
+  }
+
   // Action management permission
   canManageActions(workspaceId) {
     return this.hasPermission(workspaceId, 'action.manage');

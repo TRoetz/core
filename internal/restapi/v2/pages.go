@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strconv"
 	"time"
 
 	"windshift/internal/models"
@@ -14,6 +15,7 @@ import (
 func registerPageRoutes(builder *routeBuilder, deps Deps) {
 	pages := deps.PageApplication
 	builder.Read("/workspaces/{workspace_id}/pages", AuthAuthenticated, []string{"pages:read"}, listPages(pages))
+	builder.Read("/workspaces/{workspace_id}/pages/effective-levels", AuthAuthenticated, []string{"pages:read"}, listPageEffectiveLevels(pages))
 	builder.Read("/workspaces/{workspace_id}/pages/archived", AuthAuthenticated, []string{"pages:read"}, listArchivedPages(pages))
 	builder.Read("/workspaces/{workspace_id}/pages/search", AuthAuthenticated, []string{"pages:read"}, searchPages(pages))
 	builder.JSON(http.MethodPost, "/workspaces/{workspace_id}/pages", http.StatusCreated, false, AuthAuthenticated, []string{"pages:write"}, createPage(pages))
@@ -252,6 +254,28 @@ func restorePageRevision(pages pageApplication) actionOperation[models.Page] {
 		}
 		page, err := pages.Restore(auditActor(r, user), workspaceID, pageID, revisionID)
 		return derefPage(page), pageError(err)
+	}
+}
+
+// listPageEffectiveLevels returns the caller's effective page permission
+// level for every live visible page in the workspace, keyed by page ID
+// ("admin" | "edit" | "view"). The sidebar gates per-row actions from this
+// single payload instead of querying each page.
+func listPageEffectiveLevels(pages pageApplication) readOperation[map[string]string] {
+	return func(r *http.Request) (map[string]string, error) {
+		user, workspaceID, err := principalAndWorkspace(r)
+		if err != nil {
+			return nil, err
+		}
+		levels, err := pages.EffectiveLevels(user.ID, workspaceID)
+		if err != nil {
+			return nil, pageError(err)
+		}
+		out := make(map[string]string, len(levels))
+		for id, level := range levels {
+			out[strconv.Itoa(id)] = level
+		}
+		return out, nil
 	}
 }
 

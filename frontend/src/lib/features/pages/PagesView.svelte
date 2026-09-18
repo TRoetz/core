@@ -32,6 +32,7 @@
   import { createPageAutosaveQueue } from './pageAutosaveQueue.js';
   import { mergePageUpdate } from './pageState.js';
   import { agentRuns } from '../../stores/agentRuns.svelte.js';
+  import { workspacePermissions } from '../../stores/workspacePermissions.svelte.js';
 
   /** Right-pane knowledge-page editor with sidebar-owned tree/actions and
    * debounced autosave instead of an explicit Save button. */
@@ -551,19 +552,32 @@
     }
   }
 
+  // Toolbar actions mirror the server contract: move needs edit on the
+  // page, the ACL dialog needs admin. History and print are view-level.
+  let canAdminPage = $derived(pagePermissionsLoaded && pageEffectiveLevel === 'admin');
   let toolbarMenuItems = $derived([
-    {
-      id: 'move',
-      type: 'regular',
-      title: t('pages.menuMove'),
-      onClick: () => (moveDialogOpen = true),
-    },
-    {
-      id: 'permissions',
-      type: 'regular',
-      title: t('pages.menuPermissions'),
-      onClick: () => (permsDialogOpen = true),
-    },
+    ...(canEditPage
+      ? [
+          {
+            id: 'move',
+            type: 'regular',
+            title: t('pages.menuMove'),
+            testid: 'page-menu-move',
+            onClick: () => (moveDialogOpen = true),
+          },
+        ]
+      : []),
+    ...(canAdminPage
+      ? [
+          {
+            id: 'permissions',
+            type: 'regular',
+            title: t('pages.menuPermissions'),
+            testid: 'page-menu-permissions',
+            onClick: () => (permsDialogOpen = true),
+          },
+        ]
+      : []),
     {
       id: 'history',
       type: 'regular',
@@ -586,14 +600,21 @@
           'noopener'
         ),
     },
-    { id: 'divider', type: 'divider' },
-    {
-      id: 'archive',
-      type: 'regular',
-      title: t('pages.menuArchive'),
-      color: 'var(--ds-text-danger)',
-      onClick: archivePage,
-    },
+    // Archive needs per-page admin plus the workspace page.delete key,
+    // matching the application service's Archive contract.
+    ...(canAdminPage && workspacePermissions.canDeletePages(workspaceId)
+      ? [
+          { id: 'divider', type: 'divider' },
+          {
+            id: 'archive',
+            type: 'regular',
+            title: t('pages.menuArchive'),
+            color: 'var(--ds-text-danger)',
+            testid: 'page-menu-archive',
+            onClick: archivePage,
+          },
+        ]
+      : []),
   ]);
 
   let statusLabel = $derived.by(() => {
@@ -745,15 +766,17 @@
               {/if}
             </button>
           </Tooltip>
-          <DropdownMenu
-            triggerIcon={Dots}
-            items={toolbarMenuItems}
-            showChevron={false}
-            iconOnly={true}
-            placement="bottom-end"
-            triggerClass="toolbar-kebab"
-            triggerTestid="page-toolbar-kebab"
-          />
+          {#if toolbarMenuItems.length > 0}
+            <DropdownMenu
+              triggerIcon={Dots}
+              items={toolbarMenuItems}
+              showChevron={false}
+              iconOnly={true}
+              placement="bottom-end"
+              triggerClass="toolbar-kebab"
+              triggerTestid="page-toolbar-kebab"
+            />
+          {/if}
         </div>
         <div class="title-wrap">
           {#if PageTitleIcon}

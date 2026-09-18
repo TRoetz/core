@@ -183,6 +183,17 @@ func (s *PageApplicationService) GetPermissions(userID, workspaceID, pageID int)
 	return PagePermissionsResult{PageID: page.ID, InheritPermissions: page.InheritPermissions, EffectiveLevel: effective, ACL: acl}, nil
 }
 
+// EffectiveLevels returns the caller's effective permission level per live
+// page in the workspace, keyed by page ID. It powers affordance gating in
+// one request instead of one per page.
+func (s *PageApplicationService) EffectiveLevels(userID, workspaceID int) (map[int]string, error) {
+	pages, err := s.pages.ListTreeMeta(workspaceID, false)
+	if err != nil {
+		return nil, err
+	}
+	return s.pageAuth.EffectiveLevels(userID, workspaceID, pages)
+}
+
 // NewPageApplicationService constructs the shared page mutation pipeline.
 func NewPageApplicationService(pages *PageService, pageAuth *PagePermissionService) *PageApplicationService {
 	return &PageApplicationService{pages: pages, pageAuth: pageAuth}

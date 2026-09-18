@@ -32323,6 +32323,21 @@
         ],
         "type": "object"
       },
+      "GetWorkspacesWorkspaceIdPagesEffectiveLevelsResult": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
       "GetWorkspacesWorkspaceIdPagesPageIdDiagramsAttachmentIdResult": {
         "additionalProperties": false,
         "properties": {
@@ -102070,6 +102085,63 @@
           }
         ],
         "summary": "List archived pages",
+        "tags": [
+          "Knowledge"
+        ],
+        "x-required-scopes": [
+          "pages:read"
+        ]
+      }
+    },
+    "/workspaces/{workspace_id}/pages/effective-levels": {
+      "get": {
+        "description": "List page permission levels. Results include only resources visible to the authenticated caller; collections use their documented stable order and bounds.",
+        "operationId": "getWorkspacesWorkspaceIdPagesEffectiveLevels",
+        "parameters": [
+          {
+            "description": "The workspace identifier.",
+            "in": "path",
+            "name": "workspace_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetWorkspacesWorkspaceIdPagesEffectiveLevelsResult"
+                }
+              }
+            },
+            "description": "List page permission levels response."
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationError"
+          },
+          "403": {
+            "$ref": "#/components/responses/PermissionError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "List page permission levels",
         "tags": [
           "Knowledge"
         ],
