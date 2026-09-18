@@ -769,8 +769,18 @@ func (r *ItemRepository) buildWhereClause(params ItemListParams) (whereClause st
 		query := strings.ToUpper(params.Filters.ItemKeyQuery)
 		if lastDash := strings.LastIndex(query, "-"); lastDash > 0 {
 			if num, err := strconv.Atoi(query[lastDash+1:]); err == nil && num > 0 {
-				whereClause += " AND (LOWER(w.key) = LOWER(?) AND i.workspace_item_number = ?)"
-				args = append(args, query[:lastDash], num)
+				keyPart := query[:lastDash]
+				if strings.Contains(keyPart, "-") {
+					// A multi-segment prefix is ambiguous with prose: queries like
+					// "release-2026-09-18" end in digits but are usually text
+					// (WI-1417). Match the key OR the full query as text.
+					whereClause += " AND ((LOWER(w.key) = LOWER(?) AND i.workspace_item_number = ?) OR (LOWER(i.title) LIKE LOWER(?) OR LOWER(i.description) LIKE LOWER(?)))"
+					pattern := "%" + params.Filters.ItemKeyQuery + "%"
+					args = append(args, keyPart, num, pattern, pattern)
+				} else {
+					whereClause += " AND (LOWER(w.key) = LOWER(?) AND i.workspace_item_number = ?)"
+					args = append(args, keyPart, num)
+				}
 			}
 		}
 	}
