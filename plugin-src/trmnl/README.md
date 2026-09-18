@@ -23,8 +23,8 @@ Each plugin polls the public REST API with a personal token.
 
 ## Configuration
 
-Both plugins ask for the same two things, entered in TRMNL's plugin settings
-form (or in `.trmnlp.yml` for local dev):
+Both plugins use the same settings, entered in TRMNL's plugin settings form (or
+in `.trmnlp.yml` for local dev):
 
 - **Windshift Server URL** — the origin, e.g. `https://windshift.example.com`.
   No `/rest/api/v2` suffix; a trailing slash is tolerated.
@@ -53,7 +53,7 @@ works for everyone without hardcoding a user id.
 QL fields that are useful here: `assignee`, `reporter`, `status`, `priority`,
 `type`, `due_date`, `created`, `updated`, `label`, `project`, `workspace`.
 
-Two things that bite:
+The QL dialect has two restrictions here:
 
 - **String values need quotes.** `status = "In Progress"` works;
   `workspace = WI` is rejected as `unknown field: WI`.
@@ -149,9 +149,9 @@ screen instead:
 A poll that fails after a successful one keeps the last good data rather than
 clearing the screen, so a brief outage shows stale items rather than an error.
 
-## Layout gotchas
+## Layout restrictions
 
-Three things cost real debugging time and are easy to reintroduce:
+These mistakes cost debugging time and are easy to reintroduce:
 
 - **Do not nest `.layout` inside `.layout`.** The markup survives in the HTML
   preview but the e-ink render comes back blank. Branches that render a
