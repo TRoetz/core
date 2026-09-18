@@ -670,15 +670,21 @@ func looksLikeInteger(value string) bool {
 }
 
 func validWorkspaceKeyReference(value string) bool {
-	if len(value) < 2 || len(value) > 10 {
+	// Legacy personal-workspace keys contain dashes (JOHN-DOE, or JOHN-DOE-2
+	// with a collision counter, up to 12 chars). Accept that shape alongside
+	// contract keys; whether the key exists is the lookup's job.
+	if len(value) < 2 || len(value) > 12 {
 		return false
 	}
 	for i := range len(value) {
 		char := value[i]
-		isDigit := char >= '0' && char <= '9'
-		isUpper := char >= 'A' && char <= 'Z'
-		isLower := char >= 'a' && char <= 'z'
-		if !isDigit && !isUpper && !isLower {
+		switch {
+		case char >= '0' && char <= '9', char >= 'A' && char <= 'Z', char >= 'a' && char <= 'z':
+		case char == '-':
+			if i == 0 || i == len(value)-1 || value[i-1] == '-' {
+				return false
+			}
+		default:
 			return false
 		}
 	}
