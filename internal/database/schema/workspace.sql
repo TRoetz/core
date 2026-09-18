@@ -21,7 +21,10 @@
 
 	CREATE INDEX IF NOT EXISTS idx_workspaces_is_personal ON workspaces(is_personal);
 	CREATE INDEX IF NOT EXISTS idx_workspaces_owner_id ON workspaces(owner_id);
-	CREATE INDEX IF NOT EXISTS idx_workspaces_template_active ON workspaces(is_template, active) WHERE is_template = true;
+	-- One personal workspace per owner, enforced at the schema level so the
+	-- get-or-create path can never race into duplicates.
+	CREATE UNIQUE INDEX IF NOT EXISTS uq_workspaces_personal_owner ON workspaces(owner_id) WHERE is_personal = 1;
+	CREATE INDEX IF NOT EXISTS idx_workspaces_template_active ON workspaces(is_template, active) WHERE is_template = 1;
 
 	-- migration: 20260815_workspaces_is_template
 

@@ -210,6 +210,14 @@ func (h *ItemHandler) UnscheduleItem(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// excludePersonalQuery reports whether the caller opted out of
+// personal-workspace items via the exclude_personal query parameter — same
+// contract as the bearer-token v1 API (restapi/v1/handlers.ExcludePersonal).
+func excludePersonalQuery(r *http.Request) bool {
+	v := r.URL.Query().Get("exclude_personal")
+	return v == "true" || v == "1"
+}
+
 // GetScheduledItems returns all items scheduled for the authenticated user
 func (h *ItemHandler) GetScheduledItems(w http.ResponseWriter, r *http.Request) {
 	// Require authentication - use authenticated user's ID only
@@ -248,7 +256,11 @@ func (h *ItemHandler) GetScheduledItems(w http.ResponseWriter, r *http.Request) 
 	itemCalendarData := make(map[int][]models.CalendarScheduleEntry) // item.ID -> calendar entries
 	itemIsPersonal := make(map[int]bool)
 
+	excludePersonal := excludePersonalQuery(r)
 	for _, result := range itemsWithCalendar {
+		if excludePersonal && result.IsPersonal {
+			continue
+		}
 		allItems = append(allItems, result.Item)
 		itemCalendarData[result.Item.ID] = result.CalendarEntries
 		itemIsPersonal[result.Item.ID] = result.IsPersonal

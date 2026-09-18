@@ -210,6 +210,12 @@ func (h *PersonalLabelHandler) Create(w http.ResponseWriter, r *http.Request) {
 	`, label.Name, label.Color, label.UserID, now, now).Scan(&id)
 
 	if err != nil {
+		// The per-user unique index fires when the scoped pre-check raced with
+		// a concurrent create for the same user.
+		if database.IsUniqueConstraintError(err) {
+			respondConflict(w, r, "A label with this name already exists")
+			return
+		}
 		respondInternalError(w, r, err)
 		return
 	}
@@ -264,6 +270,10 @@ func (h *PersonalLabelHandler) Update(w http.ResponseWriter, r *http.Request) {
 		SET name = ?, color = ?, user_id = ?, updated_at = ?
 		WHERE id = ?
 	`, label.Name, label.Color, label.UserID, now, id); err != nil {
+		if database.IsUniqueConstraintError(err) {
+			respondConflict(w, r, "A label with this name already exists")
+			return
+		}
 		respondInternalError(w, r, err)
 		return
 	}

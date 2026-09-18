@@ -6,16 +6,12 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"regexp"
-	"strconv"
-	"strings"
 	"time"
 
+	"windshift/internal/database"
 	"windshift/internal/models"
 	"windshift/internal/services"
 )
-
-var personalWorkspaceKeySanitizer = regexp.MustCompile(`[^A-Za-z0-9]+`)
 
 // GetOrCreatePersonalWorkspace gets or creates a personal workspace for a user.
 //
@@ -36,135 +32,165 @@ func (h *WorkspaceHandler) GetOrCreatePersonalWorkspace(w http.ResponseWriter, r
 		userName = "User"
 	}
 
-	// Check if personal workspace already exists for this user
-	var workspace models.Workspace
-	var timeProjectName sql.NullString
-	err := h.db.QueryRow(`
-		SELECT w.id, w.name, w.key, w.description, w.active, w.time_project_id, w.is_personal, w.owner_id, w.created_at, w.updated_at,
-		       tp.name as time_project_name
-		FROM workspaces w
-		LEFT JOIN time_projects tp ON w.time_project_id = tp.id
-		WHERE w.is_personal = true AND w.owner_id = ?
-	`, userID).Scan(&workspace.ID, &workspace.Name, &workspace.Key, &workspace.Description,
-		&workspace.Active, &workspace.TimeProjectID, &workspace.IsPersonal, &workspace.OwnerID, &workspace.CreatedAt, &workspace.UpdatedAt,
-		&timeProjectName)
-
-	if err == nil {
-		// Personal workspace exists, return it
-		workspace.TimeProjectName = timeProjectName.String
-		respondJSONOK(w, workspace)
-		return
-	}
-
-	if !errors.Is(err, sql.ErrNoRows) {
-		// Database error occurred
-		respondInternalError(w, r, err)
-		return
-	}
-
-	// Personal workspace doesn't exist, create it
-	// Use first name if available, otherwise fall back to username
-	displayName := userName
-	if user.FirstName != "" {
-		displayName = user.FirstName
-	}
-	workspaceName := displayName + "'s Todo List"
-
-	// Generate slugified workspace key derived from the user's name
-	baseKey := h.generatePersonalWorkspaceKey(displayName, userName, userID)
-
-	// Check for uniqueness and add counter if needed
-	workspaceKey := baseKey
-	counter := 1
-	for {
-		var exists bool
-		checkErr := h.db.QueryRow("SELECT EXISTS(SELECT 1 FROM workspaces WHERE key = ?)", workspaceKey).Scan(&exists)
-		if checkErr != nil || !exists {
-			break
-		}
-		workspaceKey = baseKey + "-" + strconv.Itoa(counter)
-		counter++
-	}
-
-	description := "Personal todo list and task management"
-
 	now := time.Now()
-	var id int64
-	err = h.db.QueryRow(`
-		INSERT INTO workspaces (name, key, description, active, time_project_id, is_personal, owner_id, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-		RETURNING id
-	`, workspaceName, workspaceKey, description, true, nil, true, userID, now, now).Scan(&id)
+	var workspace models.Workspace
+	changed := false // created or reactivated — drives cache invalidation
+	created := false // freshly inserted — drives the 201 status
 
+	err := database.WithTx(h.db, func(tx database.Tx) error {
+		// One active personal workspace per owner — the partial unique index
+		// on (owner_id) WHERE is_personal guarantees it at the schema level.
+		var timeProjectName sql.NullString
+		err := tx.QueryRow(`
+			SELECT w.id, w.name, w.key, w.description, w.active, w.time_project_id, w.is_personal, w.owner_id, w.created_at, w.updated_at,
+			       tp.name as time_project_name
+			FROM workspaces w
+			LEFT JOIN time_projects tp ON w.time_project_id = tp.id
+			WHERE w.is_personal = true AND w.owner_id = ? AND w.active = true
+		`, userID).Scan(&workspace.ID, &workspace.Name, &workspace.Key, &workspace.Description,
+			&workspace.Active, &workspace.TimeProjectID, &workspace.IsPersonal, &workspace.OwnerID, &workspace.CreatedAt, &workspace.UpdatedAt,
+			&timeProjectName)
+
+		if err == nil {
+			workspace.TimeProjectName = timeProjectName.String
+			return nil
+		}
+		if !errors.Is(err, sql.ErrNoRows) {
+			return err
+		}
+
+		// An owner can reach an inactive personal workspace only through
+		// deprovisioning (SCIM). Get-or-create semantics: reactivate it.
+		var inactiveID int64
+		err = tx.QueryRow(`
+			SELECT id FROM workspaces WHERE is_personal = true AND owner_id = ? AND active = false
+		`, userID).Scan(&inactiveID)
+		if err == nil {
+			if _, err := tx.Exec(`UPDATE workspaces SET active = true, updated_at = ? WHERE id = ?`, now, inactiveID); err != nil {
+				return err
+			}
+			err := tx.QueryRow(`
+				SELECT w.id, w.name, w.key, w.description, w.active, w.time_project_id, w.is_personal, w.owner_id, w.created_at, w.updated_at,
+				       tp.name as time_project_name
+				FROM workspaces w
+				LEFT JOIN time_projects tp ON w.time_project_id = tp.id
+				WHERE w.id = ?
+			`, inactiveID).Scan(&workspace.ID, &workspace.Name, &workspace.Key, &workspace.Description,
+				&workspace.Active, &workspace.TimeProjectID, &workspace.IsPersonal, &workspace.OwnerID, &workspace.CreatedAt, &workspace.UpdatedAt,
+				&timeProjectName)
+			if err != nil {
+				return err
+			}
+			workspace.TimeProjectName = timeProjectName.String
+			changed = true
+			return nil
+		}
+		if !errors.Is(err, sql.ErrNoRows) {
+			return err
+		}
+
+		// Create. The key derives from the owner ID: alphanumeric, within the
+		// 2-10 key contract, and collision-free except for the (vanishingly
+		// unlikely) case of a regular workspace already owning "P<id>".
+		displayName := userName
+		if user.FirstName != "" {
+			displayName = user.FirstName
+		}
+		workspaceName := displayName + "'s Todo List"
+		description := "Personal todo list and task management"
+
+		for _, candidate := range personalWorkspaceKeyCandidates(userID) {
+			// Postgres aborts the whole transaction on a failed statement, so
+			// each key attempt needs its own savepoint to retry from.
+			const attempt = "personal_key_attempt"
+			if _, err := tx.Exec("SAVEPOINT " + attempt); err != nil {
+				return err
+			}
+			err := tx.QueryRow(`
+				INSERT INTO workspaces (name, key, description, active, time_project_id, is_personal, owner_id, created_at, updated_at)
+				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+				RETURNING id
+			`, workspaceName, candidate, description, true, nil, true, userID, now, now).Scan(&workspace.ID)
+			if err == nil {
+				if _, err := tx.Exec("RELEASE SAVEPOINT " + attempt); err != nil {
+					return err
+				}
+				workspace.Name = workspaceName
+				workspace.Key = candidate
+				workspace.Description = description
+				workspace.Active = true
+				workspace.IsPersonal = true
+				workspace.OwnerID = &userID
+				workspace.CreatedAt = now
+				workspace.UpdatedAt = now
+				changed = true
+				created = true
+				if err := h.repo.CreateItemSequence(int64(workspace.ID)); err != nil {
+					slog.Warn("failed to create item sequence for personal workspace", slog.String("component", "workspaces"), slog.Int64("workspace_id", int64(workspace.ID)), slog.Any("error", err))
+				}
+				return nil
+			}
+			if _, rbErr := tx.Exec("ROLLBACK TO SAVEPOINT " + attempt); rbErr != nil {
+				return rbErr
+			}
+			if !database.IsUniqueConstraintError(err) {
+				return err
+			}
+			// Key taken (or a concurrent creator won the owner race):
+			// fall through to the next key candidate; if the owner race,
+			// the re-select below finds the winner.
+		}
+
+		// Every key candidate collided — either a pathological regular-workspace
+		// naming pattern or a concurrent first-access race. Re-read; the race
+		// winner exists by now.
+		err = tx.QueryRow(`
+			SELECT w.id, w.name, w.key, w.description, w.active, w.time_project_id, w.is_personal, w.owner_id, w.created_at, w.updated_at,
+			       tp.name as time_project_name
+			FROM workspaces w
+			LEFT JOIN time_projects tp ON w.time_project_id = tp.id
+			WHERE w.is_personal = true AND w.owner_id = ? AND w.active = true
+		`, userID).Scan(&workspace.ID, &workspace.Name, &workspace.Key, &workspace.Description,
+			&workspace.Active, &workspace.TimeProjectID, &workspace.IsPersonal, &workspace.OwnerID, &workspace.CreatedAt, &workspace.UpdatedAt,
+			&timeProjectName)
+		if err != nil {
+			return fmt.Errorf("personal workspace key exhausted and no existing workspace found: %w", err)
+		}
+		workspace.TimeProjectName = timeProjectName.String
+		return nil
+	})
 	if err != nil {
 		respondInternalError(w, r, err)
 		return
 	}
 
-	// Create item number sequence for this workspace (PostgreSQL only, no-op for SQLite)
-	if err = h.repo.CreateItemSequence(id); err != nil {
-		slog.Warn("failed to create item sequence for personal workspace", slog.String("component", "workspaces"), slog.Int64("workspace_id", id), slog.Any("error", err))
-	}
-
 	if err := h.cacheInvalidator.Apply(services.AuthorizationInvalidation{
 		UserIDs:                 []int{userID},
-		ActiveWorkspacesChanged: true,
-		WorkspaceKeysChanged:    true,
+		ActiveWorkspacesChanged: changed,
+		WorkspaceKeysChanged:    changed,
 	}); err != nil {
 		respondInternalError(w, r, err)
 		return
 	}
 
-	// Return the created personal workspace
-	err = h.db.QueryRow(`
-		SELECT w.id, w.name, w.key, w.description, w.active, w.time_project_id, w.is_personal, w.owner_id, w.created_at, w.updated_at,
-		       tp.name as time_project_name
-		FROM workspaces w
-		LEFT JOIN time_projects tp ON w.time_project_id = tp.id
-		WHERE w.id = ?
-	`, id).Scan(&workspace.ID, &workspace.Name, &workspace.Key, &workspace.Description,
-		&workspace.Active, &workspace.TimeProjectID, &workspace.IsPersonal, &workspace.OwnerID, &workspace.CreatedAt, &workspace.UpdatedAt, &timeProjectName)
-
-	workspace.TimeProjectName = timeProjectName.String
-
-	if err != nil {
-		respondInternalError(w, r, err)
+	if created {
+		respondJSONCreated(w, workspace)
 		return
 	}
-
-	respondJSONCreated(w, workspace)
+	respondJSONOK(w, workspace)
 }
 
-// generatePersonalWorkspaceKey builds a slug-like key (max ~10 chars) based on user identity.
-func (h *WorkspaceHandler) generatePersonalWorkspaceKey(displayName, userName string, userID int) string {
-	candidates := []string{displayName, userName}
-	for _, candidate := range candidates {
-		if key := sanitizePersonalWorkspaceKeyCandidate(candidate); key != "" {
-			return key
+// personalWorkspaceKeyCandidates lists the key candidates for a personal
+// workspace: P<userID> first, then suffixed variants for the pathological case
+// where a regular workspace already owns the base key. All candidates satisfy
+// ^[A-Z0-9]+$ and the 10-char cap for user IDs up to 9 digits.
+func personalWorkspaceKeyCandidates(userID int) []string {
+	base := fmt.Sprintf("P%d", userID)
+	candidates := []string{base}
+	for _, suffix := range []string{"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F"} {
+		if candidate := base + suffix; len(candidate) <= 10 {
+			candidates = append(candidates, candidate)
 		}
 	}
-	return sanitizePersonalWorkspaceKeyCandidate(fmt.Sprintf("USER-%d", userID))
-}
-
-func sanitizePersonalWorkspaceKeyCandidate(input string) string {
-	input = strings.TrimSpace(input)
-	if input == "" {
-		return ""
-	}
-
-	key := personalWorkspaceKeySanitizer.ReplaceAllString(strings.ToUpper(input), "-")
-	key = strings.Trim(key, "-")
-
-	// Keep workspace keys reasonably short to match create/update validation expectations.
-	const maxKeyLength = 10
-	if len(key) > maxKeyLength {
-		key = key[:maxKeyLength]
-		key = strings.Trim(key, "-")
-	}
-
-	if key == "" {
-		return ""
-	}
-
-	return key
+	return candidates
 }

@@ -160,7 +160,7 @@ func registerItemRoutes(builder *routeBuilder, app *services.ItemApplicationServ
 		if err != nil {
 			return nil, err
 		}
-		result, err := app.Batch(r.Context(), user.ID, ids)
+		result, err := app.Batch(r.Context(), user.ID, ids, excludePersonal(r))
 		return result, itemError(err)
 	})
 	builder.JSON(http.MethodPost, collection+"/batch-ancestors", http.StatusOK, false, AuthAuthenticated, []string{"items:read"}, func(r *http.Request, input idBatchRequest) ([]services.ItemAncestorsBatchEntry, error) {
@@ -196,7 +196,7 @@ func registerItemRoutes(builder *routeBuilder, app *services.ItemApplicationServ
 		if err != nil {
 			return services.ItemDetailSummary{}, err
 		}
-		result, err := detail.GetByKey(r.Context(), user.ID, strings.TrimSpace(r.PathValue("workspace_key")), number, r.URL.Query().Get("surface"))
+		result, err := detail.GetByKey(r.Context(), user.ID, strings.TrimSpace(r.PathValue("workspace_key")), number, r.URL.Query().Get("surface"), excludePersonal(r))
 		return result, itemError(err)
 	})
 	builder.Read(collection+"/{item_id}/detail-summary", AuthAuthenticated, []string{"items:read"}, func(r *http.Request) (services.ItemDetailSummary, error) {
@@ -204,7 +204,7 @@ func registerItemRoutes(builder *routeBuilder, app *services.ItemApplicationServ
 		if err != nil {
 			return services.ItemDetailSummary{}, err
 		}
-		result, err := detail.Get(r.Context(), user.ID, id, r.URL.Query().Get("surface"))
+		result, err := detail.Get(r.Context(), user.ID, id, r.URL.Query().Get("surface"), excludePersonal(r))
 		return result, itemError(err)
 	})
 	builder.Read(collection+"/story-points/by-assignee", AuthAuthenticated, []string{"items:read"}, func(r *http.Request) ([]repository.StoryPointsByAssigneeRow, error) {
@@ -307,6 +307,7 @@ func registerItemSetRoutes(builder *routeBuilder, app *services.ItemApplicationS
 			QL: r.URL.Query().Get("ql"), SubQL: r.URL.Query().Get("sub_ql"),
 			Pagination:       services.PaginationParams{Page: page.Page, Limit: page.PageSize, Offset: page.Offset},
 			OmitDescriptions: r.URL.Query().Get("fields") == "summary", IncludeWatermark: r.URL.Query().Get("include_watermark") == "true",
+			ExcludePersonal: excludePersonal(r),
 		})
 		return result.Items, page, result.Total, itemListMeta{Watermark: result.Watermark, SortableFields: result.SortableFields}, itemError(err)
 	})
@@ -350,6 +351,7 @@ func registerItemSetRoutes(builder *routeBuilder, app *services.ItemApplicationS
 			UserID: user.ID, WorkspaceID: workspaceID, CollectionID: collectionID,
 			Through: through, ThroughProvided: throughRaw != "", Limit: limit,
 			Since: since, SinceProvided: sinceRaw != "", SubQL: r.URL.Query().Get("sub_ql"),
+			ExcludePersonal: excludePersonal(r),
 		})
 		return result, itemError(err)
 	})
@@ -633,9 +635,16 @@ func parseItemReference(raw string) (itemLookupReference, error) {
 		return itemLookupReference{ID: id}, nil
 	}
 
-	workspaceKey, itemNumberText, found := strings.Cut(raw, "-")
+	// Right-anchor the split: workspace keys may contain dashes (legacy
+	// personal-workspace keys like JOHN-DOE), so the number is everything
+	// after the last dash.
+	lastDash := strings.LastIndex(raw, "-")
+	if lastDash < 0 {
+		return itemLookupReference{}, invalidItemReference("item_id must be a positive integer or an item key in KEY-NUMBER format")
+	}
+	workspaceKey, itemNumberText := raw[:lastDash], raw[lastDash+1:]
 	itemNumber, err := strconv.Atoi(itemNumberText)
-	if !found || !validWorkspaceKeyReference(workspaceKey) || err != nil || itemNumber < 1 {
+	if !validWorkspaceKeyReference(workspaceKey) || err != nil || itemNumber < 1 {
 		return itemLookupReference{}, invalidItemReference("item_id must be a positive integer or an item key in KEY-NUMBER format")
 	}
 	return itemLookupReference{WorkspaceKey: workspaceKey, ItemNumber: itemNumber}, nil

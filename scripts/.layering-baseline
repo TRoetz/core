@@ -46,3 +46,4 @@ internal/handlers/time_worklogs.go|windshift/internal/database
 internal/handlers/todoist_sync.go|windshift/internal/database
 internal/handlers/webauthn.go|windshift/internal/database
 internal/handlers/workspaces_handler.go|windshift/internal/database
+internal/handlers/workspaces_personal.go|windshift/internal/database

@@ -172,6 +172,7 @@ type ItemBacklogRequest struct {
 	Pagination                        PaginationParams
 	OmitDescriptions                  bool
 	IncludeWatermark                  bool
+	ExcludePersonal                   bool
 }
 
 type ItemChangesRequest struct {
@@ -182,6 +183,7 @@ type ItemChangesRequest struct {
 	ThroughProvided                   bool
 	Limit                             int
 	SubQL                             string
+	ExcludePersonal                   bool
 }
 
 type ItemChangesResult struct {
@@ -293,8 +295,21 @@ func (s *ItemApplicationService) Backlog(ctx context.Context, request ItemBacklo
 	if err != nil {
 		return ItemListResult{}, err
 	}
+	if request.ExcludePersonal {
+		workspaceIDs, err = repository.FilterSharedWorkspaceIDs(s.db, workspaceIDs)
+		if err != nil {
+			return ItemListResult{}, err
+		}
+		if request.WorkspaceID > 0 && !slices.Contains(workspaceIDs, request.WorkspaceID) {
+			// An explicitly targeted personal workspace yields no backlog.
+			return ItemListResult{Items: []models.Item{}, SortableFields: repository.SystemSortableFieldKeys()}, nil
+		}
+	}
 	if err := s.requireCollectionRead(request.UserID, request.CollectionID, workspaceIDs); err != nil {
 		return ItemListResult{}, err
+	}
+	if len(workspaceIDs) == 0 {
+		return ItemListResult{Items: []models.Item{}, SortableFields: repository.SystemSortableFieldKeys()}, nil
 	}
 	items, total, err := s.crud.GetBacklogItemsContext(ctx, BacklogParams{
 		WorkspaceID: request.WorkspaceID, CollectionID: request.CollectionID,
@@ -321,6 +336,16 @@ func (s *ItemApplicationService) Changes(ctx context.Context, request ItemChange
 	workspaceIDs, err := s.perm.AccessibleWorkspaceIDs(request.UserID)
 	if err != nil {
 		return ItemChangesResult{}, err
+	}
+	if request.ExcludePersonal {
+		workspaceIDs, err = repository.FilterSharedWorkspaceIDs(s.db, workspaceIDs)
+		if err != nil {
+			return ItemChangesResult{}, err
+		}
+		if request.WorkspaceID > 0 && !slices.Contains(workspaceIDs, request.WorkspaceID) {
+			// An explicitly targeted personal workspace yields no window.
+			return ItemChangesResult{ChangedItemIDs: []int{}, RemovedItemIDs: []int{}}, nil
+		}
 	}
 	if err := s.requireCollectionRead(request.UserID, request.CollectionID, workspaceIDs); err != nil {
 		return ItemChangesResult{}, err
@@ -560,7 +585,7 @@ func (s *ItemApplicationService) GetByKeyWithOptions(ctx context.Context, userID
 	return s.GetWithOptions(ctx, userID, id, options)
 }
 
-func (s *ItemApplicationService) Batch(ctx context.Context, userID int, ids []int) ([]models.Item, error) {
+func (s *ItemApplicationService) Batch(ctx context.Context, userID int, ids []int, excludePersonal bool) ([]models.Item, error) {
 	loaded, err := s.items.FindByIDsWithDetails(ids)
 	if err != nil {
 		return nil, err
@@ -569,11 +594,30 @@ func (s *ItemApplicationService) Batch(ctx context.Context, userID int, ids []in
 	for _, item := range loaded {
 		loadedByID[item.ID] = item
 	}
+	// One batched personal-workspace lookup instead of a per-item query.
+	shared := make(map[int]bool)
+	if excludePersonal {
+		workspaceIDs := make([]int, 0, len(loadedByID))
+		for _, item := range loadedByID {
+			workspaceIDs = append(workspaceIDs, item.WorkspaceID)
+		}
+		sharedIDs, err := repository.FilterSharedWorkspaceIDs(s.db, workspaceIDs)
+		if err != nil {
+			return nil, err
+		}
+		shared = make(map[int]bool, len(sharedIDs))
+		for _, id := range sharedIDs {
+			shared[id] = true
+		}
+	}
 	items := make([]models.Item, 0, len(loaded))
 	permissions := make(map[int]bool)
 	for _, id := range ids {
 		item, exists := loadedByID[id]
 		if !exists {
+			continue
+		}
+		if excludePersonal && !shared[item.WorkspaceID] {
 			continue
 		}
 		allowed, ok := permissions[item.WorkspaceID]

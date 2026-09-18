@@ -371,7 +371,9 @@ func (r *WorkspaceRepository) FindMissingOrPersonal(ids []int) ([]int, error) {
 		placeholders[i] = "?"
 		args[i] = id
 	}
-	query := `SELECT id, is_personal FROM workspaces WHERE id IN (` + strings.Join(placeholders, ",") + `)`
+	// COALESCE keeps NULL is_personal rows (legacy data) eligible, matching
+	// the NULL-as-shared semantics used by every other workspace predicate.
+	query := `SELECT id, COALESCE(is_personal, false) FROM workspaces WHERE id IN (` + strings.Join(placeholders, ",") + `)`
 	rows, err := r.db.Query(query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("query workspace eligibility: %w", err)

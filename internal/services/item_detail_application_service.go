@@ -89,16 +89,16 @@ func (s *ItemDetailApplicationService) WithStoryPointRollups(reader ItemStoryPoi
 	return s
 }
 
-func (s *ItemDetailApplicationService) Get(ctx context.Context, userID, itemID int, surface string) (ItemDetailSummary, error) {
-	item, err := s.items.Get(ctx, userID, itemID, true)
+func (s *ItemDetailApplicationService) Get(ctx context.Context, userID, itemID int, surface string, excludePersonal bool) (ItemDetailSummary, error) {
+	item, err := s.items.GetWithOptions(ctx, userID, itemID, ItemReadOptions{TrackView: true, ExcludePersonal: excludePersonal})
 	if err != nil {
 		return ItemDetailSummary{}, err
 	}
 	return s.load(ctx, userID, item, surface), nil
 }
 
-func (s *ItemDetailApplicationService) GetByKey(ctx context.Context, userID int, workspaceKey string, itemNumber int, surface string) (ItemDetailSummary, error) {
-	item, err := s.items.GetByKey(ctx, userID, workspaceKey, itemNumber)
+func (s *ItemDetailApplicationService) GetByKey(ctx context.Context, userID int, workspaceKey string, itemNumber int, surface string, excludePersonal bool) (ItemDetailSummary, error) {
+	item, err := s.items.GetByKeyWithOptions(ctx, userID, workspaceKey, itemNumber, ItemReadOptions{TrackView: true, ExcludePersonal: excludePersonal})
 	if err != nil {
 		return ItemDetailSummary{}, err
 	}

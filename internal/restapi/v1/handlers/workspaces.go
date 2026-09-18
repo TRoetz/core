@@ -3,6 +3,8 @@ package handlers
 import (
 	"errors"
 	"net/http"
+	"regexp"
+	"strings"
 
 	"windshift/internal/authz"
 	"windshift/internal/database"
@@ -14,6 +16,10 @@ import (
 	"windshift/internal/sanitize"
 	"windshift/internal/services"
 )
+
+// Workspace keys are uppercase alphanumeric, 2-10 chars — the same contract
+// item-key rendering and KEY-NUMBER parsing rely on.
+var workspaceKeyUpdatePattern = regexp.MustCompile(`^[A-Z0-9]+$`)
 
 // WorkspaceHandler handles public API requests for workspaces
 type WorkspaceHandler struct {
@@ -76,6 +82,7 @@ type WorkspaceCreateRequest struct {
 // WorkspaceUpdateRequest is the request body for updating a workspace
 type WorkspaceUpdateRequest struct {
 	Name        *string `json:"name,omitempty"`
+	Key         *string `json:"key,omitempty"`
 	Description *string `json:"description,omitempty"`
 	Active      *bool   `json:"active,omitempty"`
 	Icon        *string `json:"icon,omitempty"`
@@ -336,8 +343,17 @@ func (h *WorkspaceHandler) Update(w http.ResponseWriter, r *http.Request) {
 	if !h.DecodeBodyOrRespond(w, r, &req) {
 		return
 	}
+	if req.Key != nil {
+		*req.Key = strings.ToUpper(strings.TrimSpace(*req.Key))
+		if len(*req.Key) < 2 || len(*req.Key) > 10 || !workspaceKeyUpdatePattern.MatchString(*req.Key) {
+			h.RespondError(w, r, restapi.NewAPIError(http.StatusBadRequest, restapi.ErrCodeInvalidInput,
+				"Workspace key must contain 2 to 10 alphanumeric characters"))
+			return
+		}
+	}
 	warnings := sanitize.ApplyAllWithWarnings(
 		sanitize.Pair{Target: req.Name, Policy: sanitize.PlainTextField, Label: "Workspace name"},
+		sanitize.Pair{Target: req.Key, Policy: sanitize.ShortIdentifier, Label: "Workspace key"},
 		sanitize.Pair{Target: req.Description, Policy: sanitize.RichText, Label: "Description"},
 		sanitize.Pair{Target: req.Icon, Policy: sanitize.ShortIdentifier, Label: "Icon"},
 		sanitize.Pair{Target: req.Color, Policy: sanitize.ShortIdentifier, Label: "Color"},
@@ -352,6 +368,7 @@ func (h *WorkspaceHandler) Update(w http.ResponseWriter, r *http.Request) {
 	ws, err := h.workspaceService.Update(services.UpdateWorkspaceParams{
 		ID:          wsID,
 		Name:        req.Name,
+		Key:         req.Key,
 		Description: req.Description,
 		Active:      req.Active,
 		Icon:        req.Icon,
@@ -367,12 +384,25 @@ func (h *WorkspaceHandler) Update(w http.ResponseWriter, r *http.Request) {
 			h.RespondError(w, r, restapi.NewAPIError(http.StatusUnprocessableEntity, restapi.ErrCodeInvalidWorkspaceTemplate, "Personal workspaces cannot be templates"))
 			return
 		}
+		if errors.Is(err, services.ErrPersonalWorkspaceDeactivation) {
+			h.RespondError(w, r, restapi.NewAPIError(http.StatusUnprocessableEntity, restapi.ErrCodeInvalidInput, "Personal workspaces cannot be deactivated"))
+			return
+		}
+		if errors.Is(err, services.ErrWorkspaceKeyImmutable) {
+			h.RespondError(w, r, restapi.NewAPIError(http.StatusUnprocessableEntity, restapi.ErrCodeInvalidInput, "Workspace keys can only be changed for personal workspaces"))
+			return
+		}
+		if errors.Is(err, repository.ErrDuplicateEntry) {
+			h.RespondError(w, r, restapi.NewAPIError(http.StatusConflict, restapi.ErrCodeConflict, "A workspace with this key already exists"))
+			return
+		}
 		h.RespondInternalError(w, r)
 		return
 	}
 	if err := h.cacheInvalidator.Apply(services.AuthorizationInvalidation{
 		ResetPermissions:        before.Active != ws.Active,
 		ActiveWorkspacesChanged: before.Active != ws.Active,
+		WorkspaceKeysChanged:    before.Key != ws.Key,
 	}); err != nil {
 		h.RespondInternalError(w, r)
 		return

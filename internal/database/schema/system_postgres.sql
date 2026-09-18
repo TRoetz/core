@@ -27,10 +27,11 @@ CREATE TABLE IF NOT EXISTS system_settings (
 CREATE INDEX IF NOT EXISTS idx_system_settings_key ON system_settings(key);
 CREATE INDEX IF NOT EXISTS idx_system_settings_category ON system_settings(category);
 
--- Personal labels table
+-- Personal labels table. Name uniqueness is scoped per user (shared labels
+-- have user_id NULL and share one namespace).
 CREATE TABLE IF NOT EXISTS personal_labels (
 	id SERIAL PRIMARY KEY,
-	name TEXT NOT NULL UNIQUE,
+	name TEXT NOT NULL,
 	color TEXT DEFAULT '#3B82F6',
 	user_id INTEGER,
 	created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -39,6 +40,7 @@ CREATE TABLE IF NOT EXISTS personal_labels (
 );
 
 CREATE INDEX IF NOT EXISTS idx_personal_labels_user_id ON personal_labels(user_id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_personal_labels_user_name ON personal_labels(COALESCE(user_id, 0), name);
 
 -- Reviews table
 CREATE TABLE IF NOT EXISTS reviews (

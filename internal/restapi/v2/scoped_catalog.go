@@ -116,6 +116,7 @@ type workspaceCreateRequest struct {
 
 type workspacePatchRequest struct {
 	Name                    Optional[string] `json:"name"`
+	Key                     Optional[string] `json:"key"`
 	Description             Optional[string] `json:"description"`
 	Active                  Optional[bool]   `json:"active"`
 	TimeProjectID           Optional[int]    `json:"time_project_id"`
@@ -211,7 +212,7 @@ func updateWorkspace(workspaces workspaceApplication) jsonOperation[workspacePat
 			return workspaceDTO{}, newError(http.StatusBadRequest, "invalid_request", "Only nullable workspace fields may be null")
 		}
 		params := services.UpdateWorkspaceParams{
-			ID: workspaceID, Name: optionalValue(input.Name),
+			ID: workspaceID, Name: optionalValue(input.Name), Key: optionalValue(input.Key),
 			Description: optionalValue(input.Description), Active: optionalValue(input.Active),
 			TimeProjectID: services.NullableUpdate[int]{Present: input.TimeProjectID.Set, Value: optionalNullableValue(input.TimeProjectID)},
 			Icon:          optionalValue(input.Icon), Color: optionalValue(input.Color),
@@ -258,7 +259,8 @@ func workspaceMutationError(err error) error {
 		return newError(http.StatusConflict, "conflict", "Workspace key already exists")
 	case errors.Is(err, services.ErrWorkspaceHasProtectedIntegrationLinks):
 		return newError(http.StatusConflict, "conflict", "Remove all protected integration links from this workspace before deleting it.")
-	case errors.Is(err, services.ErrInvalidWorkspaceTemplate), errors.Is(err, services.ErrWorkspaceTemplateTooLarge), errors.Is(err, services.ErrPersonalWorkspaceTemplate):
+	case errors.Is(err, services.ErrInvalidWorkspaceTemplate), errors.Is(err, services.ErrWorkspaceTemplateTooLarge), errors.Is(err, services.ErrPersonalWorkspaceTemplate),
+		errors.Is(err, services.ErrPersonalWorkspaceDeactivation), errors.Is(err, services.ErrWorkspaceKeyImmutable):
 		return newError(http.StatusUnprocessableEntity, "unprocessable_entity", err.Error())
 	default:
 		return internalError(err)

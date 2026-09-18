@@ -602,9 +602,10 @@ func (r *ItemRepository) SearchContext(ctx context.Context, query string, worksp
 
 func itemSearchFilters(query string) ItemFilters {
 	query = strings.TrimSpace(query)
-	key, number, found := strings.Cut(query, "-")
-	if found && key != "" {
-		if num, err := strconv.Atoi(number); err == nil && num > 0 {
+	// Right-anchor: legacy personal-workspace keys may contain dashes, so the
+	// number is everything after the last one.
+	if lastDash := strings.LastIndex(query, "-"); lastDash > 0 {
+		if num, err := strconv.Atoi(query[lastDash+1:]); err == nil && num > 0 {
 			return ItemFilters{ItemKeyQuery: query}
 		}
 	}
@@ -762,11 +763,14 @@ func (r *ItemRepository) buildWhereClause(params ItemListParams) (whereClause st
 	}
 
 	if params.Filters.ItemKeyQuery != "" {
-		parts := strings.Split(strings.ToUpper(params.Filters.ItemKeyQuery), "-")
-		if len(parts) == 2 {
-			if num, err := strconv.Atoi(parts[1]); err == nil && num > 0 {
+		// Right-anchored KEY-NUMBER split: workspace keys may contain dashes
+		// (legacy personal-workspace keys), so only the number after the last
+		// dash is the item number.
+		query := strings.ToUpper(params.Filters.ItemKeyQuery)
+		if lastDash := strings.LastIndex(query, "-"); lastDash > 0 {
+			if num, err := strconv.Atoi(query[lastDash+1:]); err == nil && num > 0 {
 				whereClause += " AND (LOWER(w.key) = LOWER(?) AND i.workspace_item_number = ?)"
-				args = append(args, parts[0], num)
+				args = append(args, query[:lastDash], num)
 			}
 		}
 	}

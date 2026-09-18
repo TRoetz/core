@@ -4764,6 +4764,16 @@
               "default": false,
               "type": "boolean"
             }
+          },
+          {
+            "Name": "exclude_personal",
+            "In": "query",
+            "Description": "Exclude personal-workspace items before pagination and totals. Values true and 1 enable exclusion.",
+            "Required": false,
+            "Schema": {
+              "default": false,
+              "type": "boolean"
+            }
           }
         ],
         "responses": {
@@ -4921,6 +4931,16 @@
               "maximum": 500,
               "minimum": 1,
               "type": "integer"
+            }
+          },
+          {
+            "Name": "exclude_personal",
+            "In": "query",
+            "Description": "Exclude personal-workspace items from the change window. Values true and 1 enable exclusion.",
+            "Required": false,
+            "Schema": {
+              "default": false,
+              "type": "boolean"
             }
           }
         ],
@@ -5733,6 +5753,16 @@
                 "mobile"
               ],
               "type": "string"
+            }
+          },
+          {
+            "Name": "exclude_personal",
+            "In": "query",
+            "Description": "Return 404 for personal-workspace items. Values true and 1 enable exclusion; omitted or other values leave visibility unchanged.",
+            "Required": false,
+            "Schema": {
+              "default": false,
+              "type": "boolean"
             }
           }
         ],
@@ -15930,6 +15960,16 @@
                 "mobile"
               ],
               "type": "string"
+            }
+          },
+          {
+            "Name": "exclude_personal",
+            "In": "query",
+            "Description": "Return 404 for personal-workspace items. Values true and 1 enable exclusion; omitted or other values leave visibility unchanged.",
+            "Required": false,
+            "Schema": {
+              "default": false,
+              "type": "boolean"
             }
           }
         ],

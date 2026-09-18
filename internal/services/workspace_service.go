@@ -16,6 +16,15 @@ import (
 
 var ErrWorkspaceHasProtectedIntegrationLinks = errors.New("workspace has provider-managed integration links")
 
+// ErrPersonalWorkspaceDeactivation guards baseline provisioning: the owner
+// cannot deactivate a personal workspace, only offboarding/SCIM flows may.
+var ErrPersonalWorkspaceDeactivation = errors.New("personal workspaces cannot be deactivated")
+
+// ErrWorkspaceKeyImmutable marks key edits outside the personal-workspace
+// scope; regular workspace keys stay immutable because external references
+// (item keys, integrations) rely on them.
+var ErrWorkspaceKeyImmutable = errors.New("workspace key can only be changed for personal workspaces")
+
 // WorkspaceService encapsulates workspace business logic used by both HTTP handlers
 // and other services.
 type WorkspaceService struct {
@@ -247,15 +256,22 @@ type UpdateWorkspaceParams struct {
 }
 
 // Update changes only the supplied workspace fields. Personal workspaces and
-// templates are mutually exclusive in both directions.
+// templates are mutually exclusive in both directions. Personal workspaces
+// cannot be deactivated, and only personal workspaces may change their key.
 func (s *WorkspaceService) Update(params UpdateWorkspaceParams) (*models.Workspace, error) {
-	if params.IsPersonal != nil || params.IsTemplate != nil {
+	if params.IsPersonal != nil || params.IsTemplate != nil || params.Active != nil || params.Key != nil {
 		current, err := s.repo.FindByIDBasic(params.ID)
 		if errors.Is(err, repository.ErrNotFound) {
 			return nil, fmt.Errorf("workspace not found: %d: %w", params.ID, repository.ErrNotFound)
 		}
 		if err != nil {
 			return nil, err
+		}
+		if params.Active != nil && !*params.Active && current.IsPersonal {
+			return nil, ErrPersonalWorkspaceDeactivation
+		}
+		if params.Key != nil && *params.Key != current.Key && !current.IsPersonal {
+			return nil, ErrWorkspaceKeyImmutable
 		}
 		nextIsPersonal := current.IsPersonal
 		if params.IsPersonal != nil {
@@ -325,6 +341,9 @@ func (s *WorkspaceService) Update(params UpdateWorkspaceParams) (*models.Workspa
 			args...,
 		)
 		if err != nil {
+			if database.IsUniqueConstraintError(err) {
+				return nil, fmt.Errorf("workspace key already exists: %d: %w", params.ID, repository.ErrDuplicateEntry)
+			}
 			return nil, fmt.Errorf("failed to update workspace: %w", err)
 		}
 		rows, err := result.RowsAffected()

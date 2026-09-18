@@ -297,6 +297,10 @@ func (a *Authz) canEditWorkspaceFallback(userID, workspaceID int) (bool, error) 
 	`, workspaceID, userID, models.RoleBuiltinEditor, models.RoleBuiltinAdministrator,
 		workspaceID, userID, models.RoleBuiltinEditor, models.RoleBuiltinAdministrator,
 		workspaceID, userID).Scan(&hasPermission)
+	if errors.Is(err, sql.ErrNoRows) {
+		// No role and not a personal-workspace owner: a plain denial, not an error.
+		return false, nil
+	}
 	if err != nil {
 		return false, err
 	}

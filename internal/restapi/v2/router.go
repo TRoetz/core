@@ -1061,6 +1061,9 @@ func applyParameterCorrections(route *Route) {
 		upsertParameter(route, enumQuery("type", "Assignment principal type.", "user", "group"))
 	case "GET /items/changes":
 		route.Description = "Returns visible changed and removed item IDs from a stable (since, through] window. Supply limit to page, passing next_cursor as since and the first watermark as through until has_more is false. Pages count log events before deduplication and membership filtering. Cursors ahead of the server require reset_required and a full reload. Omitting limit preserves the full-reload fallback on overflow."
+		upsertParameter(route, booleanQuery("exclude_personal", "Exclude personal-workspace items from the change window. Values true and 1 enable exclusion.", false))
+	case "GET /items/backlog":
+		upsertParameter(route, booleanQuery("exclude_personal", "Exclude personal-workspace items before pagination and totals. Values true and 1 enable exclusion.", false))
 	case "GET /items/search":
 		route.Tag = "Work items"
 		route.Summary = "Search items"
@@ -1097,6 +1100,9 @@ func applyParameterCorrections(route *Route) {
 		upsertParameter(route, booleanQuery("exclude_personal", "Return 404 for personal-workspace items. Values true and 1 enable exclusion; omitted or other values leave visibility unchanged.", false))
 	case "POST /items/batch", "POST /assets/summaries", "POST /milestones/test-statistics", "POST /iterations/progress":
 		route.Description = "Returns a bounded projection for up to 500 IDs. IDs are deduplicated by first occurrence; visible matches preserve request order, and missing or unauthorized resources are omitted without revealing which case applied. Results reflect committed state at request time and are all-or-nothing on computation failure."
+		if route.Path == "POST /items/batch" {
+			upsertParameter(route, booleanQuery("exclude_personal", "Omit personal-workspace items from the response. Values true and 1 enable exclusion.", false))
+		}
 	case "GET /links/batch":
 		route.Description = "Returns one-hop links for at most 100 explicit item IDs, or for one paged query-language selection. Explicit IDs retain first-occurrence order. Each item is capped independently and exposes an operation-bound next_cursor when more links exist; inaccessible links are omitted."
 	case "GET /items/{item_id}/comments":
@@ -1107,6 +1113,7 @@ func applyParameterCorrections(route *Route) {
 		route.Description = "Returns at most 200 visible agent runs in stable newest-first ID order. next_cursor resumes exclusively before the final returned run; private verification runs and unauthorized runs are omitted."
 	case "GET /items/{item_id}/detail-summary", "GET /workspaces/{workspace_key}/items/{item_number}/detail-summary":
 		route.Description = "Returns an authorization-checked item-detail bootstrap projection from committed state. Independent optional sections report deterministic section_errors when they fail, so partial data is distinguishable from an empty section."
+		upsertParameter(route, booleanQuery("exclude_personal", "Return 404 for personal-workspace items. Values true and 1 enable exclusion; omitted or other values leave visibility unchanged.", false))
 	case "GET /workspaces/{workspace_id}/test-reports/summary":
 		route.Description = "Computes an authorization-checked test summary from committed runs within the bounded 1-to-365-day window. The response is atomic and includes overall, trend, recent-failure, and recent-blocked projections."
 	}

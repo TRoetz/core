@@ -52610,6 +52610,11 @@
             "nullable": true,
             "type": "boolean"
           },
+          "key": {
+            "description": "The key value.",
+            "nullable": true,
+            "type": "string"
+          },
           "name": {
             "description": "The name value.",
             "nullable": true,
@@ -87680,6 +87685,16 @@
               "default": false,
               "type": "boolean"
             }
+          },
+          {
+            "description": "Exclude personal-workspace items before pagination and totals. Values true and 1 enable exclusion.",
+            "in": "query",
+            "name": "exclude_personal",
+            "required": false,
+            "schema": {
+              "default": false,
+              "type": "boolean"
+            }
           }
         ],
         "responses": {
@@ -88038,6 +88053,16 @@
               "maximum": 500,
               "minimum": 1,
               "type": "integer"
+            }
+          },
+          {
+            "description": "Exclude personal-workspace items from the change window. Values true and 1 enable exclusion.",
+            "in": "query",
+            "name": "exclude_personal",
+            "required": false,
+            "schema": {
+              "default": false,
+              "type": "boolean"
             }
           }
         ],
@@ -89548,6 +89573,16 @@
                 "mobile"
               ],
               "type": "string"
+            }
+          },
+          {
+            "description": "Return 404 for personal-workspace items. Values true and 1 enable exclusion; omitted or other values leave visibility unchanged.",
+            "in": "query",
+            "name": "exclude_personal",
+            "required": false,
+            "schema": {
+              "default": false,
+              "type": "boolean"
             }
           }
         ],
@@ -109600,6 +109635,16 @@
                 "mobile"
               ],
               "type": "string"
+            }
+          },
+          {
+            "description": "Return 404 for personal-workspace items. Values true and 1 enable exclusion; omitted or other values leave visibility unchanged.",
+            "in": "query",
+            "name": "exclude_personal",
+            "required": false,
+            "schema": {
+              "default": false,
+              "type": "boolean"
             }
           }
         ],

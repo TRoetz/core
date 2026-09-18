@@ -114,9 +114,14 @@ func (r *TodoistSyncRepository) ReleaseSyncLock(id string) error {
 	return nil
 }
 
-// ListEnabledConfigs returns all configs with sync enabled, for the poller.
+// ListEnabledConfigs returns all enabled configs whose personal workspace is
+// still active, for the poller. The join is defense in depth: a config that
+// misses the disable cascade (e.g. written before deprovisioning finished)
+// must not resurrect a sync for a deprovisioned user.
 func (r *TodoistSyncRepository) ListEnabledConfigs() ([]models.TodoistSyncConfig, error) {
-	rows, err := r.db.Query("SELECT " + todoistSyncConfigColumns + " FROM todoist_sync_config WHERE enabled = true")
+	rows, err := r.db.Query("SELECT c." + strings.ReplaceAll(todoistSyncConfigColumns, ", ", ", c.") +
+		" FROM todoist_sync_config c JOIN workspaces w ON w.id = c.personal_workspace_id" +
+		" WHERE c.enabled = true AND w.active = true")
 	if err != nil {
 		return nil, fmt.Errorf("list enabled todoist_sync_config: %w", err)
 	}

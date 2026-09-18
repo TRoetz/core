@@ -55,7 +55,11 @@ type RuleCache struct {
 	Templates           map[string]string                      // template_name -> content
 	DefaultConfigSetID  int                                    // configuration_sets.is_default — fallback scheme when a workspace has none
 	PersonalWorkspaces  map[int]bool                           // workspace_id -> true for is_personal workspaces (never notified)
-	LastRefreshed       time.Time
+	// SuppressAll fails closed: the personal-workspace load failed, so the
+	// exclusion set can't be trusted. Rule-based dispatch stops entirely until
+	// the next successful refresh instead of notifying personal workspaces.
+	SuppressAll   bool
+	LastRefreshed time.Time
 }
 
 // NotificationServiceConfig represents configuration for the notification service
@@ -924,7 +928,10 @@ func (ns *NotificationService) refreshRuleCache() error {
 	// set so the async resolver can skip them without a per-event query.
 	personalRows, err := ns.db.Query(`SELECT id FROM workspaces WHERE is_personal = true`)
 	if err != nil {
-		slog.Warn("failed to load personal workspaces for notifications", slog.String("component", "notifications"), slog.Any("error", err))
+		// Fail closed: without the exclusion set, personal workspaces would fall
+		// through to configured/default rules.
+		slog.Error("failed to load personal workspaces for notifications", slog.String("component", "notifications"), slog.Any("error", err))
+		newCache.SuppressAll = true
 	} else {
 		for personalRows.Next() {
 			var wsID int
@@ -1045,7 +1052,7 @@ func (ns *NotificationService) getConfigSetForWorkspace(workspaceID int) (int, e
 	ns.cacheMu.RLock()
 	defer ns.cacheMu.RUnlock()
 
-	if ns.ruleCache.PersonalWorkspaces[workspaceID] {
+	if ns.ruleCache.SuppressAll || ns.ruleCache.PersonalWorkspaces[workspaceID] {
 		return 0, nil
 	}
 

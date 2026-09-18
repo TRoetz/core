@@ -1302,6 +1302,105 @@ var Catalog = []Migration{
 			CREATE INDEX IF NOT EXISTS idx_test_example_step_results_result_id ON test_example_step_results(example_result_id);
 		`,
 	},
+	{
+		Version:       "20260918_workspaces_personal_owner_uniqueness",
+		Name:          "Enforce one personal workspace per owner",
+		CheckSQLite:   sqliteIndexCheck("uq_workspaces_personal_owner"),
+		CheckPostgres: pgIndexCheck("uq_workspaces_personal_owner"),
+		SQLite: `
+			-- Duplicates from the racy get-or-create keep their oldest row; the
+			-- rest become inactive regular workspaces so no data is lost.
+			UPDATE workspaces SET is_personal = 0, active = 0
+			WHERE is_personal = 1 AND id NOT IN (
+				SELECT MIN(id) FROM workspaces WHERE is_personal = 1 GROUP BY owner_id
+			);
+			CREATE UNIQUE INDEX IF NOT EXISTS uq_workspaces_personal_owner ON workspaces(owner_id) WHERE is_personal = 1;
+		`,
+		Postgres: `
+			UPDATE workspaces SET is_personal = false, active = false
+			WHERE is_personal = true AND id NOT IN (
+				SELECT MIN(id) FROM workspaces WHERE is_personal = true GROUP BY owner_id
+			);
+			CREATE UNIQUE INDEX IF NOT EXISTS uq_workspaces_personal_owner ON workspaces(owner_id) WHERE is_personal = true;
+		`,
+	},
+	{
+		Version:       "20260918_personal_labels_unique_per_user",
+		Name:          "Scope personal label name uniqueness to the owning user",
+		CheckSQLite:   sqliteIndexCheck("uq_personal_labels_user_name"),
+		CheckPostgres: pgIndexCheck("uq_personal_labels_user_name"),
+		Postgres: `
+			ALTER TABLE personal_labels DROP CONSTRAINT IF EXISTS personal_labels_name_key;
+			CREATE UNIQUE INDEX IF NOT EXISTS uq_personal_labels_user_name
+				ON personal_labels(COALESCE(user_id, 0), name);
+		`,
+		// SQLite cannot drop the inline UNIQUE(name) without a table rebuild.
+		ApplySQLite: applySQLitePersonalLabelsPerUserUnique,
+	},
+}
+
+func applySQLitePersonalLabelsPerUserUnique(db Database) (retErr error) {
+	sqliteDB, ok := db.(*SQLiteDB)
+	if !ok {
+		return fmt.Errorf("expected SQLite database, got %T", db)
+	}
+
+	ctx := context.Background()
+	conn, err := sqliteDB.writeConn.Conn(ctx)
+	if err != nil {
+		return fmt.Errorf("acquire SQLite write connection: %w", err)
+	}
+	defer func() { _ = conn.Close() }()
+
+	var foreignKeysEnabled bool
+	if err := conn.QueryRowContext(ctx, "PRAGMA foreign_keys").Scan(&foreignKeysEnabled); err != nil {
+		return fmt.Errorf("read foreign_keys pragma: %w", err)
+	}
+	if foreignKeysEnabled {
+		if _, err := conn.ExecContext(ctx, "PRAGMA foreign_keys=OFF"); err != nil {
+			return fmt.Errorf("disable foreign keys: %w", err)
+		}
+		defer func() {
+			if _, err := conn.ExecContext(ctx, "PRAGMA foreign_keys=ON"); retErr == nil && err != nil {
+				retErr = fmt.Errorf("restore foreign keys: %w", err)
+			}
+		}()
+	}
+
+	tx, err := conn.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin personal_labels rebuild: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	statements := []string{
+		`CREATE TABLE personal_labels_migration (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			name TEXT NOT NULL,
+			color TEXT DEFAULT '#3B82F6',
+			user_id INTEGER,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+		)`,
+		`INSERT INTO personal_labels_migration (id, name, color, user_id, created_at, updated_at)
+			SELECT id, name, color, user_id, created_at, updated_at FROM personal_labels`,
+		`DROP TABLE personal_labels`,
+		`ALTER TABLE personal_labels_migration RENAME TO personal_labels`,
+		`CREATE INDEX idx_personal_labels_user_id ON personal_labels(user_id)`,
+		`CREATE UNIQUE INDEX uq_personal_labels_user_name ON personal_labels(COALESCE(user_id, 0), name)`,
+	}
+	for _, statement := range statements {
+		if _, err := tx.ExecContext(ctx, statement); err != nil {
+			return fmt.Errorf("rebuild personal_labels: %w", err)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit personal_labels rebuild: %w", err)
+	}
+
+	return nil
 }
 
 func applySQLiteSSOAttributeMappingDefault(db Database) (retErr error) {

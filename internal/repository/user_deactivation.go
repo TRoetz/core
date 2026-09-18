@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -10,9 +12,11 @@ import (
 // DeprovisionCascade reports the rows a deprovisioning transaction touched so
 // callers can audit each impact and evict validation caches after commit.
 type DeprovisionCascade struct {
-	OwnedAgentIDs       []int // every owned agent, including agents already inactive
-	DeactivatedAgentIDs []int // owned agents flipped inactive by this call
-	RevokedAPITokenIDs  []int // api_tokens row IDs removed (owner + agents)
+	OwnedAgentIDs              []int // every owned agent, including agents already inactive
+	DeactivatedAgentIDs        []int // owned agents flipped inactive by this call
+	RevokedAPITokenIDs         []int // api_tokens row IDs removed (owner + agents)
+	DeactivatedPersonalWSID    int   // personal workspace flipped inactive by this call (0 = none)
+	DisabledTodoistSyncConfigs int   // todoist_sync_config rows disabled by this call
 }
 
 // HasImpact reports whether the cascade touched any rows.
@@ -86,6 +90,35 @@ func DeactivateOwnedAgentsAndTokensTx(tx database.Tx, ownerID int) (DeprovisionC
 		if _, err := tx.Exec(scopedInQuery(`DELETE FROM api_tokens WHERE user_id IN (`, len(userIDs)), scopedInArgs(userIDs)...); err != nil {
 			return cascade, fmt.Errorf("failed to revoke api_tokens: %w", err)
 		}
+	}
+
+	// Personal workspace and Todoist sync are per-user baseline state: a
+	// deprovisioned account must not keep them running. SCIM reactivation
+	// restores both — GetOrCreatePersonalWorkspace reactivates on access, and
+	// the sync config is re-enabled through its settings surface.
+	result, err := tx.Exec(`
+		UPDATE workspaces SET active = false, updated_at = CURRENT_TIMESTAMP
+		WHERE is_personal = true AND owner_id = ? AND active = true
+	`, ownerID)
+	if err != nil {
+		return cascade, fmt.Errorf("failed to deactivate personal workspace: %w", err)
+	}
+	if affected, err := result.RowsAffected(); err == nil && affected > 0 {
+		cascErr := tx.QueryRow(`SELECT id FROM workspaces WHERE is_personal = true AND owner_id = ?`, ownerID).Scan(&cascade.DeactivatedPersonalWSID)
+		if cascErr != nil && !errors.Is(cascErr, sql.ErrNoRows) {
+			return cascade, fmt.Errorf("failed to read deactivated personal workspace id: %w", cascErr)
+		}
+	}
+
+	result, err = tx.Exec(`
+		UPDATE todoist_sync_config SET enabled = false, updated_at = CURRENT_TIMESTAMP
+		WHERE user_id = ? AND enabled = true
+	`, fmt.Sprintf("%d", ownerID))
+	if err != nil {
+		return cascade, fmt.Errorf("failed to disable todoist sync configs: %w", err)
+	}
+	if affected, err := result.RowsAffected(); err == nil {
+		cascade.DisabledTodoistSyncConfigs = int(affected)
 	}
 
 	return cascade, nil

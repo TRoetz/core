@@ -638,11 +638,13 @@ func (v *ItemFieldValidator) ValidateHierarchyLevels(itemID, itemTypeID, parentI
 	return ValidateParentForItemType(v.db, itemTypeID, &parentID)
 }
 
-// IsPersonalWorkspace checks if a workspace is a personal workspace
+// IsPersonalWorkspace checks if a workspace is a personal workspace.
+// NULL is_personal (legacy rows) reads as shared, matching every other
+// workspace predicate.
 func (v *ItemFieldValidator) IsPersonalWorkspace(workspaceID int) (bool, error) {
 	var isPersonal bool
 	err := v.db.QueryRow(`
-		SELECT is_personal FROM workspaces WHERE id = ?
+		SELECT COALESCE(is_personal, false) FROM workspaces WHERE id = ?
 	`, workspaceID).Scan(&isPersonal)
 	if err != nil {
 		return false, fmt.Errorf("failed to check workspace: %w", err)

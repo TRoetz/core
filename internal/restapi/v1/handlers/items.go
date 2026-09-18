@@ -283,6 +283,14 @@ func (h *ItemHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if ExcludePersonal(r) {
+		accessibleWorkspaceIDs, err = repository.FilterSharedWorkspaceIDs(h.DB, accessibleWorkspaceIDs)
+		if err != nil {
+			h.RespondInternalError(w, r)
+			return
+		}
+	}
+
 	if len(accessibleWorkspaceIDs) == 0 {
 		h.RespondPaginated(w, []dto.ItemResponse{}, pagination, 0)
 		return
@@ -410,10 +418,6 @@ func (h *ItemHandler) GetBatch(w http.ResponseWriter, r *http.Request) {
 		h.RespondInternalError(w, r)
 		return
 	}
-	accessible := make(map[int]struct{}, len(accessibleWorkspaceIDs))
-	for _, id := range accessibleWorkspaceIDs {
-		accessible[id] = struct{}{}
-	}
 
 	loaded, err := h.itemRepo.FindByIDsWithDetails(ids)
 	if err != nil {
@@ -423,9 +427,29 @@ func (h *ItemHandler) GetBatch(w http.ResponseWriter, r *http.Request) {
 
 	// Keep only items in workspaces the caller can view; drop the rest silently
 	// (404-no-leak contract, mirroring requireItemAccess for the single fetch).
+	// exclude_personal also drops personal-workspace items.
+	shared := make(map[int]struct{}, len(accessibleWorkspaceIDs))
+	for _, id := range accessibleWorkspaceIDs {
+		shared[id] = struct{}{}
+	}
+	if ExcludePersonal(r) {
+		workspaceIDs := make([]int, 0, len(loaded))
+		for _, it := range loaded {
+			workspaceIDs = append(workspaceIDs, it.WorkspaceID)
+		}
+		sharedIDs, err := repository.FilterSharedWorkspaceIDs(h.DB, workspaceIDs)
+		if err != nil {
+			h.RespondInternalError(w, r)
+			return
+		}
+		shared = make(map[int]struct{}, len(sharedIDs))
+		for _, id := range sharedIDs {
+			shared[id] = struct{}{}
+		}
+	}
 	items := make([]models.Item, 0, len(loaded))
 	for _, it := range loaded {
-		if _, allowed := accessible[it.WorkspaceID]; allowed {
+		if _, allowed := shared[it.WorkspaceID]; allowed {
 			items = append(items, *it)
 		}
 	}
