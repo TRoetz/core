@@ -182,7 +182,7 @@
     aria-expanded={$open}
     aria-label={ariaLabel}
     class="w-full rounded border transition-all duration-200 flex items-center justify-between gap-2
-           focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50
+           focus:outline-none focus:ring-2 focus:ring-ds-border-focused
            disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer text-left {sizeClasses}"
     style="background-color: var(--ds-background-input); border-color: var(--ds-border); color: var(--ds-text);"
     onkeydown={handleTriggerKeydown}

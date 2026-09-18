@@ -347,7 +347,7 @@
               type="text"
               bind:value={searchQuery}
               placeholder={t('items.searchForParentItem')}
-              class="w-full pl-9 pr-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              class="w-full pl-9 pr-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ds-border-focused focus:border-transparent"
               style="background-color: var(--ds-background-input); border-color: var(--ds-border); color: var(--ds-text);"
               size="small"
             />

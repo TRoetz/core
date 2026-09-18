@@ -100,6 +100,20 @@
   --color-ds-text-accent-red: var(--ds-text-accent-red);
   --color-ds-text-accent-yellow: var(--ds-text-accent-yellow);
 
+  /* Section navigation chip gradients (used with from- and to- utilities) */
+  --color-ds-nav-blue-from: var(--ds-nav-blue-from);
+  --color-ds-nav-blue-to: var(--ds-nav-blue-to);
+  --color-ds-nav-green-from: var(--ds-nav-green-from);
+  --color-ds-nav-green-to: var(--ds-nav-green-to);
+  --color-ds-nav-teal-from: var(--ds-nav-teal-from);
+  --color-ds-nav-teal-to: var(--ds-nav-teal-to);
+  --color-ds-nav-purple-from: var(--ds-nav-purple-from);
+  --color-ds-nav-purple-to: var(--ds-nav-purple-to);
+  --color-ds-nav-orange-from: var(--ds-nav-orange-from);
+  --color-ds-nav-orange-to: var(--ds-nav-orange-to);
+  --color-ds-nav-gray-from: var(--ds-nav-gray-from);
+  --color-ds-nav-gray-to: var(--ds-nav-gray-to);
+
   /* Icons & feedback text */
   --color-ds-icon-danger: var(--ds-icon-danger);
   --color-ds-icon-info: var(--ds-icon-info);

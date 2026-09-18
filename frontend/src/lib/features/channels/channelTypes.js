@@ -12,36 +12,40 @@ export const channelTypes = [
   {
     id: 'portal',
     icon: IconWorld,
-    navColor: 'from-green-400 to-green-600',
+    navColor: 'from-ds-nav-green-from to-ds-nav-green-to',
     formColor: 'var(--ds-icon-accent-green)',
   },
   {
     id: 'form',
     icon: IconForms,
-    navColor: 'from-teal-400 to-teal-600',
+    navColor: 'from-ds-nav-teal-from to-ds-nav-teal-to',
     formColor: 'var(--ds-icon-accent-teal)',
   },
   {
     id: 'webhook',
     icon: IconWebhook,
-    navColor: 'from-purple-400 to-purple-600',
+    navColor: 'from-ds-nav-purple-from to-ds-nav-purple-to',
     formColor: 'var(--ds-icon-accent-purple)',
   },
   {
     id: 'email',
     icon: IconMail,
-    navColor: 'from-blue-400 to-blue-600',
+    navColor: 'from-ds-nav-blue-from to-ds-nav-blue-to',
     formColor: 'var(--ds-icon-accent-blue)',
   },
   {
     id: 'smtp',
     icon: IconSend,
-    navColor: 'from-orange-400 to-orange-600',
+    navColor: 'from-ds-nav-orange-from to-ds-nav-orange-to',
     formColor: 'var(--ds-icon-accent-orange)',
   },
 ];
 
-export const allTypesEntry = { id: null, icon: IconStack2, navColor: 'from-gray-400 to-gray-600' };
+export const allTypesEntry = {
+  id: null,
+  icon: IconStack2,
+  navColor: 'from-ds-nav-gray-from to-ds-nav-gray-to',
+};
 
 export function getChannelTypeIcon(type) {
   return channelTypes.find((ct) => ct.id === type)?.icon ?? IconLifebuoy;

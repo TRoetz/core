@@ -65,7 +65,7 @@
       data-org-id="null"
       data-testid="customer-organization-unassigned"
       onclick={() => onSelect(null)}
-      class="org-nav-btn w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-3 {dragOverOrgId === null ? 'ring-2 ring-blue-400' : ''}"
+      class="org-nav-btn w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-3 {dragOverOrgId === null ? 'ring-2 ring-ds-border-focused' : ''}"
       class:active={selectedOrgId === null}
       class:drag-over={dragOverOrgId === null}
     >
@@ -84,7 +84,7 @@
         data-org-id={org.id}
         data-testid="customer-organization"
         onclick={() => onSelect(org.id)}
-        class="org-nav-btn w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-3 {isDragOver ? 'ring-2 ring-blue-400' : ''}"
+        class="org-nav-btn w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-3 {isDragOver ? 'ring-2 ring-ds-border-focused' : ''}"
         class:active={isActive}
         class:drag-over={isDragOver}
       >

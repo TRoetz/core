@@ -58,7 +58,7 @@
       class="nav-link w-full text-left cursor-pointer px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-3 no-underline"
       class:active={isAllActive}
     >
-      <div class="w-4 h-4 rounded bg-gradient-to-br from-purple-400 to-purple-600 flex-shrink-0"></div>
+      <div class="w-4 h-4 rounded bg-gradient-to-br from-ds-nav-purple-from to-ds-nav-purple-to flex-shrink-0"></div>
       <span>{t('milestones.allCategories')}</span>
     </a>
 

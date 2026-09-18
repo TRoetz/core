@@ -226,7 +226,7 @@
     aria-disabled={disabled}
     onclick={() => { if (!disabled) toggleDropdown(); }}
     onkeydown={(e) => { if (!disabled && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); toggleDropdown(); } }}
-    class="w-full flex items-center justify-between px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors cursor-pointer"
+    class="w-full flex items-center justify-between px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-ds-border-focused focus:border-transparent transition-colors cursor-pointer"
     style="border-color: var(--ds-border); background-color: {disabled ? 'var(--ds-background-neutral)' : 'var(--ds-surface)'}; {disabled ? 'opacity: 0.5; cursor: not-allowed;' : ''}"
   >
     {#if selectedField}

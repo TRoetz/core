@@ -82,12 +82,12 @@
   // Using design system tokens for dark mode support
   const variantClasses = $derived({
     primary: 'bg-[var(--ds-interactive)] hover:bg-[var(--ds-interactive-hovered)] focus:ring-[var(--ds-border-focused)] text-white border border-transparent',
-    default: 'bg-[var(--ds-surface-raised,white)] hover:bg-[var(--ds-background-neutral-hovered,#f9fafb)] focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50 border border-[var(--ds-border,#d1d5db)] text-[var(--ds-text,#111827)]',
-    secondary: 'bg-[var(--ds-background-neutral,#f3f4f6)] hover:bg-[var(--ds-background-neutral-hovered,#e5e7eb)] focus:ring-2 focus:ring-gray-400 focus:ring-opacity-50 text-[var(--ds-text,#374151)] border border-[var(--ds-border,#e5e7eb)]',
+    default: 'bg-[var(--ds-surface-raised,white)] hover:bg-[var(--ds-background-neutral-hovered,#f9fafb)] focus:ring-2 focus:ring-ds-border-bold border border-[var(--ds-border,#d1d5db)] text-[var(--ds-text,#111827)]',
+    secondary: 'bg-[var(--ds-background-neutral,#f3f4f6)] hover:bg-[var(--ds-background-neutral-hovered,#e5e7eb)] focus:ring-2 focus:ring-ds-border-bold text-[var(--ds-text,#374151)] border border-[var(--ds-border,#e5e7eb)]',
     danger: 'bg-[var(--ds-background-danger-bold)] hover:bg-[var(--ds-background-danger-bold-hovered)] focus:ring-[var(--ds-danger)] text-white border border-transparent',
     'danger-ghost': 'bg-transparent text-[var(--ds-text-danger)] hover:bg-[var(--ds-background-danger-bold)] hover:text-white focus:ring-[var(--ds-danger)] border border-transparent',
     selected: 'bg-[var(--ds-interactive-pressed)] hover:bg-[var(--ds-interactive-hovered)] focus:ring-[var(--ds-border-focused)] text-white border border-transparent',
-    ghost: 'bg-transparent hover:bg-[var(--ctx-active-bg,var(--ds-background-neutral-hovered,#f3f4f6))] focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50 text-[var(--ctx-text,var(--ds-text,#374151))]',
+    ghost: 'bg-transparent hover:bg-[var(--ctx-active-bg,var(--ds-background-neutral-hovered,#f3f4f6))] focus:ring-2 focus:ring-ds-border-bold text-[var(--ctx-text,var(--ds-text,#374151))]',
     link: 'bg-transparent hover:underline focus:ring-0 text-[var(--ds-text-link)] hover:text-[var(--ds-text-link-hovered)] border-none p-0'
   }[variant]);
 

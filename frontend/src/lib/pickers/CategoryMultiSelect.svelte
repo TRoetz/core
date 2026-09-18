@@ -106,7 +106,7 @@
     type="button"
     onclick={toggleDropdown}
     {disabled}
-    class="w-full flex items-center justify-between px-4 py-3 rounded border transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+    class="w-full flex items-center justify-between px-4 py-3 rounded border transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ds-border-focused text-sm disabled:opacity-50 disabled:cursor-not-allowed"
     style="background-color: var(--ds-background-input); border-color: var(--ds-border); color: var(--ds-text);"
   >
     <span>

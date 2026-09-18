@@ -34,7 +34,7 @@
               data-testid={iconTriggerTestId}
               data-item-type-id={itemType.id}
               onclick={oniconclick}
-              class="inline-flex h-full w-full cursor-pointer items-center justify-center rounded leading-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="inline-flex h-full w-full cursor-pointer items-center justify-center rounded leading-none focus:outline-none focus:ring-2 focus:ring-ds-border-focused"
               title={iconTitle}
             >
               <ItemTypeIcon {itemType} testId={iconTestId} />

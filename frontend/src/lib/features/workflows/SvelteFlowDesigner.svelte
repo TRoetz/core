@@ -577,7 +577,7 @@
     <!-- Save/Cancel buttons overlay -->
     <div class="absolute top-4 right-4 flex gap-2 z-10">
       <button
-        class="px-4 py-2 text-sm font-medium border rounded-md workflow-button-secondary focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+        class="px-4 py-2 text-sm font-medium border rounded-md workflow-button-secondary focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ds-border-focused"
         onclick={onCancel}
         disabled={savingTransitions}
       >

@@ -86,7 +86,8 @@ while (queue.length) {
 // Files with hardcoded color utilities. rg exits 1 when nothing matches,
 // which is the success case once the sweep is complete.
 const { execSync } = await import('node:child_process');
-const PATTERN = '(?<![-\\w])(?:bg|text|border)-(?!opacity)[a-z]+-[0-9]{2,3}\\b';
+const PATTERN =
+  '(?<![-\\w])(?:bg|text|border|ring|from|to|via|fill|stroke|accent|divide|outline|decoration|placeholder|caret)-(?!opacity)[a-z]+-[0-9]{2,3}\\b';
 let out = '';
 try {
   out = execSync(

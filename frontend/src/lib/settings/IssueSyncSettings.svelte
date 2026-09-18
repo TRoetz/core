@@ -415,7 +415,7 @@
               value={mode}
               checked={formData.label_sync_mode === mode}
               onchange={() => formData.label_sync_mode = mode}
-              class="accent-blue-600"
+              class="accent-[var(--ds-interactive)]"
             />
             <span class="text-sm" style="color: var(--ds-text);">{t(`issueSync.labelMode${mode.charAt(0).toUpperCase() + mode.slice(1)}`)}</span>
           </label>

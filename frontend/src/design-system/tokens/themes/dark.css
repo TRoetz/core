@@ -170,6 +170,21 @@ html[data-color-mode="dark"],
   --ds-text-accent-red: var(--color-red-300);
   --ds-text-accent-yellow: var(--color-yellow-300);
 
+  /* Section navigation chip gradients. Same ramp in both themes so a
+     section keeps its identity color regardless of color mode. */
+  --ds-nav-blue-from: var(--color-blue-400);
+  --ds-nav-blue-to: var(--color-blue-600);
+  --ds-nav-green-from: var(--color-green-400);
+  --ds-nav-green-to: var(--color-green-600);
+  --ds-nav-teal-from: var(--color-teal-400);
+  --ds-nav-teal-to: var(--color-teal-600);
+  --ds-nav-purple-from: var(--color-purple-400);
+  --ds-nav-purple-to: var(--color-purple-600);
+  --ds-nav-orange-from: var(--color-orange-400);
+  --ds-nav-orange-to: var(--color-orange-600);
+  --ds-nav-gray-from: var(--color-gray-400);
+  --ds-nav-gray-to: var(--color-gray-600);
+
   /* =================================================================
      STATUS COLORS
      For test status badges, progress indicators, and status buttons

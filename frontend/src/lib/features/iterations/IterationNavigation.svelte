@@ -41,7 +41,7 @@
       class="nav-link w-full text-left cursor-pointer px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-3 no-underline"
       class:active={isAllActive}
     >
-      <div class="w-4 h-4 rounded bg-gradient-to-br from-teal-400 to-teal-600 flex-shrink-0"></div>
+      <div class="w-4 h-4 rounded bg-gradient-to-br from-ds-nav-teal-from to-ds-nav-teal-to flex-shrink-0"></div>
       <span>{t('iterations.allTypes')}</span>
     </a>
 
