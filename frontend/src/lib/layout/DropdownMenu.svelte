@@ -160,6 +160,10 @@
       event.stopPropagation();
     }
 
+    if (itemData.disabled) {
+      return;
+    }
+
     if (itemData.type === 'checkbox' && itemData.onChange) {
       itemData.onChange(!itemData.checked);
     } else if (itemData.onClick) {
@@ -401,9 +405,10 @@
             data-testid={itemData.testid || undefined}
             data-id={itemData.id ?? undefined}
             role="menuitem"
-            tabindex="0"
+            aria-disabled={itemData.disabled ? 'true' : undefined}
+            tabindex={itemData.disabled ? -1 : 0}
             onclick={(e) => handleItemClick(itemData, e)}
-            class="menu-item flex items-center w-full px-4 py-3 text-sm transition-all duration-200 cursor-pointer {itemData.class || ''}"
+            class="menu-item flex items-center w-full px-4 py-3 text-sm transition-all duration-200 cursor-pointer {itemData.disabled ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''} {itemData.class || ''}"
             style="color: {itemData.color || 'var(--ds-text)'}; {itemData.style || ''}"
           >
             {#if itemData.type === 'checkbox'}
