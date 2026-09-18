@@ -25,6 +25,13 @@ func NewTodoistSyncRepository(db database.Database) *TodoistSyncRepository {
 
 const todoistSyncConfigColumns = "id, user_id, integration_provider_id, personal_workspace_id, enabled, scope_mode, todoist_project_id, sync_token, last_synced_at, last_error, created_at, updated_at"
 
+// todoistSyncConfigColumnsPrefixed is todoistSyncConfigColumns with every
+// column qualified for the joined "todoist_sync_config c" alias. Declared
+// explicitly (not derived by string replacement) so the query cannot drift
+// from the scan order in scanTodoistSyncConfig when the base constant's
+// formatting changes.
+const todoistSyncConfigColumnsPrefixed = "c.id, c.user_id, c.integration_provider_id, c.personal_workspace_id, c.enabled, c.scope_mode, c.todoist_project_id, c.sync_token, c.last_synced_at, c.last_error, c.created_at, c.updated_at"
+
 // GetConfig returns the sync config for a (user, provider) pair, or ErrNotFound.
 func (r *TodoistSyncRepository) GetConfig(userID, providerID string) (*models.TodoistSyncConfig, error) {
 	row := r.db.QueryRow("SELECT "+todoistSyncConfigColumns+" FROM todoist_sync_config WHERE user_id = ? AND integration_provider_id = ?", userID, providerID)
@@ -119,7 +126,7 @@ func (r *TodoistSyncRepository) ReleaseSyncLock(id string) error {
 // misses the disable cascade (e.g. written before deprovisioning finished)
 // must not resurrect a sync for a deprovisioned user.
 func (r *TodoistSyncRepository) ListEnabledConfigs() ([]models.TodoistSyncConfig, error) {
-	rows, err := r.db.Query("SELECT c." + strings.ReplaceAll(todoistSyncConfigColumns, ", ", ", c.") +
+	rows, err := r.db.Query("SELECT " + todoistSyncConfigColumnsPrefixed +
 		" FROM todoist_sync_config c JOIN workspaces w ON w.id = c.personal_workspace_id" +
 		" WHERE c.enabled = true AND w.active = true")
 	if err != nil {
