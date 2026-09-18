@@ -10,6 +10,7 @@
     onDeferredImageUpload = null,
     enableDiagrams = false,
     workspaceId = null,
+    enablePageLinks = false,
     expectedContentHash = '',
     onBeforeDiagramOpen = async () => {},
     onDiagramPersisted = (_payload) => {},
@@ -110,6 +111,7 @@
       {onDeferredImageUpload}
       {enableDiagrams}
       {workspaceId}
+      {enablePageLinks}
       {expectedContentHash}
       {onBeforeDiagramOpen}
       {onDiagramPersisted}

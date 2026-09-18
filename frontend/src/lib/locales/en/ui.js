@@ -240,6 +240,8 @@ export default {
     insertImage: 'Insert Image',
     userNotFound: 'User not found',
     insertDiagram: 'Insert diagram',
+    insertPageLink: 'Insert knowledge page link',
+    searchPagesToLink: 'Search pages…',
     diagramEdit: 'Edit diagram',
     diagramOpen: 'Open diagram',
     diagramUntitled: 'Untitled diagram',

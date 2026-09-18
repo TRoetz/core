@@ -12,7 +12,7 @@
   import { nord } from '@milkdown/theme-nord';
   import '@milkdown/theme-nord/style.css';
   import { imageBlockComponent } from '@milkdown/kit/component/image-block';
-  import { Bold, Italic, Code, List, ListOrdered, Strikethrough, Image as ImageIcon, Workflow } from '@lucide/svelte';
+  import { Bold, Italic, Code, List, ListOrdered, Strikethrough, Image as ImageIcon, Workflow, BookOpen } from '@lucide/svelte';
   import { api } from '../api.js';
   import { confirm } from '../composables/useConfirm.js';
   import Tooltip from '../components/Tooltip.svelte';
@@ -36,6 +36,7 @@
     onDeferredImageUpload = null,
     enableDiagrams = false,
     workspaceId = null,
+    enablePageLinks = false,
     expectedContentHash = '',
     onBeforeDiagramOpen = async () => {},
     onDiagramPersisted = (_payload) => {},
@@ -44,6 +45,14 @@
 
   // Diagram modal state — only meaningful when enableDiagrams=true.
   let diagramModal = $state({ open: false, mode: 'create', attachmentId: null, name: '', getPos: null });
+
+  // Page-link picker state — only meaningful when enablePageLinks=true.
+  let pageLinkPickerOpen = $state(false);
+  let pageLinkQuery = $state('');
+  let pageLinkResults = $state([]);
+  let pageLinkSearching = $state(false);
+  let pageLinkTimer = null;
+  let pageLinkSearchVersion = 0;
 
   const effectivePlaceholder = $derived(placeholder || t('editors.enterText'));
 
@@ -612,6 +621,7 @@
       clearTimeout(toolbarHideTimer);
       toolbarHideTimer = null;
     }
+    clearTimeout(pageLinkTimer);
     if (editor) {
       try {
         await editor.destroy();
@@ -690,6 +700,60 @@
       editor.action(insert(imageMarkdown));
     } catch (error) {
       console.error('Failed to insert image:', error);
+    }
+  }
+
+  function togglePageLinkPicker() {
+    pageLinkPickerOpen = !pageLinkPickerOpen;
+    if (pageLinkPickerOpen) {
+      pageLinkQuery = '';
+      pageLinkResults = [];
+      pageLinkSearchVersion += 1;
+    }
+  }
+
+  function closePageLinkPicker() {
+    clearTimeout(pageLinkTimer);
+    pageLinkSearchVersion += 1;
+    pageLinkPickerOpen = false;
+  }
+
+  function handlePageLinkQuery(event) {
+    pageLinkQuery = event.currentTarget.value;
+    clearTimeout(pageLinkTimer);
+    const trimmed = pageLinkQuery.trim();
+    if (!trimmed || !workspaceId) {
+      pageLinkSearchVersion += 1;
+      pageLinkResults = [];
+      pageLinkSearching = false;
+      return;
+    }
+    pageLinkSearching = true;
+    const version = ++pageLinkSearchVersion;
+    pageLinkTimer = setTimeout(async () => {
+      try {
+        const result = await api.pages.searchPages(workspaceId, trimmed, { limit: 8 });
+        if (version !== pageLinkSearchVersion) return;
+        pageLinkResults = result?.results ?? (Array.isArray(result) ? result : []);
+      } catch (error) {
+        if (version !== pageLinkSearchVersion) return;
+        console.error('Page search failed:', error);
+        pageLinkResults = [];
+      } finally {
+        if (version === pageLinkSearchVersion) pageLinkSearching = false;
+      }
+    }, 250);
+  }
+
+  function insertPageLink(page) {
+    if (!editor || readonly || !page?.id) return;
+    const title = String(page.title || `Page ${page.id}`).replace(/[/\\]/g, ' ');
+    try {
+      editor.action(insert(`[${title}](page:${page.id})`));
+      closePageLinkPicker();
+      focus();
+    } catch (error) {
+      console.error('Failed to insert page link:', error);
     }
   }
 
@@ -812,6 +876,15 @@
           {/snippet}
         </Tooltip>
       {/if}
+      {#if enablePageLinks && workspaceId}
+        <Tooltip content={t('editors.insertPageLink')} placement="bottom">
+          {#snippet children()}
+            <button type="button" class="toolbar-btn" tabindex="-1" onclick={togglePageLinkPicker} aria-label={t('editors.insertPageLink')} data-testid="milkdown-insert-page-link">
+              <BookOpen size={14} />
+            </button>
+          {/snippet}
+        </Tooltip>
+      {/if}
     </div>
   {/if}
   <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
@@ -846,6 +919,41 @@
     {expectedContentHash}
     onSaved={handleDiagramSaved}
   />
+{/if}
+<!-- Page-link picker for inserting knowledge-page links -->
+{#if pageLinkPickerOpen}
+  <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+  <div class="page-link-picker" data-testid="page-link-picker" onclick={(e) => e.stopPropagation()}>
+    <input
+      type="text"
+      class="page-link-input"
+      placeholder={t('editors.searchPagesToLink')}
+      value={pageLinkQuery}
+      oninput={handlePageLinkQuery}
+      data-testid="page-link-search"
+    />
+    {#if pageLinkSearching}
+      <div class="page-link-empty">{t('common.searching')}</div>
+    {:else if pageLinkResults.length === 0}
+      <div class="page-link-empty">{t('common.noResults')}</div>
+    {:else}
+      <ul class="page-link-results">
+        {#each pageLinkResults as page (page.id)}
+          <li>
+            <button
+              type="button"
+              class="page-link-option"
+              data-testid="page-link-option"
+              onclick={() => insertPageLink(page)}
+            >
+              <BookOpen size={13} />
+              <span class="page-link-title">{page.title}</span>
+            </button>
+          </li>
+        {/each}
+      </ul>
+    {/if}
+  </div>
 {/if}
 <!-- Mention Picker for @ mentions -->
 <MentionPicker
@@ -1405,6 +1513,75 @@
   /* Name part of quoted mentions - needs @ prefix via CSS */
   :global(.mention-chip-name::before) {
     content: '@';
+  }
+
+  /* ===== Page-link picker styles ===== */
+  .page-link-picker {
+    background: var(--ds-surface-raised, white);
+    border: 1px solid var(--ds-border, #dfe1e6);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    width: 280px;
+    max-width: 100%;
+    padding: 6px;
+    margin-top: 4px;
+    z-index: 1000;
+  }
+
+  .page-link-input {
+    width: 100%;
+    box-sizing: border-box;
+    font-size: 13px;
+    padding: 6px 8px;
+    border: 1px solid var(--ds-border, #dfe1e6);
+    border-radius: 6px;
+    background: var(--ds-bg, white);
+    color: var(--ds-text, #172b4d);
+    margin-bottom: 4px;
+  }
+
+  .page-link-input:focus {
+    outline: none;
+    border-color: var(--ds-interactive, #2563eb);
+  }
+
+  .page-link-empty {
+    font-size: 12px;
+    color: var(--ds-text-subtle, #6b778c);
+    padding: 6px 4px;
+  }
+
+  .page-link-results {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-height: 200px;
+    overflow-y: auto;
+  }
+
+  .page-link-option {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    border-radius: 4px;
+    padding: 6px;
+    font-size: 13px;
+    color: var(--ds-text, #172b4d);
+    cursor: pointer;
+  }
+
+  .page-link-option:hover {
+    background: var(--ds-bg-subtle, #f4f5f7);
+  }
+
+  .page-link-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   /* ===== User Hover Card Styles ===== */

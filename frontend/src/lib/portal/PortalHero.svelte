@@ -128,7 +128,7 @@
                       class="block w-full text-left p-4 rounded border transition-all hover:shadow-md"
                       style="background-color: var(--ds-surface-raised); border-color: var(--ds-border);"
                       data-testid="kb-result-workspace-page"
-                      onclick={() => navigate(`/portal/${portalStore.currentSlug}/kb/${result.page_id}`)}
+                      onclick={() => navigate(`/portal/${portalStore.currentSlug}/kb/${result.page_id}?source=search`)}
                     >
                       <div class="flex items-start gap-3">
                         <div class="flex-shrink-0 mt-1">
@@ -142,8 +142,9 @@
                             <p class="text-xs mb-1" style="color: var(--ds-text-subtle);">{result.heading_path}</p>
                           {/if}
                           {#if result.highlight}
-                            <p class="text-sm line-clamp-2 mb-1" style="color: var(--ds-text-subtle);">
-                              {result.highlight}
+                            <p class="text-sm line-clamp-2 mb-1" style="color: var(--ds-text-subtle);"
+                               data-testid="kb-result-highlight">
+                              {result.highlight.replace(/<[^>]*>/g, '')}
                             </p>
                           {/if}
                           <span
@@ -245,14 +246,5 @@
     line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
-  }
-
-  /* Style for search term highlights in knowledge base results */
-  .line-clamp-2 :global(b) {
-    font-weight: 600;
-    color: var(--ds-interactive, #2563eb);
-    background-color: var(--ds-interactive-subtle, #eff6ff);
-    padding: 0 2px;
-    border-radius: 2px;
   }
 </style>

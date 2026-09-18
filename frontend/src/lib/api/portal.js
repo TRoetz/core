@@ -77,8 +77,10 @@ export const portal = {
     }),
 
   /** Fetch one workspace page published through the portal knowledge base. */
-  getKnowledgeBasePage: (slug, pageId) =>
-    fetchAPI(`/portal/${slug}/knowledge-base/pages/${pageId}`),
+  getKnowledgeBasePage: (slug, pageId, source = '') =>
+    fetchAPI(
+      `/portal/${slug}/knowledge-base/pages/${pageId}${source ? `?source=${encodeURIComponent(source)}` : ''}`
+    ),
 
   /** Browse listing of published knowledge-base pages (titles + hierarchy). */
   listKnowledgeBasePages: (slug) => fetchAPI(`/portal/${slug}/knowledge-base/pages`),

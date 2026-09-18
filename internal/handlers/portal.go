@@ -51,12 +51,37 @@ type PortalHandler struct {
 	attachmentPath       string
 	eventCoordinator     *services.EventCoordinator
 	publication          *services.KnowledgePublicationService
+	kbSignals            *services.KBSignalService
 }
 
 // SetKnowledgePublicationService wires the resolver for workspace pages
 // published through portal knowledge bases.
 func (h *PortalHandler) SetKnowledgePublicationService(s *services.KnowledgePublicationService) {
 	h.publication = s
+}
+
+// SetKBSignalService wires the knowledge-base usage-signal recorder. Optional
+// — when unset the KB endpoints serve normally but record no events.
+func (h *PortalHandler) SetKBSignalService(s *services.KBSignalService) {
+	h.kbSignals = s
+}
+
+// portalKBPageLinkResolver maps page:<id> anchors in portal-visible HTML to
+// in-portal article URLs. Only pages published through this portal's KB
+// wiring resolve; everything else returns false so the anchor is stripped to
+// plain text and the portal never renders a dead link or leaks the existence
+// of an unpublished/restricted page. Links carry source=ticket so the view
+// signal attributes them to the assisted (ticket) context.
+func (h *PortalHandler) portalKBPageLinkResolver(config models.ChannelConfig) func(pageID int) (string, bool) {
+	return func(pageID int) (string, bool) {
+		if h.publication == nil || len(config.KnowledgeBasePageSources) == 0 {
+			return "", false
+		}
+		if _, err := h.publication.PublishedPageForPortal(config, pageID); err != nil {
+			return "", false
+		}
+		return fmt.Sprintf("/portal/%s/kb/%d?source=ticket", config.PortalSlug, pageID), true
+	}
 }
 
 // SetApprovalService wires the approval service so portal customers can
@@ -830,7 +855,7 @@ func (h *PortalHandler) SubmitToPortal(w http.ResponseWriter, r *http.Request) {
 // from the connected Docmost share (if configured) plus the workspace pages
 // the channel manager wired into the knowledge base.
 func (h *PortalHandler) SearchKnowledgeBase(w http.ResponseWriter, r *http.Request) {
-	ctx, cancel, _, config, ok := h.resolvePortalBySlug(w, r)
+	ctx, cancel, channel, config, ok := h.resolvePortalBySlug(w, r)
 	if !ok {
 		return
 	}
@@ -887,9 +912,38 @@ func (h *PortalHandler) SearchKnowledgeBase(w http.ResponseWriter, r *http.Reque
 		}
 	}
 
+	h.recordKBSearch(r, channel.ID, searchRequest.Query, len(data))
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_ = json.NewEncoder(w).Encode(map[string]any{"data": data})
+}
+
+// recordKBSearch records the search/no_result signal for one knowledge-base
+// query. Only portal-customer sessions are attributed — staff previews
+// record nothing. Failures are logged, never surfaced: analytics must not
+// break the user-facing path.
+func (h *PortalHandler) recordKBSearch(r *http.Request, channelID int, query string, hitCount int) {
+	if h.kbSignals == nil {
+		return
+	}
+	_, customerID := h.getAuthFromContext(r)
+	if customerID == nil {
+		return
+	}
+	eventType := services.KBEventSearch
+	if hitCount == 0 {
+		eventType = services.KBEventNoResult
+	}
+	err := h.kbSignals.RecordKBEvent(r.Context(), services.KBEventInput{
+		ChannelID:        channelID,
+		PortalCustomerID: customerID,
+		EventType:        eventType,
+		Query:            query,
+	})
+	if err != nil {
+		slog.Warn("failed to record knowledge-base search signal", slog.Any("error", err))
+	}
 }
 
 // knowledgeBasePageSearchLimit caps how many published workspace pages one
@@ -1021,7 +1075,7 @@ func (h *PortalHandler) ListKnowledgeBasePages(w http.ResponseWriter, r *http.Re
 // callers. The page must be inside a subtree (or whole-workspace wiring)
 // this portal's knowledge base publishes; anything else is 404.
 func (h *PortalHandler) GetKnowledgeBasePage(w http.ResponseWriter, r *http.Request) {
-	_, cancel, _, config, ok := h.resolvePortalBySlug(w, r)
+	_, cancel, channel, config, ok := h.resolvePortalBySlug(w, r)
 	if !ok {
 		return
 	}
@@ -1042,6 +1096,7 @@ func (h *PortalHandler) GetKnowledgeBasePage(w http.ResponseWriter, r *http.Requ
 		respondError(w, r, restapi.NewAPIError(http.StatusNotFound, restapi.ErrCodeNotFound, "Page not found"))
 		return
 	}
+	h.recordKBPageView(r, channel.ID, page)
 	respondJSONOK(w, map[string]any{
 		"source":       "workspace_page",
 		"page_id":      page.ID,
@@ -1050,6 +1105,63 @@ func (h *PortalHandler) GetKnowledgeBasePage(w http.ResponseWriter, r *http.Requ
 		"content":      page.Content,
 		"updated_at":   page.UpdatedAt,
 	})
+}
+
+// recordKBPageView records the view signal for one served article, plus the
+// deflection signal under the v1 rule: an authenticated portal customer who
+// reaches the article through self-service (search or browse) while having no
+// open requests on this portal counts as deflected. Views opened from a
+// ticket conversation are assisted reads, not self-service; staff previews
+// record nothing.
+func (h *PortalHandler) recordKBPageView(r *http.Request, channelID int, page *models.Page) {
+	if h.kbSignals == nil {
+		return
+	}
+	_, customerID := h.getAuthFromContext(r)
+	if customerID == nil {
+		return
+	}
+	source := normalizedKBViewSource(r.URL.Query().Get("source"))
+	pageID := page.ID
+	workspaceID := page.WorkspaceID
+	input := services.KBEventInput{
+		ChannelID:        channelID,
+		PortalCustomerID: customerID,
+		EventType:        services.KBEventView,
+		PageID:           &pageID,
+		WorkspaceID:      &workspaceID,
+		Source:           source,
+	}
+	if err := h.kbSignals.RecordKBEvent(r.Context(), input); err != nil {
+		slog.Warn("failed to record knowledge-base view signal", slog.Any("error", err))
+		return
+	}
+	if source == services.KBViewSourceTicket {
+		return
+	}
+	open, err := h.kbSignals.PortalCustomerHasOpenRequests(r.Context(), channelID, *customerID)
+	if err != nil {
+		slog.Warn("failed to check open requests for deflection signal", slog.Any("error", err))
+		return
+	}
+	if open {
+		return
+	}
+	input.EventType = services.KBEventDeflection
+	if err := h.kbSignals.RecordKBEvent(r.Context(), input); err != nil {
+		slog.Warn("failed to record knowledge-base deflection signal", slog.Any("error", err))
+	}
+}
+
+// normalizedKBViewSource maps the frontend-reported navigation origin onto
+// the known sources; anything unrecognized counts as browse.
+func normalizedKBViewSource(raw string) string {
+	switch raw {
+	case services.KBViewSourceSearch, services.KBViewSourceTicket:
+		return raw
+	default:
+		return services.KBViewSourceBrowse
+	}
 }
 
 // DownloadPortalAttachment serves portal branding attachments (logos, backgrounds) without authentication

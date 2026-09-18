@@ -1337,6 +1337,52 @@ var Catalog = []Migration{
 		// SQLite cannot drop the inline UNIQUE(name) without a table rebuild.
 		ApplySQLite: applySQLitePersonalLabelsPerUserUnique,
 	},
+	{
+		Version:       "20260918_kb_events",
+		Name:          "Add portal knowledge-base usage-signal event log",
+		CheckSQLite:   sqliteTableCheck("kb_events"),
+		CheckPostgres: pgTableCheck("kb_events"),
+		SQLite: `
+			CREATE TABLE kb_events (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				channel_id INTEGER NOT NULL,
+				portal_customer_id INTEGER,
+				event_type TEXT NOT NULL,
+				page_id INTEGER,
+				workspace_id INTEGER,
+				source TEXT,
+				query TEXT,
+				created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+				FOREIGN KEY (channel_id) REFERENCES channels(id) ON DELETE CASCADE,
+				FOREIGN KEY (portal_customer_id) REFERENCES portal_customers(id) ON DELETE SET NULL,
+				FOREIGN KEY (page_id) REFERENCES pages(id) ON DELETE SET NULL,
+				CHECK (event_type IN ('search', 'no_result', 'view', 'deflection'))
+			);
+			CREATE INDEX idx_kb_events_channel_created ON kb_events(channel_id, created_at);
+			CREATE INDEX idx_kb_events_type_created ON kb_events(event_type, created_at);
+			CREATE INDEX idx_kb_events_customer_created ON kb_events(portal_customer_id, created_at);
+		`,
+		Postgres: `
+			CREATE TABLE kb_events (
+				id SERIAL PRIMARY KEY,
+				channel_id INTEGER NOT NULL,
+				portal_customer_id INTEGER,
+				event_type TEXT NOT NULL,
+				page_id INTEGER,
+				workspace_id INTEGER,
+				source TEXT,
+				query TEXT,
+				created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+				FOREIGN KEY (channel_id) REFERENCES channels(id) ON DELETE CASCADE,
+				FOREIGN KEY (portal_customer_id) REFERENCES portal_customers(id) ON DELETE SET NULL,
+				FOREIGN KEY (page_id) REFERENCES pages(id) ON DELETE SET NULL,
+				CHECK (event_type IN ('search', 'no_result', 'view', 'deflection'))
+			);
+			CREATE INDEX idx_kb_events_channel_created ON kb_events(channel_id, created_at);
+			CREATE INDEX idx_kb_events_type_created ON kb_events(event_type, created_at);
+			CREATE INDEX idx_kb_events_customer_created ON kb_events(portal_customer_id, created_at);
+		`,
+	},
 }
 
 func applySQLitePersonalLabelsPerUserUnique(db Database) (retErr error) {

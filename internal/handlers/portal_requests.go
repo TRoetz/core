@@ -8,21 +8,22 @@ import (
 	"strings"
 
 	"windshift/internal/markdown"
+	"windshift/internal/models"
 	"windshift/internal/validation"
 )
 
 // resolvePortalRequest authorizes a request owner or active approver.
 // Approver access permits reading and commenting only and ends with the pending
 // approval step. On success callers must defer cancel.
-func (h *PortalHandler) resolvePortalRequest(w http.ResponseWriter, r *http.Request) (itemID int, internalUserID *int, portalCustomerID *int, ctx context.Context, cancel context.CancelFunc, ok bool) { //nolint:gocritic // multiple results needed for this complex guard
+func (h *PortalHandler) resolvePortalRequest(w http.ResponseWriter, r *http.Request) (itemID int, config models.ChannelConfig, internalUserID *int, portalCustomerID *int, ctx context.Context, cancel context.CancelFunc, ok bool) { //nolint:gocritic // multiple results needed for this complex guard
 	itemID, itemOK := requireIDParam(w, r, "itemId")
 	if !itemOK {
-		return 0, nil, nil, nil, nil, false
+		return 0, models.ChannelConfig{}, nil, nil, nil, nil, false
 	}
 
-	ctx, cancel, channel, _, portalOK := h.resolvePortalBySlug(w, r)
+	ctx, cancel, channel, config, portalOK := h.resolvePortalBySlug(w, r)
 	if !portalOK {
-		return 0, nil, nil, nil, nil, false
+		return 0, models.ChannelConfig{}, nil, nil, nil, nil, false
 	}
 
 	// Get auth info from context (middleware already validated)
@@ -33,10 +34,10 @@ func (h *PortalHandler) resolvePortalRequest(w http.ResponseWriter, r *http.Requ
 	if err != nil {
 		cancel()
 		respondInternalError(w, r, err)
-		return 0, nil, nil, nil, nil, false
+		return 0, models.ChannelConfig{}, nil, nil, nil, nil, false
 	}
 	if isOwner {
-		return itemID, internalUserID, portalCustomerID, ctx, cancel, true
+		return itemID, config, internalUserID, portalCustomerID, ctx, cancel, true
 	}
 
 	// Active-approver branch. Only consulted when ownership failed; approvers
@@ -49,16 +50,16 @@ func (h *PortalHandler) resolvePortalRequest(w http.ResponseWriter, r *http.Requ
 		if aerr != nil {
 			cancel()
 			respondInternalError(w, r, aerr)
-			return 0, nil, nil, nil, nil, false
+			return 0, models.ChannelConfig{}, nil, nil, nil, nil, false
 		}
 		if isApprover {
-			return itemID, internalUserID, portalCustomerID, ctx, cancel, true
+			return itemID, config, internalUserID, portalCustomerID, ctx, cancel, true
 		}
 	}
 
 	cancel()
 	respondNotFound(w, r, "item")
-	return 0, nil, nil, nil, nil, false
+	return 0, models.ChannelConfig{}, nil, nil, nil, nil, false
 }
 
 // callerIsActiveApproverOnItem checks the approver pool for whichever auth
@@ -109,7 +110,7 @@ func (h *PortalHandler) GetMyRequests(w http.ResponseWriter, r *http.Request) {
 
 // GetRequestDetail returns detailed information about a specific request
 func (h *PortalHandler) GetRequestDetail(w http.ResponseWriter, r *http.Request) {
-	itemID, _, _, ctx, cancel, ok := h.resolvePortalRequest(w, r)
+	itemID, config, _, _, ctx, cancel, ok := h.resolvePortalRequest(w, r)
 	if !ok {
 		return
 	}
@@ -126,12 +127,17 @@ func (h *PortalHandler) GetRequestDetail(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	// Page links in the description resolve to in-portal KB articles when the
+	// page is published through this portal; otherwise they lose the anchor so
+	// customers never see a dead or existence-leaking link.
+	detail.DescriptionHTML = markdown.RewritePageLinks(detail.DescriptionHTML, h.portalKBPageLinkResolver(config))
+
 	respondJSONOK(w, detail)
 }
 
 // GetRequestComments returns comments for a specific request
 func (h *PortalHandler) GetRequestComments(w http.ResponseWriter, r *http.Request) {
-	itemID, _, _, ctx, cancel, ok := h.resolvePortalRequest(w, r)
+	itemID, config, _, _, ctx, cancel, ok := h.resolvePortalRequest(w, r)
 	if !ok {
 		return
 	}
@@ -144,12 +150,20 @@ func (h *PortalHandler) GetRequestComments(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	// Rewrite agent-inserted page links the same way as the description:
+	// published-through-this-portal pages become in-portal article links,
+	// anything else degrades to plain text.
+	resolver := h.portalKBPageLinkResolver(config)
+	for i := range comments {
+		comments[i].ContentHTML = markdown.RewritePageLinks(comments[i].ContentHTML, resolver)
+	}
+
 	respondJSONOK(w, comments)
 }
 
 // AddRequestComment adds a comment to a request from a portal customer or internal user
 func (h *PortalHandler) AddRequestComment(w http.ResponseWriter, r *http.Request) {
-	itemID, internalUserID, portalCustomerID, ctx, cancel, ok := h.resolvePortalRequest(w, r)
+	itemID, _, internalUserID, portalCustomerID, ctx, cancel, ok := h.resolvePortalRequest(w, r)
 	if !ok {
 		return
 	}

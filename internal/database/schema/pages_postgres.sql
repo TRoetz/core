@@ -169,3 +169,28 @@ ON CONFLICT (role_id, permission_id) DO NOTHING;
 INSERT INTO system_settings (key, value, value_type, description, category) VALUES
     ('knowledge.full_text_search_enabled', 'true', 'boolean', 'Enable full-text knowledge search', 'knowledge')
 ON CONFLICT (key) DO NOTHING;
+
+-- Portal knowledge-base usage signals (WI-1134). Insert-only event log:
+-- search / no_result / view / deflection rows recorded by the portal KB
+-- endpoints. Stores IDs and the submitted query only — never page content —
+-- so unauthorized bodies can never leak through analytics. Lives here because
+-- every FK target (channels, portal_customers, pages) exists earlier in the
+-- fresh-install load order.
+CREATE TABLE IF NOT EXISTS kb_events (
+	id SERIAL PRIMARY KEY,
+	channel_id INTEGER NOT NULL,
+	portal_customer_id INTEGER,
+	event_type TEXT NOT NULL,
+	page_id INTEGER,
+	workspace_id INTEGER,
+	source TEXT,
+	query TEXT,
+	created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+	FOREIGN KEY (channel_id) REFERENCES channels(id) ON DELETE CASCADE,
+	FOREIGN KEY (portal_customer_id) REFERENCES portal_customers(id) ON DELETE SET NULL,
+	FOREIGN KEY (page_id) REFERENCES pages(id) ON DELETE SET NULL,
+	CHECK (event_type IN ('search', 'no_result', 'view', 'deflection'))
+);
+CREATE INDEX IF NOT EXISTS idx_kb_events_channel_created ON kb_events(channel_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_kb_events_type_created ON kb_events(event_type, created_at);
+CREATE INDEX IF NOT EXISTS idx_kb_events_customer_created ON kb_events(portal_customer_id, created_at);

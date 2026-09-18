@@ -28,7 +28,11 @@
     loading = true;
     error = '';
     try {
-      const result = await api.portal.getKnowledgeBasePage(slug, pageId);
+      // The navigation origin rides on the query string (search results append
+      // ?source=search, ticket-conversation links ?source=ticket); anything
+      // else is a plain browse view.
+      const source = new URLSearchParams(window.location.search).get('source') || '';
+      const result = await api.portal.getKnowledgeBasePage(slug, pageId, source);
       if (seq !== requestSeq) return;
       page = result;
     } catch (err) {

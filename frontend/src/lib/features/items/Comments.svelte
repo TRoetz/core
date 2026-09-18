@@ -618,6 +618,7 @@
 						{itemId}
 						{workspaceId}
 						{isPersonalWorkspace}
+						enablePageLinks={true}
 					/>
 				</div>
 				<div class="flex items-center justify-between mt-3">
