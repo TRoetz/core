@@ -95,8 +95,10 @@ ${t('personal.placeholderImprovements')}`;
     currentDate = formatDate(new Date());
   }
 
-  // Load completed items for the date range
-  async function loadCompletedItems() {
+  // Load completed items for the date range. Callers pass their request
+  // generation so a superseded load cannot overwrite completedItems/itemTypes
+  // with results for an older date (WI-1419).
+  async function loadCompletedItems(generation = reviewGeneration) {
     try {
       let startDate, endDate;
 
@@ -112,9 +114,11 @@ ${t('personal.placeholderImprovements')}`;
         api.reviews.getCompletedItems(startDate, endDate),
         api.itemTypes.getAll()
       ]);
+      if (generation !== reviewGeneration) return;
       completedItems = items || [];
       itemTypes = types || [];
     } catch (error) {
+      if (generation !== reviewGeneration) return;
       console.error('Failed to load completed items:', error);
       completedItems = [];
     }
@@ -129,7 +133,7 @@ ${t('personal.placeholderImprovements')}`;
     const generation = ++reviewGeneration;
     loading = true;
     try {
-      await loadCompletedItems();
+      await loadCompletedItems(generation);
       if (generation !== reviewGeneration) return;
 
       const reviews = await api.reviews.getAll({
@@ -322,6 +326,7 @@ ${t('personal.placeholderImprovements')}`;
         <!-- Date Navigation -->
         <div class="flex items-center space-x-2">
           <button
+            data-testid="review-nav-prev"
             class="p-2 rounded transition-colors"
             style="color: var(--ds-text-subtle); hover:background-color: var(--ds-background-neutral-hovered);"
             onclick={() => navigateDate(-1)}
@@ -334,6 +339,7 @@ ${t('personal.placeholderImprovements')}`;
             class="w-auto border-0 bg-transparent cursor-pointer px-2 py-1"
           />
           <button
+            data-testid="review-nav-next"
             class="p-2 rounded transition-colors"
             style="color: var(--ds-text-subtle); hover:background-color: var(--ds-background-neutral-hovered);"
             onclick={() => navigateDate(1)}
