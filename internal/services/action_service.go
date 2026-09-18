@@ -3153,6 +3153,8 @@ func matchURLComponent(component, pattern string) bool {
 
 // doHTTPRequest enforces the URL allowlist on every redirect and blocks
 // loopback, private, and link-local destinations to prevent SSRF and rebinding.
+// Destination blocking honors the process-wide ALLOW_LOCAL_CONNECTIONS switch
+// via utils.IsBlockedSSRFAddr, like every other server-side HTTP client.
 func doHTTPRequest(ctx context.Context, method, targetURL, body string, headers, defaultHeaders map[string]string, timeoutSecs int, allowedPatterns []string) (string, error) {
 	if timeoutSecs <= 0 {
 		timeoutSecs = 30
@@ -3216,8 +3218,8 @@ func newSSRFSafeClient(timeout time.Duration, allowedPatterns []string) *http.Cl
 			if ip == nil {
 				return fmt.Errorf("dial host %q did not resolve to an IP", host)
 			}
-			if isBlockedIP(ip) {
-				return fmt.Errorf("dial to %s on %s blocked: non-public address", ip.String(), network)
+			if utils.IsBlockedSSRFAddr(ip) {
+				return fmt.Errorf("%w: %s (%s)", utils.ErrBlockedSSRFAddr, ip.String(), network)
 			}
 			return nil
 		},
@@ -3301,24 +3303,6 @@ func redactHTTPRequestError(err error) string {
 		return fmt.Sprintf("%s %q: %s", urlErr.Op, redactHTTPURLForDiagnostics(urlErr.URL), RedactString(urlErr.Err.Error()))
 	}
 	return RedactString(err.Error())
-}
-
-// isBlockedIP reports whether an IP is on a network we never want server-side
-// automation to reach: loopback, unspecified, link-local (including cloud
-// metadata services at 169.254.169.254), RFC1918 private ranges, carrier-grade
-// NAT, and IPv6 ULA / link-local.
-func isBlockedIP(ip net.IP) bool {
-	if ip.IsLoopback() || ip.IsUnspecified() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() || ip.IsMulticast() || ip.IsPrivate() {
-		return true
-	}
-	// Carrier-grade NAT range 100.64.0.0/10 is not caught by IsPrivate.
-	if v4 := ip.To4(); v4 != nil {
-		_, cgnat, _ := net.ParseCIDR("100.64.0.0/10")
-		if cgnat.Contains(v4) {
-			return true
-		}
-	}
-	return false
 }
 
 // truncateString truncates a string to n characters.
