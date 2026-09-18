@@ -573,6 +573,8 @@ export default {
     workspaceKeyPlaceholder: 'Ej.: DEV, TEST, PROD',
     workspaceKeyHelp: 'Se usa como prefijo para los elementos (ej.: DEV-123). Solo letras mayúsculas y números.',
     workspaceKeyImmutable: 'Se usa como prefijo para los elementos (ej.: DEV-123). No se puede cambiar tras la creación.',
+    workspaceKeyPersonalHint: 'Se usa como prefijo para los elementos (ej.: P1-12). Los espacios personales pueden cambiarlo; las claves de los elementos cambian con él.',
+    invalidWorkspaceKey: 'La clave del espacio debe tener de 2 a 10 letras o dígitos (A-Z, 0-9).',
     description: 'Descripción',
     descriptionPlaceholder: 'Descripción opcional para este espacio de trabajo',
     defaultTimeProject: 'Proyecto de seguimiento de tiempo predeterminado',

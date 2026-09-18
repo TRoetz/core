@@ -761,6 +761,8 @@ export default {
     workspaceKeyPlaceholder: 'e.g., DEV, TEST, PROD',
     workspaceKeyHelp: 'Used for item prefixes (e.g., DEV-123). Uppercase letters and numbers only.',
     workspaceKeyImmutable: 'Used for item prefixes (e.g., DEV-123). Cannot be changed after creation.',
+    workspaceKeyPersonalHint: 'Used for item prefixes (e.g., P1-12). Personal workspaces can change it; item keys change with it.',
+    invalidWorkspaceKey: 'Workspace key must be 2-10 letters or digits (A-Z, 0-9).',
     description: 'Description',
     descriptionPlaceholder: 'Optional description for this workspace',
     defaultTimeProject: 'Default Time Tracking Project',

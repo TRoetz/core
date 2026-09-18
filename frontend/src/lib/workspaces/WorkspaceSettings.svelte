@@ -197,18 +197,34 @@
       return;
     }
 
+    // Workspace key format guard (personal workspaces only — the API rejects
+    // key changes for regular workspaces).
+    const normalizedKey = formData.key.trim().toUpperCase();
+    if (workspace?.is_personal) {
+      if (!/^[A-Z0-9]{2,10}$/.test(normalizedKey)) {
+        errorToast(t('workspaceSettings.invalidWorkspaceKey'));
+        return;
+      }
+    }
+
     // The workspace can change under the component while the request is in
     // flight, so pin what this save is about before awaiting. Effects then
     // split: what the server actually changed is applied unconditionally,
     // what describes the view is applied only if we are still on that target.
-    // The API treats the workspace key as immutable; PATCH rejects it.
+    // The key is editable only for personal workspaces; changes are sent so a
+    // rename re-renders the owner's item keys.
     const targetId = workspaceId;
     const { key: _key, ...patchFields } = formData;
+    /** @type {Record<string, unknown>} */
     const payload = {
       ...patchFields,
       time_project_id: formData.time_project_id ? parseInt(formData.time_project_id, 10) : null,
       time_project_categories: selectedTimeProjectCategories
     };
+    const keyChanged = workspace?.is_personal && normalizedKey !== (workspace.key || '').toUpperCase();
+    if (keyChanged) {
+      payload.key = normalizedKey;
+    }
 
     try {
       saving = true;
@@ -217,7 +233,8 @@
       // Update stores so sidebar dropdown reflects name/description changes immediately
       workspacesStore.updateWorkspace(targetId, {
         name: payload.name,
-        description: payload.description
+        description: payload.description,
+        ...(keyChanged ? { key: normalizedKey } : {})
       });
 
       if (targetId !== workspaceId) return;
@@ -328,12 +345,14 @@
               label={t('workspaceSettings.workspaceKey')}
               id="workspace-key"
               placeholder={t('workspaceSettings.workspaceKeyPlaceholder')}
-              disabled
+              disabled={!workspace?.is_personal}
               dataTestid="workspace-key-input"
               bind:value={formData.key}
             />
             <DescriptionText>
-              {t('workspaceSettings.workspaceKeyImmutable')}
+              {workspace?.is_personal
+                ? t('workspaceSettings.workspaceKeyPersonalHint')
+                : t('workspaceSettings.workspaceKeyImmutable')}
             </DescriptionText>
           </div>
         </div>

@@ -573,6 +573,8 @@ export default {
     workspaceKeyPlaceholder: 'ex.: DEV, TEST, PROD',
     workspaceKeyHelp: 'Usada como prefixo de itens (ex.: DEV-123). Apenas letras maiúsculas e números.',
     workspaceKeyImmutable: 'Usada como prefixo de itens (ex.: DEV-123). Não pode ser alterada após a criação.',
+    workspaceKeyPersonalHint: 'Usada como prefixo de itens (ex.: P1-12). Workspaces pessoais podem alterá-la; as chaves de itens mudam junto.',
+    invalidWorkspaceKey: 'A chave do workspace deve ter de 2 a 10 letras ou dígitos (A-Z, 0-9).',
     description: 'Descrição',
     descriptionPlaceholder: 'Descrição opcional para este workspace',
     defaultTimeProject: 'Projeto Padrão de Controle de Tempo',

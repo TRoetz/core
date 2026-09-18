@@ -2,6 +2,7 @@ import { derived, writable } from 'svelte/store';
 import { setAPIRequestSessionKey } from '../api/core.js';
 import { api } from '../api.js';
 import { clearStores, getStoreValue } from './storeUtils.js';
+import { workspacesStore } from './workspaces.svelte.js';
 
 function policyValue(error, field) {
   return error?.[field] ?? error?.body?.[field];
@@ -18,6 +19,14 @@ function createAuthStore() {
   const isAuthenticated = writable(false);
   const loading = writable(false);
   const error = writable(null);
+
+  // Identity-scoped stores (workspace list, personal workspace id) must never
+  // survive an un-authentication event — the next login belongs to a
+  // potentially different user.
+  function resetIdentity() {
+    clearStores(user, session, error);
+    workspacesStore.clear();
+  }
 
   // Create a combined derived store for easy subscription
   const combined = derived(
@@ -208,7 +217,7 @@ function createAuthStore() {
         console.warn('Logout API call failed:', err);
       }
 
-      clearStores(user, session, error);
+      resetIdentity();
       isAuthenticated.set(false);
       loading.set(false);
     },
@@ -223,7 +232,7 @@ function createAuthStore() {
         console.warn('Logout all API call failed:', err);
       }
 
-      clearStores(user, session, error);
+      resetIdentity();
       isAuthenticated.set(false);
       loading.set(false);
     },
@@ -264,7 +273,7 @@ function createAuthStore() {
 
     // Clear authentication (called on 401 errors)
     clearAuth() {
-      clearStores(user, session);
+      resetIdentity();
       isAuthenticated.set(false);
       loading.set(false);
       error.set('Session expired. Please log in again.');

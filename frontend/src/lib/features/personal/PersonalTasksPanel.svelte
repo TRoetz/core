@@ -142,7 +142,13 @@
 
   // Create a new personal task linked to this work item
   async function handleAddTask() {
-    if (!newTaskTitle.trim() || !personalWorkspace) return;
+    if (!newTaskTitle.trim()) return;
+    if (!personalWorkspace) {
+      // Reachable only if the store failed to provision a personal workspace;
+      // surface it instead of silently dropping the action (WI-1390).
+      error = t('personal.noPersonalWorkspace');
+      return;
+    }
 
     try {
       adding = true;
@@ -201,9 +207,11 @@
 
   // Navigate to task detail
   function handleNavigateToTask(task) {
-    if (personalWorkspace) {
-      navigate(`/personal/items/${task.id}`);
+    if (!personalWorkspace) {
+      error = t('personal.noPersonalWorkspace');
+      return;
     }
+    navigate(`/personal/items/${task.id}`);
   }
 
   onMount(() => {
@@ -258,8 +266,8 @@
     </div>
     <div class="flex items-center gap-1">
       <button
-        class="p-1 rounded transition-colors opacity-40 group-hover:opacity-100"
-        class:invisible={showAddForm || !expanded || !personalWorkspace}
+        class="p-1 rounded transition-colors opacity-40 group-hover:opacity-100 disabled:opacity-20 disabled:cursor-not-allowed"
+        disabled={!personalWorkspace || showAddForm || !expanded}
         onclick={(e) => { e.stopPropagation(); showAddForm = true; }}
         title={t('personal.addPersonalTask')}
       >

@@ -699,6 +699,8 @@ export default {
     "workspaceKeyPlaceholder": "예: DEV, TEST, PROD",
     "workspaceKeyHelp": "작업 접두사에 사용합니다(예: DEV-123). 영문 대문자와 숫자만 가능합니다.",
     "workspaceKeyImmutable": "작업 접두사에 사용합니다(예: DEV-123). 생성 후 변경할 수 없습니다.",
+    "workspaceKeyPersonalHint": "작업 접두사로 사용됩니다(예: P1-12). 개인 워크스페이스에서는 변경할 수 있으며, 작업 키도 함께 변경됩니다.",
+    "invalidWorkspaceKey": "워크스페이스 키는 영문 대문자와 숫자 2-10자여야 합니다.",
     "description": "설명",
     "descriptionPlaceholder": "워크스페이스 설명(선택 사항)",
     "defaultTimeProject": "기본 시간 기록 프로젝트",

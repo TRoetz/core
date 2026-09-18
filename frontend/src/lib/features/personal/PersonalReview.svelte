@@ -120,11 +120,17 @@ ${t('personal.placeholderImprovements')}`;
     }
   }
 
-  // Load existing review for the current date and type
+  // Load existing review for the current date and type. A request-generation
+  // guard discards stale responses when the user navigates faster than the
+  // network resolves (WI-1386): without it, reviewContent/existingReview could
+  // end up belonging to an older date while autosave stamps the current one.
+  let reviewGeneration = 0;
   async function loadReview() {
+    const generation = ++reviewGeneration;
     loading = true;
     try {
       await loadCompletedItems();
+      if (generation !== reviewGeneration) return;
 
       const reviews = await api.reviews.getAll({
         type: reviewType,
@@ -132,6 +138,8 @@ ${t('personal.placeholderImprovements')}`;
         end_date: currentDate,
         limit: 1
       });
+
+      if (generation !== reviewGeneration) return;
 
       if (reviews && reviews.length > 0) {
         existingReview = reviews[0];
@@ -154,9 +162,13 @@ ${t('personal.placeholderImprovements')}`;
       }
       previousContent = reviewContent;
     } catch (error) {
-      console.error('Failed to load review:', error);
+      if (generation === reviewGeneration) {
+        console.error('Failed to load review:', error);
+      }
     } finally {
-      loading = false;
+      if (generation === reviewGeneration) {
+        loading = false;
+      }
     }
   }
 

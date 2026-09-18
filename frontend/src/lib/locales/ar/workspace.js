@@ -573,6 +573,8 @@ export default {
     workspaceKeyPlaceholder: 'مثال: DEV, TEST, PROD',
     workspaceKeyHelp: 'يُستخدم كبادئة للعناصر (مثال: DEV-123). أحرف كبيرة وأرقام فقط.',
     workspaceKeyImmutable: 'يُستخدم كبادئة للعناصر (مثال: DEV-123). لا يمكن تغييره بعد الإنشاء.',
+    workspaceKeyPersonalHint: 'يُستخدم كبادئة للعناصر (مثال: P1-12). يمكن تغييره في مساحات العمل الشخصية، وتتغير بادئات العناصر معه.',
+    invalidWorkspaceKey: 'يجب أن يتكون مفتاح مساحة العمل من 2 إلى 10 أحرف أو أرقام (A-Z، 0-9).',
     description: 'الوصف',
     descriptionPlaceholder: 'وصف اختياري لمساحة العمل هذه',
     defaultTimeProject: 'مشروع تتبع الوقت الافتراضي',

@@ -577,6 +577,8 @@ export default {
     workspaceKeyPlaceholder: 'z.B. DEV, TEST, PROD',
     workspaceKeyHelp: 'Wird für Element-Präfixe verwendet (z.B. DEV-123). Nur Großbuchstaben und Zahlen.',
     workspaceKeyImmutable: 'Wird für Element-Präfixe verwendet (z.B. DEV-123). Nach dem Anlegen nicht änderbar.',
+    workspaceKeyPersonalHint: 'Wird für Element-Präfixe verwendet (z.B. P1-12). Persönliche Workspaces können ihn ändern; Element-Schlüssel ändern sich mit.',
+    invalidWorkspaceKey: 'Der Workspace-Schlüssel muss aus 2-10 Buchstaben oder Ziffern bestehen (A-Z, 0-9).',
     description: 'Beschreibung',
     descriptionPlaceholder: 'Optionale Beschreibung für diesen Arbeitsbereich',
     defaultTimeProject: 'Standard-Zeiterfassungsprojekt',

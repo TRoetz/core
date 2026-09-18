@@ -169,11 +169,13 @@
     }
   }
 
-  // Check if item is from personal workspace (should be checkbox)
+  // Check if item is from personal workspace (should be checkbox).
+  // Compare against the actual personal workspace id — name matching breaks
+  // for renamed personal workspaces and shared workspaces named "Personal …"
+  // (WI-1385).
   function isPersonalWorkspaceItem(item) {
-    return item.workspace_name === "User's Todo List" ||
-           item.workspace_name?.toLowerCase().includes('personal') ||
-           item.workspace_name?.toLowerCase().includes('todo');
+    const workspace = $workspacesStore.personalWorkspace;
+    return item.workspace_id != null && workspace?.id != null && item.workspace_id === workspace.id;
   }
 
   // Personal task helpers (same as TodoList)
