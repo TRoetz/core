@@ -1,5 +1,4 @@
 <script>
-  import { onMount } from 'svelte';
   import { api } from '../../api.js';
   import { attachmentStatus } from '../../stores';
   import { workspaceDataStore } from '../../stores/workspaceDataStore.svelte.js';
@@ -54,10 +53,6 @@
   let currentHierarchyLevel = $state(null);
   let itemTypes = $state([]);
 
-  onMount(async () => {
-    if (!isModal && attachmentStatus.enabled) await loadAttachments();
-  });
-
   // Reload whenever the route targets a different item (WI-1378: the lazy
   // route reuses this component across /personal/items/N navigations, so an
   // onMount-only load left `item` pointing at the previously viewed task).
@@ -66,6 +61,11 @@
     const generation = ++itemGeneration;
     loading = true;
     error = null;
+    // Drop the previous task's attachment list and comment badge immediately
+    // so navigation never shows another task's data (WI-1418).
+    attachments = [];
+    commentCount = 0;
+    if (!isModal && attachmentStatus.enabled) void loadAttachments(id, generation);
     try {
       const loaded = await api.items.get(id);
       if (generation !== itemGeneration) return; // a newer load superseded this one
@@ -97,11 +97,13 @@
     void loadWorkspace();
   });
 
-  async function loadAttachments() {
+  async function loadAttachments(id = itemId, generation = itemGeneration) {
     try {
-      const response = await api.attachments.getByItem(itemId);
+      const response = await api.attachments.getByItem(id);
+      if (id !== itemId || generation !== itemGeneration) return; // superseded by navigation
       attachments = response?.data || [];
     } catch (err) {
+      if (id !== itemId || generation !== itemGeneration) return;
       console.error('Failed to load attachments:', err);
       attachments = [];
     }
