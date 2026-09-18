@@ -55,25 +55,47 @@
   let itemTypes = $state([]);
 
   onMount(async () => {
-    const initialLoads = [loadItem()];
-    if (!isModal) initialLoads.push(loadWorkspace());
-    if (attachmentStatus.enabled) initialLoads.push(loadAttachments());
-    await Promise.all(initialLoads);
-
-    if (!isModal) await loadHierarchyData();
-    loading = false;
+    if (!isModal && attachmentStatus.enabled) await loadAttachments();
   });
 
-  async function loadItem() {
+  // Reload whenever the route targets a different item (WI-1378: the lazy
+  // route reuses this component across /personal/items/N navigations, so an
+  // onMount-only load left `item` pointing at the previously viewed task).
+  let itemGeneration = 0;
+  async function loadItem(id) {
+    const generation = ++itemGeneration;
+    loading = true;
+    error = null;
     try {
-      item = await api.items.get(itemId);
+      const loaded = await api.items.get(id);
+      if (generation !== itemGeneration) return; // a newer load superseded this one
+      item = loaded;
       editTitle = item.title || '';
       editDescription = item.description || '';
+      if (!isModal) await loadHierarchyData();
     } catch (err) {
+      if (generation !== itemGeneration) return;
       console.error('Failed to load item:', err);
       error = 'Failed to load task';
+    } finally {
+      if (generation === itemGeneration) loading = false;
     }
   }
+
+  $effect(() => {
+    const id = itemId;
+    if (id == null) return;
+    void loadItem(id);
+  });
+
+  // Deep links land here before the personal workspace id resolves (the prop
+  // is null until the store loads). Re-run when it transitions null → id
+  // (WI-1389) instead of initializing the workspace store with null once.
+  $effect(() => {
+    const wsId = workspaceId;
+    if (isModal || wsId == null) return;
+    void loadWorkspace();
+  });
 
   async function loadAttachments() {
     try {
