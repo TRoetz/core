@@ -175,6 +175,14 @@ func (w *GlobalRankMigrationWorker) Run(ctx context.Context) (GlobalRankMigratio
 	// the limit means none remain past the frontier), so concurrent creates or
 	// deletes that skew the estimate can neither stall nor shortcut it.
 	state.MigratedCount += int64(len(rows))
+	// Items created during the migration are born inside the unprocessed
+	// active-bucket window and are migrated like every other row, but the
+	// start snapshot never counted them. Raise the total so the persisted
+	// state keeps satisfying the migrated-count invariant instead of failing
+	// every subsequent batch.
+	if state.MigratedCount > state.TotalCount {
+		state.TotalCount = state.MigratedCount
+	}
 	remaining := state.TotalCount - state.MigratedCount
 	if remaining < 0 {
 		remaining = 0
