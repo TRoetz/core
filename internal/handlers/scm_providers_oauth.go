@@ -173,6 +173,47 @@ func (h *SCMProviderHandler) StartOAuth(w http.ResponseWriter, r *http.Request) 
 	})
 }
 
+// oauthLanding is the page an OAuth flow returns to, derived from the state
+// row once it has been validated. The admin provider list is the fallback for
+// failures that carry no usable state (missing or expired state), since the
+// origin page cannot be recovered at that point.
+type oauthLanding string
+
+const (
+	oauthLandingProfile oauthLanding = "/profile?tab=connected-accounts"
+	oauthLandingAdmin   oauthLanding = "/admin/scm-providers"
+)
+
+// oauthLandingFromState resolves the landing for a validated state row.
+// Workspace flows return to the workspace source-control settings with the
+// numeric workspace ID: the SPA shell and workspace settings resolve only
+// numeric IDs, not keys (the v2 API rejects non-numeric workspace IDs).
+func oauthLandingFromState(workspaceID sql.NullInt64) oauthLanding {
+	if workspaceID.Valid {
+		return oauthLanding(fmt.Sprintf("/workspaces/%d/settings/source-control", workspaceID.Int64))
+	}
+	return oauthLandingProfile
+}
+
+// redirectOAuthOutcome sends the browser back to the flow's landing page with
+// the outcome in the query string. Success and error share this builder so
+// every landing page can acknowledge both outcomes the same way.
+func redirectOAuthOutcome(w http.ResponseWriter, r *http.Request, landing oauthLanding, outcome, providerSlug, message string) {
+	params := url.Values{}
+	params.Set("oauth", outcome)
+	if providerSlug != "" {
+		params.Set("provider", providerSlug)
+	}
+	if message != "" {
+		params.Set("message", message)
+	}
+	separator := "?"
+	if strings.Contains(string(landing), "?") {
+		separator = "&"
+	}
+	http.Redirect(w, r, string(landing)+separator+params.Encode(), http.StatusFound)
+}
+
 // OAuthCallback handles the OAuth callback
 // Routes tokens to workspace-level storage when workspace_id is present in state
 func (h *SCMProviderHandler) OAuthCallback(w http.ResponseWriter, r *http.Request) {
@@ -182,11 +223,10 @@ func (h *SCMProviderHandler) OAuthCallback(w http.ResponseWriter, r *http.Reques
 
 	if code == "" || state == "" {
 		errorMsg := r.URL.Query().Get("error")
-		if errorMsg != "" {
-			h.redirectWithOAuthError(w, r, errorMsg)
-		} else {
-			h.redirectWithOAuthError(w, r, "Missing code or state parameter")
+		if errorMsg == "" {
+			errorMsg = "Missing code or state parameter"
 		}
+		redirectOAuthOutcome(w, r, oauthLandingAdmin, "error", "", errorMsg)
 		return
 	}
 
@@ -200,9 +240,12 @@ func (h *SCMProviderHandler) OAuthCallback(w http.ResponseWriter, r *http.Reques
 	`, state).Scan(&providerID, &userID, &redirectURI, &workspaceID)
 	if err != nil {
 		slog.Warn("invalid OAuth state", slog.String("component", "scm"), slog.Any("error", err))
-		h.redirectWithOAuthError(w, r, "Invalid or expired state")
+		redirectOAuthOutcome(w, r, oauthLandingAdmin, "error", "", "Invalid or expired state")
 		return
 	}
+	// The state row is the only record of where the flow started, so every
+	// outcome from here on returns to that landing page.
+	landing := oauthLandingFromState(workspaceID)
 
 	// Delete used state (check error)
 	if _, err = h.db.ExecWrite("DELETE FROM scm_oauth_state WHERE state = ?", state); err != nil {
@@ -222,7 +265,7 @@ func (h *SCMProviderHandler) OAuthCallback(w http.ResponseWriter, r *http.Reques
 	`, providerID).Scan(&providerType, &clientID, &clientSecretEnc, &providerBaseURL, &providerSlug)
 	if err != nil {
 		slog.Error("failed to get provider", slog.String("component", "scm"), slog.Int("provider_id", providerID), slog.Any("error", err))
-		h.redirectWithOAuthError(w, r, "Provider not found")
+		redirectOAuthOutcome(w, r, landing, "error", "", "Provider not found")
 		return
 	}
 
@@ -230,7 +273,7 @@ func (h *SCMProviderHandler) OAuthCallback(w http.ResponseWriter, r *http.Reques
 	clientSecret, err := h.encryption.Decrypt(clientSecretEnc.String)
 	if err != nil {
 		slog.Error("failed to decrypt client secret", slog.String("component", "scm"), slog.Int("provider_id", providerID), slog.Any("error", err))
-		h.redirectWithOAuthError(w, r, "Configuration error")
+		redirectOAuthOutcome(w, r, landing, "error", "", "Configuration error")
 		return
 	}
 
@@ -245,7 +288,7 @@ func (h *SCMProviderHandler) OAuthCallback(w http.ResponseWriter, r *http.Reques
 	})
 	if err != nil {
 		slog.Error("failed to exchange OAuth code", slog.String("component", "scm"), slog.Int("provider_id", providerID), slog.Any("error", err))
-		h.redirectWithOAuthError(w, r, "Failed to exchange token")
+		redirectOAuthOutcome(w, r, landing, "error", "", "Failed to exchange token")
 		return
 	}
 
@@ -253,7 +296,7 @@ func (h *SCMProviderHandler) OAuthCallback(w http.ResponseWriter, r *http.Reques
 	encTokens, err := h.encryptOAuthTokens(tokenResult.accessToken, tokenResult.refreshToken)
 	if err != nil {
 		slog.Error("failed to encrypt tokens", slog.String("component", "scm"), slog.Int("provider_id", providerID), slog.Any("error", err))
-		h.redirectWithOAuthError(w, r, "Failed to store token")
+		redirectOAuthOutcome(w, r, landing, "error", "", "Failed to store token")
 		return
 	}
 
@@ -267,7 +310,7 @@ func (h *SCMProviderHandler) OAuthCallback(w http.ResponseWriter, r *http.Reques
 	err = h.storeUserOAuthToken(r.Context(), userID, providerID, encTokens, tokenResult.expiresAt, userInfo)
 	if err != nil {
 		slog.Error("failed to store user OAuth token", slog.String("component", "scm"), slog.Int("user_id", userID), slog.Int("provider_id", providerID), slog.Any("error", err))
-		h.redirectWithOAuthError(w, r, "Failed to store token")
+		redirectOAuthOutcome(w, r, landing, "error", "", "Failed to store token")
 		return
 	}
 
@@ -292,17 +335,9 @@ func (h *SCMProviderHandler) OAuthCallback(w http.ResponseWriter, r *http.Reques
 		}
 	}
 
-	// Redirect based on context. The workspace segment must be the numeric
-	// workspace ID: the SPA shell and workspace settings only resolve IDs,
-	// not keys (the v2 API rejects non-numeric workspace IDs).
-	if workspaceID.Valid {
-		http.Redirect(w, r, fmt.Sprintf("/workspaces/%d/settings/source-control?oauth=success&provider=%s",
-			workspaceID.Int64, url.QueryEscape(providerSlug)), http.StatusFound)
-		return
-	}
-
-	// Default: redirect to user profile connected accounts
-	http.Redirect(w, r, "/profile?tab=connected-accounts&oauth=success&provider="+url.QueryEscape(providerSlug), http.StatusFound)
+	// Both outcomes return to the same landing page so the origin UI can
+	// acknowledge success and failure alike.
+	redirectOAuthOutcome(w, r, landing, "success", providerSlug, "")
 }
 
 // Helper methods
@@ -529,11 +564,4 @@ func (h *SCMProviderHandler) getOAuthRedirectURI(slug string) (string, error) {
 		return "", fmt.Errorf("scm OAuth is not configured: server baseURL is unset")
 	}
 	return h.baseURL + "/api/scm/oauth/" + slug + "/callback", nil
-}
-
-func (h *SCMProviderHandler) redirectWithOAuthError(w http.ResponseWriter, r *http.Request, message string) {
-	// Path-param form: the admin page force-navigates /admin to a default
-	// tab and drops query strings, so the error target must carry its tab
-	// in the path to survive.
-	http.Redirect(w, r, "/admin/scm-providers?oauth=error&message="+url.QueryEscape(message), http.StatusFound)
 }
