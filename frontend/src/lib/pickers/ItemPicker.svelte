@@ -103,11 +103,16 @@
         <div class="flex items-center gap-2 flex-1 min-w-0 {multiSelect ? 'flex-wrap' : ''}">
           {#if multiSelect}
             {#if values.length > 0}
-              {#each values as val}
+              {#each values as val (val)}
                 {@const selItem = items.find(i => finalConfig.getValue(i) === val)}
+                {@const missingLabel = selItem ? '' : (resolveMissingLabel?.(val) || '')}
                 {#if selItem}
                   <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs" style="background-color: var(--ds-background-selected); color: var(--ds-text);">
                     <span class="truncate max-w-[120px]">{finalConfig.getLabel(selItem)}</span>
+                  </span>
+                {:else if missingLabel}
+                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs" style="background-color: var(--ds-background-selected); color: var(--ds-text);">
+                    <span class="truncate max-w-[120px]">{missingLabel}</span>
                   </span>
                 {/if}
               {/each}

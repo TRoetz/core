@@ -26,6 +26,9 @@
     unassignedLabel = '',
     children = null,
     multiple = false,
+    // (value) => string | null. Labels a selected milestone that is not in the
+    // loaded options yet; forwarded to ItemPicker's trigger rendering.
+    resolveMissingLabel = null,
     onOpen = null,
     onSelect = () => {},
     onCancel = () => {}
@@ -289,6 +292,7 @@
     allowCreate={canCreate}
     onCreate={openCreateDialog}
     onSelect={handleSelectMulti}
+    {resolveMissingLabel}
     onOpen={() => onOpen?.()}
     onCancel={() => onCancel()}
   >
@@ -339,6 +343,7 @@
     allowCreate={canCreate}
     onCreate={openCreateDialog}
     onSelect={handleSelectSingle}
+    {resolveMissingLabel}
     onOpen={() => onOpen?.()}
     onCancel={() => onCancel()}
   >

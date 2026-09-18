@@ -184,6 +184,19 @@
     return getLabel(item);
   }
 
+  // Unresolved chips carry their raw value in .value; resolved ones go through
+  // the picker's getValue. Both removal and the each key must use this so a
+  // chip is never identified as undefined. An unresolved value can never
+  // collide with a resolved key: it is a value no item's getValue matched.
+  function itemKey(item) {
+    return itemValue(item);
+  }
+
+  function itemValue(item) {
+    if (item && item.__unresolved) return item.value;
+    return getValue(item);
+  }
+
   // For multi-select: get array of selected items. Values missing from items
   // render as unresolved chips labeled via resolveMissingLabel so a set value
   // never silently disappears from the trigger.
@@ -514,7 +527,7 @@
       onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && focusInput()}
       role="button" tabindex="-1"
     >
-      {#each selectedItems as item (getValue(item))}
+      {#each selectedItems as item (itemKey(item))}
         <div class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs border"
              style="background-color: var(--ds-surface-raised); border-color: var(--ds-border); color: var(--ds-text);">
           {#if chipSnippet}
@@ -522,7 +535,7 @@
           {:else}
             <span class="font-medium truncate max-w-[150px]">{labelFor(item)}</span>
           {/if}
-          <button type="button" onclick={(e) => removeItem(e, getValue(item))}
+          <button type="button" onclick={(e) => removeItem(e, itemValue(item))}
                   class="picker-clear rounded p-0.5 transition-colors" {disabled}>
             <X class="w-3 h-3" style="color: var(--ds-text-subtle);" />
           </button>
