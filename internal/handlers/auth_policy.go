@@ -388,7 +388,8 @@ func (h *AuthPolicyHandler) GetAffectedUsers(w http.ResponseWriter, r *http.Requ
 		var u AffectedUser
 		var firstName, lastName string
 		if err := rows.Scan(&u.ID, &u.Email, &u.Username, &firstName, &lastName, &u.HasPasskey, &u.HasSSO, &u.IsAdmin); err != nil {
-			continue
+			respondInternalError(w, r, fmt.Errorf("scan affected user: %w", err))
+			return
 		}
 		u.FullName = strings.TrimSpace(firstName + " " + lastName)
 		users = append(users, u)
