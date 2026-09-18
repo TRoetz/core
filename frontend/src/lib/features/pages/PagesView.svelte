@@ -677,21 +677,21 @@
   {:else if loadingPage}
     <p class="status">{t('pages.pageLoading')}</p>
   {:else if selectedPage}
+    {#if pagePublication?.publicly_viewable}
+      <div class="publication-banner" data-testid="page-publication-banner">
+        {pagePublication.portals?.length
+          ? t('pages.publiclyViewableBannerWithPortals', {
+              portals: pagePublication.portals.join(', '),
+            })
+          : t('pages.publiclyViewableBanner')}
+      </div>
+    {/if}
     <div
       class="page-frame"
       class:canvas-expanded={canvasExpanded}
       data-testid="page-canvas"
       data-width={canvasExpanded ? 'wide' : 'comfortable'}
     >
-      {#if pagePublication?.publicly_viewable}
-        <div class="publication-banner" data-testid="page-publication-banner">
-          {pagePublication.portals?.length
-            ? t('pages.publiclyViewableBannerWithPortals', {
-                portals: pagePublication.portals.join(', '),
-              })
-            : t('pages.publiclyViewableBanner')}
-        </div>
-      {/if}
       <div class="toolbar">
         <div class="actions">
           {#if statusLabel && mode === 'edit' && canEditPage}
@@ -949,10 +949,11 @@
     flex-direction: column;
     min-height: 0;
     container-type: inline-size;
+    /* Shared by the page frame children and the full-bleed banner. */
+    --page-gutter: clamp(1rem, 4cqi, 3rem);
   }
 
   .page-frame {
-    --page-gutter: clamp(1rem, 4cqi, 3rem);
     width: 100%;
     max-width: none;
     margin: 0 auto;
@@ -1004,11 +1005,13 @@
   }
 
   /* Green status bar above the page when a portal knowledge base
-     publishes it. */
+     publishes it. Sits outside the centered page frame so the bar runs
+     edge to edge across the whole pane. */
   .publication-banner {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    margin-bottom: 1rem;
     padding: 0.5rem var(--page-gutter);
     font-size: 0.8125rem;
     color: var(--ds-text-success, #065f46);

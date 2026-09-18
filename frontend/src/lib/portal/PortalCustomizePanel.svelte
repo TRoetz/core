@@ -30,6 +30,7 @@
   import { confirm } from '../composables/useConfirm.js';
   import DescriptionText from '../components/DescriptionText.svelte';
   import RequestTypeFieldsBuilder from '../dialogs/RequestTypeFieldsBuilder.svelte';
+  import PagePicker from '../pickers/PagePicker.svelte';
 
   let {
     onOpenRequestTypeModal = () => {},
@@ -58,13 +59,12 @@
   // Knowledge-base workspace-pages wiring state (see the knowledge-base
   // customize section). Workspaces and page titles load lazily when the
   // section opens; the wiring itself lives in the portal store so both
-  // persistence paths serialize identically.
+  // persistence paths serialize identically. Start pages are picked through
+  // the searchable PagePicker, so no page tree is held here.
   let kbWorkspaceId = $state('');
   let kbScope = $state('entire');
-  let kbRootPageId = $state('');
+  let kbRootPageId = $state(null);
   let kbWorkspaces = $state([]);
-  let kbPages = $state([]);
-  let kbPagesLoading = $state(false);
   let kbPageTitles = $state({});
   // Workspace administration rights of the current manager, resolved from
   // their permission profile. Null until loaded; the customize panel lives in
@@ -117,19 +117,6 @@
     }
   }
 
-  async function loadKbPages(workspaceId) {
-    kbPagesLoading = true;
-    try {
-      const response = await api.pages.getAll(workspaceId);
-      kbPages = Array.isArray(response) ? response : (response?.items ?? []);
-    } catch (err) {
-      console.error('Failed to load pages for knowledge base wiring:', err);
-      kbPages = [];
-    } finally {
-      kbPagesLoading = false;
-    }
-  }
-
   async function loadKbPageTitles() {
     const sources = portalStore.knowledgeBasePageSources || [];
     const workspaceIds = [...new Set(sources.map((s) => s.workspace_id))];
@@ -149,10 +136,8 @@
   }
 
   function onKbWorkspaceChange() {
-    kbRootPageId = '';
+    kbRootPageId = null;
     kbScope = 'entire';
-    kbPages = [];
-    if (kbWorkspaceId) void loadKbPages(Number(kbWorkspaceId));
   }
 
   function addKbPageSource() {
@@ -160,13 +145,12 @@
     if (!workspaceId) return;
     const source =
       kbScope === 'subtree' && kbRootPageId
-        ? { workspace_id: workspaceId, root_page_id: Number(kbRootPageId) }
+        ? { workspace_id: workspaceId, root_page_id: kbRootPageId }
         : { workspace_id: workspaceId };
     portalStore.addKnowledgeBasePageSource(source);
     kbWorkspaceId = '';
     kbScope = 'entire';
-    kbRootPageId = '';
-    kbPages = [];
+    kbRootPageId = null;
   }
 
   function kbSourceLabel(source) {
@@ -1004,22 +988,14 @@
                     <label for="kb-add-page" class="block text-xs font-medium mb-1" style="color: var(--ds-text);">
                       {t('portal.customize.workspacePagesPickPage')}
                     </label>
-                    {#if kbPagesLoading}
-                      <p class="text-xs" style="color: var(--ds-text-subtle);">{t('common.loading')}</p>
-                    {:else}
-                      <select
-                        id="kb-add-page"
-                        class="w-full text-xs rounded p-2"
-                        style="background-color: var(--ds-surface-raised); color: var(--ds-text); border-color: var(--ds-border);"
-                        bind:value={kbRootPageId}
-                        data-testid="kb-add-page"
-                      >
-                        <option value="">{t('portal.customize.workspacePagesPickPagePlaceholder')}</option>
-                        {#each kbPages as page}
-                          <option value={String(page.id)}>{'\u00a0'.repeat(page.depth * 2)}{page.title}</option>
-                        {/each}
-                      </select>
-                    {/if}
+                    <PagePicker
+                      id="kb-add-page"
+                      workspaceId={Number(kbWorkspaceId)}
+                      bind:value={kbRootPageId}
+                      placeholder={t('portal.customize.workspacePagesPickPagePlaceholder')}
+                      inputTestid="kb-add-page"
+                      optionTestid={(opt) => `kb-add-page-option-${opt.item?.id}`}
+                    />
                   </div>
                 {/if}
                 <button

@@ -14,6 +14,8 @@
     disabled = false,
     allowClear = true,
     class: className = '',
+    inputTestid = undefined,
+    optionTestid = null,
     onSelect = () => {},
     onCancel = () => {},
   } = $props();
@@ -58,6 +60,8 @@
   {allowClear}
   class={className}
   serverSearch
+  {inputTestid}
+  {optionTestid}
   onSearchChange={handleSearchChange}
   getValue={(page) => page?.id}
   getLabel={(page) => page?.title ?? ''}
