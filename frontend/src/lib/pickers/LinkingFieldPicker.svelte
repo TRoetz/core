@@ -52,28 +52,35 @@
   }
 
   let searchTimeout;
+  let searchSeq = 0;
   async function handleSearch(e) {
     searchQuery = e.target.value;
     clearTimeout(searchTimeout);
     if (!searchQuery.trim()) {
+      searchSeq++; // Invalidate any in-flight request so it cannot land late.
       searchResults = [];
+      searching = false;
       return;
     }
     searchTimeout = setTimeout(async () => {
+      const seq = ++searchSeq;
       searching = true;
       try {
         const entityType = opts.allowed_entity_types?.[0] || 'item';
         const itemTypeIds = opts.allowed_item_type_ids || [];
-        searchResults = await api.links.search(searchQuery, entityType, 20, itemTypeIds) || [];
+        const results = await api.links.search(searchQuery, entityType, 20, itemTypeIds) || [];
+        // A newer keystroke superseded this request; drop the stale response.
+        if (seq !== searchSeq) return;
         // Filter out already linked items
         const linkedIds = new Set(links.map(l => isMirror ? l.source_id : l.target_id));
         linkedIds.add(itemId); // Exclude self
-        searchResults = searchResults.filter(r => !linkedIds.has(r.id));
+        searchResults = results.filter(r => !linkedIds.has(r.id));
       } catch (e) {
+        if (seq !== searchSeq) return;
         console.error('Search failed:', e);
         searchResults = [];
       } finally {
-        searching = false;
+        if (seq === searchSeq) searching = false;
       }
     }, 300);
   }

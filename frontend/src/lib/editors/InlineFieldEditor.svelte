@@ -1,5 +1,6 @@
 <script>
   import { api } from '../api.js';
+  import { updateCustomFieldValue } from '../utils/customFieldValueUpdates.js';
   import InlineTextEditor from './InlineTextEditor.svelte';
   import InlineSelectEditor from './InlineSelectEditor.svelte';
   import InlineDateEditor from './InlineDateEditor.svelte';
@@ -36,16 +37,15 @@
 
     try {
       saving = true;
-      let updateData;
+      let updatedItem;
       if (field.startsWith('custom_field_')) {
         const fieldId = field.replace('custom_field_', '');
-        updateData = {
-          custom_field_values: { ...(item.custom_field_values || {}), [fieldId]: value }
-        };
+        // The shared tracker merges against values issued during other
+        // in-flight requests, so rapid successive saves never drop one.
+        updatedItem = await updateCustomFieldValue(api, item.id, fieldId, value);
       } else {
-        updateData = { [field]: value };
+        updatedItem = await api.items.update(item.id, { [field]: value });
       }
-      const updatedItem = await api.items.update(item.id, updateData);
       const merged = { ...item, ...updatedItem };
       editorComponent?.confirmSave?.(value);
       onitemUpdated?.({ item: merged, field, value });

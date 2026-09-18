@@ -364,12 +364,20 @@
 
   function commitFromInput(rawValue) {
     if (isSelfEditing) {
-      // Blur fires even when nothing changed — only commit real edits.
-      if (rawValue !== (value ?? '')) onChange(rawValue);
+      // Blur fires even when nothing changed — only commit real edits. Both
+      // sides stringify first: inputs hand back strings while stored number
+      // or boolean values keep their type, and 5 !== "5" would commit on
+      // every untouched blur.
+      if (stringifyValue(rawValue) !== stringifyValue(value)) onChange(rawValue);
       exitEditing();
       return;
     }
     onCommit?.(rawValue);
+  }
+
+  function stringifyValue(v) {
+    if (v === null || v === undefined) return '';
+    return String(v);
   }
 
   // Edit-input keystrokes: free-form fields stage a draft in self-editing

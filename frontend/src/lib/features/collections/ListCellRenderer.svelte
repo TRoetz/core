@@ -3,6 +3,7 @@
   import { collectionEditorOptions } from '../../stores/collectionEditorOptions.svelte.js';
   import { collectionFieldLinks } from '../../stores/collectionFieldLinks.svelte.js';
   import { api } from '../../api.js';
+  import { updateCustomFieldValue } from '../../utils/customFieldValueUpdates.js';
   import InlineFieldEditor from '../../editors/InlineFieldEditor.svelte';
   import ItemPicker from '../../pickers/ItemPicker.svelte';
   import UserPicker from '../../pickers/UserPicker.svelte';
@@ -82,16 +83,11 @@
     }
   }
 
-  // Handle custom field updates
+  // Handle custom field updates. The merge goes through the shared tracker
+  // so a second rapid edit never persists a blob missing the first edit.
   async function handleCustomFieldUpdate(fieldIdentifier, value) {
     try {
-      const currentCustomValues = item.custom_field_values || {};
-      const updatedItem = await api.items.update(item.id, {
-        custom_field_values: {
-          ...currentCustomValues,
-          [fieldIdentifier]: value
-        }
-      });
+      const updatedItem = await updateCustomFieldValue(api, item.id, fieldIdentifier, value);
       onitemUpdated?.({ item: updatedItem, field: fieldIdentifier, value });
     } catch (error) {
       onupdateError?.({ error: error.message, field: fieldIdentifier, value });
