@@ -228,12 +228,14 @@
     description={t('settings.appearance')}
   >
     {#snippet actions()}
+      <!-- shortcut-guard-exempt: button has keyboardHint + hotkeyConfig; the guard mis-parses the arrow function inside hotkeyConfig -->
       <Button
         variant="primary"
         icon={Plus}
         onclick={() => showCreateForm = !showCreateForm}
         keyboardHint="A"
         hotkeyConfig={{ key: toHotkeyString('themes', 'add'), guard: () => !showCreateForm }}
+        dataTestid="theme-add"
       >
         {t('common.create')}
       </Button>
@@ -352,7 +354,7 @@
   {:else}
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {#each themes as theme (theme.id)}
-        <div class="rounded overflow-hidden" style="background-color: var(--ds-surface); border: 1px solid var(--ds-border);">
+        <div class="rounded overflow-hidden" style="background-color: var(--ds-surface); border: 1px solid var(--ds-border);" data-testid={`theme-card-${theme.id}`}>
           <!-- Theme Previews (Light and Dark side by side) -->
           <div class="flex">
             <div
@@ -531,6 +533,7 @@
                       size="sm"
                       icon={Check}
                       onclick={() => activateTheme(theme.id)}
+                      dataTestid={`theme-activate-${theme.id}`}
                     >
                       {t('common.enable')}
                     </Button>
@@ -541,6 +544,7 @@
                       onclick={() => startEdit(theme)}
                       class="flex items-center space-x-1 px-3 py-1 text-sm rounded transition-colors hover-edit-btn"
                       style="color: var(--ds-text-subtle); background-color: var(--ds-surface-secondary);"
+                      data-testid={`theme-edit-${theme.id}`}
                     >
                       <Edit class="w-3 h-3" />
                       <span>{t('common.edit')}</span>
@@ -553,6 +557,7 @@
                     onclick={() => deleteTheme(theme.id)}
                     class="flex items-center space-x-1 px-3 py-1 text-sm rounded transition-colors"
                     style="color: var(--ds-text-danger); background-color: var(--ds-danger-subtle);"
+                    data-testid={`theme-delete-${theme.id}`}
                   >
                     <Trash2 class="w-3 h-3" />
                     <span>{t('common.delete')}</span>
@@ -568,6 +573,7 @@
     {#if themes.length === 0}
       <EmptyState icon={Palette} title={t('common.noData')} description={t('settings.appearance')}>
         {#snippet action()}
+          <!-- shortcut-guard-exempt: duplicate of the header Create button, which owns the A shortcut -->
           <Button variant="primary" icon={Plus} onclick={() => showCreateForm = true}>
             {t('common.create')}
           </Button>

@@ -474,6 +474,7 @@
                 type="text"
                 placeholder={t('conditionSets.namePlaceholder')}
                 size="small"
+                dataTestid="condition-set-name"
                 bind:value={formData.name}
               />
             </div>

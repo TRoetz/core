@@ -98,7 +98,7 @@
 />
 
 <div class="mb-6">
-  <SearchInput bind:value={searchQuery} placeholder={t('approvalSets.searchPlaceholder')} class="max-w-md" />
+  <SearchInput bind:value={searchQuery} placeholder={t('approvalSets.searchPlaceholder')} class="max-w-md" dataTestid="approval-set-search" />
 </div>
 
 {#if loading}
@@ -131,7 +131,7 @@
   <div class="space-y-3" data-testid="approval-sets-list">
     {#each filtered as s (s.id)}
       <Panel padding="spacious" hoverable>
-        <div class="flex items-center justify-between">
+        <div class="flex items-center justify-between" data-testid={`approval-set-row-${s.id}`}>
           <div class="flex-1 min-w-0">
             <div class="flex items-center gap-3 mb-2">
               <h3 class="text-lg font-medium" style="color: var(--ds-text);">{s.name}</h3>

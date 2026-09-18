@@ -370,7 +370,7 @@
       </Button>
     </div>
   {:else}
-    <DataTable {columns} data={connections} keyField="id">
+    <DataTable {columns} data={connections} keyField="id" rowAttrs={(conn) => ({ 'data-testid': `llm-connection-row-${conn.id}` })}>
       {#snippet name(conn)}
         <div class="flex items-center gap-2">
           <span class="font-medium" style="color: var(--ds-text);">{conn.name}</span>

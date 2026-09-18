@@ -315,7 +315,7 @@
           {t('zammad.refreshAllTickets')}
         </Button>
         <!-- shortcut-guard-exempt: this secondary integration tab does not own a global add shortcut -->
-        <Button variant="primary" size="small" icon={Plus} onclick={openCreate}>
+        <Button variant="primary" size="small" icon={Plus} onclick={openCreate} dataTestid="zammad-connection-add">
           {t('zammad.addConnection')}
         </Button>
       </div>
@@ -330,9 +330,9 @@
     <EmptyState title={t('zammad.noConnections')} />
   {:else}
     <div class="space-y-3">
-      {#each connections as connection}
+      {#each connections as connection (connection.id)}
         {@const connectionAuthStatus = authStatus(connection)}
-        <div class="border rounded-lg p-4" style="border-color: var(--ds-border); background-color: var(--ds-surface-raised);">
+        <div class="border rounded-lg p-4" style="border-color: var(--ds-border); background-color: var(--ds-surface-raised);" data-testid={`zammad-connection-row-${connection.id}`}>
           <div class="flex items-center gap-4">
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2">
@@ -356,8 +356,8 @@
                   {connection.oauth_connected || connection.reauthorization_required ? t('zammad.reauthorizeOAuth') : t('zammad.connectOAuth')}
                 </Button>
               {/if}
-              <Button variant="ghost" size="small" onclick={() => openEdit(connection)}><Edit2 class="w-4 h-4" /></Button>
-              <Button variant="danger-ghost" size="small" onclick={() => remove(connection)}><Trash2 class="w-4 h-4" /></Button>
+              <Button variant="ghost" size="small" onclick={() => openEdit(connection)} dataTestid={`zammad-connection-edit-${connection.id}`}><Edit2 class="w-4 h-4" /></Button>
+              <Button variant="danger-ghost" size="small" onclick={() => remove(connection)} dataTestid={`zammad-connection-delete-${connection.id}`}><Trash2 class="w-4 h-4" /></Button>
             </div>
           </div>
           {#if metadataByConnection[connection.id]}
@@ -383,9 +383,9 @@
 <Modal bind:isOpen={showModal}>
   <ModalHeader title={editing ? t('zammad.editConnection') : t('zammad.addConnection')} onclose={() => (showModal = false)} />
   <form onsubmit={(event) => { event.preventDefault(); save(); }} class="p-4 space-y-4 max-h-[75vh] overflow-y-auto">
-    <FormField label={t('common.name')} required><Input bind:value={form.name} /></FormField>
-    <FormField label={t('zammad.slug')} required><Input bind:value={form.slug} placeholder="zammad-main" /></FormField>
-    <FormField label={t('zammad.baseUrl')} required><Input bind:value={form.base_url} placeholder="https://support.example.com" /></FormField>
+    <FormField label={t('common.name')} required><Input bind:value={form.name} dataTestid="zammad-connection-name" /></FormField>
+    <FormField label={t('zammad.slug')} required><Input bind:value={form.slug} placeholder="zammad-main" dataTestid="zammad-connection-slug" /></FormField>
+    <FormField label={t('zammad.baseUrl')} required><Input bind:value={form.base_url} placeholder="https://support.example.com" dataTestid="zammad-connection-base-url" /></FormField>
     {#if editing}
       <FormField label={t('zammad.authMethod')}>
         <p class="text-sm" style="color: var(--ds-text-subtle);">
@@ -433,11 +433,11 @@
       </FormField>
     {:else}
       <FormField label={t('zammad.apiToken')} required={!editing}>
-        <Input bind:value={form.api_token} type="password" placeholder={editing ? t('zammad.secretStored') : t('zammad.apiToken')} />
+        <Input bind:value={form.api_token} type="password" placeholder={editing ? t('zammad.secretStored') : t('zammad.apiToken')} dataTestid="zammad-connection-api-token" />
       </FormField>
     {/if}
     <FormField label={t('zammad.defaultCustomer')} required>
-      <Input bind:value={form.default_customer} placeholder="windshift@example.com" />
+      <Input bind:value={form.default_customer} placeholder="windshift@example.com" dataTestid="zammad-connection-default-customer" />
     </FormField>
     {#if editing && metadataByConnection[editing.id]?.groups?.length}
       <FormField label={t('zammad.defaultGroup')} required>
@@ -476,8 +476,8 @@
     {:else}
       <FormField label={t('zammad.defaultGroup')} required>
         <div class="grid grid-cols-[8rem_1fr] gap-2">
-          <Input bind:value={form.default_group_id} type="number" placeholder="7" />
-          <Input bind:value={form.default_group_name} placeholder="Support" />
+          <Input bind:value={form.default_group_id} type="number" placeholder="7" dataTestid="zammad-connection-default-group-id" />
+          <Input bind:value={form.default_group_name} placeholder="Support" dataTestid="zammad-connection-default-group-name" />
         </div>
       </FormField>
       <FormField label={t('zammad.allowedGroupIds')}>
@@ -489,7 +489,7 @@
       </FormField>
     {/if}
     <FormField label={t('zammad.correlationField')} required>
-      <Input bind:value={form.correlation_field} />
+      <Input bind:value={form.correlation_field} dataTestid="zammad-connection-correlation-field" />
       <p class="text-xs mt-1" style="color: var(--ds-text-subtle);">{t('zammad.correlationFieldHint')}</p>
     </FormField>
     <FormField label={t('zammad.completionStatus')}>
@@ -543,7 +543,7 @@
 
     <div class="flex justify-end gap-2 pt-2">
       <Button variant="ghost" onclick={() => (showModal = false)}>{t('common.cancel')}</Button>
-      <Button variant="primary" type="submit" loading={saving} disabled={!form.name || !form.slug || !form.base_url || !form.default_customer || (form.auth_method === 'oauth' ? (!form.oauth_client_id || (!editing && !form.oauth_client_secret) || (editing && !form.has_oauth_client_secret && !form.oauth_client_secret)) : (!editing && !form.api_token)) || (!form.applies_to_all_workspaces && form.workspace_ids.length === 0)}>
+      <Button variant="primary" type="submit" loading={saving} disabled={!form.name || !form.slug || !form.base_url || !form.default_customer || (form.auth_method === 'oauth' ? (!form.oauth_client_id || (!editing && !form.oauth_client_secret) || (editing && !form.has_oauth_client_secret && !form.oauth_client_secret)) : (!editing && !form.api_token)) || (!form.applies_to_all_workspaces && form.workspace_ids.length === 0)} dataTestid="zammad-connection-submit">
         {editing ? t('common.update') : t('common.create')}
       </Button>
     </div>

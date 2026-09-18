@@ -149,6 +149,11 @@
       if (!initialLoad) saveSettings();
     }
   }
+
+  // Stable, selector-safe testid for a MIME type ("image/png" → "image-png").
+  function mimeTypeTestId(mimeType) {
+    return mimeType.replace(/[^a-zA-Z0-9]+/g, '-').toLowerCase();
+  }
   
   function removeMimeType(index) {
     allowedMimeTypes = allowedMimeTypes.filter((_, i) => i !== index);
@@ -290,7 +295,7 @@
                 </span>
                 <p class="text-xs" style="color: var(--ds-text-subtle);">{t('settings.attachments.enableAttachmentsDesc')}</p>
               </div>
-<Toggle bind:checked={enabled} disabled={!status || !status.attachment_path} />
+<Toggle bind:checked={enabled} disabled={!status || !status.attachment_path} dataTestid="attachment-enabled-toggle" />
             </div>
 
             <!-- Max File Size -->
@@ -362,11 +367,13 @@
                 class="flex-1"
                 size="small"
               />
+              <!-- shortcut-guard-exempt: inline chip add, not a modal-opening create affordance -->
               <Button
                 variant="default"
                 icon={Plus}
                 onclick={addMimeType}
                 disabled={!newMimeType.trim() || saving}
+                dataTestid="attachment-add-mime-button"
               >
                 {t('common.add')}
               </Button>
@@ -375,7 +382,7 @@
 
           <!-- Current MIME Types -->
           {#if allowedMimeTypes.length > 0}
-            <div>
+            <div data-testid="attachment-mime-types">
               <span class="block font-medium text-sm mb-2" style="color: var(--ds-text);">{t('settings.attachments.allowedMimeTypes')} ({allowedMimeTypes.length}):</span>
               <div class="flex flex-wrap gap-2 max-h-48 overflow-y-auto p-1">
                 {#each allowedMimeTypes as mimeType, index}
@@ -390,6 +397,7 @@
                       disabled={saving}
                       class="ml-1 hover:opacity-70 transition-opacity disabled:opacity-50"
                       aria-label="Remove {mimeType}"
+                      data-testid={`attachment-remove-mime-${mimeTypeTestId(mimeType)}`}
                     >
                       <X class="w-3 h-3" />
                     </button>

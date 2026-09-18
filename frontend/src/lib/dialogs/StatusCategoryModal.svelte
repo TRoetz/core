@@ -72,6 +72,7 @@
             type="text"
             placeholder={t('statusCategory.namePlaceholder')}
             size="medium"
+            dataTestid="status-category-name"
             bind:value={formData.name}
           />
         </div>
@@ -110,6 +111,7 @@
           disabled={!formData.name.trim()}
           size="medium"
           keyboardHint={submitHint}
+          dataTestid="status-category-save"
         >
           {isEditing ? t('statusCategory.updateCategory') : t('statusCategory.createCategory')}
         </Button>

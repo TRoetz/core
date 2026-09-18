@@ -86,6 +86,7 @@
     onclick={startCreating}
     keyboardHint="A"
     hotkeyConfig={{ key: toHotkeyString('conditionSets', 'add') }}
+    dataTestid="condition-set-add"
   >
     {t('conditionSets.add')}
   </Button>
@@ -100,7 +101,7 @@
 
 <!-- Search Bar -->
 <div class="mb-6">
-  <SearchInput bind:value={searchQuery} placeholder={t('conditionSets.searchPlaceholder')} class="max-w-md" />
+  <SearchInput bind:value={searchQuery} placeholder={t('conditionSets.searchPlaceholder')} class="max-w-md" dataTestid="condition-set-search" />
 </div>
 
 {#if loading}
@@ -133,7 +134,7 @@
   <div class="space-y-3">
     {#each filteredConditionSets as cs (cs.id)}
       <Panel padding="spacious" hoverable>
-        <div class="flex items-center justify-between">
+        <div class="flex items-center justify-between" data-testid={`condition-set-row-${cs.id}`}>
           <div class="flex-1 min-w-0">
             <div class="flex items-center gap-3 mb-2">
               <h3 class="text-lg font-medium" style="color: var(--ds-text);">{cs.name}</h3>
@@ -167,6 +168,7 @@
               size="small"
               icon={Edit}
               onclick={() => startEditing(cs)}
+              dataTestid={`condition-set-edit-${cs.id}`}
             >
               {t('common.edit')}
             </Button>
@@ -175,6 +177,7 @@
               size="small"
               icon={Trash2}
               onclick={() => deleteConditionSet(cs)}
+              dataTestid={`condition-set-delete-${cs.id}`}
             >
               {t('common.delete')}
             </Button>

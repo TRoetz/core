@@ -206,6 +206,7 @@
         icon: Edit,
         title: t('common.edit'),
         hoverClass: 'hover-bg',
+        testid: `status-edit-${status.id}`,
         onClick: () => startEdit(status)
       }
     ];
@@ -219,6 +220,7 @@
         title: t('common.delete'),
         color: 'var(--ds-text-danger)',
         hoverClass: 'hover-danger',
+        testid: `status-delete-${status.id}`,
         onClick: () => deleteStatus(status),
         disabled: inUse
       });
@@ -275,6 +277,7 @@
         disabled={statusCategories.length === 0}
         keyboardHint="A"
         hotkeyConfig={{ key: toHotkeyString('statuses', 'add'), guard: () => !showCreateForm }}
+        dataTestid="status-add"
       >
         {t('statuses.createStatus')}
       </Button>
@@ -298,6 +301,8 @@
       emptyMessage={t('statuses.noStatuses')}
       emptyIcon={Circle}
       actionItems={buildStatusDropdownItems}
+      rowAttrs={(status) => ({ 'data-testid': `status-row-${status.id}` })}
+      actionTriggerTestid={(status) => `status-actions-${status.id}`}
     >
       {#snippet status(status)}
         <div class="flex items-center gap-3">

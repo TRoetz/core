@@ -19,9 +19,9 @@
 	});
 
 	const tabs = $derived([
-		{ id: 'outbound', label: t('integrations.directions.outbound'), icon: ArrowUpRight },
-		{ id: 'inbound', label: t('integrations.directions.inbound'), icon: ArrowDownLeft },
-		{ id: 'zammad', label: t('zammad.tab'), icon: TicketCheck },
+		{ id: 'outbound', label: t('integrations.directions.outbound'), icon: ArrowUpRight, testid: 'integrations-tab-outbound' },
+		{ id: 'inbound', label: t('integrations.directions.inbound'), icon: ArrowDownLeft, testid: 'integrations-tab-inbound' },
+		{ id: 'zammad', label: t('zammad.tab'), icon: TicketCheck, testid: 'integrations-tab-zammad' },
 	]);
 </script>
 

@@ -294,6 +294,7 @@
           <Toggle
             bind:checked={testManagementEnabled}
             onchange={autoSave}
+            dataTestid="module-test-management-toggle"
           />
         </div>
       </Panel>

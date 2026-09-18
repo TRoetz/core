@@ -406,7 +406,7 @@
   <!-- Header -->
   <PageHeader title={t('settings.scmProviders.title')} subtitle={t('settings.scmProviders.subtitle')} icon={GitBranch}>
     {#snippet actions()}
-      <Button variant="primary" onclick={openCreateModal} keyboardHint="A" hotkeyConfig={{ key: toHotkeyString('scmProviders', 'addProvider'), guard: () => !showCreateModal && !showEditModal }}>
+      <Button variant="primary" onclick={openCreateModal} keyboardHint="A" hotkeyConfig={{ key: toHotkeyString('scmProviders', 'addProvider'), guard: () => !showCreateModal && !showEditModal }} dataTestid="scm-provider-add">
         <Plus class="w-4 h-4 mr-2" />
         {t('settings.scmProviders.addProvider')}
       </Button>
@@ -440,7 +440,7 @@
     <Card shadow padding="none" class="divide-y">
       {#each providers as provider (provider.id)}
         {@const ProviderIcon = getProviderIcon(provider.provider_type)}
-        <div class="p-4 flex items-center justify-between" style="border-color: var(--ds-border);">
+        <div class="p-4 flex items-center justify-between" style="border-color: var(--ds-border);" data-testid={`scm-provider-row-${provider.id}`}>
           <div class="flex items-center space-x-4">
             <div class="flex-shrink-0">
               <ProviderIcon class="h-8 w-8" style="color: var(--ds-text-subtle);" />
@@ -489,14 +489,14 @@
           </div>
           <div class="flex items-center space-x-2">
             {#if provider.auth_method !== 'oauth'}
-              <Button variant="ghost" size="sm" onclick={() => testConnection(provider.id)} disabled={testLoading}>
+              <Button variant="ghost" size="sm" onclick={() => testConnection(provider.id)} disabled={testLoading} dataTestid={`scm-provider-test-${provider.id}`}>
                 <TestTube class="w-4 h-4" />
               </Button>
             {/if}
-            <Button variant="ghost" size="sm" onclick={() => openEditModal(provider)}>
+            <Button variant="ghost" size="sm" onclick={() => openEditModal(provider)} dataTestid={`scm-provider-edit-${provider.id}`}>
               <Edit class="w-4 h-4" />
             </Button>
-            <Button variant="danger-ghost" size="sm" icon={Trash2} title={t('common.delete')} onclick={() => deleteProvider(provider)}></Button>
+            <Button variant="danger-ghost" size="sm" icon={Trash2} title={t('common.delete')} onclick={() => deleteProvider(provider)} dataTestid={`scm-provider-delete-${provider.id}`}></Button>
           </div>
         </div>
       {/each}
@@ -520,12 +520,14 @@
             bind:value={formData.slug}
             placeholder="github-main"
             disabled={!!editingProvider}
+            dataTestid="scm-provider-slug"
           />
         </FormField>
         <FormField label={t('settings.scmProviders.name')} error={formErrors.name}>
           <Input
             bind:value={formData.name}
             placeholder={t('settings.scmProviders.namePlaceholder')}
+            dataTestid="scm-provider-name"
           />
         </FormField>
       </div>
@@ -541,6 +543,8 @@
             getValue={(item) => item.value}
             getLabel={(item) => item.label}
             onSelect={(item) => handleProviderTypeChange(item.value)}
+            inputTestid="scm-provider-type"
+            optionTestid={(item) => `scm-provider-type-option-${item.value}`}
           />
         </div>
         <div>
@@ -551,6 +555,8 @@
             placeholder="Select auth method"
             getValue={(item) => item.value}
             getLabel={(item) => item.label}
+            inputTestid="scm-provider-auth"
+            optionTestid={(item) => `scm-provider-auth-option-${item.value}`}
           />
         </div>
       </div>
@@ -616,7 +622,7 @@
       <!-- Access Token Settings (stored internally as PAT for API compatibility) -->
       {#if formData.auth_method === 'pat'}
         <FormField label={t('settings.scmProviders.accessToken')} error={formErrors.personal_access_token} helper={getAccessTokenHelp()}>
-          <Input type="password" bind:value={formData.personal_access_token} />
+          <Input type="password" bind:value={formData.personal_access_token} dataTestid="scm-provider-token" />
         </FormField>
       {/if}
 
@@ -786,7 +792,7 @@
           <Button type="button" variant="secondary" onclick={closeModals}>
             {t('common.cancel')}
           </Button>
-          <Button type="submit" variant="primary" disabled={saving} keyboardHint="⏎">
+          <Button type="submit" variant="primary" disabled={saving} keyboardHint="⏎" dataTestid="scm-provider-submit">
             {#if saving}
               <Spinner size="sm" class="mr-2" />
             {/if}

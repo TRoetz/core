@@ -68,7 +68,7 @@
   </div>
 
   {#if error}
-    <Card variant="outlined">
+    <Card variant="outlined" dataTestid="diagnostics-section-error">
       <div class="flex items-start gap-3" style="color: var(--ds-text-danger);">
         <IconAlertCircle size={18} stroke={1.75} style="flex-shrink: 0; margin-top: 2px;" />
         <div class="text-sm">

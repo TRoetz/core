@@ -157,6 +157,7 @@
         icon: Edit,
         title: t('common.edit'),
         hoverClass: 'hover-bg',
+        testid: `status-category-edit-${category.id}`,
         onClick: () => startEdit(category)
       },
       {
@@ -166,6 +167,7 @@
         title: t('common.delete'),
         color: 'var(--ds-text-danger)',
         hoverClass: 'hover-danger',
+        testid: `status-category-delete-${category.id}`,
         onClick: () => deleteCategory(category),
         disabled: category.statusCount > 0
       }
@@ -213,7 +215,7 @@
     count={t('settings.statusCategories.count', { count: statusCategories.length })}
   >
     {#snippet actions()}
-      <Button variant="primary" icon={Plus} onclick={startCreate} keyboardHint="A" hotkeyConfig={{ key: toHotkeyString('statusCategories', 'addCategory'), guard: () => !showModal }}>
+      <Button variant="primary" icon={Plus} onclick={startCreate} keyboardHint="A" hotkeyConfig={{ key: toHotkeyString('statusCategories', 'addCategory'), guard: () => !showModal }} dataTestid="status-category-add">
         {t('settings.statusCategories.addStatusCategory')}
       </Button>
     {/snippet}
@@ -226,6 +228,8 @@
     emptyMessage={t('settings.statusCategories.empty')}
     emptyIcon={Palette}
     actionItems={buildCategoryDropdownItems}
+    rowAttrs={(category) => ({ 'data-testid': `status-category-row-${category.id}` })}
+    actionTriggerTestid={(category) => `status-category-actions-${category.id}`}
   >
     {#snippet category(category)}
       <div class="flex items-center gap-3">

@@ -423,6 +423,7 @@
                 bind:checked={allowUserManagedAgents}
                 disabled={saving}
                 onchange={handleUserManagedAgentsToggle}
+                dataTestid="user-managed-agents-toggle"
               />
             </div>
 

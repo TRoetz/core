@@ -239,6 +239,7 @@
 					maxWidth="max-w-sm"
 					triggerClass="px-3.5 py-1.5 border"
 					triggerStyle="background-color: var(--ds-surface-raised); border-color: var(--ds-border); color: var(--ds-text);"
+					triggerTestid="oauth-client-template"
 					items={[
 						{
 							id: 'docmost',
@@ -255,6 +256,7 @@
 					onclick={openCreate}
 					keyboardHint="A"
 					hotkeyConfig={{ key: toHotkeyString('oauthClients', 'addClient'), guard: () => !showFormModal && !secretModal }}
+					dataTestid="oauth-client-add"
 				>
 					{t('integrations.oauthClients.registerClient')}
 				</Button>
@@ -277,10 +279,11 @@
 		/>
 	{:else}
 		<div class="space-y-3">
-			{#each clients as client}
+			{#each clients as client (client.id)}
 				<div
 					class="border rounded-lg p-4 flex items-center gap-4"
 					style="border-color: var(--ds-border); background-color: var(--ds-surface-raised);"
+					data-testid={`oauth-client-row-${client.id}`}
 				>
 					<div class="flex-1 min-w-0">
 						<div class="flex items-center gap-2 flex-wrap">
@@ -313,14 +316,15 @@
 								size="small"
 								title={t('integrations.oauthClients.rotateSecret')}
 								onclick={() => rotateSecret(client)}
+								dataTestid={`oauth-client-rotate-${client.id}`}
 							>
 								<RefreshCw class="w-4 h-4" />
 							</Button>
 						{/if}
-						<Button variant="ghost" size="small" onclick={() => openEdit(client)}>
+						<Button variant="ghost" size="small" onclick={() => openEdit(client)} dataTestid={`oauth-client-edit-${client.id}`}>
 							<Edit2 class="w-4 h-4" />
 						</Button>
-						<Button variant="danger-ghost" size="small" icon={Trash2} title={t('integrations.oauthClients.deleteClient')} onclick={() => deleteClient(client)}></Button>
+						<Button variant="danger-ghost" size="small" icon={Trash2} title={t('integrations.oauthClients.deleteClient')} onclick={() => deleteClient(client)} dataTestid={`oauth-client-delete-${client.id}`}></Button>
 					</div>
 				</div>
 			{/each}
@@ -346,6 +350,7 @@
 			<Input
 				bind:value={formData.display_name}
 				placeholder={t('integrations.oauthClients.displayNamePlaceholder')}
+				dataTestid="oauth-client-display-name"
 			/>
 		</FormField>
 
@@ -354,6 +359,7 @@
 				bind:value={formData.slug}
 				placeholder="omni"
 				disabled={!!editingClient}
+				dataTestid="oauth-client-slug"
 			/>
 		</FormField>
 
@@ -366,6 +372,7 @@
 					{ value: 'public', label: t('integrations.oauthClients.public') },
 				]}
 				size="small"
+				dataTestid="oauth-client-type"
 			/>
 			<p class="text-xs mt-1" style="color: var(--ds-text-subtle);">
 				{t('integrations.oauthClients.clientTypeHelp')}
@@ -378,6 +385,7 @@
 				rows={3}
 				class="font-mono"
 				size="small"
+				data-testid="oauth-client-redirect-uris"
 				placeholder={`https://docmost.example.com/api/integrations/oauth/windshift/callback\n${DOCMOST_LOCAL_CALLBACK}`}
 			/>
 			<p class="text-xs mt-1" style="color: var(--ds-text-subtle);">
@@ -414,6 +422,7 @@
 					!formData.display_name ||
 					formData.allowed_scopes.length === 0 ||
 					parseRedirectURIs(formData.redirect_uris_text).length === 0}
+				dataTestid="oauth-client-register-submit"
 			>
 				{editingClient ? t('common.update') : t('integrations.oauthClients.register')}
 			</Button>
@@ -454,6 +463,7 @@
 					<code
 						class="flex-1 text-xs px-3 py-2 rounded border break-all"
 						style="background-color: var(--ds-background-neutral); border-color: var(--ds-border); color: var(--ds-text);"
+						data-testid="oauth-client-secret-value"
 					>
 						{secretModal.secret}
 					</code>
@@ -462,7 +472,7 @@
 			</div>
 
 			<div class="flex justify-end pt-2">
-				<Button variant="primary" onclick={() => (secretModal = null)}>
+				<Button variant="primary" onclick={() => (secretModal = null)} dataTestid="oauth-client-secret-done">
 					<X class="w-4 h-4 mr-1" /> {t('common.done')}
 				</Button>
 			</div>
