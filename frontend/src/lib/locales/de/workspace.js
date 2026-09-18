@@ -375,6 +375,7 @@ export default {
     range30d: 'Letzte 30 Tage',
     range90d: 'Letzte 90 Tage',
     rangeAll: 'Gesamter Zeitraum',
+    rangeNone: 'Keine',
     deleteTask: 'Aufgabe löschen',
     failedToDelete: 'Aufgabe konnte nicht gelöscht werden',
   },

@@ -457,7 +457,8 @@ export default {
     "range7d": "최근 7일",
     "range30d": "최근 30일",
     "range90d": "최근 90일",
-    "rangeAll": "전체 기간"
+    "rangeAll": "전체 기간",
+    "rangeNone": "없음"
   },
   "collectionTree": {
     "loading": "불러오는 중...",

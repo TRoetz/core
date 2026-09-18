@@ -373,6 +373,7 @@ export default {
     range30d: 'Últimos 30 dias',
     range90d: 'Últimos 90 dias',
     rangeAll: 'Todo o histórico',
+    rangeNone: 'Nenhum',
   },
   collectionTree: {
     loading: 'Carregando...',

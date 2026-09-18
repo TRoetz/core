@@ -376,6 +376,7 @@ export default {
     range30d: '最近 30 天',
     range90d: '最近 90 天',
     rangeAll: '全部记录',
+    rangeNone: '无',
   },
 
   collectionTree: {

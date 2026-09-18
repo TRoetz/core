@@ -472,6 +472,7 @@ export default {
     range30d: 'Last 30 days',
     range90d: 'Last 90 days',
     rangeAll: 'All time',
+    rangeNone: 'None',
   },
 
   collectionTree: {

@@ -373,6 +373,7 @@ export default {
     range30d: 'آخر 30 يومًا',
     range90d: 'آخر 90 يومًا',
     rangeAll: 'كل السجل',
+    rangeNone: 'بدون',
   },
   collectionTree: {
     loading: 'جارٍ التحميل...',

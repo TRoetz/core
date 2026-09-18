@@ -40,15 +40,18 @@
   let assignedCollapsed = $state(false);
 
   // Done-items date range: caps the indefinitely-growing completed list.
-  // '7' | '30' | '90' | 'all' | 'custom'; default = last 7 days.
+  // 'none' | '7' | '30' | '90' | 'all' | 'custom'; default = last 7 days.
   // svelte-ignore state_referenced_locally
   const RANGE_KEY = `todo-done-range-${workspaceId}`;
   let completedRange = $state('7');
   let customDate = $state('');
 
-  // ISO date (YYYY-MM-DD) sent as completed_since, or null for "All time".
+  // ISO date (YYYY-MM-DD) sent as completed_since, null for "All time", or a
+  // far-future date for "None" so no completed item can match while open items
+  // still pass the server-side filter.
   let completedSince = $derived.by(() => {
     if (completedRange === 'all') return null;
+    if (completedRange === 'none') return '9999-12-31';
     if (completedRange === 'custom') return customDate || null;
     const days = parseInt(completedRange, 10);
     const d = new Date();
@@ -57,6 +60,7 @@
   });
 
   const RANGE_PRESETS = [
+    { value: 'none', label: () => t('todo.rangeNone') },
     { value: '7', label: () => t('todo.range7d') },
     { value: '30', label: () => t('todo.range30d') },
     { value: '90', label: () => t('todo.range90d') },
