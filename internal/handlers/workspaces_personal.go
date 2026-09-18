@@ -181,13 +181,20 @@ func (h *WorkspaceHandler) GetOrCreatePersonalWorkspace(w http.ResponseWriter, r
 }
 
 // personalWorkspaceKeyCandidates lists the key candidates for a personal
-// workspace: P<userID> first, then suffixed variants for the pathological case
-// where a regular workspace already owns the base key. All candidates satisfy
-// ^[A-Z0-9]+$ and the 10-char cap for user IDs up to 9 digits.
+// workspace: P<userID> first, then letter-suffixed variants for the
+// pathological case where a regular workspace already owns the base key.
+//
+// Fallbacks use letters only, so every suffixed candidate ends in a letter and
+// can never equal another user's base key (P + decimal digits) or another
+// user's fallback (the trailing letter pins the suffix position; the digit run
+// pins the owner). Collisions therefore cannot cascade across users — only a
+// regular workspace owning the exact candidate triggers the next one, via the
+// savepoint retry. All candidates satisfy ^[A-Z0-9]+$ and the 10-char cap for
+// user IDs up to 9 digits.
 func personalWorkspaceKeyCandidates(userID int) []string {
 	base := fmt.Sprintf("P%d", userID)
 	candidates := []string{base}
-	for _, suffix := range []string{"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F"} {
+	for _, suffix := range []string{"A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"} {
 		if candidate := base + suffix; len(candidate) <= 10 {
 			candidates = append(candidates, candidate)
 		}
