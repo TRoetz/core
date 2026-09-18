@@ -17,6 +17,8 @@
   import PortalMyApprovals from '../portal/PortalMyApprovals.svelte';
   import PortalMyDrafts from '../portal/PortalMyDrafts.svelte';
   import PortalSections from '../portal/PortalSections.svelte';
+  import PortalKBBrowse from '../portal/PortalKBBrowse.svelte';
+  import PortalKBArticle from '../portal/PortalKBArticle.svelte';
   import PortalCustomizePanel from '../portal/PortalCustomizePanel.svelte';
 
   // Modals
@@ -131,6 +133,15 @@
   // The /profile route shares the 'portal' view; we discriminate on path.
   let isProfileRoute = $derived(
     typeof $currentRoute?.path === 'string' && $currentRoute.path.endsWith('/profile')
+  );
+
+  // Knowledge-base routes share the 'portal' view too: /kb lists the
+  // published articles, /kb/{pageId} shows one. Discriminated on path the
+  // same way as /profile; the article id comes from the route params.
+  let isKBBrowseRoute = $derived(/\/kb\/?$/.test($currentRoute?.path ?? ''));
+  let isKBArticleRoute = $derived(/\/kb\/\d+$/.test($currentRoute?.path ?? ''));
+  let kbPageId = $derived(
+    isKBArticleRoute ? Number($currentRoute.params?.pageId) : null
   );
 
   onMount(async () => {
@@ -485,8 +496,9 @@
         <!-- Stable portal navigation -->
         <PortalHeader />
 
-        <!-- Branded search hero on the portal home. -->
-        {#if !portalRequestsStore.visible && !portalApprovalsStore.visible && !portalDraftsStore.visible && !isProfileRoute}
+        <!-- Branded search hero on the portal home. Hidden on the
+             knowledge-base routes, which are full sections of their own. -->
+        {#if !portalRequestsStore.visible && !portalApprovalsStore.visible && !portalDraftsStore.visible && !isProfileRoute && !isKBBrowseRoute && !isKBArticleRoute}
           <PortalHero />
         {/if}
 
@@ -495,6 +507,10 @@
           <div class="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
             {#if isProfileRoute}
               <PortalProfile />
+            {:else if isKBArticleRoute}
+              <PortalKBArticle pageId={kbPageId} />
+            {:else if isKBBrowseRoute}
+              <PortalKBBrowse />
             {:else if portalApprovalsStore.visible}
               <PortalMyApprovals />
             {:else if portalDraftsStore.visible}

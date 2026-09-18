@@ -3,6 +3,7 @@ package services
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -275,6 +276,81 @@ func (s *KnowledgePublicationService) SearchPublishedPagesForPortal(config model
 		}
 		if len(out) >= limit {
 			break
+		}
+	}
+	return out, nil
+}
+
+// PublishedPagesForPortal lists the live pages this portal's knowledge
+// base publishes, for the browse listing. Whole-workspace wirings
+// contribute every live page of the workspace; subtree wirings contribute
+// the root and its descendants. Pages arrive in each workspace's stable
+// tree order (wired workspaces in ascending ID order), and a page wired
+// through several sources appears once. Mirrors PublishedPageForPortal's
+// inclusion rules so browse, search, and detail always agree.
+func (s *KnowledgePublicationService) PublishedPagesForPortal(config models.ChannelConfig) ([]models.Page, error) {
+	if len(config.KnowledgeBasePageSources) == 0 {
+		return nil, nil
+	}
+
+	wholeWorkspaces := map[int]bool{}
+	rootsByWorkspace := map[int][]int{}
+	workspaceIDs := make([]int, 0, len(config.KnowledgeBasePageSources))
+	seenWorkspaces := map[int]bool{}
+	for _, src := range config.KnowledgeBasePageSources {
+		if src.RootPageID == nil {
+			wholeWorkspaces[src.WorkspaceID] = true
+		}
+		if !seenWorkspaces[src.WorkspaceID] {
+			seenWorkspaces[src.WorkspaceID] = true
+			workspaceIDs = append(workspaceIDs, src.WorkspaceID)
+		}
+		if src.RootPageID != nil {
+			rootsByWorkspace[src.WorkspaceID] = append(rootsByWorkspace[src.WorkspaceID], *src.RootPageID)
+		}
+	}
+	sort.Ints(workspaceIDs)
+
+	out := make([]models.Page, 0, len(config.KnowledgeBasePageSources))
+	seenPages := map[int]bool{}
+	for _, workspaceID := range workspaceIDs {
+		pages, err := s.pages.ListWorkspaceTreeMeta(workspaceID, false)
+		if err != nil {
+			return nil, err
+		}
+		roots := make([]*models.Page, 0, len(rootsByWorkspace[workspaceID]))
+		for _, rootID := range rootsByWorkspace[workspaceID] {
+			root, err := s.pages.GetByID(rootID)
+			if err == repository.ErrNotFound {
+				continue
+			}
+			if err != nil {
+				return nil, err
+			}
+			if root.ArchivedAt != nil || root.WorkspaceID != workspaceID {
+				continue
+			}
+			roots = append(roots, root)
+		}
+
+		for _, page := range pages {
+			if seenPages[page.ID] {
+				continue
+			}
+			included := wholeWorkspaces[workspaceID]
+			if !included {
+				for _, root := range roots {
+					prefix := root.Path + strconv.Itoa(root.ID) + "/"
+					if page.ID == root.ID || strings.HasPrefix(page.Path, prefix) {
+						included = true
+						break
+					}
+				}
+			}
+			if included {
+				seenPages[page.ID] = true
+				out = append(out, page)
+			}
 		}
 	}
 	return out, nil

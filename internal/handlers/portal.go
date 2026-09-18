@@ -981,6 +981,42 @@ func (h *PortalHandler) appendWorkspacePageHits(config models.ChannelConfig, que
 	return nil
 }
 
+// ListKnowledgeBasePages serves the browse listing of published workspace
+// pages for one portal's knowledge base: titles and hierarchy only — page
+// bodies stay behind the per-page endpoint. Mirrors the search and detail
+// endpoints' scoping: only this portal's wiring, live pages only, and 404
+// when the portal has no workspace-pages wiring at all.
+func (h *PortalHandler) ListKnowledgeBasePages(w http.ResponseWriter, r *http.Request) {
+	_, cancel, _, config, ok := h.resolvePortalBySlug(w, r)
+	if !ok {
+		return
+	}
+	defer cancel()
+
+	if h.publication == nil || len(config.KnowledgeBasePageSources) == 0 {
+		respondError(w, r, restapi.NewAPIError(http.StatusNotFound, restapi.ErrCodeNotFound, "Page not found"))
+		return
+	}
+	pages, err := h.publication.PublishedPagesForPortal(config)
+	if err != nil {
+		respondInternalError(w, r, err)
+		return
+	}
+	result := make([]map[string]any, 0, len(pages))
+	for _, page := range pages {
+		result = append(result, map[string]any{
+			"source":       "workspace_page",
+			"page_id":      page.ID,
+			"workspace_id": page.WorkspaceID,
+			"title":        page.Title,
+			"parent_id":    page.ParentID,
+			"depth":        page.Depth,
+			"updated_at":   page.UpdatedAt,
+		})
+	}
+	respondJSONOK(w, result)
+}
+
 // GetKnowledgeBasePage serves one published workspace page to portal
 // callers. The page must be inside a subtree (or whole-workspace wiring)
 // this portal's knowledge base publishes; anything else is 404.

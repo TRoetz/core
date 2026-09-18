@@ -1,6 +1,7 @@
 <script>
   import {
     ArrowLeft,
+    BookOpen,
     CheckSquare,
     FileText,
     Home,
@@ -23,7 +24,7 @@
   } from '../stores/portalActivity.svelte.js';
   import { portalAuthStore } from '../stores/portalAuth.svelte.js';
   import { t } from '../stores/i18n.svelte.js';
-  import { navigate } from '../router.js';
+  import { navigate, currentRoute } from '../router.js';
   import Input from '../components/Input.svelte';
 
   let isInternalUser = $derived($authStore.isAuthenticated || $portalAuthStore.isInternal);
@@ -88,6 +89,15 @@
     portalDraftsStore.setVisible(false);
     closeMenus();
     if (portalStore.currentSlug) navigate(`/portal/${portalStore.currentSlug}`);
+  }
+
+  // The knowledge-base nav entry appears only when workspace pages are
+  // wired into this portal; Docmost-only portals link out from search.
+  let hasKBPages = $derived(portalStore.knowledgeBasePageSources.length > 0);
+  let isKBRoute = $derived(/\/kb(\/|$)/.test($currentRoute?.path ?? ''));
+
+  function goToKnowledgeBase() {
+    if (portalStore.currentSlug) navigate(`/portal/${portalStore.currentSlug}/kb`);
   }
 
   function goToProfile() {
@@ -192,6 +202,20 @@
             </span>
           {/if}
         </button>
+
+        {#if hasKBPages}
+          <button
+            type="button"
+            onclick={goToKnowledgeBase}
+            class="hidden sm:inline-flex h-9 items-center gap-2 rounded-md px-3 text-sm font-medium transition-colors"
+            style="color: {shellText}; background-color: {isKBRoute ? shellControl : 'transparent'};"
+            title="Knowledge base"
+            data-testid="portal-kb-nav"
+          >
+            <BookOpen class="w-4 h-4" />
+            <span>Knowledge base</span>
+          </button>
+        {/if}
 
         {#if portalApprovalsStore.pendingCount > 0}
           <button

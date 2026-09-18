@@ -80,6 +80,9 @@ export const portal = {
   getKnowledgeBasePage: (slug, pageId) =>
     fetchAPI(`/portal/${slug}/knowledge-base/pages/${pageId}`),
 
+  /** Browse listing of published knowledge-base pages (titles + hierarchy). */
+  listKnowledgeBasePages: (slug) => fetchAPI(`/portal/${slug}/knowledge-base/pages`),
+
   getMyRequests: (slug) => fetchAPI(`/portal/${slug}/my-requests`),
 
   getRequestDetail: (slug, itemId) => fetchAPI(`/portal/${slug}/requests/${itemId}`),
