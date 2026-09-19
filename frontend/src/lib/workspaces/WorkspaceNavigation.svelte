@@ -14,7 +14,7 @@
     IconSparkles as Sparkles,
     IconPencil as Pencil,
   } from '@tabler/icons-svelte-runes';
-  import { workspaceViewItems, workspaceOnlyViews, testNavigationItems, workspaceSettingsItems, workspaceSettingsViews, workspaceSettingsRoute } from '../navigation/workspaceNavigation.js';
+  import { workspaceViewItems, workspaceOnlyViews, testNavigationItems, visibleWorkspaceSettingsItems, workspaceSettingsViews, workspaceSettingsRoute } from '../navigation/workspaceNavigation.js';
   import { navigate, currentRoute } from '../router.js';
   import { currentWorkspace, workspacePermissions } from '../stores';
   import { moduleSettings } from '../stores/moduleSettings.js';
@@ -89,6 +89,11 @@
   const canViewTests = $derived.by(() => workspacePermissions.canViewTests(workspaceId));
   const canManageActions = $derived.by(() => workspacePermissions.canManageActions(workspaceId));
   const canAdmin = $derived.by(() => workspacePermissions.canAdminWorkspace(workspaceId));
+  const visibleSettingsItems = $derived.by(() =>
+    visibleWorkspaceSettingsItems(workspaceId, (wsId, permission) =>
+      workspacePermissions.hasPermission(wsId, permission)
+    )
+  );
   const canViewPages = $derived.by(() => workspacePermissions.hasPermission(workspaceId, 'page.view'));
 
   // Filter workspace-only views based on permissions
@@ -463,7 +468,7 @@
     <div class="flex flex-col items-center space-y-1 mt-6">
       {@render collapsedNavIcon({ href: `/workspaces/${workspaceId}`, testId: 'workspace-back-link', label: t('workspaceSettings.backToWorkspace'), icon: ArrowLeft, isActive: false })}
       {@render sectionDivider()}
-      {#each workspaceSettingsItems as item (item.id)}
+      {#each visibleSettingsItems as item (item.id)}
         {@render collapsedNavIcon({ href: workspaceSettingsRoute(workspaceId, item.id), testId: `workspace-admin-nav-${item.id}`, label: t(item.labelKey), icon: item.icon, isActive: $currentRoute.view === item.view })}
       {/each}
     </div>
@@ -494,7 +499,7 @@
       {/each}
 
       {#if canAdmin}
-        {@render collapsedNavIcon({ href: `/workspaces/${workspaceId}/settings/general`, label: t('workspaceSettings.title'), icon: Settings, isActive: isSettingsActive() })}
+        {@render collapsedNavIcon({ href: `/workspaces/${workspaceId}/settings/general`, label: t('workspaceSettings.title'), icon: Settings, testId: 'workspace-nav-settings', isActive: isSettingsActive() })}
       {/if}
     </div>
   {/if}
@@ -639,7 +644,7 @@
 
             {#if canAdmin}
               {@render navLink({ href: `/workspaces/${workspaceId}/look-and-feel`, label: t('lookAndFeel.title'), tooltip: t('lookAndFeel.subtitle'), icon: Palette, isActive: $currentRoute.view === 'workspace-look-and-feel' })}
-              {@render navLink({ href: `/workspaces/${workspaceId}/settings/general`, label: t('workspaceSettings.title'), tooltip: t('workspaceSettings.subtitle', { name: $currentWorkspace?.name || t('common.workspace') }), icon: Settings, isActive: isSettingsActive() })}
+              {@render navLink({ href: `/workspaces/${workspaceId}/settings/general`, label: t('workspaceSettings.title'), tooltip: t('workspaceSettings.subtitle', { name: $currentWorkspace?.name || t('common.workspace') }), icon: Settings, testId: 'workspace-nav-settings', isActive: isSettingsActive() })}
             {/if}
           </div>
         {/if}

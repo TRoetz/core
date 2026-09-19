@@ -1,17 +1,25 @@
 <script>
   import { currentRoute } from '../router.js';
   import { workspacePermissions } from '../stores';
-  import { workspaceSettingsItems, workspaceSettingsRoute } from '../navigation/workspaceNavigation.js';
+  import {
+    visibleWorkspaceSettingsItems,
+    workspaceSettingsRoute,
+  } from '../navigation/workspaceNavigation.js';
   import { t } from '../stores/i18n.svelte.js';
 
   let { workspaceId = null } = $props();
 
   const canAdmin = $derived(workspacePermissions.canAdminWorkspace(workspaceId));
+  const items = $derived(
+    visibleWorkspaceSettingsItems(workspaceId, (wsId, permission) =>
+      workspacePermissions.hasPermission(wsId, permission)
+    )
+  );
 </script>
 
 {#if canAdmin}
   <nav class="px-4 pt-2 pb-2 space-y-1" data-testid="workspace-admin-nav" aria-label={t('workspaceSettings.title')}>
-    {#each workspaceSettingsItems as item (item.id)}
+    {#each items as item (item.id)}
       {@const ItemIcon = item.icon}
       {@const active = $currentRoute.view === item.view}
       <a

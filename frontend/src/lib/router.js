@@ -32,6 +32,7 @@ const routes = {
   '/workspaces/:id/settings/configuration': 'workspace-settings-configuration',
   '/workspaces/:id/settings/source-control': 'workspace-settings-source-control',
   '/workspaces/:id/settings/issue-sync': 'workspace-settings-issue-sync',
+  '/workspaces/:id/settings/action-credentials': 'workspace-settings-action-credentials',
   '/workspaces/:id/settings/templates': 'workspace-settings-templates',
   '/workspaces/:id/settings/danger': 'workspace-settings-danger',
   '/workspaces/:id/actions': 'workspace-actions',

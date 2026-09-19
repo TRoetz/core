@@ -8,6 +8,7 @@
   import WorkspaceConfigurationAssigner from './WorkspaceConfigurationAssigner.svelte';
   import WorkspaceConfigurationPreview from './WorkspaceConfigurationPreview.svelte';
   import WorkspaceSCMSettings from './WorkspaceSCMSettings.svelte';
+  import WorkspaceActionCredentials from './WorkspaceActionCredentials.svelte';
   import WorkspaceAgentBindings from './WorkspaceAgentBindings.svelte';
   import WorkspaceAgentSkills from './WorkspaceAgentSkills.svelte';
   import IssueSyncSettings from '../settings/IssueSyncSettings.svelte';
@@ -80,6 +81,7 @@
     'source-control': 'workspaceSettings.headers.sourceControl',
     'coding-agents': 'workspaceSettings.headers.codingAgents',
     'issue-sync': 'workspaceSettings.headers.issueSync',
+    'action-credentials': 'workspaceSettings.headers.actionCredentials',
     recurrence: 'workspaceSettings.headers.recurrence',
     templates: 'workspaceSettings.headers.templates',
     danger: 'workspaceSettings.headers.danger',
@@ -305,7 +307,7 @@
     </div>
   </Card>
 {:else if !canAdmin}
-  <Card rounded="xl" shadow padding="loose">
+  <Card rounded="xl" shadow padding="loose" dataTestid="workspace-settings-access-denied">
     <div class="text-center py-8">
       <Shield class="w-12 h-12 mx-auto mb-4 text-ds-icon-warning" />
       <h2 class="text-lg font-semibold mb-2" style="color: var(--ds-text);">{t('workspaceSettings.accessDenied')}</h2>
@@ -530,6 +532,10 @@
     {:else if activeTab === 'issue-sync'}
         <!-- Issue Sync Settings -->
         <IssueSyncSettings {workspaceId} />
+
+    {:else if activeTab === 'action-credentials'}
+        <!-- Workspace-scoped action credentials (WI-1433) -->
+        <WorkspaceActionCredentials {workspaceId} />
 
     {:else if activeTab === 'recurrence'}
         <!-- Recurrence Rules -->

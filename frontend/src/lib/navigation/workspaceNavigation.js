@@ -8,6 +8,7 @@ import {
   IconFileCheck as FileCheck,
   IconFileStack as FileStack,
   IconGitBranch as GitBranch,
+  IconKey as Key,
   IconList as List,
   IconListTree as ListTree,
   IconMapPin as MapPin,
@@ -94,7 +95,7 @@ export const workspaceOnlyViews = [
     tooltipKey: 'commandPalette.commands.analytics.description',
     icon: TrendingUp,
   },
-  { id: 'actions', labelKey: 'actions.title', icon: Zap },
+  { id: 'actions', labelKey: 'actions.title', icon: Zap, testId: 'workspace-nav-actions' },
   {
     id: 'pages',
     labelKey: 'pages.treeHeading',
@@ -154,6 +155,7 @@ export const testNavigationItems = [
  * @property {any}     icon      Icon component.
  * @property {string}  view      Route view name that highlights this item.
  * @property {boolean} [danger]  Styled as a destructive action when true.
+ * @property {string}  [permission] Workspace permission key required to see the module.
  */
 
 /**
@@ -200,6 +202,13 @@ export const workspaceSettingsItems = [
     view: 'workspace-settings-issue-sync',
   },
   {
+    id: 'action-credentials',
+    labelKey: 'workspaceSettings.tabs.actionCredentials',
+    icon: Key,
+    view: 'workspace-settings-action-credentials',
+    permission: 'action.credential.manage',
+  },
+  {
     id: 'recurrence',
     labelKey: 'workspaceSettings.tabs.recurrence',
     icon: Repeat,
@@ -225,6 +234,15 @@ export const workspaceSettingsViews = [
   'workspace-settings',
   ...workspaceSettingsItems.map((item) => item.view),
 ];
+
+/** Settings modules visible to the current user in a workspace. Modules with
+ * a `permission` require that workspace permission; the rest only need
+ * workspace.admin (the settings area's own gate). */
+export function visibleWorkspaceSettingsItems(workspaceId, hasPermission) {
+  return workspaceSettingsItems.filter(
+    (item) => !item.permission || hasPermission(workspaceId, item.permission)
+  );
+}
 
 /** Build the route for a settings module. */
 export function workspaceSettingsRoute(workspaceId, id) {

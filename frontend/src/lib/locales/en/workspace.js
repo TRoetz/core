@@ -721,6 +721,7 @@ export default {
       sourceControl: 'Source Control',
       codingAgents: 'Agents',
       issueSync: 'Issue Sync',
+      actionCredentials: 'Action Credentials',
       recurrence: 'Recurrence',
       templates: 'Templates',
       removeWorkspace: 'Remove Workspace',
@@ -743,6 +744,7 @@ export default {
       sourceControl: 'Connect repositories and source control',
       codingAgents: 'Configure coding agents and their skills',
       issueSync: 'Sync external issues into this workspace',
+      actionCredentials: 'Encrypted API tokens this workspace’s actions can use',
       recurrence: 'Manage recurring item rules',
       templates: 'Reusable description scaffolds for new items',
       danger: 'Permanently remove this workspace',
@@ -752,6 +754,22 @@ export default {
     accessDenied: 'Access Denied',
     accessDeniedDescription: 'You need workspace administrator permissions to access settings.',
     backToWorkspace: 'Back to Workspace',
+
+    // Action credentials module (gated on action.credential.manage)
+    actionCredentials: {
+      description:
+        'Encrypted API tokens referenced by this workspace’s HTTP action capabilities instead of storing tokens inline. Secrets are write-only and cannot be read back.',
+      empty: 'No credentials are available in this workspace yet.',
+      ownedHere: 'This workspace',
+      inherited: 'Inherited',
+      inheritedHelp:
+        'Managed by a system administrator — global and shared credentials can only be edited on the system Action Capabilities page.',
+      managedByAdmin: 'System admin',
+      pinnedHelp: 'The credential is stored for this workspace only.',
+      noPermissionTitle: 'Action credentials unavailable',
+      noPermissionBody:
+        'You need the action.credential.manage permission in this workspace to manage its action credentials.',
+    },
 
     // General tab
     basicInformation: 'Basic Information',
