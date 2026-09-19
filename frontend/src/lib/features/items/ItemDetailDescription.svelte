@@ -29,6 +29,10 @@
     showAIActions = true,
     manualActions = [],
     canCreate = false,
+    // Write affordances (edit description, add link, attach, diagram) are
+    // offered only when the user may edit the item; personal tasks stay
+    // editable via the default.
+    canEdit = true,
     onsavefield = undefined,
     oncanceledit = undefined,
     onstartEditingDescription = undefined,
@@ -169,19 +173,29 @@
       </div>
     </div>
   {:else if item.description}
-    <div
-      onclick={startEditingDescription}
-      onkeydown={(e) => e.key === 'Enter' && startEditingDescription()}
-      role="button"
-      tabindex="0"
-      class="description-hover text-left rounded cursor-pointer transition-colors duration-150"
-      style="color: var(--ds-text);"
-      title={t('items.clickToEditDescription')}
-      data-testid="item-description-display"
-    >
-      <SafeMarkdown html={item.description_html} source={item.description} />
-    </div>
-  {:else}
+    {#if canEdit}
+      <div
+        onclick={startEditingDescription}
+        onkeydown={(e) => e.key === 'Enter' && startEditingDescription()}
+        role="button"
+        tabindex="0"
+        class="description-hover text-left rounded cursor-pointer transition-colors duration-150"
+        style="color: var(--ds-text);"
+        title={t('items.clickToEditDescription')}
+        data-testid="item-description-display"
+      >
+        <SafeMarkdown html={item.description_html} source={item.description} />
+      </div>
+    {:else}
+      <div
+        class="text-left rounded"
+        style="color: var(--ds-text);"
+        data-testid="item-description-display"
+      >
+        <SafeMarkdown html={item.description_html} source={item.description} />
+      </div>
+    {/if}
+  {:else if canEdit}
     <button
       data-testid="item-description-empty"
       onclick={startEditingDescription}
@@ -190,11 +204,19 @@
     >
       {t('items.noDescriptionProvided')}
     </button>
+  {:else}
+    <p
+      data-testid="item-description-empty"
+      class="text-left w-full py-2 text-sm"
+      style="color: var(--ds-text-subtle);"
+    >
+      {t('items.noDescriptionProvided')}
+    </p>
   {/if}
   
   <!-- Action buttons - icon only, label slides in on hover -->
   <div class="mt-5 flex gap-1">
-    {#if showLinkButton}
+    {#if showLinkButton && canEdit}
       <button
         data-testid="add-link-button"
         class="action-btn inline-flex items-center gap-1.5 px-2 py-1.5 rounded text-xs transition-all"
@@ -218,8 +240,9 @@
         <span class="action-label">{t('items.child')}</span>
       </button>
     {/if}
-    {#if attachmentStatus.enabled}
+    {#if attachmentStatus.enabled && canEdit}
       <label
+        data-testid="item-attachment-upload"
         class="action-btn inline-flex items-center gap-1.5 px-2 py-1.5 rounded text-xs transition-all cursor-pointer"
         style="color: var(--ds-text-subtle);"
         title={t('items.attachFile')}
@@ -238,7 +261,7 @@
           }}
         />
       </label>
-      {#if showDiagramButton}
+      {#if showDiagramButton && canEdit}
         <button
           class="action-btn inline-flex items-center gap-1.5 px-2 py-1.5 rounded text-xs transition-all"
           style="color: var(--ds-text-subtle);"

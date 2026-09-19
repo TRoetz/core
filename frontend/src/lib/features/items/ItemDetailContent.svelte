@@ -377,6 +377,7 @@
             {diagrams}
             {manualActions}
             {canCreate}
+            {canEdit}
             onsavefield={handleSaveField}
             oncanceledit={handleCancelEdit}
             onstartEditingDescription={() => onstartEditingDescription?.()}

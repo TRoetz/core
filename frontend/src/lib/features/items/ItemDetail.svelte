@@ -814,7 +814,10 @@ import NativeSelect from '../../components/NativeSelect.svelte';
       }
     ];
 
-    if (!recurrenceRule) {
+    // Use untrack to prevent creating reactive dependency that could cause infinite loops
+    const canEdit = untrack(() => workspacePermissions.canEdit(workspaceId));
+
+    if (!recurrenceRule && canEdit) {
       items.push({
         id: 'add-recurrence',
         type: 'regular',
@@ -825,7 +828,6 @@ import NativeSelect from '../../components/NativeSelect.svelte';
       });
     }
 
-    const canEdit = untrack(() => workspacePermissions.canEdit(workspaceId));
     if (canEdit) {
       items.push({
         id: 'move-workspace',
