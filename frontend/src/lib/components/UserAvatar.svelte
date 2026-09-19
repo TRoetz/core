@@ -109,11 +109,13 @@
   triggerIcon={!showAvatar ? User : null}
   triggerIconClass="w-5 h-5"
   triggerClass={showAvatar
-    ? "w-full pl-1.5 pr-3 h-10 rounded flex items-center cursor-pointer nav-button overflow-hidden"
+    ? (expanded
+        ? "w-full pl-1.5 pr-3 h-10 rounded flex items-center cursor-pointer nav-button overflow-hidden"
+        : "w-full px-1.5 h-10 rounded flex items-center justify-center cursor-pointer nav-button overflow-hidden")
     : "w-full px-3 h-10 rounded flex items-center cursor-pointer nav-button"
   }
   triggerGap={showAvatar || expanded ? "gap-3" : ""}
-  triggerAlignment={showAvatar || expanded ? "start" : "center"}
+  triggerAlignment={expanded ? "start" : "center"}
   showChevron={false}
   triggerTestid="user-avatar-trigger"
   {isOpen}

@@ -94,7 +94,9 @@
   <button
     use:melt={$trigger}
     data-testid="notifications-trigger"
-    class="w-full px-3 h-10 rounded flex items-center justify-start cursor-pointer nav-button {$open ? 'nav-button-selected' : ''}"
+    class="w-full h-10 rounded flex items-center {expanded
+      ? 'justify-start px-3'
+      : 'justify-center'} cursor-pointer nav-button {$open ? 'nav-button-selected' : ''}"
     title={t('notifications.title')}
     aria-label={t('notifications.title')}
   >

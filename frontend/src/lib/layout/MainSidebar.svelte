@@ -74,7 +74,10 @@
     <a
       href="/"
       onclick={closePopoverSurface}
-      class="flex items-center justify-start px-4 w-full h-10 mb-2 hover:opacity-80 transition-opacity cursor-pointer"
+      data-testid="nav-logo-link"
+      class="flex items-center {$uiStore.navExpanded
+        ? 'justify-start px-4'
+        : 'justify-center'} w-full h-10 mb-2 hover:opacity-80 transition-opacity cursor-pointer"
     >
       {#if themeStore.activeTheme?.logo_url}
         <img
@@ -105,7 +108,9 @@
           triggerGap="gap-3"
           triggerText={$uiStore.navExpanded ? t('nav.workspaces') : ''}
           triggerLabel={t('nav.workspaces')}
-          triggerClass="w-full px-3 h-10 rounded flex items-center justify-start cursor-pointer nav-button {isWorkspaceRoute($currentRoute.view) ? 'nav-button-selected' : ''} {!$workspacesStore.loaded ? 'opacity-50 cursor-wait' : ''}"
+          triggerClass="w-full h-10 rounded flex items-center {$uiStore.navExpanded
+            ? 'justify-start px-3'
+            : 'justify-center'} cursor-pointer nav-button {isWorkspaceRoute($currentRoute.view) ? 'nav-button-selected' : ''} {!$workspacesStore.loaded ? 'opacity-50 cursor-wait' : ''}"
           triggerTestid="workspaces-dropdown-trigger"
           items={workspacesDropdownItems}
           maxWidth="max-w-xs"
@@ -186,8 +191,9 @@
   <div class="flex flex-col items-stretch px-2.5 space-y-1 pt-2">
     <!-- Nav Toggle Button -->
     <button
+      data-testid="nav-toggle-button"
       onclick={() => uiStore.toggleNavExpanded()}
-      class="flex items-center justify-start w-full px-3 h-10 mb-2 rounded cursor-pointer nav-button"
+      class="flex items-center {$uiStore.navExpanded ? 'justify-start px-3' : 'justify-center'} w-full h-10 mb-2 rounded cursor-pointer nav-button"
       aria-label={$uiStore.navExpanded ? t('nav.collapse') : t('nav.expand')}
     >
       {#if $uiStore.navExpanded}

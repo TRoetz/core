@@ -15,8 +15,12 @@
     id = undefined
   } = $props();
 
+  // Collapsed buttons center the icon so alignment survives narrow columns
+  // (Linux reserve scrollbars shrink the collapsed rail to ~32px buttons).
   const baseClasses = $derived(
-    'w-full px-3 h-10 rounded flex items-center justify-start text-left cursor-pointer'
+    expanded
+      ? 'w-full px-3 h-10 rounded flex items-center justify-start text-left cursor-pointer'
+      : 'w-full h-10 rounded flex items-center justify-center cursor-pointer'
   );
 
   const variantClasses = $derived(
