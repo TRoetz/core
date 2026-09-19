@@ -35,7 +35,7 @@
   import ItemKey from '../items/ItemKey.svelte';
   import CollectionViewSwitcher from './CollectionViewSwitcher.svelte';
   import DropdownMenu from '../../layout/DropdownMenu.svelte';
-  import { backlogStore, workspaceDataStore, workspacesStore } from '../../stores/index.js';
+  import { backlogStore, workspaceDataStore, workspacesStore, workspacePermissions } from '../../stores/index.js';
   import { useWorkItemPoller } from '../../composables/useWorkItemPoller.svelte.js';
   import { agentRuns } from '../../stores/agentRuns.svelte.js';
   import { getVisibleColor, hexToRgb } from '../../utils/colorUtils.js';
@@ -121,6 +121,13 @@
       : collectionAllowsAllWorkspaces
         ? workspaces
         : workspaces.filter(workspace => collectionStore.boardWorkspaceIds.includes(workspace.id))
+  );
+  // Quick-add needs item.create in the target workspace; a cross-workspace
+  // board offers the affordance only while at least one target allows it, and
+  // the form's workspace picker is limited to those targets (the backend
+  // rejects creation elsewhere with 404).
+  let creatableWorkspaces = $derived(
+    availableWorkspaces.filter((workspace) => workspacePermissions.canCreate(workspace.id))
   );
   const quickAddItemTypesByWorkspace = new Map();
   let quickAddTypeLoadToken = 0;
@@ -293,7 +300,7 @@
     const parentId = parentItem?.id ?? null;
 
     const preselectedWorkspaceId = parentItem?.workspace_id
-      ?? (availableWorkspaces.length === 1 ? availableWorkspaces[0].id : null);
+      ?? (creatableWorkspaces.length === 1 ? creatableWorkspaces[0].id : null);
 
     quickAddState[quickAddKey] = {
       show: true,
@@ -1714,7 +1721,7 @@
                       textStyle={styles.glassTextStyle}
                       subtleTextStyle={styles.glassSubtleTextStyle}
                       dndAction={registerBoardColumn}
-                      onadd={laneQuickAddTypes.length > 0 && availableWorkspaces.length > 0
+                      onadd={laneQuickAddTypes.length > 0 && creatableWorkspaces.length > 0
                         ? () => initQuickAdd(column.id, column.status_ids[0], quickAddKey, lane.parent ?? null)
                         : null}
                       oncollapse={() => toggleColumnCollapse(column.id)}
@@ -1724,7 +1731,7 @@
                             <QuickAddForm
                               parentId={quickAddKey}
                               formState={quickAddState[quickAddKey]}
-                              workspaces={availableWorkspaces}
+                              workspaces={creatableWorkspaces}
                               cardBgStyle={styles.cardStyle(8)}
                               onUpdateField={updateQuickAddField}
                               onCreate={createColumnItem}
