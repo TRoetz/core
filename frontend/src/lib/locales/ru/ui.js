@@ -192,6 +192,8 @@ export default {
     insertImage: 'Вставить изображение',
     userNotFound: 'Пользователь не найден',
     insertDiagram: 'Вставить диаграмму',
+    insertPageLink: 'Вставить ссылку на страницу знаний',
+    searchPagesToLink: 'Поиск страниц…',
     diagramEdit: 'Изменить диаграмму',
     diagramOpen: 'Открыть диаграмму',
     diagramUntitled: 'Диаграмма без названия',
