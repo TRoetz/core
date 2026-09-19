@@ -28,6 +28,9 @@
     cardStyle = 'background-color: var(--ds-surface-raised); border-color: var(--ds-border);',
     textStyle = 'color: var(--ds-text);',
     showMoveMenu = true,
+    // Registered with pragmatic-drag-and-drop only when the user may edit the
+    // item; the action re-runs when this flips (e.g. permissions finish loading).
+    canDrag = true,
     dndAction = () => {},
     onopen = null,
   } = $props();
@@ -37,6 +40,8 @@
       ? moveMenuItems
       : [{ id: `no-moves-${item.id}`, type: 'text', text: 'No available moves' }],
   );
+
+  const dndConfig = $derived([item.id, canDrag]);
 
   const bodyCardFields = $derived(
     cardFields.filter(
@@ -73,7 +78,7 @@
 </script>
 
 <div
-  use:dndAction={item.id}
+  use:dndAction={dndConfig}
   class="board-card relative rounded-[4px] border px-3 py-2.5"
   style={cardStyle}
   data-testid={`board-item-${item.id}`}
@@ -89,7 +94,7 @@
     <DropIndicator edge={closestEdge} />
   {/if}
 
-  <div class="cursor-grab active:cursor-grabbing">
+  <div class={canDrag ? 'cursor-grab active:cursor-grabbing' : ''}>
     <div class="min-w-0">
       <div class="flex items-start gap-2">
         <h4 class="min-w-0 flex-1 break-words text-sm font-medium leading-5" style={textStyle}>

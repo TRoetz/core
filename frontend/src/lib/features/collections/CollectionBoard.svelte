@@ -1105,26 +1105,35 @@
     }
   }
 
-  function registerBoardCard(element, itemId) {
+  function registerBoardCard(element, [itemId, canDrag]) {
     dragState.set(itemId, { isDragging: false, closestEdge: null });
 
-    const draggableCleanup = draggable({
-      element,
-      getInitialData: () => ({ item: itemsById.get(itemId), type: 'work-item' }),
-      onDragStart: () => {
-        element.style.opacity = '0.5';
-        document.body.classList.add('is-dragging');
-        const state = dragState.get(itemId) || {};
-        dragState.set(itemId, { ...state, isDragging: true });
-        dragState = new Map(dragState);
-      },
-      onDrop: () => {
-        element.style.opacity = '';
-        document.body.classList.remove('is-dragging');
-        dragState = new Map([...dragState].map(([id]) => [id, { isDragging: false, closestEdge: null }]));
-        resetAllColumnStyles();
-      }
-    });
+    let draggableCleanup = null;
+    function attachDraggable(canDragValue) {
+      draggableCleanup?.();
+      draggableCleanup = null;
+      if (!canDragValue) return;
+      draggableCleanup = draggable({
+        element,
+        getInitialData: () => ({ item: itemsById.get(itemId), type: 'work-item' }),
+        onDragStart: () => {
+          element.style.opacity = '0.5';
+          document.body.classList.add('is-dragging');
+          const state = dragState.get(itemId) || {};
+          dragState.set(itemId, { ...state, isDragging: true });
+          dragState = new Map(dragState);
+        },
+        onDrop: () => {
+          element.style.opacity = '';
+          document.body.classList.remove('is-dragging');
+          dragState = new Map([...dragState].map(([id]) => [id, { isDragging: false, closestEdge: null }]));
+          resetAllColumnStyles();
+        }
+      });
+    }
+
+    // Re-evaluated when the canDrag flag flips (e.g. permissions finish loading).
+    attachDraggable(canDrag);
 
     const dropTargetCleanup = dropTargetForElements({
       element,
@@ -1172,10 +1181,13 @@
     });
 
     return {
+      update([, nextCanDrag]) {
+        attachDraggable(nextCanDrag);
+      },
       destroy() {
         element.style.opacity = '';
         document.body.classList.remove('is-dragging');
-        draggableCleanup();
+        draggableCleanup?.();
         dropTargetCleanup();
         dragState.delete(itemId);
       }
@@ -1754,6 +1766,7 @@
                           <div class="space-y-1">
                             {#each columnItems as item (item.id)}
                               {@const moveMenuItems = getMoveMenuItems(item)}
+                              {@const canDragCard = workspacePermissions.canEdit(item.workspace_id)}
                               <BoardItemCard
                                 {item}
                                 {workspace}
@@ -1767,12 +1780,14 @@
                                 {customFieldDefinitions}
                                 {users}
                                 dependencyLinks={dependencyLinksByItem[item.id] ?? []}
-                                {moveMenuItems}
+                                moveMenuItems={canDragCard ? moveMenuItems : []}
+                                showMoveMenu={canDragCard}
                                 closestEdge={dragState.get(item.id)?.closestEdge}
                                 swimlaneParentId={selectedGroupByItemType && lane.parent ? lane.parent.id : ''}
                                 cardStyle={styles.cardStyle(0)}
                                 textStyle={styles.glassTextStyle}
                                 dndAction={registerBoardCard}
+                                canDrag={canDragCard}
                                 onopen={openItem}
                               />
                             {/each}
