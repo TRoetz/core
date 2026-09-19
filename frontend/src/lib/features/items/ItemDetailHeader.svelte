@@ -11,6 +11,7 @@
     editingTitle = $bindable(false),
     editTitle = $bindable(''),
     saving = false,
+    canEdit = false,
     onsavefield = undefined,
     oncanceledit = undefined,
   } = $props();
@@ -88,15 +89,27 @@
       {:else}
         <!-- Item key -->
 
-        <button
-          onclick={startEditingTitle}
-          data-testid="item-title-edit"
-          class="text-2xl font-semibold pr-4 py-1 rounded transition-colors text-left cursor-pointer w-full title-button break-words"
-          style="color: var(--ds-text); word-wrap: break-word; overflow-wrap: break-word;"
-          title={t('items.clickToEditTitle')}
-        >
-          {item.title}
-        </button>
+        {#if canEdit}
+          <button
+            onclick={startEditingTitle}
+            data-testid="item-title-edit"
+            class="text-2xl font-semibold pr-4 py-1 rounded transition-colors text-left cursor-pointer w-full title-button break-words"
+            style="color: var(--ds-text); word-wrap: break-word; overflow-wrap: break-word;"
+            title={t('items.clickToEditTitle')}
+          >
+            {item.title}
+          </button>
+        {:else}
+          <!-- Read-only title for users without item.edit (server enforces the
+               PATCH; the UI simply must not offer the affordance). -->
+          <h1
+            class="text-2xl font-semibold pr-4 py-1 text-left w-full break-words"
+            style="color: var(--ds-text); word-wrap: break-word; overflow-wrap: break-word;"
+            data-testid="item-title-readonly"
+          >
+            {item.title}
+          </h1>
+        {/if}
       {/if}
     </div>
   </div>

@@ -1258,6 +1258,7 @@ import NativeSelect from '../../components/NativeSelect.svelte';
     diagrams={itemDetailStore.diagrams}
     manualActions={itemDetailStore.manualActions}
     canCreate={untrack(() => workspacePermissions.canCreate(workspaceId))}
+    canEdit={untrack(() => workspacePermissions.canEdit(workspaceId))}
     onaiAction={handleAIAction}
     onnavigate={handleNavigate}
     ongoBack={handleGoBack}

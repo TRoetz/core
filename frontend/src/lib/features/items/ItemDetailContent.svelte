@@ -25,6 +25,7 @@
     editingTitle = $bindable(false),
     editTitle = $bindable(''),
     saving = false,
+    canEdit = false,
     dropdownItems = [],
     statusOptions = [],
     pendingApproval = null,
@@ -361,6 +362,7 @@
             bind:editingTitle
             bind:editTitle
             {saving}
+            {canEdit}
             onsavefield={handleSaveField}
             oncanceledit={handleCancelEdit}
           />
