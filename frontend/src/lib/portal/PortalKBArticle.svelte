@@ -5,7 +5,7 @@
   import { navigate } from '../router.js';
   import { portalCustomizationStore as portalStore } from '../stores/portal.svelte.js';
   import StateDisplay from '../components/StateDisplay.svelte';
-  import { renderMarkdown } from '../utils/render-markdown.js';
+  import LazyMilkdownEditor from '../editors/LazyMilkdownEditor.svelte';
 
   /**
    * Full-page knowledge-base article. Deep-linkable at
@@ -21,7 +21,6 @@
   let requestSeq = 0;
 
   const slug = $derived(portalStore.currentSlug);
-  const rendered = $derived(page ? renderMarkdown(page.content) : '');
 
   async function load() {
     const seq = ++requestSeq;
@@ -94,8 +93,12 @@
           })}
         </p>
       {/if}
-      <div class="kb-article__body prose-kb-page" data-testid="portal-kb-article-content">
-        {@html rendered}
+      <div class="kb-article__body" data-testid="portal-kb-article-content">
+        <LazyMilkdownEditor
+          content={page.content}
+          readonly={true}
+          enableDiagrams={true}
+        />
       </div>
     </article>
   {/if}
@@ -167,7 +170,5 @@
 
   .kb-article__body {
     margin-top: 1.25rem;
-    color: var(--ds-text);
-    line-height: 1.7;
   }
 </style>
