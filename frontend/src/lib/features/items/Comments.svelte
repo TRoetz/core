@@ -22,6 +22,7 @@
 	import { Shield, Bot } from '@lucide/svelte';
 	import { agentOwnerName, loadAttributedComments } from './activityAttributionData.js';
 	import { isExpectedBackgroundSyncError } from '../../utils/backgroundSync.js';
+	import { workspacePermissions } from '../../stores/workspacePermissions.svelte.js';
 
 	const COMMENT_PAGE_SIZE = 25;
 
@@ -48,6 +49,10 @@
 	let editingContent = $state('');
 	let isSavingEdit = $state(false);
 	let editEditorRef = $state(null);
+
+	// comment.edit_others holders may moderate foreign comments (mirrors
+	// requireCommentEdit in the v2 API).
+	const canEditOthersComments = $derived(workspacePermissions.canEditOthersComments(workspaceId));
 
 	// Sort state
 	let sortOrder = $state('oldest'); // 'oldest' | 'newest'
@@ -517,10 +522,11 @@
 									<Badge variant="warning" size="xs" class="uppercase">{t('comments.internal')}</Badge>
 								{/if}
 							</div>
-							{#if comment.source !== 'approval' && authStore.currentUser && comment.author_id === authStore.currentUser.id && editingCommentId !== comment.id}
+							{#if comment.source !== 'approval' && authStore.currentUser && (comment.author_id === authStore.currentUser.id || canEditOthersComments) && editingCommentId !== comment.id}
 								<div class="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
 									<button
 										onclick={() => startEdit(comment)}
+										data-testid="comment-edit"
 										class="text-[var(--ds-text-subtlest)] hover:text-[var(--ds-interactive)] transition-colors"
 										title={t('comments.editComment')}
 									>
@@ -530,6 +536,7 @@
 									</button>
 									<button
 										onclick={() => deleteComment(comment.id)}
+										data-testid="comment-delete"
 										class="text-[var(--ds-text-subtlest)] hover:text-[var(--ds-danger)] transition-colors"
 										title={t('comments.deleteComment')}
 									>
