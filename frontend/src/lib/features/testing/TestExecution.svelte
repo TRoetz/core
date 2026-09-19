@@ -21,6 +21,7 @@
   import Textarea from '../../components/Textarea.svelte';
   import { getStatusLabel } from '../../utils/statusColors.js';
   import { t } from '../../stores/i18n.svelte.js';
+  import { workspacePermissions } from '../../stores/index.js';
   import DescriptionText from '../../components/DescriptionText.svelte';
   import { loadTestRunDetail } from './testRunDetailData.js';
 import BDDExampleExecution from './BDDExampleExecution.svelte';
@@ -64,6 +65,9 @@ import { parseScenarioSpec, flattenExamples } from './bddSpec.js';
 
   let workspaceId = $derived($currentRoute.params.id);
   let runId = $derived($currentRoute.params.runId);
+  // Recording results and finishing a run are the test.execute tier (denied
+  // server-side with 404 otherwise); read-only users just follow along.
+  let canExecuteTests = $derived(workspacePermissions.canExecuteTests(workspaceId));
   let fromPage = $derived($currentRoute.query?.from);
   let currentCase = $derived((Array.isArray(testCases) && testCases[currentCaseIndex]) || null);
   let currentStep = $derived(currentCase?.test_steps?.[currentStepIndex] || null);
@@ -596,30 +600,32 @@ import { parseScenarioSpec, flattenExamples } from './bddSpec.js';
       </div>
 
       <!-- Footer Actions -->
-      <div class="p-2 border-t" style="border-color: var(--ds-border);">
-        {#if sidebarCollapsed}
-          <Button
-            onclick={finishExecution}
-            variant="primary"
-            size="small"
-            class="w-full"
-            title={t('testing.finishExecution')}
-            dataTestid="test-execution-finish-sidebar"
-          >
-            <IconCheck class="w-4 h-4" />
-          </Button>
-        {:else}
-          <Button
-            onclick={finishExecution}
-            variant="primary"
-            size="medium"
-            class="w-full"
-            dataTestid="test-execution-finish-sidebar"
-          >
-            {t('testing.finishExecution')}
-          </Button>
-        {/if}
-      </div>
+      {#if canExecuteTests}
+        <div class="p-2 border-t" style="border-color: var(--ds-border);">
+          {#if sidebarCollapsed}
+            <Button
+              onclick={finishExecution}
+              variant="primary"
+              size="small"
+              class="w-full"
+              title={t('testing.finishExecution')}
+              dataTestid="test-execution-finish-sidebar"
+            >
+              <IconCheck class="w-4 h-4" />
+            </Button>
+          {:else}
+            <Button
+              onclick={finishExecution}
+              variant="primary"
+              size="medium"
+              class="w-full"
+              dataTestid="test-execution-finish-sidebar"
+            >
+              {t('testing.finishExecution')}
+            </Button>
+          {/if}
+        </div>
+      {/if}
     </div>
 
     <!-- Main Content - Step Execution -->
@@ -707,6 +713,7 @@ import { parseScenarioSpec, flattenExamples } from './bddSpec.js';
               testCase={currentCase}
               snapshot={currentCaseSnapshot()}
               initialResults={currentExampleRows}
+              canExecute={canExecuteTests}
               onResultsChange={handleBddResultsChange}
             />
           </div>
@@ -747,7 +754,8 @@ import { parseScenarioSpec, flattenExamples } from './bddSpec.js';
             <!-- Result Recording -->
             <Card variant="raised" padding="spacious" shadow class="mb-6">
               <h3 class="font-medium mb-4" style="color: var(--ds-text);">{t('testing.recordResult')}</h3>
-              
+
+              {#if canExecuteTests}
               <!-- Status Buttons -->
               <div class="flex gap-3 mb-4">
                 <button
@@ -917,6 +925,7 @@ import { parseScenarioSpec, flattenExamples } from './bddSpec.js';
                   </div>
                 </AlertBox>
               {/if}
+              {/if}
 
               <!-- Quick Navigation -->
               <div class="flex justify-between items-center pt-4 border-t" style="border-color: var(--ds-border);">
@@ -937,7 +946,7 @@ import { parseScenarioSpec, flattenExamples } from './bddSpec.js';
                   >
                     {t('testing.nextStep')}
                   </Button>
-                {:else}
+                {:else if canExecuteTests}
                   <Button
                     onclick={finishExecution}
                     variant="primary"
@@ -984,7 +993,7 @@ import { parseScenarioSpec, flattenExamples } from './bddSpec.js';
                 >
                   {t('testing.nextCase')}
                 </Button>
-              {:else}
+              {:else if canExecuteTests}
                 <Button
                   onclick={finishExecution}
                   variant="primary"

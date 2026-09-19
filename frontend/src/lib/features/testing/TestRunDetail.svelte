@@ -15,6 +15,7 @@
   import SectionHeader from '../../layout/SectionHeader.svelte';
   import { getStatusLabel } from '../../utils/statusColors.js';
   import { t } from '../../stores/i18n.svelte.js';
+  import { workspacePermissions } from '../../stores/index.js';
   import { errorToast, infoToast } from '../../stores/toasts.svelte.js';
   import { loadTestRunDetail } from './testRunDetailData.js';
   import { formatExampleRow } from './bddSpec.js';
@@ -28,6 +29,10 @@
 
   let workspaceId = $derived($currentRoute.params.id);
   let runId = $derived($currentRoute.params.runId);
+  // Run execution (start/continue/rerun) is the test.execute tier; run deletion
+  // is test.manage. Both are denied server-side with 404 otherwise.
+  let canExecuteTests = $derived(workspacePermissions.canExecuteTests(workspaceId));
+  let canManageTests = $derived(workspacePermissions.canManageTests(workspaceId));
   let fromPage = $derived($currentRoute.query?.from);
 
   onMount(async () => {
@@ -245,15 +250,17 @@
         {#snippet actions()}
         <div class="flex flex-wrap items-center gap-3">
           {#if testRun.ended_at}
-            <Button
-              onclick={executeRun}
-              variant="default"
-              size="medium"
-              icon={IconPlayerPlay}
-              dataTestid="test-run-rerun"
-            >
-              {t('testing.startExecution')}
-            </Button>
+            {#if canExecuteTests}
+              <Button
+                onclick={executeRun}
+                variant="default"
+                size="medium"
+                icon={IconPlayerPlay}
+                dataTestid="test-run-rerun"
+              >
+                {t('testing.startExecution')}
+              </Button>
+            {/if}
             <Button
               onclick={exportResults}
               variant="primary"
@@ -263,7 +270,7 @@
             >
               {t('testing.exportResults')}
             </Button>
-          {:else}
+          {:else if canExecuteTests}
             <Button
               variant="primary"
               onclick={() => navigate(testPath(`/runs/${runId}/execute`))}
@@ -273,15 +280,17 @@
               {t('testing.continueExecution')}
             </Button>
           {/if}
-          <Button
-            onclick={confirmDelete}
-            variant="danger"
-            size="medium"
-            icon={IconTrash}
-            title={t('testing.deleteTestRun')}
-          >
-            {t('common.delete')}
-          </Button>
+          {#if canManageTests}
+            <Button
+              onclick={confirmDelete}
+              variant="danger"
+              size="medium"
+              icon={IconTrash}
+              title={t('testing.deleteTestRun')}
+            >
+              {t('common.delete')}
+            </Button>
+          {/if}
         </div>
         {/snippet}
       </PageHeader>

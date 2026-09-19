@@ -17,11 +17,15 @@
   import UserPicker from '../../pickers/UserPicker.svelte';
   import { renderStatusBadge } from '../../utils/statusColors.js';
   import { t } from '../../stores/i18n.svelte.js';
+  import { workspacePermissions } from '../../stores/index.js';
   import { errorToast, warningToast } from '../../stores/toasts.svelte.js';
   import { formatAuthenticatedDateTime } from '../../utils/authenticatedDateFormatter.js';
   import TestManagementHeader from './TestManagementHeader.svelte';
 
   let { workspaceId = null } = $props();
+
+  // Run creation belongs to the test.execute tier (denied with 404 otherwise).
+  let canExecuteTests = $derived(workspacePermissions.canExecuteTests(workspaceId));
 
   const testSets = writable([]);
   const testRuns = writable([]);
@@ -70,6 +74,7 @@
   }
 
   function showAddForm() {
+    if (!canExecuteTests) return;
     showForm = true;
     selectedSetId = '';
     runName = '';
@@ -283,15 +288,17 @@
       </div>
     {/snippet}
     {#snippet primaryAction()}
-      <Button
-        onclick={showAddForm}
-        variant="primary"
-        size="medium"
-        keyboardHint="A"
-        dataTestid="create-test-run-button"
-      >
-        {t('testing.createTestRun')}
-      </Button>
+      {#if canExecuteTests}
+        <Button
+          onclick={showAddForm}
+          variant="primary"
+          size="medium"
+          keyboardHint="A"
+          dataTestid="create-test-run-button"
+        >
+          {t('testing.createTestRun')}
+        </Button>
+      {/if}
     {/snippet}
   </TestManagementHeader>
 

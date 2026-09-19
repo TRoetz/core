@@ -20,12 +20,18 @@
   import TestCasePicker from '../../pickers/TestCasePicker.svelte';
   import { renderStatusBadge, renderMilestoneBadge } from '../../utils/statusColors.js';
   import { t } from '../../stores/i18n.svelte.js';
+  import { workspacePermissions } from '../../stores/index.js';
   import { errorToast, successToast } from '../../stores/toasts.svelte.js';
   import DescriptionText from '../../components/DescriptionText.svelte';
   import { formatDateSimple } from '../../utils/dateFormatter.js';
   import TestManagementHeader from './TestManagementHeader.svelte';
 
   let { workspaceId = null, testSetId = null } = $props();
+
+  // Set mutations require test.manage; starting a run creates one, which
+  // requires test.execute (both denied server-side with 404 otherwise).
+  let canManageTests = $derived(workspacePermissions.canManageTests(workspaceId));
+  let canExecuteTests = $derived(workspacePermissions.canExecuteTests(workspaceId));
 
   const testSets = writable([]);
   const selectedSet = writable(null);
@@ -120,6 +126,7 @@
   }
 
   function showAddForm() {
+    if (!canManageTests) return;
     showForm = true;
     editingSet = null;
     formData = {
@@ -292,6 +299,7 @@
   ]);
 
   function testSetActions(set) {
+    if (!canManageTests) return [];
     return [
       {
         id: 'manage-tests',
@@ -324,15 +332,17 @@
     createEvent="trigger-test-plan-form"
   >
     {#snippet primaryAction()}
-      <Button
-        onclick={showAddForm}
-        variant="primary"
-        size="medium"
-        keyboardHint="A"
-        dataTestid="test-set-create-button"
-      >
-        {t('testing.addTestPlan')}
-      </Button>
+      {#if canManageTests}
+        <Button
+          onclick={showAddForm}
+          variant="primary"
+          size="medium"
+          keyboardHint="A"
+          dataTestid="test-set-create-button"
+        >
+          {t('testing.addTestPlan')}
+        </Button>
+      {/if}
     {/snippet}
   </TestManagementHeader>
 
@@ -419,14 +429,16 @@
       </div>
 
       <!-- Add Test Case Picker -->
-      <FormField label={t('testing.addTestCase')} class="mb-6">
-        <TestCasePicker
-          {workspaceId}
-          excludeIds={setTestCases.map(tc => tc.id)}
-          onSelect={handleAddTestCase}
-          placeholder={t('testing.searchTestCasesToAdd')}
-        />
-      </FormField>
+      {#if canManageTests}
+        <FormField label={t('testing.addTestCase')} class="mb-6">
+          <TestCasePicker
+            {workspaceId}
+            excludeIds={setTestCases.map(tc => tc.id)}
+            onSelect={handleAddTestCase}
+            placeholder={t('testing.searchTestCasesToAdd')}
+          />
+        </FormField>
+      {/if}
 
       <!-- Assigned Test Cases List -->
       <div>
@@ -457,14 +469,16 @@
                       {/if}
                     </div>
                   </div>
-                  <button
-                    onclick={() => removeTestCaseFromSet(tc.id)}
-                    class="p-1.5 rounded transition-colors flex-shrink-0 hover:bg-[var(--ds-background-danger-hovered)] hover:text-[var(--ds-text-danger)]"
-                    style="color: var(--ds-text-subtle);"
-                    title={t('testing.removeTestCase')}
-                  >
-                    <IconX size={16} />
-                  </button>
+                  {#if canManageTests}
+                    <button
+                      onclick={() => removeTestCaseFromSet(tc.id)}
+                      class="p-1.5 rounded transition-colors flex-shrink-0 hover:bg-[var(--ds-background-danger-hovered)] hover:text-[var(--ds-text-danger)]"
+                      style="color: var(--ds-text-subtle);"
+                      title={t('testing.removeTestCase')}
+                    >
+                      <IconX size={16} />
+                    </button>
+                  {/if}
                 </div>
               {/each}
             </div>
@@ -476,9 +490,9 @@
       cancelLabel={t('common.done')}
       confirmLabel={t('testing.startRun')}
       onCancel={closeTestCaseSelector}
-      onConfirm={handleStartRun}
+      onConfirm={canExecuteTests ? handleStartRun : null}
       disabled={setTestCases.length === 0}
-      showKeyboardHint={true}
+      showKeyboardHint={Boolean(canExecuteTests)}
       cancelTestid="test-set-manage-done"
       confirmTestid="test-set-start-run"
     />

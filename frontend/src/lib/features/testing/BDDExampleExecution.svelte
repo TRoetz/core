@@ -18,6 +18,7 @@
    *   testCase: object,
    *   snapshot?: object | null,
    *   initialResults?: Array<object>,
+   *   canExecute?: boolean,
    *   onResultsChange?: ((results: Array<object>) => void) | null,
    *   dataTestid?: string,
    * }}
@@ -28,6 +29,9 @@
     testCase,
     snapshot = null,
     initialResults = [],
+    // Recording example results requires test.execute; read-only users just
+    // follow along.
+    canExecute = true,
     onResultsChange = null,
     dataTestid = 'bdd-example-execution',
   } = $props();
@@ -197,6 +201,7 @@
             {#if saving[row.exampleIndex]}
               <Loader2 class="w-4 h-4 animate-spin" style="color: var(--ds-text-subtle);" />
             {/if}
+            {#if canExecute}
             {#each statusButtons as button (button.status)}
               <button
                 type="button"
@@ -209,6 +214,7 @@
                 {button.label}
               </button>
             {/each}
+            {/if}
           </div>
         </div>
 
@@ -223,6 +229,7 @@
             style="background-color: var(--ds-surface-raised); color: var(--ds-text); border-color: var(--ds-border);"
             value={result.notes || ''}
             data-testid="bdd-example-notes"
+            disabled={!canExecute}
             onblur={(e) => commitExampleNotes(row.exampleIndex, e.currentTarget.value)}
             oninput={(e) => setExampleField(row.exampleIndex, 'notes', e.currentTarget.value)}
           ></textarea>
@@ -257,19 +264,21 @@
                     </span>
                   </p>
                   <div class="flex items-center gap-2 flex-wrap">
-                    {#each statusButtons as button (button.status)}
-                      <button
-                        type="button"
-                        class="text-xs px-2 py-0.5 rounded border transition cursor-pointer"
-                        style="border-color: var(--ds-border); color: var(--ds-text-subtle);"
-                        class:selected={stepResult.status === button.status}
-                        data-status={button.status}
-                        data-testid="bdd-step-status-{button.status}"
-                        onclick={() => setExampleStepStatus(row.exampleIndex, stepNumber, button.status)}
-                      >
-                        {button.label}
-                      </button>
-                    {/each}
+                    {#if canExecute}
+                      {#each statusButtons as button (button.status)}
+                        <button
+                          type="button"
+                          class="text-xs px-2 py-0.5 rounded border transition cursor-pointer"
+                          style="border-color: var(--ds-border); color: var(--ds-text-subtle);"
+                          class:selected={stepResult.status === button.status}
+                          data-status={button.status}
+                          data-testid="bdd-step-status-{button.status}"
+                          onclick={() => setExampleStepStatus(row.exampleIndex, stepNumber, button.status)}
+                        >
+                          {button.label}
+                        </button>
+                      {/each}
+                    {/if}
                     {#if saving[`${row.exampleIndex}_${stepNumber}`]}
                       <Loader2 class="w-3 h-3 animate-spin" style="color: var(--ds-text-subtle);" />
                     {/if}

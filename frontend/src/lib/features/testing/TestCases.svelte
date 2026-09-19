@@ -26,12 +26,17 @@
   import { toHotkeyString, getShortcutDisplay, matchesShortcut, isTypingInField } from '../../utils/keyboardShortcuts.js';
   import { currentRoute, navigate } from '../../router.js';
   import { t } from '../../stores/i18n.svelte.js';
+  import { workspacePermissions } from '../../stores/index.js';
   import DescriptionText from '../../components/DescriptionText.svelte';
   import SearchInput from '../../components/SearchInput.svelte';
   import { useEventListener } from 'runed';
   import { createStepsShortcutCodes, STEPS_SHORTCUT_ALPHABET } from './testCaseShortcuts.js';
 
   let { workspaceId = null } = $props();
+
+  // Case, folder, and label mutations all require the test.manage tier
+  // (server returns 404 otherwise), so every write affordance is gated on it.
+  let canManageTests = $derived(workspacePermissions.canManageTests(workspaceId));
 
   const testFolders = writable([]);
   const testCases = writable([]);
@@ -210,6 +215,7 @@
   }
 
   function showAddFolderForm() {
+    if (!canManageTests) return;
     showFolderForm = true;
     editingFolder = null;
     folderFormData = {
@@ -227,6 +233,7 @@
   }
 
   function showEditFolderForm(folder) {
+    if (!canManageTests) return;
     showFolderForm = true;
     editingFolder = folder;
     folderFormData = {
@@ -255,6 +262,7 @@
   }
 
   function showAddCaseForm() {
+    if (!canManageTests) return;
     showCaseForm = true;
     editingCase = null;
     caseFormError = null;
@@ -278,6 +286,7 @@
   }
 
   async function showEditCaseForm(testCase) {
+    if (!canManageTests) return;
     showCaseForm = true;
     editingCase = testCase;
     caseFormError = null;
@@ -383,6 +392,7 @@
   }
 
   async function deleteFolder(id) {
+    if (!canManageTests) return;
     const ok = await confirm({
       title: t('testing.deleteFolder'),
       message: t('testing.deleteFolderConfirm'),
@@ -403,6 +413,7 @@
   }
 
   async function deleteTestCase(id) {
+    if (!canManageTests) return;
     const ok = await confirm({
       title: t('testing.deleteTestCase'),
       message: t('testing.deleteTestCaseConfirm'),
@@ -433,6 +444,7 @@
 
   // Label Management
   async function openLabelsModal(testCase) {
+    if (!canManageTests) return;
     selectedTestCase = testCase;
     try {
       const labels = await api.tests.testCases.labels.getAll(workspaceId, testCase.id);
@@ -518,6 +530,7 @@
 
   // Build dropdown menu items for test case actions
   function buildTestCaseActions(testCase) {
+    if (!canManageTests) return [];
     return [
       {
         id: 'labels',
@@ -860,17 +873,19 @@
             }}
           />
         </div>
-        <Button
-          onclick={showAddCaseForm}
-          variant="primary"
-          icon={IconPlus}
-          size="medium"
-          keyboardHint={getShortcutDisplay('testCases', 'addTestCase')}
-          hotkeyConfig={{ key: toHotkeyString('testCases', 'addTestCase'), guard: () => !showCaseForm && !showFolderForm }}
-          dataTestid="test-case-create-button"
-        >
-          {t('testing.addTestCase')}
-        </Button>
+        {#if canManageTests}
+          <Button
+            onclick={showAddCaseForm}
+            variant="primary"
+            icon={IconPlus}
+            size="medium"
+            keyboardHint={getShortcutDisplay('testCases', 'addTestCase')}
+            hotkeyConfig={{ key: toHotkeyString('testCases', 'addTestCase'), guard: () => !showCaseForm && !showFolderForm }}
+            dataTestid="test-case-create-button"
+          >
+            {t('testing.addTestCase')}
+          </Button>
+        {/if}
       </div>
     {/snippet}
   </PageHeader>
@@ -941,7 +956,7 @@
                 {/snippet}
               </Tooltip>
               <div class="flex items-center gap-1">
-                {#if selectedFolder === folder.id}
+                {#if canManageTests && selectedFolder === folder.id}
                   <div
                     onclick={(e) => { e.stopPropagation(); showEditFolderForm(folder); }}
                     class="folder-action-edit p-1 cursor-pointer rounded"
@@ -971,17 +986,19 @@
         
         <!-- Add Folder Button -->
         <div class="pt-2">
-          <Button
-            onclick={showAddFolderForm}
-            variant="ghost"
-            icon={IconPlus}
-            size="small"
-            keyboardHint={getShortcutDisplay('testCases', 'addFolder')}
-            hotkeyConfig={{ key: toHotkeyString('testCases', 'addFolder'), guard: () => !showCaseForm && !showFolderForm }}
-            class="w-full justify-start"
-          >
-            {t('testing.addFolder')}
-          </Button>
+          {#if canManageTests}
+            <Button
+              onclick={showAddFolderForm}
+              variant="ghost"
+              icon={IconPlus}
+              size="small"
+              keyboardHint={getShortcutDisplay('testCases', 'addFolder')}
+              hotkeyConfig={{ key: toHotkeyString('testCases', 'addFolder'), guard: () => !showCaseForm && !showFolderForm }}
+              class="w-full justify-start"
+            >
+              {t('testing.addFolder')}
+            </Button>
+          {/if}
         </div>
       </div>
     </div>
@@ -1071,15 +1088,17 @@
                         {stepsShortcutMode ? stepsShortcutCodes[index] : 'S'}
                       </kbd>
                     </a>
-                    <DropdownMenu
-                      triggerIcon={IconDots}
-                      showChevron={false}
-                      iconOnly={true}
-                      triggerClass="p-1.5 rounded transition-colors hover:bg-[var(--ds-background-neutral-hovered)]"
-                      triggerStyle="color: var(--ds-text-subtle);"
-                      placement="bottom"
-                      items={buildTestCaseActions(testCase)}
-                    />
+                    {#if canManageTests}
+                      <DropdownMenu
+                        triggerIcon={IconDots}
+                        showChevron={false}
+                        iconOnly={true}
+                        triggerClass="p-1.5 rounded transition-colors hover:bg-[var(--ds-background-neutral-hovered)]"
+                        triggerStyle="color: var(--ds-text-subtle);"
+                        placement="bottom"
+                        items={buildTestCaseActions(testCase)}
+                      />
+                    {/if}
                   </div>
                 </td>
               </tr>
