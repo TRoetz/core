@@ -203,8 +203,12 @@ func (s *ActionApplicationService) Create(userID, workspaceID int, actor AuditAc
 	}
 	input.Name = sanitize.PlainTextField.Sanitize(input.Name)
 	input.Description = sanitize.RichText.Sanitize(input.Description)
+	isEnabled := true
+	if input.IsEnabled != nil {
+		isEnabled = *input.IsEnabled
+	}
 	action := &models.Action{
-		WorkspaceID: workspaceID, Name: input.Name, Description: input.Description, IsEnabled: true,
+		WorkspaceID: workspaceID, Name: input.Name, Description: input.Description, IsEnabled: isEnabled,
 		TriggerType: input.TriggerType, TriggerConfig: input.TriggerConfig, CreatedBy: &userID,
 		ActorUserID: input.ActorUserID, AllowedRoleIDs: roles,
 	}

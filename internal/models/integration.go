@@ -1409,6 +1409,7 @@ type CreateActionRequest struct {
 	Description    string            `json:"description,omitempty"`
 	TriggerType    ActionTriggerType `json:"trigger_type"`
 	TriggerConfig  string            `json:"trigger_config,omitempty"`
+	IsEnabled      *bool             `json:"is_enabled,omitempty"`
 	ActorUserID    *int              `json:"actor_user_id,omitempty"` // requires action.set_actor global permission
 	AllowedRoleIDs []int             `json:"allowed_role_ids,omitempty"`
 	Nodes          []ActionNode      `json:"nodes,omitempty"`
