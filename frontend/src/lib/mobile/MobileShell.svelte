@@ -3,7 +3,7 @@
   import { Plus } from '@lucide/svelte';
   import { currentRoute, navigate } from '../router.js';
   import { timerStore } from '../stores/timerStore.svelte.js';
-  import { workspacesStore, aiStore, homepageStore } from '../stores';
+  import { workspacesStore, aiStore, homepageStore, authStore, workspacePermissions } from '../stores';
   import { startNotificationPoller, stopNotificationPoller } from '../stores/notifications.js';
   import { resetAuthenticatedShellState } from '../services/authenticatedShellBootstrap.js';
   import { registerMobileServiceWorker } from './pushClient.js';
@@ -54,10 +54,13 @@
     startNotificationPoller();
     registerMobileServiceWorker();
     // MainApp normally loads these; the mobile shell bypasses MainApp, so load
-    // them here (stores guard re-loads) for the create dialog's workspace list
-    // and the AI-chat availability gate.
+    // them here (stores guard re-loads) for the create dialog's workspace list,
+    // the AI-chat availability gate, and the permission-gated create/detail
+    // affordances.
     workspacesStore.load();
     aiStore.load();
+    const userId = authStore.currentUser?.id;
+    if (userId) workspacePermissions.loadPermissions(userId);
 
     return () => {
       stopNotificationPoller();

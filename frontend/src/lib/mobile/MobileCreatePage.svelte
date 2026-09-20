@@ -1,7 +1,7 @@
 <script>
   import { api } from '../api.js';
   import { currentRoute, navigate, setNavigationInterceptor } from '../router.js';
-  import { workspacesStore } from '../stores';
+  import { workspacesStore, workspacePermissions } from '../stores';
   import { FileText } from '@lucide/svelte';
   import NativeSelect from '../components/NativeSelect.svelte';
   import CustomFieldRenderer from '../features/items/CustomFieldRenderer.svelte';
@@ -111,7 +111,13 @@
 
   const templateLocked = $derived(!!mandatoryTemplate);
   const isChild = $derived(!!parent);
-  const workspaces = $derived($workspacesStore.regularWorkspaces ?? []);
+  // Only workspaces where the user holds item.create are valid creation
+  // targets — same gate as the desktop create modal (WI-1438/1440).
+  const workspaces = $derived(
+    ($workspacesStore.regularWorkspaces ?? []).filter((ws) =>
+      workspacePermissions.canCreate(ws.id)
+    )
+  );
   // Personal workspace is loaded on-demand; the store keeps it once fetched.
   const personalWorkspace = $derived($workspacesStore.personalWorkspace ?? null);
 
