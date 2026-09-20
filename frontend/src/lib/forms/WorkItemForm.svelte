@@ -2,7 +2,7 @@
   import { MoreHorizontal, Calendar, Flag, User, Layers, ChevronDown, FileText, Briefcase, Hash, Clock } from '@lucide/svelte';
   import ItemTypeIcon from '../components/ItemTypeIcon.svelte';
   import { workItemFormStore } from '../stores/workItemFormStore.svelte.js';
-  import { workspacesStore } from '../stores';
+  import { workspacesStore, workspacePermissions } from '../stores';
   import { t } from '../stores/i18n.svelte.js';
   import { formatDateOnly, formatDueDate } from '../utils/dateFormatter.js';
   import MilkdownEditor from '../editors/LazyMilkdownEditor.svelte';
@@ -108,10 +108,12 @@
     }
   });
 
-  // Apply stored workspace when workspaces are available
+  // Apply stored workspace when workspaces are available, restricted to
+  // workspaces where item.create is held (the create endpoint denies the
+  // rest with 404).
   $effect(() => {
     if (!store.formData.workspace_id && store.storedWorkspaceId && $workspacesStore.regularWorkspaces.length > 0) {
-      store.applyStoredWorkspace($workspacesStore.regularWorkspaces);
+      store.applyStoredWorkspace($workspacesStore.regularWorkspaces.filter((workspace) => workspacePermissions.canCreate(workspace.id)));
     }
   });
 

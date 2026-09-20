@@ -106,6 +106,14 @@
   let collectionCategoryId = $state(null);
   let submitting = $state(false);
 
+  // The work-item create endpoint requires item.create in the target
+  // workspace (denied with 404), so the picker must only offer workspaces
+  // where creation is allowed. Mirrors CollectionBoard's quick-add filter;
+  // collections only need workspace access and stay unfiltered.
+  let creatableWorkspaces = $derived(
+    $workspacesStore.regularWorkspaces.filter((workspace) => workspacePermissions.canCreate(workspace.id))
+  );
+
   // Derived state for display
   let currentTypeName = $derived(typeLabels[selectedType] || 'Item');
   let currentFormData = $derived.by(() => {
@@ -423,7 +431,11 @@
     }
     const workspace = $workspacesStore.regularWorkspaces.find(w => w.id === workspaceIdNum);
     if (workspace) {
-      workItemFormStore.setWorkspace(workspace);
+      // Skip the work-item pre-selection when item.create is missing; the
+      // picker offers the alternatives instead of a guaranteed denial.
+      if (workspacePermissions.canCreate(workspace.id)) {
+        workItemFormStore.setWorkspace(workspace);
+      }
     }
   }
 
@@ -481,7 +493,7 @@
         {#if selectedType === 'work-item' && !workItemFormStore.parentItem}
           <ChipPicker
             value={workItemFormStore.formData.workspace_id}
-            items={$workspacesStore.regularWorkspaces}
+            items={creatableWorkspaces}
             getValue={(w) => w.id}
             getLabel={(w) => w.key || w.name}
             icon={Building}
