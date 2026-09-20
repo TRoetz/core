@@ -1302,23 +1302,6 @@
     );
   }
 
-  async function updateItemStatus(itemId, newStatus) {
-    try {
-      await api.items.update(itemId, { status: newStatus });
-
-      // Update store directly with a new array to ensure reactivity
-      collectionStore.items = collectionStore.items.map(item =>
-        item.id === itemId
-          ? { ...item, status: newStatus }
-          : item
-      );
-
-    } catch (error) {
-      console.error('Failed to update item status:', error);
-      // Could add user notification here
-    }
-  }
-
   async function handleEdgeBasedDrop(draggedItem, targetItem, closestEdge, targetStatus, targetLaneParentId = undefined) {
     // Create a unique identifier for this drop operation
     const dropId = `${draggedItem.id}-edge-${targetItem.id}-${closestEdge}`;
