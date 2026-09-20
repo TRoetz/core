@@ -73319,6 +73319,11 @@
             },
             "type": "array"
           },
+          "is_enabled": {
+            "description": "The is enabled value.",
+            "nullable": true,
+            "type": "boolean"
+          },
           "name": {
             "description": "The name value.",
             "type": "string"
@@ -73655,6 +73660,11 @@
               "type": "object"
             },
             "type": "array"
+          },
+          "is_enabled": {
+            "description": "The is enabled value.",
+            "nullable": true,
+            "type": "boolean"
           },
           "name": {
             "description": "The name value.",
