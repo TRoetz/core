@@ -41,7 +41,8 @@ describe('Page diagram scene payloads', () => {
       expect(source).toBe('graph TD\nA-->B');
       return { elements: [{ id: 'seed', type: 'rectangle' }], files: {} };
     };
-    const convertElements = (elements) => elements.map((element) => ({ ...element, converted: true }));
+    const convertElements = (elements) =>
+      elements.map((element) => ({ ...element, converted: true }));
 
     await expect(
       preparePageDiagramScene(
