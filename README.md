@@ -36,6 +36,12 @@ It ships as a single Go binary with the Svelte frontend built in.
 - Connect the tools you already use - integrate GitHub, Gitea, and Forgejo, import Jira projects, and send email or webhook notifications.
 - Add the capabilities you need - extend work management with test management, time tracking, or asset management.
 
+## Available in many languages
+
+<p align="center"><strong>Available in many languages · متوفر بالعديد من اللغات · 支持多种语言 · Доступно на многих языках · 다양한 언어로 사용 가능</strong></p>
+
+Windshift ships with nine built-in languages — English, Deutsch, Español, Français, Português (Brasil), العربية, Русский, 简体中文, and 한국어 — including right-to-left support for Arabic.
+
 ## Get started
 
 [Download the latest release](https://windshift.sh/download), then follow the [quick start guide](https://windshift.sh/self-hosting/01-getting-started/02-quick-start). Windshift is designed to run comfortably on anything from a Raspberry Pi to a dedicated server.
