@@ -321,6 +321,7 @@ export default {
     noIteration: 'Sem iteração',
     selectOrCreateLabels: 'Selecionar ou criar rótulos',
     storyPoints: 'Story Points',
+    storyPointsChildRollup: '{points} pontos acumulados de {count} itens de trabalho filhos',
   },
   comments: {
     failedToLoad: 'Falha ao carregar comentários',

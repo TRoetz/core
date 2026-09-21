@@ -321,6 +321,7 @@ export default {
     noIteration: 'بدون تكرار',
     selectOrCreateLabels: 'اختيار أو إنشاء تسميات',
     storyPoints: 'نقاط القصة',
+    storyPointsChildRollup: '{points} نقطة قصة من {count} عناصر عمل فرعية',
   },
   comments: {
     failedToLoad: 'فشل تحميل التعليقات',

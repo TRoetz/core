@@ -322,6 +322,7 @@ export default {
     noIteration: 'Keine Iteration',
     selectOrCreateLabels: 'Labels auswählen oder erstellen',
     storyPoints: 'Story Points',
+    storyPointsChildRollup: '{points} Story Points aus {count} untergeordneten Elementen zusammengefasst',
     itemLinkCopied: 'Elementlink in Zwischenablage kopiert',
     failedToCopyToClipboard: 'Kopieren in die Zwischenablage fehlgeschlagen',
     copyError: 'Kopierfehler',

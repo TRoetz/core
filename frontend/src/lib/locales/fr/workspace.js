@@ -399,6 +399,7 @@ export default {
     labels: 'Étiquettes',
     addLabel: '+ Ajouter une étiquette',
     storyPoints: 'Story Points',
+    storyPointsChildRollup: '{points} points cumulés à partir de {count} éléments de travail enfants',
     project: 'Projet',
     clickToViewDetails: 'Cliquer pour afficher les détails de l’élément',
 

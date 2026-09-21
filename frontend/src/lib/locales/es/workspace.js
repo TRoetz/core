@@ -321,6 +321,7 @@ export default {
     noIteration: 'Sin iteración',
     selectOrCreateLabels: 'Seleccionar o crear etiquetas',
     storyPoints: 'Puntos de historia',
+    storyPointsChildRollup: '{points} puntos acumulados de {count} elementos de trabajo secundarios',
   },
   comments: {
     failedToLoad: 'Error al cargar los comentarios',

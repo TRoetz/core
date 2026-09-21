@@ -310,6 +310,7 @@ export default {
     milestone: '里程碑',
     iteration: '迭代',
     storyPoints: '故事点',
+    storyPointsChildRollup: '从 {count} 个子工作项汇总的 {points} 个故事点',
     project: '项目',
     clickToViewDetails: '点击查看事项详情',
     itemLinkCopied: '事项链接已复制到剪贴板',
