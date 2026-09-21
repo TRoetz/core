@@ -1057,7 +1057,7 @@
             </div>
           </button>
           {#if childStoryPointRollup?.contributors > 0}
-            <p class="text-xs mt-0.5 text-right" style="color: var(--ds-text-subtle);" data-testid="story-points-child-rollup">
+            <p class="text-xs mt-0.5 text-right px-2" style="color: var(--ds-text-subtle);" data-testid="story-points-child-rollup">
               {t('items.storyPointsChildRollup', { points: childStoryPointRollup.points, count: childStoryPointRollup.contributors, plural: childStoryPointRollup.contributors === 1 ? '' : 's' })}
             </p>
           {/if}
