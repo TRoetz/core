@@ -22,18 +22,19 @@ report it responsibly.
 discussions, pull requests, or other public communication channels
 before an appropriate mitigation is available.**
 
-Instead, please contact our security team through the designated
-security reporting channel.
+Instead, please report the vulnerability by email to:
+
+**[security@windshift.ch](mailto:security@windshift.ch)**
 
 When submitting a vulnerability report, please include:
 
-- A clear description of the vulnerability.
-- The affected project, component, and software version.
-- Detailed steps to reproduce the issue.
-- A proof of concept, when applicable.
-- The potential security impact and affected assets.
-- Any relevant logs, screenshots, or technical evidence.
-- Suggested mitigation strategies, if available.
+* A clear description of the vulnerability.
+* The affected project, component, and software version.
+* Detailed steps to reproduce the issue.
+* A proof of concept, when applicable.
+* The potential security impact and affected assets.
+* Any relevant logs, screenshots, or technical evidence.
+* Suggested mitigation strategies, if available.
 
 Please avoid including sensitive personal information,
 credentials, or confidential data in vulnerability reports
@@ -47,12 +48,12 @@ confidentiality, technical rigor, and appropriate prioritization.
 
 Our vulnerability management process aims to:
 
-- Acknowledge valid security reports within 48 hours.
-- Perform an initial technical assessment of the reported issue.
-- Determine the severity, impact, and affected components.
-- Provide an initial remediation or mitigation plan within
+* Acknowledge valid security reports within 48 hours.
+* Perform an initial technical assessment of the reported issue.
+* Determine the severity, impact, and affected components.
+* Provide an initial remediation or mitigation plan within
   7 days, depending on the severity and complexity of the issue.
-- Coordinate security fixes and responsible disclosure
+* Coordinate security fixes and responsible disclosure
   with the reporting researcher when appropriate.
 
 Remediation timelines may vary according to the technical
@@ -81,14 +82,14 @@ developed and maintained by Windshift.
 
 The following are generally considered within scope:
 
-- Security vulnerabilities in officially maintained source code.
-- Authentication and authorization weaknesses.
-- Sensitive information disclosure.
-- Cryptographic implementation vulnerabilities.
-- Remote code execution and privilege escalation.
-- Injection vulnerabilities.
-- Insecure configurations directly related to our software.
-- Other security weaknesses with demonstrable impact.
+* Security vulnerabilities in officially maintained source code.
+* Authentication and authorization weaknesses.
+* Sensitive information disclosure.
+* Cryptographic implementation vulnerabilities.
+* Remote code execution and privilege escalation.
+* Injection vulnerabilities.
+* Insecure configurations directly related to our software.
+* Other security weaknesses with demonstrable impact.
 
 Third-party dependencies, external services, and software
 maintained by other organizations are generally outside
@@ -105,14 +106,14 @@ ethically, responsibly, and in accordance with applicable laws.
 
 Researchers are expected to:
 
-- Avoid unauthorized access to systems or information.
-- Avoid activities that may disrupt service availability.
-- Refrain from modifying, deleting, or exposing sensitive data.
-- Limit testing to the minimum necessary to demonstrate
+* Avoid unauthorized access to systems or information.
+* Avoid activities that may disrupt service availability.
+* Refrain from modifying, deleting, or exposing sensitive data.
+* Limit testing to the minimum necessary to demonstrate
   a vulnerability.
-- Maintain confidentiality until an appropriate disclosure
+* Maintain confidentiality until an appropriate disclosure
   timeline has been established.
-- Cooperate with our security team during the investigation
+* Cooperate with our security team during the investigation
   and remediation process.
 
 This policy does not grant authorization to test systems,
@@ -166,3 +167,4 @@ trust, resilience, and security across the digital ecosystem.
 ---
 
 **Windshift**
+
