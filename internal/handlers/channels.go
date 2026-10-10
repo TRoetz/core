@@ -1573,6 +1573,7 @@ func (h *ChannelHandler) ListEmailReplies(w http.ResponseWriter, r *http.Request
 	}
 
 	type emailReply struct {
+		ID            int        `json:"id"`
 		CommentID     int        `json:"comment_id"`
 		ItemID        int        `json:"item_id"`
 		ToEmail       string     `json:"to_email"`
@@ -1591,6 +1592,7 @@ func (h *ChannelHandler) ListEmailReplies(w http.ResponseWriter, r *http.Request
 	replies := make([]emailReply, 0, len(rows))
 	for _, row := range rows {
 		reply := emailReply{
+			ID:           row.ID,
 			CommentID:    row.CommentID,
 			ItemID:       row.ItemID,
 			ToEmail:      row.ToEmail,

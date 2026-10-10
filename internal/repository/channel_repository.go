@@ -1336,6 +1336,7 @@ const (
 // channel UI renders it. Bodies are deliberately excluded — the queue shows
 // envelope metadata and delivery state, never message content.
 type EmailReplyOutboxRow struct {
+	ID            int
 	CommentID     int
 	ItemID        int
 	ToEmail       string
@@ -1388,7 +1389,7 @@ func (r *ChannelRepository) ListEmailReplies(ctx context.Context, channelID int,
 	}
 
 	rows, err := r.db.QueryContext(ctx,
-		"SELECT eo.comment_id, eo.item_id, eo.to_email, eo.to_name, eo.subject, eo.attempt_count, eo.next_attempt_at, eo.last_error, eo.delivered_at, eo.discarded_at, eo.created_at, i.workspace_id, w.key "+
+		"SELECT eo.id, eo.comment_id, eo.item_id, eo.to_email, eo.to_name, eo.subject, eo.attempt_count, eo.next_attempt_at, eo.last_error, eo.delivered_at, eo.discarded_at, eo.created_at, i.workspace_id, w.key "+
 			"FROM email_reply_outbox eo "+
 			"LEFT JOIN items i ON eo.item_id = i.id "+
 			"LEFT JOIN workspaces w ON i.workspace_id = w.id "+
@@ -1406,7 +1407,7 @@ func (r *ChannelRepository) ListEmailReplies(ctx context.Context, channelID int,
 		var row EmailReplyOutboxRow
 		var workspaceID sql.NullInt64
 		var workspaceKey sql.NullString
-		if err := rows.Scan(&row.CommentID, &row.ItemID, &row.ToEmail, &row.ToName, &row.Subject, &row.AttemptCount,
+		if err := rows.Scan(&row.ID, &row.CommentID, &row.ItemID, &row.ToEmail, &row.ToName, &row.Subject, &row.AttemptCount,
 			&row.NextAttemptAt, &row.LastError, &row.DeliveredAt, &row.DiscardedAt, &row.CreatedAt, &workspaceID, &workspaceKey); err != nil {
 			return nil, fmt.Errorf("scan email_reply_outbox row: %w", err)
 		}

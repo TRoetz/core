@@ -493,7 +493,7 @@
             title={t('channel.emailLog.outboxEmpty')}
           />
         {:else}
-          <DataTable columns={outboxColumns} data={outboxData.replies} keyField="comment_id">
+          <DataTable columns={outboxColumns} data={outboxData.replies} keyField="id">
             {#snippet to(reply)}
               <div class="font-medium truncate max-w-44" style="color: var(--ds-text);">{reply.to_name || reply.to_email}</div>
               {#if reply.to_name}
@@ -514,7 +514,7 @@
               style={replyStatus(reply) === 'failed'
                 ? 'background: var(--ds-surface-warning, rgba(234, 88, 12, 0.12)); color: var(--ds-text-warning, var(--ds-text));'
                 : 'background: var(--ds-background-neutral, rgba(0,0,0,0.05)); color: var(--ds-text-subtle);'}
-              data-testid="email-outbox-status-{reply.comment_id}"
+              data-testid="email-outbox-status-{reply.id}"
             >
               {replyStatusText(reply)}
             </span>
@@ -538,7 +538,7 @@
                     variant="ghost"
                     size="small"
                     disabled={actingCommentID !== null}
-                    dataTestid="email-outbox-retry-{reply.comment_id}"
+                    dataTestid="email-outbox-retry-{reply.id}"
                   >
                     {actingCommentID === reply.comment_id ? t('channel.emailLog.outboxRetrying') : t('channel.emailLog.outboxRetry')}
                   </Button>
@@ -547,7 +547,7 @@
                     variant="ghost"
                     size="small"
                     disabled={actingCommentID !== null}
-                    dataTestid="email-outbox-discard-{reply.comment_id}"
+                    dataTestid="email-outbox-discard-{reply.id}"
                   >
                     {actingCommentID === reply.comment_id ? t('channel.emailLog.outboxDiscarding') : t('channel.emailLog.outboxDiscard')}
                   </Button>
