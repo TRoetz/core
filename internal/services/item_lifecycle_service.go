@@ -534,90 +534,70 @@ func (s *ItemLifecycleService) Split(ctx context.Context, input ItemSplitInput) 
 	}
 
 	// The moved counts are reported after commit, so they live outside the
-	// transaction closure.
+	// AfterCreate hook. The child goes through the shared creation API; the
+	// moves and the split fact commit with it in the same transaction.
 	var movedComments, movedAttachments int64
-	childID, err := repository.WithItemCreateTransaction(ctx, s.db, func(tx database.Tx) (int, error) {
-		creation, err := prepareItemCreation(ctx, s.db, ItemCreationParams{
-			WorkspaceID:             source.WorkspaceID,
-			Title:                   strings.TrimSpace(input.Title),
-			Description:             input.Description,
-			ItemTypeID:              childTypeID,
-			ParentID:                &source.ID,
-			AssigneeID:              input.AssigneeID,
-			CreatorID:               &input.ActorUserID,
-			CreatorPortalCustomerID: input.PortalCustomerID,
-			ChannelID:               source.ChannelID,
-		})
-		if err != nil {
-			return 0, err
-		}
-
-		fracIndex, err := repository.GenerateFracIndexForNewItem(tx, s.db.GetDriverName())
-		if err != nil {
-			return 0, fmt.Errorf("generate frac_index for split: %w", err)
-		}
-		itemNumber, err := s.items.GetNextWorkspaceItemNumber(tx, source.WorkspaceID)
-		if err != nil {
-			return 0, fmt.Errorf("generate workspace item number for split: %w", err)
-		}
-		newChildID, err := creation.insertRow(tx, itemNumber, fracIndex)
-		if err != nil {
-			return 0, fmt.Errorf("insert split item: %w", err)
-		}
-		if err := creation.extendTransaction(tx, newChildID); err != nil {
-			return 0, fmt.Errorf("extend split item: %w", err)
-		}
-		if err := creation.recordCreation(tx, newChildID, itemNumber); err != nil {
-			return 0, fmt.Errorf("record split item creation: %w", err)
-		}
-
-		if len(input.CommentIDs) > 0 {
-			var moved int64
-			moved, err = s.comments.MoveCommentsByID(tx, int64(source.ID), int64(newChildID), int64s(input.CommentIDs))
-			movedComments = moved
-			if err != nil {
-				return 0, fmt.Errorf("move comments to split item: %w", err)
+	childID64, err := CreateItem(s.db, ItemCreationParams{
+		WorkspaceID:             source.WorkspaceID,
+		Title:                   strings.TrimSpace(input.Title),
+		Description:             input.Description,
+		ItemTypeID:              childTypeID,
+		ParentID:                &source.ID,
+		AssigneeID:              input.AssigneeID,
+		CreatorID:               &input.ActorUserID,
+		CreatorPortalCustomerID: input.PortalCustomerID,
+		ChannelID:               source.ChannelID,
+		SkipAssigneeTrigger:     true,
+		SkipPublish:             true,
+		EventMetadata:           itemEventMetadata(input.ActorUserID, "application", nil),
+		AfterCreate: func(ctx context.Context, tx database.Tx, newChildID int) error {
+			if len(input.CommentIDs) > 0 {
+				var moved int64
+				moved, err = s.comments.MoveCommentsByID(tx, int64(source.ID), int64(newChildID), int64s(input.CommentIDs))
+				movedComments = moved
+				if err != nil {
+					return fmt.Errorf("move comments to split item: %w", err)
+				}
+				if int(movedComments) != len(input.CommentIDs) {
+					return &validation.ValidationError{Field: "comment_ids", Message: "One or more comments do not belong to this item"}
+				}
 			}
-			if int(movedComments) != len(input.CommentIDs) {
-				return 0, &validation.ValidationError{Field: "comment_ids", Message: "One or more comments do not belong to this item"}
+			if len(input.AttachmentIDs) > 0 {
+				query := fmt.Sprintf(`
+					UPDATE attachments SET item_id = ? WHERE item_id = ? AND COALESCE(entity_type, 'item') = 'item' AND id IN (%s)
+				`, placeholderList(input.AttachmentIDs))
+				args := append([]any{newChildID, source.ID}, intSliceToAny(input.AttachmentIDs)...)
+				res, err := tx.Exec(query, args...)
+				if err != nil {
+					return fmt.Errorf("move attachments to split item: %w", err)
+				}
+				movedAttachments, _ = res.RowsAffected()
+				if int(movedAttachments) != len(input.AttachmentIDs) {
+					return &validation.ValidationError{Field: "attachment_ids", Message: "One or more attachments do not belong to this item"}
+				}
 			}
-		}
-		if len(input.AttachmentIDs) > 0 {
-			query := fmt.Sprintf(`
-				UPDATE attachments SET item_id = ? WHERE item_id = ? AND COALESCE(entity_type, 'item') = 'item' AND id IN (%s)
-			`, placeholderList(input.AttachmentIDs))
-			args := append([]any{newChildID, source.ID}, intSliceToAny(input.AttachmentIDs)...)
-			res, err := tx.Exec(query, args...)
-			if err != nil {
-				return 0, fmt.Errorf("move attachments to split item: %w", err)
-			}
-			movedAttachments, _ = res.RowsAffected()
-			if int(movedAttachments) != len(input.AttachmentIDs) {
-				return 0, &validation.ValidationError{Field: "attachment_ids", Message: "One or more attachments do not belong to this item"}
-			}
-		}
 
-		now := time.Now().UTC()
-		if err := s.items.RecordHistory(tx, repository.HistoryEntry{
-			ItemID: source.ID, UserID: input.ActorUserID,
-			FieldName: "split_item_id", OldValueNull: true,
-			NewValue: fmt.Sprintf("%d", newChildID), ChangedAt: now,
-		}); err != nil {
-			return 0, err
-		}
+			now := time.Now().UTC()
+			if err := s.items.RecordHistory(tx, repository.HistoryEntry{
+				ItemID: source.ID, UserID: input.ActorUserID,
+				FieldName: "split_item_id", OldValueNull: true,
+				NewValue: fmt.Sprintf("%d", newChildID), ChangedAt: now,
+			}); err != nil {
+				return err
+			}
 
-		if _, err := itemevents.NewRecorder(s.db).Split(ctx, tx, source.WorkspaceID, itemevents.SplitV1{
-			SourceItemID: source.ID, SplitItemID: newChildID,
-			MovedComments: int(movedComments), MovedAttachments: int(movedAttachments),
-			AssigneeID: input.AssigneeID, PortalCustomerID: input.PortalCustomerID,
-		}, itemevents.User(input.ActorUserID, "application")); err != nil {
-			return 0, err
-		}
-		return newChildID, nil
+			_, err := itemevents.NewRecorder(s.db).Split(ctx, tx, source.WorkspaceID, itemevents.SplitV1{
+				SourceItemID: source.ID, SplitItemID: newChildID,
+				MovedComments: int(movedComments), MovedAttachments: int(movedAttachments),
+				AssigneeID: input.AssigneeID, PortalCustomerID: input.PortalCustomerID,
+			}, itemevents.User(input.ActorUserID, "application"))
+			return err
+		},
 	})
 	if err != nil {
 		return nil, err
 	}
+	childID := int(childID64)
 
 	child, err := s.items.FindByID(childID)
 	if err != nil {

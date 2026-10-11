@@ -306,8 +306,6 @@ func scanAncestorItem(rows *sql.Rows, item *models.Item, leading ...any) error {
 		return err
 	}
 	_ = level
-	_ = itemTypeColor
-	_ = itemTypeIcon
 	assignNullableInt(&item.ItemTypeID, itemTypeID)
 	assignNullableInt(&item.AssigneeID, assigneeID)
 	assignNullableInt(&item.CreatorID, creatorID)
@@ -315,6 +313,8 @@ func scanAncestorItem(rows *sql.Rows, item *models.Item, leading ...any) error {
 	assignNullableString(&item.WorkspaceName, workspaceName)
 	assignNullableString(&item.WorkspaceKey, workspaceKey)
 	assignNullableString(&item.ItemTypeName, itemTypeName)
+	assignNullableString(&item.ItemTypeColor, itemTypeColor)
+	assignNullableString(&item.ItemTypeIcon, itemTypeIcon)
 	item.CustomFieldValues = parseCustomFieldsJSON(customFieldValuesJSON)
 	return nil
 }
@@ -408,8 +408,6 @@ func scanBatchAncestorItem(rows *sql.Rows, item *models.Item, leading ...any) er
 		return err
 	}
 	_ = level
-	_ = itemTypeColor
-	_ = itemTypeIcon
 	assignNullableInt(&item.ItemTypeID, itemTypeID)
 	assignNullableInt(&item.AssigneeID, assigneeID)
 	assignNullableInt(&item.CreatorID, creatorID)
@@ -419,6 +417,8 @@ func scanBatchAncestorItem(rows *sql.Rows, item *models.Item, leading ...any) er
 	assignNullableString(&item.WorkspaceName, workspaceName)
 	assignNullableString(&item.WorkspaceKey, workspaceKey)
 	assignNullableString(&item.ItemTypeName, itemTypeName)
+	assignNullableString(&item.ItemTypeColor, itemTypeColor)
+	assignNullableString(&item.ItemTypeIcon, itemTypeIcon)
 	item.CustomFieldValues = parseCustomFieldsJSON(customFieldValuesJSON)
 	return nil
 }

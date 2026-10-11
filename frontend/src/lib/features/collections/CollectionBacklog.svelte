@@ -15,6 +15,7 @@
   import SubFilterBar from './SubFilterBar.svelte';
   import CollectionViewSwitcher from './CollectionViewSwitcher.svelte';
   import BacklogIterationSection from './BacklogIterationSection.svelte';
+  import { sortBacklogIterations } from './backlogIterationOrder.js';
   import ItemPicker from '../../pickers/ItemPicker.svelte';
   import { backlogStore, workspaceDataStore } from '../../stores/index.js';
   import { useCollectionEventStream } from '../../composables/useCollectionEventStream.svelte.js';
@@ -95,13 +96,9 @@
     allIterations.filter(i => i.status === 'planned' || i.status === 'active')
   );
 
-  // Sort order: active first, then planned, then completed/cancelled
-  const statusOrder = { active: 0, planned: 1, completed: 2, cancelled: 3 };
-
-  let visibleIterations = $derived.by(() => {
-    const combined = [...localIterations, ...addedGlobalIterations];
-    return combined.sort((a, b) => (statusOrder[a.status] ?? 9) - (statusOrder[b.status] ?? 9));
-  });
+  let visibleIterations = $derived.by(() =>
+    sortBacklogIterations([...localIterations, ...addedGlobalIterations])
+  );
 
   let visibleIterationIds = $derived(new Set(visibleIterations.map(i => i.id)));
 

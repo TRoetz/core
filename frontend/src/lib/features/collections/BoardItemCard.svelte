@@ -151,9 +151,12 @@
         data-testid={`board-card-footer-${item.id}`}
       >
         <span class="inline-flex shrink-0 items-center gap-1.5">
-          {#if itemType}
+          {#if item.item_type_icon || itemType}
             <ItemTypeIcon
               {itemType}
+              icon={item.item_type_icon}
+              color={item.item_type_color}
+              title={item.item_type_name || undefined}
               testId={`board-card-type-icon-${item.id}`}
             />
           {/if}

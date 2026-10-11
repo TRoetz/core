@@ -533,25 +533,27 @@
   }
 
   function getItemTypeInfo(item) {
-    if (!item.item_type_id || !itemTypes.length) {
-      const fallback = [
-        { iconName: 'GitBranch', color: '#9333ea', label: 'Epic' },
-        { iconName: 'Circle', color: '#2563eb', label: 'Feature' },
-        { iconName: 'Circle', color: '#16a34a', label: 'Story' },
-        { iconName: 'Circle', color: '#ea580c', label: 'Task' },
-        { iconName: 'Circle', color: '#6b7280', label: 'Subtask' }
-      ];
-      return fallback[Math.min(item.level || 0, fallback.length - 1)];
-    }
-    const it = itemTypes.find(type => type.id === item.item_type_id);
-    if (it) {
+    const itemType = item.item_type_id
+      ? itemTypes.find((type) => type.id === item.item_type_id)
+      : null;
+    // Prefer the icon carried on the row: the workspace-scoped itemTypes list
+    // omits types excluded from the effective configuration set.
+    const iconName = item.item_type_icon || itemType?.icon;
+    if (iconName) {
       return {
-        iconName: it.icon,
-        color: it.color,
-        label: it.name
+        iconName,
+        color: item.item_type_color || itemType?.color || '#6b7280',
+        label: item.item_type_name || itemType?.name || 'Unknown'
       };
     }
-    return { iconName: 'Circle', color: '#6b7280', label: 'Unknown' };
+    const fallback = [
+      { iconName: 'GitBranch', color: '#9333ea', label: 'Epic' },
+      { iconName: 'Circle', color: '#2563eb', label: 'Feature' },
+      { iconName: 'Circle', color: '#16a34a', label: 'Story' },
+      { iconName: 'Circle', color: '#ea580c', label: 'Task' },
+      { iconName: 'Circle', color: '#6b7280', label: 'Subtask' }
+    ];
+    return fallback[Math.min(item.level || 0, fallback.length - 1)];
   }
 
   function renderTreeItems(parentId = null, level = 0, result = []) {

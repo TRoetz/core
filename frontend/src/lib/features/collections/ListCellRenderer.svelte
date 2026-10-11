@@ -134,10 +134,18 @@
   {:else if column.field_identifier === 'title'}
     <!-- Title with type icon -->
     <div class="flex items-center gap-2 min-w-0">
-      {#if item.item_type_id && itemTypes.length > 0}
-        {@const itemType = itemTypes.find(type => type.id === item.item_type_id)}
-        {#if itemType}
-          <ItemTypeIcon {itemType} />
+      {#if item.item_type_icon || item.item_type_id}
+        {@const itemType = item.item_type_id
+          ? itemTypes.find((type) => type.id === item.item_type_id) ?? null
+          : null}
+        {#if item.item_type_icon || itemType}
+          <ItemTypeIcon
+            {itemType}
+            icon={item.item_type_icon}
+            color={item.item_type_color}
+            title={item.item_type_name || undefined}
+            testId={`list-cell-type-icon-${item.id}`}
+          />
         {/if}
       {/if}
       <div class="flex-1 min-w-0" data-testid={`workspace-item-title-${item.id}`}>

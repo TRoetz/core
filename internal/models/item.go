@@ -44,6 +44,8 @@ type Item struct {
 	// Portal submission tracking fields (immutable once set)
 	ChannelID         *int                    `json:"channel_id,omitempty"`      // Portal/channel this request was submitted through
 	RequestTypeID     *int                    `json:"request_type_id,omitempty"` // Request type used for submission
+	IntakeID          *int                    `json:"intake_id,omitempty"`       // Email intake that created this item
+	PortalOrgShared   bool                    `json:"portal_org_shared"`         // Creator opted to share the request with their organisation
 	CustomFieldValues map[string]any          `json:"custom_field_values,omitempty"`
 	VirtualFieldData  map[string]any          `json:"virtual_field_data,omitempty"`
 	CalendarData      []CalendarScheduleEntry `json:"calendar_data,omitempty"`
@@ -72,6 +74,8 @@ type Item struct {
 	WorkspaceKey              string `json:"workspace_key,omitempty"`
 	ItemTypeName              string `json:"item_type_name,omitempty"`
 	ItemTypeBuiltinKey        string `json:"item_type_builtin_key,omitempty"`
+	ItemTypeIcon              string `json:"item_type_icon,omitempty"`
+	ItemTypeColor             string `json:"item_type_color,omitempty"`
 	PriorityName              string `json:"priority_name,omitempty"`
 	PriorityBuiltinKey        string `json:"priority_builtin_key,omitempty"`
 	PriorityIcon              string `json:"priority_icon,omitempty"`

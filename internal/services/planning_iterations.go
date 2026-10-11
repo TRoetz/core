@@ -170,9 +170,11 @@ func iterationOrderByClause(sortBy, sortOrder string) string {
 	}
 	switch sortBy {
 	case "start_date", "end_date", "name", "status", "created_at", "updated_at":
-		return " ORDER BY i." + sortBy + " " + direction + ", i.name ASC, i.id ASC"
+		// The id tie-break follows the primary direction and is always the
+		// final key, so equal values never fall back to alphabetical name order.
+		return " ORDER BY i." + sortBy + " " + direction + ", i.id " + direction
 	default:
-		return " ORDER BY i.start_date DESC, i.name ASC, i.id ASC"
+		return " ORDER BY i.start_date DESC, i.id DESC"
 	}
 }
 

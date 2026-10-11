@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -327,54 +328,47 @@ func (s *ItemCRUDService) Copy(itemID int, opts CopyOptions) (*CopyResult, error
 	if parentID == nil {
 		parentID = source.ParentID
 	}
-	newItem := &models.Item{
-		WorkspaceID:       source.WorkspaceID,
-		ItemTypeID:        source.ItemTypeID,
-		Title:             opts.NewTitle,
-		Description:       source.Description,
-		StatusID:          source.StatusID,
-		PriorityID:        source.PriorityID,
-		DueDate:           source.DueDate,
-		StartDate:         source.StartDate,
-		EndDate:           source.EndDate,
-		IsTask:            source.IsTask,
-		IterationID:       source.IterationID,
-		ProjectID:         source.ProjectID,
-		InheritProject:    source.InheritProject,
-		AssigneeID:        source.AssigneeID,
-		CreatorID:         &opts.CreatorID,
-		CustomFieldValues: source.CustomFieldValues,
-		ParentID:          parentID,
-		RelatedWorkItemID: source.RelatedWorkItemID,
-		StoryPoints:       source.StoryPoints,
-	}
-	if err := validation.ValidateTaskState(s.db, newItem.WorkspaceID, opts.CreatorID, newItem.IsTask, newItem.StatusID); err != nil {
+	if err := validation.ValidateTaskState(s.db, source.WorkspaceID, opts.CreatorID, source.IsTask, source.StatusID); err != nil {
 		return nil, err
 	}
 
-	newID, err := s.repo.CreateWithRetry(context.Background(), newItem, func(tx database.Tx, itemID int) error {
-		now := time.Now()
-		if _, err := tx.Exec(`
-			INSERT INTO item_milestones (item_id, milestone_id, created_at)
-			SELECT ?, milestone_id, ? FROM item_milestones WHERE item_id = ?
-		`, itemID, now, source.ID); err != nil {
-			return fmt.Errorf("copy item milestones: %w", err)
-		}
-		created, err := s.repo.FindByIDForUpdate(tx, itemID)
+	milestoneIDs, err := s.repo.GetMilestoneIDs(source.ID)
+	if err != nil {
+		return nil, fmt.Errorf("load source milestones: %w", err)
+	}
+	customFieldValuesJSON := ""
+	if len(source.CustomFieldValues) > 0 {
+		encoded, err := json.Marshal(source.CustomFieldValues)
 		if err != nil {
-			return err
+			return nil, fmt.Errorf("encode source custom fields: %w", err)
 		}
-		metadata := itemevents.User(opts.CreatorID, "application")
-		metadata.OccurredAt = now
-		milestoneIDs, err := itemMilestoneIDsInTx(tx, itemID)
-		if err != nil {
-			return err
-		}
-		if err := s.repo.RecordHistoryBatch(tx, creationHistoryEntries(*created, opts.CreatorID, metadata.OccurredAt)); err != nil {
-			return fmt.Errorf("record copied item creation history: %w", err)
-		}
-		_, err = itemevents.NewRecorder(s.db).Created(context.Background(), tx, created, milestoneIDs, metadata)
-		return err
+		customFieldValuesJSON = string(encoded)
+	}
+
+	newID, err := CreateItem(s.db, ItemCreationParams{
+		WorkspaceID:           source.WorkspaceID,
+		ItemTypeID:            source.ItemTypeID,
+		Title:                 opts.NewTitle,
+		Description:           source.Description,
+		StatusID:              source.StatusID,
+		PriorityID:            source.PriorityID,
+		DueDate:               source.DueDate,
+		StartDate:             source.StartDate,
+		EndDate:               source.EndDate,
+		IsTask:                source.IsTask,
+		IterationID:           source.IterationID,
+		ProjectID:             source.ProjectID,
+		InheritProject:        source.InheritProject,
+		AssigneeID:            source.AssigneeID,
+		CreatorID:             &opts.CreatorID,
+		CustomFieldValuesJSON: customFieldValuesJSON,
+		ParentID:              parentID,
+		RelatedWorkItemID:     source.RelatedWorkItemID,
+		StoryPoints:           source.StoryPoints,
+		MilestoneIDs:          milestoneIDs,
+		SkipMandatoryTemplate: true,
+		SkipAssigneeTrigger:   true,
+		SkipPublish:           true,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("copy item %d: %w", source.ID, err)
@@ -382,7 +376,7 @@ func (s *ItemCRUDService) Copy(itemID int, opts CopyOptions) (*CopyResult, error
 
 	// Live-update publish (WI-483): the copy committed. Announce the new item and
 	// refresh the destination parent's child list.
-	PublishItemChange(newID)
+	PublishItemChange(int(newID))
 	effectiveParent := opts.NewParentID
 	if effectiveParent == nil {
 		effectiveParent = source.ParentID
@@ -391,7 +385,7 @@ func (s *ItemCRUDService) Copy(itemID int, opts CopyOptions) (*CopyResult, error
 		PublishItemChange(*effectiveParent)
 	}
 
-	return &CopyResult{NewItemID: newID, CopyCount: 1}, nil
+	return &CopyResult{NewItemID: int(newID), CopyCount: 1}, nil
 }
 
 // GetChildren returns direct children of an item

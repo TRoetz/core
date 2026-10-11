@@ -302,30 +302,29 @@
   }
 
   function getItemTypeInfo(item) {
-    if (!item.item_type_id || !itemTypes.length) {
-      // Fallback to hierarchy level based icons
-      const fallbackIndicators = [
-        { iconName: 'GitBranch', color: '#9333ea', label: 'Epic' },      // Level 0
-        { iconName: 'Circle', color: '#2563eb', label: 'Feature' },      // Level 1
-        { iconName: 'Circle', color: '#16a34a', label: 'Story' },        // Level 2
-        { iconName: 'Circle', color: '#ea580c', label: 'Task' },         // Level 3
-        { iconName: 'Circle', color: '#4b5563', label: 'Subtask' }       // Level 4+
-      ];
-      return fallbackIndicators[Math.min(item.level || 0, fallbackIndicators.length - 1)];
-    }
-
-    // Find the actual item type
-    const itemType = itemTypes.find(type => type.id === item.item_type_id);
-    if (itemType) {
+    const itemType = item.item_type_id
+      ? itemTypes.find((type) => type.id === item.item_type_id)
+      : null;
+    // Prefer the icon carried on the row: the workspace-scoped itemTypes list
+    // omits types excluded from the effective configuration set.
+    const iconName = item.item_type_icon || itemType?.icon;
+    if (iconName) {
       return {
-        iconName: itemType.icon,
-        color: itemType.color, // Use the actual hex color
-        label: itemType.name
+        iconName,
+        color: item.item_type_color || itemType?.color || '#4b5563',
+        label: item.item_type_name || itemType?.name || 'Unknown'
       };
     }
 
-    // Fallback if item type not found
-    return { iconName: 'Circle', color: '#4b5563', label: 'Unknown' };
+    // Fallback to hierarchy level based icons
+    const fallbackIndicators = [
+      { iconName: 'GitBranch', color: '#9333ea', label: 'Epic' },      // Level 0
+      { iconName: 'Circle', color: '#2563eb', label: 'Feature' },      // Level 1
+      { iconName: 'Circle', color: '#16a34a', label: 'Story' },        // Level 2
+      { iconName: 'Circle', color: '#ea580c', label: 'Task' },         // Level 3
+      { iconName: 'Circle', color: '#4b5563', label: 'Subtask' }       // Level 4+
+    ];
+    return fallbackIndicators[Math.min(item.level || 0, fallbackIndicators.length - 1)];
   }
 
   function renderTreeItems(parentId = null, level = 0, result = [], rootItems = null) {

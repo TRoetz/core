@@ -833,8 +833,14 @@
             <!-- Bottom row: Key, Icon, Status, Drill Down -->
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-2">
-                {#if itemType}
-                  <ItemTypeIcon {itemType} />
+                {#if backboneItem.item_type_icon || itemType}
+                  <ItemTypeIcon
+                    {itemType}
+                    icon={backboneItem.item_type_icon}
+                    color={backboneItem.item_type_color}
+                    title={backboneItem.item_type_name || undefined}
+                    testId={`map-item-type-icon-${backboneItem.id}`}
+                  />
                 {/if}
                 <ItemKey item={backboneItem} {workspace}
                   onClick={(e) => handleKeyClick(backboneItem, e)}
