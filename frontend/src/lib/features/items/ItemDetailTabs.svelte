@@ -575,6 +575,7 @@
                   variant="default"
                   size="small"
                   onclick={handleLogTime}
+                  dataTestid="log-time-btn"
                   title={t('items.logTimeTitle')}
                   keyboardHint={getShortcutDisplay('itemDetail', 'logTime')}
                   hotkeyConfig={{ key: toHotkeyString('itemDetail', 'logTime'), guard: () => tab === 'time' && moduleSettings?.time_tracking_enabled }}
@@ -653,6 +654,7 @@
                 variant="default"
                 size="small"
                 onclick={handleLogTime}
+                dataTestid="log-time-btn"
                 title={t('items.logTimeTitle')}
                 keyboardHint={getShortcutDisplay('itemDetail', 'logTime')}
                 hotkeyConfig={{ key: toHotkeyString('itemDetail', 'logTime'), guard: () => tab === 'time' && moduleSettings?.time_tracking_enabled }}

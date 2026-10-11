@@ -1541,8 +1541,10 @@ import NativeSelect from '../../components/NativeSelect.svelte';
     onclose={handleCloseTestCaseModal}
   />
 {/if}
+{/if}
 
-<!-- Time Log Modal -->
+<!-- Time Log Modal: rendered outside the isModal branch so logging time
+     works from both the item detail modal and the full-page view. -->
 {#if itemDetailStore.showTimeLogModal}
   <TimeLogModal
     defaultProjectId={getDefaultProjectForTimeLogging()}
@@ -1557,7 +1559,6 @@ import NativeSelect from '../../components/NativeSelect.svelte';
     onsave={handleModalSave}
     oncancel={handleModalCancel}
   />
-{/if}
 {/if}
 
 <ItemMoveWorkspaceDialog
