@@ -15,7 +15,8 @@
   import DialogFooter from '../../dialogs/DialogFooter.svelte';
   import FormField from '../../components/FormField.svelte';
   import UserPicker from '../../pickers/UserPicker.svelte';
-  import { renderStatusBadge } from '../../utils/statusColors.js';
+  import Lozenge from '../../components/Lozenge.svelte';
+  import { getStatusLabel, getTestStatusColor } from '../../utils/statusColors.js';
   import { t } from '../../stores/i18n.svelte.js';
   import { workspacePermissions } from '../../stores/index.js';
   import { errorToast, warningToast } from '../../stores/toasts.svelte.js';
@@ -112,8 +113,6 @@
     await loadData();
   }
 
-  // Status rendering now handled by imported utility (renderStatusBadge)
-
   function viewRunDetails(run) {
     navigate(testPath(`/runs/${run.id}?from=runs`));
   }
@@ -183,15 +182,7 @@
       label: t('testing.ended'),
       render: (run) => run.ended_at ? formatAuthenticatedDateTime(run.ended_at) : '-'
     },
-    {
-      key: 'status',
-      label: t('common.status'),
-      html: true,
-      render: (run) => {
-        const status = run.ended_at ? 'completed' : 'in_progress';
-        return renderStatusBadge(status);
-      }
-    },
+    { key: 'status', label: t('common.status'), width: 'w-32', slot: 'statusCell' },
     { key: 'actions', label: t('common.actions'), width: 'w-16', align: 'text-right' }
   ]);
 
@@ -360,6 +351,11 @@
       emptyMessage={t('testing.noTestRunsYet')}
       emptyDescription={t('testing.createTestRunToExecute')}
       emptyIcon={IconPlayerPlay}
-    />
+    >
+      {#snippet statusCell(run)}
+        {@const status = run.ended_at ? 'completed' : 'in_progress'}
+        <Lozenge color={getTestStatusColor(status)} text={getStatusLabel(status)} />
+      {/snippet}
+    </DataTable>
   </div>
 </div>

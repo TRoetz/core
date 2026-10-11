@@ -13,7 +13,7 @@
   import StateDisplay from '../../components/StateDisplay.svelte';
   import PageHeader from '../../layout/PageHeader.svelte';
   import SectionHeader from '../../layout/SectionHeader.svelte';
-  import { getStatusLabel } from '../../utils/statusColors.js';
+  import { getStatusLabel, getTestStatusColor } from '../../utils/statusColors.js';
   import { t } from '../../stores/i18n.svelte.js';
   import { workspacePermissions } from '../../stores/index.js';
   import { errorToast, infoToast } from '../../stores/toasts.svelte.js';
@@ -140,20 +140,8 @@
     }
   }
 
-  // Status colors now handled by imported utility (getStatusBadgeCSS, getStatusLabel)
-
   const isBddResult = (result) => result.format === 'bdd';
   const exampleRowLabel = (row) => formatExampleRow(row.row_values);
-
-  function getStatusColor(status) {
-    return {
-      passed: 'green',
-      failed: 'red',
-      blocked: 'amber',
-      skipped: 'gray',
-      not_run: 'gray'
-    }[status] || 'gray';
-  }
 
   function getStepStatusStyle(status) {
     const styles = {
@@ -311,7 +299,7 @@
                       <h3 class="font-medium" style="color: var(--ds-text);">
                         {result.test_case_title}
                       </h3>
-                      <Lozenge color={getStatusColor(result.status)} text={getStatusLabel(result.status)} size="md" />
+                      <Lozenge color={getTestStatusColor(result.status)} text={getStatusLabel(result.status)} size="md" />
                     </div>
 
 

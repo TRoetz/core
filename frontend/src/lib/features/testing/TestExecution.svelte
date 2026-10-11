@@ -19,7 +19,7 @@
   import CreateModal from '../../dialogs/CreateModal.svelte';
   import Label from '../../components/Label.svelte';
   import Textarea from '../../components/Textarea.svelte';
-  import { getStatusLabel } from '../../utils/statusColors.js';
+  import { getStatusLabel, getTestStatusColor } from '../../utils/statusColors.js';
   import { t } from '../../stores/i18n.svelte.js';
   import { workspacePermissions } from '../../stores/index.js';
   import DescriptionText from '../../components/DescriptionText.svelte';
@@ -43,16 +43,6 @@ import { parseScenarioSpec, flattenExamples } from './bddSpec.js';
   // test case id. Both come with the run detail payload.
   let bddSnapshots = $state({});
   let bddExampleResults = $state({});
-
-  function getStatusColor(status) {
-    return {
-      passed: 'green',
-      failed: 'red',
-      blocked: 'amber',
-      skipped: 'gray',
-      not_run: 'gray'
-    }[status] || 'gray';
-  }
 
   function handleRenderedContentClick(event) {
     if (event.target.tagName === 'IMG') {
@@ -931,7 +921,7 @@ import { parseScenarioSpec, flattenExamples } from './bddSpec.js';
               <div class="flex justify-between items-center pt-4 border-t" style="border-color: var(--ds-border);">
                 <span data-testid="test-execution-current-status">
                   <Lozenge
-                    color={getStatusColor(stepResults[currentStep.id]?.status || 'not_run')}
+                    color={getTestStatusColor(stepResults[currentStep.id]?.status || 'not_run')}
                     text={`${t('common.status')}: ${getStatusLabel(stepResults[currentStep.id]?.status || 'not_run')}`}
                   />
                 </span>

@@ -4,7 +4,6 @@
   import { writable } from 'svelte/store';
   import { confirm } from '../../composables/useConfirm.js';
   import { IconX, IconPackage, IconFileText, IconPlayerPlay } from '@tabler/icons-svelte-runes';
-  import { escapeHtml } from '../../utils/sanitize.ts';
   import { navigate } from '../../router.js';
   import Button from '../../components/Button.svelte';
   import Input from '../../components/Input.svelte';
@@ -15,10 +14,12 @@
   import DataTable from '../../components/DataTable.svelte';
   import EmptyState from '../../components/EmptyState.svelte';
   import Panel from '../../components/Panel.svelte';
+  import Badge from '../../components/Badge.svelte';
+  import Lozenge from '../../components/Lozenge.svelte';
   import ModalHeader from '../../dialogs/ModalHeader.svelte';
   import DialogFooter from '../../dialogs/DialogFooter.svelte';
   import TestCasePicker from '../../pickers/TestCasePicker.svelte';
-  import { renderStatusBadge, renderMilestoneBadge } from '../../utils/statusColors.js';
+  import { getStatusLabel, getTestStatusColor } from '../../utils/statusColors.js';
   import { t } from '../../stores/i18n.svelte.js';
   import { workspacePermissions } from '../../stores/index.js';
   import { errorToast, successToast } from '../../stores/toasts.svelte.js';
@@ -247,54 +248,16 @@
   const workspaceTestBase = $derived.by(() => workspaceId ? `/workspaces/${workspaceId}/tests` : '/workspaces');
   const testSetColumns = $derived.by(() => [
     { key: 'id', label: t('common.id'), width: 'w-16' },
-    {
-      key: 'name',
-      label: t('common.name'),
-      html: true,
-      render: (set) => {
-        const description = set.description ? `<div class="text-xs mt-1" style="color: var(--ds-text-subtle);">${escapeHtml(set.description)}</div>` : '';
-        return `<div class="font-medium" style="color: var(--ds-text);">${escapeHtml(set.name)}</div>${description}`;
-      }
-    },
-    {
-      key: 'milestone',
-      label: t('milestones.milestone'),
-      html: true,
-      render: (set) => renderMilestoneBadge(set.milestone_name)
-    },
+    { key: 'name', label: t('common.name'), slot: 'nameCell' },
+    { key: 'milestone', label: t('milestones.milestone'), width: 'w-40', slot: 'milestoneCell' },
     {
       key: 'test_case_count',
       label: t('testing.testCases'),
-      html: true,
-      render: (set) => {
-        const count = set.test_case_count || 0;
-        return `<span style="color: var(--ds-text);">${count}</span>`;
-      }
+      width: 'w-24',
+      render: (set) => String(set.test_case_count || 0)
     },
-    {
-      key: 'total_runs',
-      label: t('testing.testRuns'),
-      html: true,
-      render: (set) => {
-        const total = set.total_runs || 0;
-        const success = set.successful_runs || 0;
-        const failed = set.failed_runs || 0;
-        const summary = total > 0
-          ? `<div class="text-xs"><span style="color: var(--ds-text-success);">${success} ✓</span>${failed > 0 ? `<span style="color: var(--ds-text-danger);" class="ml-1">${failed} ✗</span>` : ''}</div>`
-          : '';
-        return `<div class="flex items-center space-x-2"><span class="font-medium" style="color: var(--ds-text);">${total} ${t('common.total').toLowerCase()}</span>${summary}</div>`;
-      }
-    },
-    {
-      key: 'last_run_status',
-      label: t('testing.lastRun'),
-      html: true,
-      render: (set) => {
-        if (!set.last_run_status) return `<span style="color: var(--ds-text-subtle);">${t('testing.neverRun')}</span>`;
-        const datePart = set.last_run_date ? `<span class="text-xs mt-1" style="color: var(--ds-text-subtle);">${formatDateSimple(set.last_run_date)}</span>` : '';
-        return `<div class="flex flex-col">${renderStatusBadge(set.last_run_status)}${datePart}</div>`;
-      }
-    },
+    { key: 'total_runs', label: t('testing.testRuns'), width: 'w-32', slot: 'runsCell' },
+    { key: 'last_run_status', label: t('testing.lastRun'), width: 'w-36', slot: 'lastRunCell' },
     { key: 'actions', label: t('common.actions'), width: 'w-24', align: 'text-right' }
   ]);
 
@@ -510,6 +473,49 @@
       emptyMessage={t('testing.noTestPlansYet')}
       emptyDescription={t('testing.createFirstTestPlan')}
       emptyIcon={IconPackage}
-    />
+    >
+      {#snippet nameCell(set)}
+        <div class="font-medium" style="color: var(--ds-text);">{set.name}</div>
+        {#if set.description}
+          <DescriptionText>{set.description}</DescriptionText>
+        {/if}
+      {/snippet}
+
+      {#snippet milestoneCell(set)}
+        {#if set.milestone_name}
+          <Badge variant="info" class="whitespace-nowrap">{set.milestone_name}</Badge>
+        {:else}
+          <span style="color: var(--ds-text-subtle);">{t('testing.noMilestone')}</span>
+        {/if}
+      {/snippet}
+
+      {#snippet runsCell(set)}
+        {@const total = set.total_runs || 0}
+        <div class="flex flex-col items-start gap-1 whitespace-nowrap">
+          <span class="text-sm font-medium" style="color: var(--ds-text);">{total} {t('common.total').toLowerCase()}</span>
+          {#if total > 0}
+            <div class="flex items-center gap-1">
+              <Badge variant="success" size="xs">{set.successful_runs || 0} ✓</Badge>
+              {#if (set.failed_runs || 0) > 0}
+                <Badge variant="danger" size="xs">{set.failed_runs} ✗</Badge>
+              {/if}
+            </div>
+          {/if}
+        </div>
+      {/snippet}
+
+      {#snippet lastRunCell(set)}
+        {#if set.last_run_status}
+          <div class="flex flex-col items-start gap-1 whitespace-nowrap">
+            <Lozenge color={getTestStatusColor(set.last_run_status)} text={getStatusLabel(set.last_run_status)} />
+            {#if set.last_run_date}
+              <span class="text-xs" style="color: var(--ds-text-subtle);">{formatDateSimple(set.last_run_date)}</span>
+            {/if}
+          </div>
+        {:else}
+          <span style="color: var(--ds-text-subtle);">{t('testing.neverRun')}</span>
+        {/if}
+      {/snippet}
+    </DataTable>
   </div>
 </div>
