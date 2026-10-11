@@ -13,6 +13,7 @@
   import SelectField from '../components/SelectField.svelte';
   import { AlertTriangle, ChevronLeft, ChevronRight, Mail, MessageSquare, FileText } from '@lucide/svelte';
   import SearchInput from '../components/SearchInput.svelte';
+  import TabStrip from '../components/TabStrip.svelte';
 
   let { isOpen = false, channel = null, initialTab = 'inbound', onClose = () => {} } = $props();
 
@@ -84,9 +85,8 @@
     debouncedSearch();
   }
 
-  function onTabChange(event) {
-    activeTab = event.tab;
-    if (activeTab === 'outbox' && !outboxData) {
+  function handleTabChange(id) {
+    if (id === 'outbox' && !outboxData) {
       untrack(() => loadOutbox());
     }
   }
@@ -283,23 +283,13 @@
 
   <!-- Content -->
   <div class="p-6">
-    <div class="border-b mb-4" style="border-color: var(--ds-border);">
-      <nav class="-mb-px flex space-x-6" aria-label="Sections">
-        {#each modalTabs as tab (tab.id)}
-          <button
-            type="button"
-            data-testid={tab.testid}
-            class="whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm transition-colors"
-            style={activeTab === tab.id
-              ? 'border-color: var(--ds-interactive); color: var(--ds-interactive);'
-              : 'border-color: transparent; color: var(--ds-text-subtle);'}
-            onclick={() => onTabChange(tab.id)}
-          >
-            {tab.label}
-          </button>
-        {/each}
-      </nav>
-    </div>
+    <TabStrip
+      tabs={modalTabs}
+      bind:activeTab
+      onTabChange={handleTabChange}
+      ariaLabel="Sections"
+      class="mb-4"
+    />
 
     {#if activeTab === 'inbound'}
     <div class="pt-4">

@@ -157,7 +157,7 @@
       type="button"
       role="tab"
       aria-selected={mode === 'builder'}
-      class="px-3 py-1.5 rounded-md text-sm border transition-colors"
+      class="px-3 py-1.5 rounded-md text-sm border transition-colors whitespace-nowrap"
       style={mode === 'builder'
         ? 'color: var(--ds-text); background-color: var(--ds-surface-hovered); border-color: var(--ds-border-bold);'
         : 'color: var(--ds-text-subtle); background-color: transparent; border-color: var(--ds-border);'}
@@ -170,7 +170,7 @@
       type="button"
       role="tab"
       aria-selected={mode === 'raw'}
-      class="px-3 py-1.5 rounded-md text-sm border transition-colors"
+      class="px-3 py-1.5 rounded-md text-sm border transition-colors whitespace-nowrap"
       style={mode === 'raw'
         ? 'color: var(--ds-text); background-color: var(--ds-surface-hovered); border-color: var(--ds-border-bold);'
         : 'color: var(--ds-text-subtle); background-color: transparent; border-color: var(--ds-border);'}

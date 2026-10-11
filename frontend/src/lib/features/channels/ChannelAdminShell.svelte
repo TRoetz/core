@@ -3,6 +3,7 @@
   import { t } from '../../stores/i18n.svelte.js';
   import Button from '../../components/Button.svelte';
   import Spinner from '../../components/Spinner.svelte';
+  import TabStrip from '../../components/TabStrip.svelte';
 
   let {
     loading = false,
@@ -15,6 +16,15 @@
     children,
     after = undefined,
   } = $props();
+
+  let stripTabs = $derived(
+    tabs.map((tab) => ({
+      id: tab.id,
+      label: tab.label(),
+      icon: tab.icon,
+      testid: `channel-tab-${tab.id}`,
+    })),
+  );
 </script>
 
 {#if loading}
@@ -55,27 +65,7 @@
         {/if}
       </div>
 
-      <nav class="flex gap-6 border-b" style="border-color: var(--ds-border);">
-        {#each tabs as tab}
-          <button
-            data-testid="channel-tab-{tab.id}"
-            onclick={() => activeTab = tab.id}
-            class="relative py-3 text-sm font-medium transition-colors {
-              activeTab === tab.id
-                ? 'text-[var(--ds-interactive)]'
-                : 'text-[var(--ds-text-subtle)] hover:text-[var(--ds-text)]'
-            }"
-          >
-            <div class="flex items-center gap-2">
-              <tab.icon class="w-4 h-4" />
-              <span>{tab.label()}</span>
-            </div>
-            {#if activeTab === tab.id}
-              <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-[var(--ds-interactive)]"></div>
-            {/if}
-          </button>
-        {/each}
-      </nav>
+      <TabStrip tabs={stripTabs} bind:activeTab />
     </div>
 
     <div class="flex-1 overflow-y-auto">

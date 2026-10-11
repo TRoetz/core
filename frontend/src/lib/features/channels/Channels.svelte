@@ -18,6 +18,7 @@
   import Lozenge from '../../components/Lozenge.svelte';
   import DataTable from '../../components/DataTable.svelte';
   import ChannelNavigation from './ChannelNavigation.svelte';
+  import TabStrip from '../../components/TabStrip.svelte';
   import { channelTypes as channelTypeDefs, allTypesEntry, getChannelTypeIcon } from './channelTypes.js';
   import { channelAdminRoute } from './channelRoutes.js';
   import CategoryModal from '../../dialogs/CategoryModal.svelte';
@@ -34,11 +35,11 @@
   // Props
   let { embedded = false } = $props();
 
-  // Channel type definitions for embedded tab navigation
-  const channelTypes = [
-    { ...allTypesEntry, label: t('channels.allTypes', 'All') },
-    ...channelTypeDefs.map(ct => ({ ...ct, label: t(`channels.${ct.id}`, ct.id) }))
-  ];
+  // Channel type definitions for embedded tab navigation.
+  let channelTabs = $derived([
+    { id: 'all', label: t('channels.allTypes', 'All'), icon: allTypesEntry.icon },
+    ...channelTypeDefs.map(ct => ({ id: ct.id, label: t(`channels.${ct.id}`, ct.id), icon: ct.icon }))
+  ]);
 
   let channels = $state([]);
   let loading = $state(true);
@@ -455,54 +456,44 @@
   <div class="flex-1 min-h-0 overflow-y-auto {embedded ? '' : 'p-6'}">
     <!-- Embedded Tab Navigation -->
     {#if embedded}
-      <div class="border-b mb-6" style="border-color: var(--ds-border);">
-        <!-- Type Tabs with Category filter and Manage button on right -->
-        <div class="flex items-center justify-between">
-          <div class="flex gap-1">
-            {#each channelTypes as type (type.id)}
-              {@const isActive = activeTypeFilter === type.id}
-              <button
-                onclick={() => handleTypeClick(type.id)}
-                class="channel-tab px-4 py-2.5 text-sm font-medium border-b-2 transition-colors flex items-center gap-2"
-                class:active={isActive}
-              >
-                <type.icon class="w-4 h-4" />
-                {type.label}
-              </button>
-            {/each}
-          </div>
-          <div class="flex items-center gap-3 flex-shrink-0">
-            <span class="text-sm whitespace-nowrap" style="color: var(--ds-text-subtle);">{t('channels.category', 'Category')}:</span>
-            <ItemPicker
-              value={activeCategoryId ? parseInt(activeCategoryId) : null}
-              items={$channelCategoriesStore}
-              placeholder={t('channels.allCategories', 'All Categories')}
-              showUnassigned={true}
-              unassignedLabel={t('channels.allCategories', 'All Categories')}
-              allowClear={false}
-              class="w-48"
-              onSelect={(item) => {
-                if (!item) {
-                  navigate('/admin/channels');
-                } else {
-                  navigate(`/admin/channels/category/${item.id}`);
-                }
-              }}
-            />
-            {#if $isSystemAdmin}
-              <Button
-                onclick={() => showCategoryModal = true}
-                variant="ghost"
-                size="small"
-                icon={IconTag}
-                class="whitespace-nowrap flex-shrink-0"
-              >
-                {t('channels.manageCategories', 'Manage')}
-              </Button>
-            {/if}
-          </div>
-        </div>
-      </div>
+      <!-- Type Tabs with Category filter and Manage button on right -->
+      <TabStrip
+        tabs={channelTabs}
+        activeTab={activeTypeFilter ?? 'all'}
+        onTabChange={(id) => handleTypeClick(id === 'all' ? null : id)}
+        class="mb-6"
+      >
+        {#snippet trailing()}
+          <span class="text-sm whitespace-nowrap" style="color: var(--ds-text-subtle);">{t('channels.category', 'Category')}:</span>
+          <ItemPicker
+            value={activeCategoryId ? parseInt(activeCategoryId) : null}
+            items={$channelCategoriesStore}
+            placeholder={t('channels.allCategories', 'All Categories')}
+            showUnassigned={true}
+            unassignedLabel={t('channels.allCategories', 'All Categories')}
+            allowClear={false}
+            class="w-48"
+            onSelect={(item) => {
+              if (!item) {
+                navigate('/admin/channels');
+              } else {
+                navigate(`/admin/channels/category/${item.id}`);
+              }
+            }}
+          />
+          {#if $isSystemAdmin}
+            <Button
+              onclick={() => showCategoryModal = true}
+              variant="ghost"
+              size="small"
+              icon={IconTag}
+              class="whitespace-nowrap flex-shrink-0"
+            >
+              {t('channels.manageCategories', 'Manage')}
+            </Button>
+          {/if}
+        {/snippet}
+      </TabStrip>
     {/if}
 
     <!-- Header -->
@@ -765,18 +756,3 @@
   onClose={() => { showEmailLog = false; emailLogChannel = null; }}
 />
 
-<style>
-  .channel-tab {
-    border-color: transparent;
-    color: var(--ds-text-subtle);
-  }
-
-  .channel-tab:hover:not(.active) {
-    color: var(--ds-text);
-  }
-
-  .channel-tab.active {
-    border-color: var(--ds-border-focused);
-    color: var(--ds-text);
-  }
-</style>

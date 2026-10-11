@@ -193,6 +193,7 @@
   .seg {
     flex: 1;
     min-height: 36px;
+    white-space: nowrap;
     border: 1px solid var(--ds-border);
     border-radius: var(--radius-md, 6px);
     background-color: var(--ds-surface);

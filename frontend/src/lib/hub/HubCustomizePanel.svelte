@@ -9,8 +9,16 @@
   import Input from '../components/Input.svelte';
   import Textarea from '../components/Textarea.svelte';
   import ModalBackdrop from '../components/ModalBackdrop.svelte';
+  import TabStrip from '../components/TabStrip.svelte';
 
   let showCustomizePanelHover = $state(false);
+
+  function handleSectionChange(section) {
+    hubStore.activeSection = section;
+    if (section === 'sections') {
+      hubStore.isEditing = true;
+    }
+  }
 </script>
 
 <!-- Customization Panel Overlay (hide when editing sections so sections are visible) -->
@@ -43,24 +51,15 @@
     </div>
 
     <!-- Section Navigation -->
-    <div class="border-b flex" style="border-color: var(--ds-border);">
-      <button
-        onclick={() => hubStore.activeSection = 'hero-gradient'}
-        class="flex-1 p-3 text-sm font-medium flex items-center justify-center gap-2 border-b-2 transition-colors"
-        style="border-color: {hubStore.activeSection === 'hero-gradient' ? 'var(--ds-border-focused)' : 'transparent'}; color: {hubStore.activeSection === 'hero-gradient' ? 'var(--ds-text)' : 'var(--ds-text-subtle)'};"
-      >
-        <Palette class="w-4 h-4" />
-        <span>{t('portal.theme', 'Theme')}</span>
-      </button>
-      <button
-        onclick={() => { hubStore.activeSection = 'sections'; hubStore.isEditing = true; }}
-        class="flex-1 p-3 text-sm font-medium flex items-center justify-center gap-2 border-b-2 transition-colors"
-        style="border-color: {hubStore.activeSection === 'sections' ? 'var(--ds-border-focused)' : 'transparent'}; color: {hubStore.activeSection === 'sections' ? 'var(--ds-text)' : 'var(--ds-text-subtle)'};"
-      >
-        <Navigation class="w-4 h-4" />
-        <span>{t('hub.sections', 'Sections')}</span>
-      </button>
-    </div>
+    <TabStrip
+      tabs={[
+        { id: 'hero-gradient', label: t('portal.theme', 'Theme'), icon: Palette },
+        { id: 'sections', label: t('hub.sections', 'Sections'), icon: Navigation }
+      ]}
+      activeTab={hubStore.activeSection}
+      onTabChange={handleSectionChange}
+      fill
+    />
 
     <!-- Panel Content -->
     <div class="flex-1 overflow-y-auto p-4">

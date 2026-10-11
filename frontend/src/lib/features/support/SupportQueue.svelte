@@ -568,7 +568,7 @@
               type="button"
               role="tab"
               aria-selected={queueRef(entry) === activeRef}
-              class="px-3 py-1.5 text-sm"
+              class="px-3 py-1.5 text-sm whitespace-nowrap"
               data-testid={`support-queue-tab-${queueRef(entry)}`}
               onclick={() => selectQueue(queueRef(entry))}
             >

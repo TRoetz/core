@@ -18,6 +18,7 @@
   import { toHotkeyString, getShortcutDisplay } from '../../utils/keyboardShortcuts.js';
   import { isExternalRequest } from '../../utils/requestOrigin.js';
   import Badge from '../../components/Badge.svelte';
+  import TabStrip from '../../components/TabStrip.svelte';
   import DescriptionText from '../../components/DescriptionText.svelte';
   import EmptyState from '../../components/EmptyState.svelte';
   import DataTable from '../../components/DataTable.svelte';
@@ -58,6 +59,18 @@
       .then((runs) => { if (item?.id === id) hasAgentRuns = (runs?.length ?? 0) > 0; })
       .catch(() => {});
   });
+
+  let tabs = $derived([
+    { id: 'comments', label: t('items.comments'), icon: MessageSquare, count: commentCount },
+    ...(moduleSettings.time_tracking_enabled
+      ? [{ id: 'time', label: t('items.timeTracking'), icon: Clock, count: timeWorklogs?.length ?? 0, testid: 'item-detail-time-tab' }]
+      : []),
+    { id: 'details', label: t('items.details'), icon: Info, testid: 'item-detail-details-tab' },
+    { id: 'history', label: t('items.history'), icon: History, testid: 'item-detail-history-tab' },
+    ...(hasAgentRuns
+      ? [{ id: 'agent-log', label: t('items.agentLog'), icon: Bot, testid: 'item-detail-agent-log-tab' }]
+      : []),
+  ]);
 
   // Sum logged worklog minutes for the time tab header. When the
   // "Include child items" toggle is on, swap to the server-side rollup totals
@@ -311,62 +324,7 @@
 <div class="mt-6">
   <div>
     <!-- Tab Navigation -->
-    <div class="flex border-b" style="border-color: var(--ds-border);">
-      <button
-        class="flex items-center gap-2 pl-0 pr-4 py-3 text-sm font-medium transition-all relative"
-        style="{tab === 'comments' ? 'background-color: var(--ds-surface-raised); color: var(--ds-interactive); margin-bottom: -1px; border-bottom: 2px solid var(--ds-interactive);' : 'color: var(--ds-text-subtle);'}"
-        onclick={() => switchTab('comments')}
-      >
-        <MessageSquare class="w-4 h-4" />
-        {t('items.comments')}
-        {#if commentCount > 0}
-          <Badge variant="neutral" size="xs">{commentCount}</Badge>
-        {/if}
-      </button>
-      {#if moduleSettings.time_tracking_enabled}
-        <button
-          data-testid="item-detail-time-tab"
-          class="flex items-center gap-2 px-4 py-3 text-sm font-medium transition-all relative"
-          style="{tab === 'time' ? 'background-color: var(--ds-surface-raised); color: var(--ds-interactive); margin-bottom: -1px; border-bottom: 2px solid var(--ds-interactive);' : 'color: var(--ds-text-subtle);'}"
-          onclick={() => switchTab('time')}
-        >
-          <Clock class="w-4 h-4" />
-          {t('items.timeTracking')}
-          {#if timeWorklogs && timeWorklogs.length > 0}
-            <Badge variant="neutral" size="xs">{timeWorklogs.length}</Badge>
-          {/if}
-        </button>
-      {/if}
-      <button
-        data-testid="item-detail-details-tab"
-        class="flex items-center gap-2 px-4 py-3 text-sm font-medium transition-all relative"
-        style="{tab === 'details' ? 'background-color: var(--ds-surface-raised); color: var(--ds-interactive); margin-bottom: -1px; border-bottom: 2px solid var(--ds-interactive);' : 'color: var(--ds-text-subtle);'}"
-        onclick={() => switchTab('details')}
-      >
-        <Info class="w-4 h-4" />
-        {t('items.details')}
-      </button>
-      <button
-        data-testid="item-detail-history-tab"
-        class="flex items-center gap-2 px-4 py-3 text-sm font-medium transition-all relative"
-        style="{tab === 'history' ? 'background-color: var(--ds-surface-raised); color: var(--ds-interactive); margin-bottom: -1px; border-bottom: 2px solid var(--ds-interactive);' : 'color: var(--ds-text-subtle);'}"
-        onclick={() => switchTab('history')}
-      >
-        <History class="w-4 h-4" />
-        {t('items.history')}
-      </button>
-      {#if hasAgentRuns}
-        <button
-          data-testid="item-detail-agent-log-tab"
-          class="flex items-center gap-2 px-4 py-3 text-sm font-medium transition-all relative"
-          style="{tab === 'agent-log' ? 'background-color: var(--ds-surface-raised); color: var(--ds-interactive); margin-bottom: -1px; border-bottom: 2px solid var(--ds-interactive);' : 'color: var(--ds-text-subtle);'}"
-          onclick={() => switchTab('agent-log')}
-        >
-          <Bot class="w-4 h-4" />
-          {t('items.agentLog')}
-        </button>
-      {/if}
-    </div>
+    <TabStrip {tabs} activeTab={tab} onTabChange={switchTab} />
 
     <!-- Tab Content -->
     <div class="pt-6">
