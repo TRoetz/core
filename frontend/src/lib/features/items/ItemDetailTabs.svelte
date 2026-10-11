@@ -22,6 +22,7 @@
   import DescriptionText from '../../components/DescriptionText.svelte';
   import EmptyState from '../../components/EmptyState.svelte';
   import DataTable from '../../components/DataTable.svelte';
+  import Tooltip from '../../components/Tooltip.svelte';
   import Toggle from '../../components/Toggle.svelte';
   import Spinner from '../../components/Spinner.svelte';
   // Direct store access for the child-item rollup keeps the time-tab logic
@@ -309,14 +310,15 @@
     ];
   }
 
+  function formatWorklogTime(timestamp) {
+    return timestamp ? formatAuthenticatedInstant(timestamp * 1000, { hour: '2-digit', minute: '2-digit' }) : '—';
+  }
+
   const worklogColumns = [
     { key: 'date', label: t('common.date'), render: (w) => dateKeyInZone(w.start_time, getUserTimezone(authStore?.currentUser)), textColor: 'var(--ds-text-subtle)' },
-    { key: 'description', label: t('common.description'), render: (w) => w.description || t('items.noDescription') },
+    { key: 'description', label: t('common.description'), slot: 'description' },
     { key: 'user_name', label: t('common.user'), render: (w) => w.user_name || '—' },
-    { key: 'start_time', label: t('time.start'), render: (w) => w.start_time ? formatAuthenticatedInstant(w.start_time * 1000, { hour: '2-digit', minute: '2-digit' }) : '—', textColor: 'var(--ds-text-subtle)' },
-    { key: 'end_time', label: t('time.end'), render: (w) => w.end_time ? formatAuthenticatedInstant(w.end_time * 1000, { hour: '2-digit', minute: '2-digit' }) : '—', textColor: 'var(--ds-text-subtle)' },
-    { key: 'duration_minutes', label: t('time.duration'), render: (w) => `${Math.floor(w.duration_minutes / 60)}h ${w.duration_minutes % 60}m` },
-    { key: 'project_name', label: t('common.project'), textColor: 'var(--ds-text-subtle)' },
+    { key: 'duration_minutes', label: t('time.duration'), slot: 'duration' },
     { key: 'actions', label: '', width: 'w-12' },
   ];
 </script>
@@ -547,7 +549,27 @@
               data={timeWorklogs}
               keyField="id"
               actionItems={buildWorklogDropdownItems}
-            />
+            >
+              {#snippet description(worklog)}
+                <span
+                  class="line-clamp-2 text-sm"
+                  style="color: var(--ds-text);"
+                  title={worklog.description || t('items.noDescription')}
+                >
+                  {worklog.description || t('items.noDescription')}
+                </span>
+              {/snippet}
+              {#snippet duration(worklog)}
+                {@const durationLabel = `${Math.floor(worklog.duration_minutes / 60)}h ${worklog.duration_minutes % 60}m`}
+                {#if worklog.start_time}
+                  <Tooltip content={`${formatWorklogTime(worklog.start_time)} — ${formatWorklogTime(worklog.end_time)}`}>
+                    <span class="text-sm tabular-nums" style="color: var(--ds-text);">{durationLabel}</span>
+                  </Tooltip>
+                {:else}
+                  <span class="text-sm tabular-nums" style="color: var(--ds-text);">{durationLabel}</span>
+                {/if}
+              {/snippet}
+            </DataTable>
           </div>
         {:else}
           <div class="mb-3 flex items-center">
