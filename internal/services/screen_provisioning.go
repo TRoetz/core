@@ -193,10 +193,19 @@ func (s *ScreenProvisioningService) Update(actor AuditActor, id int, screen *mod
 	return screen, warnings, nil
 }
 
-// Delete removes a screen. The default screen (ID 1) is protected.
+// Delete removes a screen. Built-in screens are protected because the default
+// configuration set and fallback resolution depend on them.
 func (s *ScreenProvisioningService) Delete(actor AuditActor, id int) error {
-	if id == 1 {
-		return NewServiceError(400, "Cannot delete default screen")
+	var builtinKey sql.NullString
+	err := s.db.QueryRow("SELECT builtin_key FROM screens WHERE id = ?", id).Scan(&builtinKey)
+	if errors.Is(err, sql.ErrNoRows) {
+		return NewServiceError(404, "Screen not found")
+	}
+	if err != nil {
+		return fmt.Errorf("load screen %d: %w", id, err)
+	}
+	if strings.TrimSpace(builtinKey.String) != "" {
+		return NewServiceError(400, "Cannot delete builtin screen")
 	}
 
 	if _, err := s.db.ExecWrite("DELETE FROM screens WHERE id = ?", id); err != nil {
