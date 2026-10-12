@@ -50,6 +50,7 @@ type NotificationScheduler struct {
 	notifSvc      *services.NotificationService
 	batchInterval time.Duration
 	replyOutbox   emailReplyOutbox
+	mentionOutbox mentionEmailOutbox
 	claimOwner    string
 	claimLease    time.Duration
 	now           func() time.Time
@@ -75,11 +76,24 @@ type emailReplyOutbox interface {
 	ProcessPendingReplies(ctx context.Context, limit int) (int, error)
 }
 
+type mentionEmailOutbox interface {
+	ProcessPendingMentions(ctx context.Context, limit int) (int, error)
+}
+
 // SetEmailReplyOutbox wires the durable threaded-reply queue after the
 // comment service is constructed. The scheduler may already be running.
 func (ns *NotificationScheduler) SetEmailReplyOutbox(outbox emailReplyOutbox) {
 	ns.mu.Lock()
 	ns.replyOutbox = outbox
+	ns.mu.Unlock()
+}
+
+// SetMentionEmailOutbox wires the durable @mention email queue. It runs
+// before the digest claims unread notifications so a delivered mention email
+// suppresses the duplicate digest entry.
+func (ns *NotificationScheduler) SetMentionEmailOutbox(outbox mentionEmailOutbox) {
+	ns.mu.Lock()
+	ns.mentionOutbox = outbox
 	ns.mu.Unlock()
 }
 
@@ -203,12 +217,23 @@ func (ns *NotificationScheduler) processPendingNotificationsContext(ctx context.
 
 	ns.mu.RLock()
 	replyOutbox := ns.replyOutbox
+	mentionOutbox := ns.mentionOutbox
 	ns.mu.RUnlock()
 	if replyOutbox != nil {
 		delivered, err := replyOutbox.ProcessPendingReplies(ctx, maxBatchSize)
 		batchesProcessed += delivered
 		if err != nil {
 			slog.Error("Failed to process pending threaded email replies", slog.Any("error", err))
+			runErr = err
+		}
+	}
+	// Deliver mention emails before claiming the digest so a successful send
+	// marks the matching notification sent and the digest skips it.
+	if mentionOutbox != nil {
+		delivered, err := mentionOutbox.ProcessPendingMentions(ctx, maxBatchSize)
+		batchesProcessed += delivered
+		if err != nil {
+			slog.Error("Failed to process pending mention emails", slog.Any("error", err))
 			runErr = err
 		}
 	}

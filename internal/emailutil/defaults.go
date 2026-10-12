@@ -11,9 +11,9 @@ type DefaultTemplate struct {
 	TextBody    string
 }
 
-// DefaultTemplates returns the four built-in transactional email templates
-// shipped with Windshift. Each template uses email-safe HTML (table layout,
-// inline styles, no flexbox or CSS variables) and the brand color #2874bb.
+// DefaultTemplates returns the built-in transactional email templates shipped
+// with Windshift. Each template uses email-safe HTML (table layout, inline
+// styles, no flexbox or CSS variables) and the brand color #2874bb.
 func DefaultTemplates() []DefaultTemplate {
 	return []DefaultTemplate{
 		{
@@ -45,6 +45,13 @@ func DefaultTemplates() []DefaultTemplate {
 			TextBody:    notificationBatchText,
 		},
 		{
+			Name:        TemplateMention,
+			Description: "Sent to a user who was @mentioned in a comment or item description. Includes the message body.",
+			Subject:     `{{.ActorName}} mentioned you in {{.ItemKey}}`,
+			HTMLBody:    mentionHTML,
+			TextBody:    mentionText,
+		},
+		{
 			Name:        TemplatePortalReply,
 			Description: "Threaded reply sent to a portal customer when an internal user comments on their ticket (email or portal origin).",
 			Subject:     `Re: {{.OriginalSubject}}`,
@@ -73,6 +80,7 @@ const (
 	TemplateMagicLink          = "magic_link"
 	TemplateEmailVerification  = "email_verification"
 	TemplateInvitation         = "invitation"
+	TemplateMention            = "mention"
 	TemplateNotificationBatch  = "notification_batch"
 	TemplatePortalReply        = "portal_reply"
 	TemplateApprovalRequested  = "approval_requested"
@@ -212,6 +220,28 @@ You have {{.NotificationCount}} new notification{{if ne .NotificationCount 1}}s{
 {{end}}
 {{end}}
 Manage your notification preferences in Windshift.
+`
+
+const mentionHTML = emailShellOpen + `<p style="margin:0 0 8px;">Hi {{.RecipientName}},</p>
+<p style="margin:0 0 16px;font-size:14px;color:#6b7280;">
+<strong style="color:#0f172a;">{{.ActorName}}</strong> mentioned you in {{.SourceLabel}} on
+<span style="font-family:'JetBrains Mono',ui-monospace,monospace;color:#2874bb;">{{.ItemKey}}</span>
+&nbsp;·&nbsp; {{.ItemTitle}}
+</p>
+<div class="ws-md" style="font-size:15px;line-height:1.6;color:#1f2937;border-left:3px solid #a855f7;background:#fafbfc;border-radius:6px;padding:16px;">{{markdown .Content}}</div>
+{{if .ActionURL}}<p style="margin:20px 0 0;"><a href="{{.ActionURL}}" style="` + buttonStyle + `">View in Windshift</a></p>{{end}}
+` + emailShellClose
+
+const mentionText = `Hi {{.RecipientName}},
+
+{{.ActorName}} mentioned you in {{.SourceLabel}} on {{.ItemKey}} · {{.ItemTitle}}
+
+─────────────────────────────
+{{.Content}}
+─────────────────────────────
+{{if .ActionURL}}
+View in Windshift: {{.ActionURL}}
+{{end}}
 `
 
 const portalReplyHTML = emailShellOpen + `<p style="margin:0 0 16px;font-size:14px;color:#6b7280;">

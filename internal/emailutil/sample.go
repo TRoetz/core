@@ -37,6 +37,24 @@ func SampleData(name string) any {
 			InvitationURL: "https://app.example.com/set-password/preview-token",
 			ExpiresIn:     "7 days",
 		}
+	case TemplateMention:
+		return struct {
+			RecipientName string
+			ActorName     string
+			ItemKey       string
+			ItemTitle     string
+			SourceLabel   string
+			Content       string
+			ActionURL     string
+		}{
+			RecipientName: "Alex",
+			ActorName:     "Sam Patel",
+			ItemKey:       "ACME-42",
+			ItemTitle:     "Cannot reset password",
+			SourceLabel:   "a comment",
+			Content:       "@Alex could you take a look at the token refresh path? I think the expiry check runs before the clock is injected.",
+			ActionURL:     "https://app.example.com/workspaces/1/items/42",
+		}
 	case TemplatePortalReply:
 		return struct {
 			AuthorName      string

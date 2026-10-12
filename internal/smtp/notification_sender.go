@@ -259,6 +259,13 @@ func defaultTemplate(name string) (emailutil.DefaultTemplate, bool) {
 // is the shared one-call surface used by the magic-link / verification /
 // invitation services so each one stays a thin URL-builder + caller.
 func (s *NotificationSMTPSender) SendTransactional(toEmail, templateName string, data any) error {
+	return s.SendTransactionalContext(context.Background(), toEmail, templateName, data)
+}
+
+// SendTransactionalContext is SendTransactional with cancellation propagated
+// through SMTP dialing, handshake, commands, and DATA completion. The
+// mention-email outbox uses it so a scheduler shutdown cannot wedge a send.
+func (s *NotificationSMTPSender) SendTransactionalContext(ctx context.Context, toEmail, templateName string, data any) error {
 	if !s.IsSMTPConfigured() {
 		return ErrSMTPNotConfigured
 	}
@@ -266,7 +273,18 @@ func (s *NotificationSMTPSender) SendTransactional(toEmail, templateName string,
 	if err != nil {
 		return fmt.Errorf("render %s: %w", templateName, err)
 	}
-	return s.SendCustomEmail(toEmail, subject, htmlBody, textBody)
+	config, err := s.getSMTPConfig()
+	if err != nil {
+		return fmt.Errorf("failed to get SMTP config: %w", err)
+	}
+	return s.sendEmailContext(ctx, config, toEmail, subject, htmlBody, textBody)
+}
+
+// AbsoluteActionURL turns a stored relative notification action path into a
+// clickable absolute URL. Exported so out-of-band email builders share the
+// exact normalization the notification digest uses.
+func AbsoluteActionURL(baseURL, actionURL string) string {
+	return absoluteActionURL(baseURL, actionURL)
 }
 
 // resolveTemplate returns the template sources and whether they came from the

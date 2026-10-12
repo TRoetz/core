@@ -2664,6 +2664,80 @@ var Catalog = []Migration{
 		SQLite:        `ALTER TABLE jira_import_jobs ADD COLUMN lease_token TEXT;`,
 		Postgres:      `ALTER TABLE jira_import_jobs ADD COLUMN IF NOT EXISTS lease_token TEXT;`,
 	},
+	{
+		Version:       "20261029_mention_email_outbox",
+		Name:          "Queue dedicated @mention emails that carry the message body (WI-1726)",
+		CheckSQLite:   sqliteTableCheck("mention_email_outbox"),
+		CheckPostgres: pgTableCheck("mention_email_outbox"),
+		SQLite: `
+			CREATE TABLE IF NOT EXISTS mention_email_outbox (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				mention_id INTEGER NOT NULL,
+				notification_id INTEGER,
+				user_id INTEGER NOT NULL,
+				workspace_id INTEGER NOT NULL,
+				item_id INTEGER NOT NULL,
+				to_email TEXT NOT NULL,
+				to_name TEXT NOT NULL DEFAULT '',
+				actor_name TEXT NOT NULL DEFAULT '',
+				item_key TEXT NOT NULL DEFAULT '',
+				item_title TEXT NOT NULL DEFAULT '',
+				source_type TEXT NOT NULL DEFAULT '',
+				content TEXT NOT NULL DEFAULT '',
+				action_url TEXT NOT NULL DEFAULT '',
+				attempt_count INTEGER NOT NULL DEFAULT 0,
+				next_attempt_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+				lease_owner TEXT,
+				last_error TEXT,
+				delivered_at DATETIME,
+				discarded_at DATETIME,
+				created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+				updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+				FOREIGN KEY (mention_id) REFERENCES mentions(id) ON DELETE CASCADE,
+				FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+				FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE,
+				FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE
+			);
+			CREATE INDEX IF NOT EXISTS idx_mention_email_outbox_pending
+				ON mention_email_outbox(delivered_at, discarded_at, next_attempt_at);
+			CREATE UNIQUE INDEX IF NOT EXISTS uq_mention_email_outbox_mention
+				ON mention_email_outbox(mention_id);
+		`,
+		Postgres: `
+			CREATE TABLE IF NOT EXISTS mention_email_outbox (
+				id SERIAL PRIMARY KEY,
+				mention_id INTEGER NOT NULL,
+				notification_id INTEGER,
+				user_id INTEGER NOT NULL,
+				workspace_id INTEGER NOT NULL,
+				item_id INTEGER NOT NULL,
+				to_email TEXT NOT NULL,
+				to_name TEXT NOT NULL DEFAULT '',
+				actor_name TEXT NOT NULL DEFAULT '',
+				item_key TEXT NOT NULL DEFAULT '',
+				item_title TEXT NOT NULL DEFAULT '',
+				source_type TEXT NOT NULL DEFAULT '',
+				content TEXT NOT NULL DEFAULT '',
+				action_url TEXT NOT NULL DEFAULT '',
+				attempt_count INTEGER NOT NULL DEFAULT 0,
+				next_attempt_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+				lease_owner TEXT,
+				last_error TEXT,
+				delivered_at TIMESTAMPTZ,
+				discarded_at TIMESTAMPTZ,
+				created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+				updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+				FOREIGN KEY (mention_id) REFERENCES mentions(id) ON DELETE CASCADE,
+				FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+				FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE,
+				FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE
+			);
+			CREATE INDEX IF NOT EXISTS idx_mention_email_outbox_pending
+				ON mention_email_outbox(delivered_at, discarded_at, next_attempt_at);
+			CREATE UNIQUE INDEX IF NOT EXISTS uq_mention_email_outbox_mention
+				ON mention_email_outbox(mention_id);
+		`,
+	},
 }
 
 // applyAssetReportsWorkspacePinned backfills form-mode asset reports that have

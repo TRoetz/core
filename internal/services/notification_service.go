@@ -584,15 +584,23 @@ func itemActionURL(workspaceID, itemID int) string {
 // config use this to avoid the event→rule→recipient pipeline which can't
 // express "notify exactly these users".
 func (ns *NotificationService) NotifyUsers(userIDs []int, workspaceID, itemID, actorUserID int, notifType, title, message string) error {
+	_, err := ns.NotifyUsersWithRecords(userIDs, workspaceID, itemID, actorUserID, notifType, title, message)
+	return err
+}
+
+// NotifyUsersWithRecords is NotifyUsers but returns the persisted
+// notifications so callers can correlate follow-up delivery. The mention
+// email path needs the notification id to suppress the content-less digest
+// copy once the dedicated email carrying the message body has gone out.
+func (ns *NotificationService) NotifyUsersWithRecords(userIDs []int, workspaceID, itemID, actorUserID int, notifType, title, message string) ([]models.Notification, error) {
 	var authorize func(int) (bool, error)
 	if ns.permService != nil {
 		authorize = func(userID int) (bool, error) {
 			return ns.permService.HasWorkspacePermission(userID, workspaceID, models.PermissionItemView)
 		}
 	}
-	_, err := ns.notifyUsersAtURL(userIDs, actorUserID, notifType, title, message, itemActionURL(workspaceID, itemID),
+	return ns.notifyUsersAtURL(userIDs, actorUserID, notifType, title, message, itemActionURL(workspaceID, itemID),
 		models.NotificationScopeWorkspace, &workspaceID, &itemID, "item", &itemID, authorize)
-	return err
 }
 
 // NotifyUsersForAsset creates direct notifications for users who currently
@@ -610,8 +618,16 @@ func (ns *NotificationService) NotifyUsersForAsset(userIDs []int, setID, assetID
 	authorize := func(userID int) (bool, error) {
 		return checker.HasAssetSetPermission(userID, setID, AssetPermissionKeyView)
 	}
-	return ns.notifyUsersAtURL(userIDs, actorUserID, notifType, title, message, actionURL,
+	notifications, err := ns.notifyUsersAtURL(userIDs, actorUserID, notifType, title, message, actionURL,
 		models.NotificationScopeAsset, nil, nil, "asset", &assetID, authorize)
+	if err != nil {
+		return nil, err
+	}
+	delivered := make([]int, len(notifications))
+	for i, notification := range notifications {
+		delivered[i] = notification.UserID
+	}
+	return delivered, nil
 }
 
 func (ns *NotificationService) notifyUsersAtURL(
@@ -622,7 +638,7 @@ func (ns *NotificationService) notifyUsersAtURL(
 	sourceType string,
 	sourceID *int,
 	authorize func(int) (bool, error),
-) ([]int, error) {
+) ([]models.Notification, error) {
 	if ns.notificationManager == nil {
 		return nil, fmt.Errorf("notification manager not configured")
 	}
@@ -632,7 +648,6 @@ func (ns *NotificationService) notifyUsersAtURL(
 	}
 	seen := make(map[int]bool, len(userIDs))
 	notifications := make([]models.Notification, 0, len(userIDs))
-	deliveredUserIDs := make([]int, 0, len(userIDs))
 	now := time.Now()
 	for _, uid := range userIDs {
 		if uid <= 0 || uid == actorUserID || seen[uid] || skipAsAgent[uid] {
@@ -662,15 +677,15 @@ func (ns *NotificationService) notifyUsersAtURL(
 			SourceType:         sourceType,
 			SourceID:           sourceID,
 		})
-		deliveredUserIDs = append(deliveredUserIDs, uid)
 	}
 	if len(notifications) == 0 {
-		return []int{}, nil
+		return []models.Notification{}, nil
 	}
-	if _, err := ns.notificationManager.AddNotifications(notifications); err != nil {
+	stored, err := ns.notificationManager.AddNotifications(notifications)
+	if err != nil {
 		return nil, fmt.Errorf("add notifications for %d users: %w", len(notifications), err)
 	}
-	return deliveredUserIDs, nil
+	return stored, nil
 }
 
 // CreateNotification stores a single notification through the notification

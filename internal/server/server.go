@@ -1122,6 +1122,19 @@ func (s *Server) initialize() error {
 	commentService.SetEmailReplyService(emailReplyService)
 	s.notificationScheduler.SetEmailReplyOutbox(emailReplyService)
 
+	// Dedicated @mention emails (WI-1726): carry the message body and
+	// re-authorize the recipient before SMTP delivery. mentionService was
+	// constructed above, before this notifier existed.
+	mentionEmailService := services.NewMentionEmailService(
+		s.db,
+		smtpSender,
+		s.notificationService,
+		services.NewNotificationAuthorizer(s.db, permService, nil),
+	)
+	mentionEmailService.SetBaseURL(baseURL)
+	mentionService.SetMentionEmailNotifier(mentionEmailService)
+	s.notificationScheduler.SetMentionEmailOutbox(mentionEmailService)
+
 	// External request participants (WI-1136): the reply service sends the
 	// customer-facing "you were added" notice.
 	participantService := services.NewItemParticipantService(s.db)
