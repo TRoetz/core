@@ -72,6 +72,10 @@
   // svelte-ignore state_referenced_locally
   let selectedType = $state(initialType);
 
+  // Set once item creation commits so a failed post-create step can be retried
+  // without creating a duplicate.
+  let recoverableItemId = $state(null);
+
   // Form references
   let milestoneFormRef = $state(null);
   let workspaceFormRef = $state(null);
@@ -156,6 +160,7 @@
   function close() {
     isOpen = false;
     selectedType = initialType;
+    recoverableItemId = null;
 
     // Reset work item form store
     workItemFormStore.resetForm();
@@ -267,10 +272,17 @@
           return;
         }
 
-        let result = await api.items.create(formData);
+        // Creation may have committed on an earlier attempt whose post-create
+        // work failed. Reuse that item instead of posting a duplicate.
+        const reusingItem = recoverableItemId != null;
+        let result = reusingItem ? { id: recoverableItemId } : await api.items.create(formData);
+        recoverableItemId = result.id;
+
         const originalDescription = formData.description || '';
         const updatedDescription = await uploadPendingDescriptionImages(result.id, originalDescription);
-        if (updatedDescription !== originalDescription) {
+        // Always reconcile the description when retrying a committed item: the
+        // first attempt stored the pre-upload text and may hold a temporary URL.
+        if (updatedDescription !== originalDescription || reusingItem) {
           result = await api.items.update(result.id, { description: updatedDescription });
           formData.description = updatedDescription;
         }
@@ -288,6 +300,7 @@
         } else {
           showCreatedItemToast(result);
         }
+        recoverableItemId = null;
         close();
       } else if (selectedType === 'milestone') {
         // Scope the milestone to the opening context when the user may write
@@ -360,7 +373,9 @@
     } catch (error) {
       console.error('Failed to create item:', error);
       const errorMsg = error.message || String(error);
-      if (errorMsg.includes('UNIQUE constraint failed: workspaces.key')) {
+      if (recoverableItemId != null && selectedType === 'work-item') {
+        errorToast(t('createModal.createdPartialError', { error: errorMsg }));
+      } else if (errorMsg.includes('UNIQUE constraint failed: workspaces.key')) {
         errorToast('A workspace with this key already exists. Please choose a different key.');
       } else {
         errorToast(`Failed to create ${currentTypeName.toLowerCase()}: ${errorMsg}`);

@@ -792,6 +792,8 @@ export default {
     // Validation
     fillRequiredFields: 'Veuillez remplir les champs obligatoires :',
     selectWorkspaceFirst: 'Sélectionnez d’abord un espace de travail',
+    createdPartialError:
+      'Élément créé, mais la finalisation a échoué : {error}. Cliquez à nouveau sur Créer pour réessayer.',
     // Buttons
     create: 'Créer',
   },

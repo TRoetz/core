@@ -520,6 +520,8 @@ export default {
     parent: 'Übergeordnet',
     fillRequiredFields: 'Bitte füllen Sie die Pflichtfelder aus:',
     selectWorkspaceFirst: 'Wählen Sie zuerst einen Arbeitsbereich',
+    createdPartialError:
+      'Element erstellt, aber das Abschließen ist fehlgeschlagen: {error}. Klicken Sie erneut auf Erstellen, um es zu wiederholen.',
     create: 'Erstellen',
   },
   scm: {

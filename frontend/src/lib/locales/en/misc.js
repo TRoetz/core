@@ -801,6 +801,9 @@ export default {
     // Validation
     fillRequiredFields: 'Please fill in required fields:',
     selectWorkspaceFirst: 'Select a workspace first',
+    // Feedback
+    createdPartialError:
+      'Item created, but finishing it failed: {error}. Press Create again to retry.',
     // Buttons
     create: 'Create',
   },
