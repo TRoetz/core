@@ -21,10 +21,8 @@ export function parseChannelConfig(config) {
 }
 
 /**
- * Email channels whose tickets surface in a portal. Intakes linked to the
- * portal (portal_channel_id) own the link since WI-1644; the legacy
- * email_connected_portal_id is kept as a fallback so links that predate the
- * migration still render.
+ * Email channels whose tickets surface in a portal. An intake linked to the
+ * portal (portal_channel_id) is the only link since WI-1644.
  */
 export async function loadPortalConnectedMailboxes(portalId) {
   const emailChannels = await api.channels.getAll({
@@ -35,10 +33,6 @@ export async function loadPortalConnectedMailboxes(portalId) {
   const channels = Array.isArray(emailChannels) ? emailChannels : [];
   const linked = [];
   for (const channel of channels) {
-    if (parseChannelConfig(channel.config)?.email_connected_portal_id === portalId) {
-      linked.push(channel);
-      continue;
-    }
     let intakes = [];
     try {
       intakes = (await api.channelIntakes.list(channel.id)) ?? [];

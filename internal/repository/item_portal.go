@@ -283,20 +283,16 @@ const portalMergedDuplicateVisible = `(i.merged_into_item_id IS NULL OR EXISTS (
 	))`
 
 // PortalRequestVisibility describes which items a portal exposes to its
-// requesters: the portal's own channel, any enabled intake email channel
-// linked to it via email_connected_portal_id, and — as defense-in-depth —
-// only items in workspaces the portal serves (empty = no restriction, for
-// legacy portals).
+// requesters: the portal's own channel, any enabled intake linked to it, and —
+// as defense-in-depth — only items in workspaces the portal serves (empty = no
+// restriction, for legacy portals).
 type PortalRequestVisibility struct {
 	PortalChannelID int
 	// LinkedIntakeIDs are the enabled intakes linked to the portal. Their items
 	// are visible even though their channel_id is the mailbox, so linking one
 	// intake never exposes a sibling internal intake on the same mailbox.
-	LinkedIntakeIDs []int
-	// LinkedEmailChannelIDs are legacy email channels linked through
-	// email_connected_portal_id without an intake row.
-	LinkedEmailChannelIDs []int
-	ServedWorkspaceIDs    []int
+	LinkedIntakeIDs    []int
+	ServedWorkspaceIDs []int
 }
 
 // PortalOrgShare describes the organisation-sharing that applies to one portal
@@ -371,10 +367,6 @@ func (r *ItemRepository) listChannelRequests(ownerClause string, ownerArgs []any
 	args := append([]any{}, ownerArgs...)
 	channelFilter := "i.channel_id = ?"
 	args = append(args, visibility.PortalChannelID)
-	for _, id := range visibility.LinkedEmailChannelIDs {
-		channelFilter += " OR i.channel_id = ?"
-		args = append(args, id)
-	}
 	if len(visibility.LinkedIntakeIDs) > 0 {
 		placeholders := strings.Repeat("?,", len(visibility.LinkedIntakeIDs))
 		placeholders = placeholders[:len(placeholders)-1]

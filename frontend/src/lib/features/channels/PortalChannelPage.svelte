@@ -42,7 +42,7 @@
     allowed_domains: '',
   });
 
-  // Email channels whose email_connected_portal_id points at this portal.
+  // Email channels with an intake linked to this portal.
   let connectedMailboxes = $state([]);
 
   let channelId = $derived(parseInt($currentRoute.path.match(/\/admin\/channels\/(\d+)\/portal/)?.[1]));

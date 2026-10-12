@@ -33,7 +33,6 @@
       imap_password: '',
       workspace_id: null,
       item_type_id: null,
-      connected_portal_id: null,
       mailbox: 'INBOX',
       processing_disposition: 'mark_read',
       rate_limit_per_hour: null,
@@ -46,11 +45,6 @@
     onOAuthStartFailed = async () => {}
   } = $props();
 
-  // A missing key would crash the select's bind:value (undefined + fallback);
-  // normalize once at init so older callers without the field keep working.
-  if (formData.connected_portal_id === undefined) {
-    formData.connected_portal_id = null;
-  }
   // Older callers (and stored configs) carry the two legacy booleans instead of
   // the single disposition. Derive it once so the select always has a value.
   if (formData.processing_disposition === undefined) {

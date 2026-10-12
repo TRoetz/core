@@ -93,7 +93,6 @@
     imap_password: '',
     workspace_id: null,
     item_type_id: null,
-    connected_portal_id: null,
     mailbox: 'INBOX',
     processing_disposition: 'mark_read',
     rate_limit_per_hour: null,
@@ -244,7 +243,6 @@
           imap_password: '',
           workspace_id: config.email_workspace_id || null,
           item_type_id: config.email_item_type_id || null,
-          connected_portal_id: config.email_connected_portal_id ?? null,
           mailbox: config.email_mailbox || 'INBOX',
           processing_disposition:
             config.email_processing_disposition ||
