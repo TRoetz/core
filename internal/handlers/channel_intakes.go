@@ -284,6 +284,14 @@ func (h *ChannelHandler) UpdateChannelIntake(w http.ResponseWriter, r *http.Requ
 		respondInternalError(w, r, err)
 		return
 	}
+	// Editing an intake writes to both the current and the replacement target,
+	// so the actor must be authorized for the existing one too. Delete already
+	// enforces this; update must match or it can divert routing away from a
+	// target the actor cannot manage.
+	if err := h.authorizeIntakeTarget(ctx, user.ID, existing.WorkspaceID, existing.PortalChannelID); err != nil {
+		h.respondIntakeError(w, r, err)
+		return
+	}
 
 	req, ok := decodeChannelJSON[intakeRequest](w, r)
 	if !ok {
