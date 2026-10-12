@@ -282,6 +282,10 @@ export default {
     intakePortalItemTypeHelp:
       'New items from this folder use the selected item type. The portal\u2019s system Email request type still routes the mail.',
     selectPortal: 'Select a portal',
+    intakeSendConfirmation: 'Send a submission receipt',
+    intakeSendConfirmationHint:
+      'Email the sender a confirmation that their request was received. The receipt includes a portal link when this intake is linked to a portal.',
+    intakeConfirmationOn: 'Receipt on',
     intakeSaved: 'Intake saved',
     intakeSaveFailed: 'Failed to save intake',
     intakeDeleted: 'Intake deleted',

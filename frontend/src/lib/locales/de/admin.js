@@ -657,6 +657,8 @@ export default {
         invitation: 'Neue Benutzereinladung',
         notification_batch: 'Gebündelte Benachrichtigungen',
         portal_reply: 'Portal-Kundenantwort',
+        approval_requested: 'Portal-Genehmigungsanfrage',
+        intake_confirmation: 'Eingangsbestätigung (E-Mail)',
       },
     },
     linkTypes: {

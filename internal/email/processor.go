@@ -23,12 +23,19 @@ import (
 	"uuid"
 )
 
+// IntakeConfirmationSender emails the sender a receipt after an intake creates
+// a new item. EmailReplyService implements it; tests substitute fakes.
+type IntakeConfirmationSender interface {
+	SendIntakeConfirmation(itemID, customerID int) error
+}
+
 // Processor handles email-to-item/comment conversion
 type Processor struct {
-	db               database.Database
-	attachmentPath   string
-	commentService   *services.CommentService
-	eventCoordinator *services.EventCoordinator
+	db                 database.Database
+	attachmentPath     string
+	commentService     *services.CommentService
+	eventCoordinator   *services.EventCoordinator
+	confirmationSender IntakeConfirmationSender
 }
 
 // NewProcessor creates a new email processor
@@ -50,6 +57,12 @@ func (p *Processor) SetCommentService(cs *services.CommentService) {
 // silently missing those events.
 func (p *Processor) SetEventCoordinator(ec *services.EventCoordinator) {
 	p.eventCoordinator = ec
+}
+
+// SetConfirmationSender wires the sender used for the optional intake receipt
+// email. Nil disables receipts.
+func (p *Processor) SetConfirmationSender(s IntakeConfirmationSender) {
+	p.confirmationSender = s
 }
 
 // ProcessEmail processes a single email, creating an item or comment.
@@ -75,18 +88,24 @@ func (p *Processor) ProcessEmail(
 }
 
 // ProcessEmailWithIntake is ProcessEmail for a specific intake. The intake id
-// is stamped on the tracking row for per-intake rate limiting; dedup stays
-// mailbox-scoped on channelID.
+// is stamped on the tracking row for per-intake rate limiting and selects the
+// optional receipt; dedup stays mailbox-scoped on channelID. A nil intake (or
+// one with ID 0) is the legacy channel-level path.
 func (p *Processor) ProcessEmailWithIntake(
 	ctx context.Context,
 	email *ParsedEmail,
 	channelID int,
 	uidValidity uint32,
 	config *models.ChannelConfig,
-	intakeID *int,
+	intake *models.Intake,
 ) (*ProcessingResult, error) {
 	if email == nil {
 		return nil, fmt.Errorf("email is required")
+	}
+	var intakeID *int
+	if intake != nil && intake.ID > 0 {
+		id := intake.ID
+		intakeID = &id
 	}
 	sender := strings.TrimSpace(email.From.Address)
 	parsedSender, senderErr := mail.ParseAddress(sender)
@@ -173,7 +192,22 @@ func (p *Processor) ProcessEmailWithIntake(
 		)
 	}
 
-	// 6. Handle attachments if item was created. Surface partial-ingestion
+	// 6. Optional receipt for a newly created item. Auto-generated mail is
+	// skipped so an auto-responder cannot bounce receipts back and forth.
+	// Best-effort: a delivery failure must not fail ingestion or reopen the
+	// tracking claim.
+	if result.Action == ActionItemCreated && result.ItemID != nil && intake != nil && intake.SendConfirmation && p.confirmationSender != nil && !isAutomatedEmail(email) {
+		if err := p.confirmationSender.SendIntakeConfirmation(*result.ItemID, customerID); err != nil {
+			slog.Warn("failed to send intake confirmation email",
+				"error", err,
+				"channel_id", channelID,
+				"intake_id", intake.ID,
+				"item_id", *result.ItemID,
+			)
+		}
+	}
+
+	// 7. Handle attachments if item was created. Surface partial-ingestion
 	// status on the tracking row so operators can see when attachments were
 	// dropped — the item itself stays in place either way.
 	if result.ItemID != nil && len(email.Attachments) > 0 {
@@ -194,6 +228,35 @@ func (p *Processor) ProcessEmailWithIntake(
 	}
 
 	return result, nil
+}
+
+// isAutomatedEmail reports whether a message declares itself auto-generated,
+// either with an RFC 3834 Auto-Submitted value other than "no" or a
+// bulk/list Precedence. Intake receipts are suppressed for these senders so an
+// auto-responder cannot loop with the mailbox.
+func isAutomatedEmail(email *ParsedEmail) bool {
+	if email == nil {
+		return false
+	}
+	for key, values := range email.RawHeaders {
+		switch strings.ToLower(key) {
+		case "auto-submitted":
+			if len(values) > 0 {
+				value := strings.ToLower(strings.TrimSpace(values[0]))
+				if value != "" && value != "no" {
+					return true
+				}
+			}
+		case "precedence":
+			if len(values) > 0 {
+				switch strings.ToLower(strings.TrimSpace(values[0])) {
+				case "bulk", "junk", "list":
+					return true
+				}
+			}
+		}
+	}
+	return false
 }
 
 // dedupKeyFor uses stable bare Message-IDs or channel-scoped UIDVALIDITY/UID

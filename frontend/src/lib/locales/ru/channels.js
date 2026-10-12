@@ -257,6 +257,10 @@ export default {
     intakesMailboxAddress: 'Отслеживается {address}',
     intakeLastUID: 'Последний UID {uid}',
     intakeRateLimited: 'Удержано: {count}',
+    intakeSendConfirmation: 'Отправлять подтверждение получения',
+    intakeSendConfirmationHint:
+      'Отправлять отправителю подтверждение о получении запроса. Подтверждение содержит ссылку на портал, если этот приём связан с порталом.',
+    intakeConfirmationOn: 'Подтверждение включено',
     intakesEmpty: 'Приёмов пока нет. Добавьте приём, чтобы ящик создавал элементы.',
     intakeAdd: 'Добавить приём',
     intakeFolder: 'Папка',

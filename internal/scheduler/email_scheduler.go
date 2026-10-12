@@ -69,6 +69,12 @@ func (es *EmailScheduler) SetEventCoordinator(ec *services.EventCoordinator) {
 	es.processor.SetEventCoordinator(ec)
 }
 
+// SetConfirmationSender forwards the optional intake receipt sender to the
+// processor.
+func (es *EmailScheduler) SetConfirmationSender(sender email.IntakeConfirmationSender) {
+	es.processor.SetConfirmationSender(sender)
+}
+
 // Start begins the email polling scheduler
 func (es *EmailScheduler) Start() {
 	es.mu.Lock()
@@ -437,14 +443,6 @@ func (es *EmailScheduler) pollIntake(
 	var offenderUID uint32
 	deferredClaim := false
 	disposition := email.ResolveEmailDisposition(&effective)
-	// A synthetic legacy intake (ID 0) is channel-scoped: leave the tracking
-	// row's intake_id NULL so channel-level rate-limit requeue still finds it.
-	var intakeID *int
-	if intake.ID > 0 {
-		id := intake.ID
-		intakeID = &id
-	}
-
 	for _, msg := range messages {
 		if msg.FetchError != nil {
 			slog.Error("failed to fetch bounded email body, stopping batch to avoid skipping the UID",
@@ -455,7 +453,10 @@ func (es *EmailScheduler) pollIntake(
 			break
 		}
 		parsed := es.parser.Parse(msg)
-		result, processErr := es.processor.ProcessEmailWithIntake(ctx, parsed, ch.ID, currentValidity, &effective, intakeID)
+		// A synthetic legacy intake (ID 0) is channel-scoped: the processor
+		// leaves the tracking row's intake_id NULL so channel-level rate-limit
+		// requeue still finds it.
+		result, processErr := es.processor.ProcessEmailWithIntake(ctx, parsed, ch.ID, currentValidity, &effective, intake)
 		if processErr != nil {
 			slog.Error("failed to process email, stopping batch to avoid skipping the UID",
 				"channel_id", ch.ID, "intake_id", intake.ID, "uid", msg.UID,

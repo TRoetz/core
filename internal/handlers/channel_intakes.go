@@ -21,6 +21,7 @@ type intakeRequest struct {
 	ItemTypeID            *int   `json:"item_type_id"`
 	RateLimitPerHour      *int   `json:"rate_limit_per_hour"`
 	ProcessingDisposition string `json:"processing_disposition"`
+	SendConfirmation      bool   `json:"send_confirmation"`
 	Status                string `json:"status"`
 }
 
@@ -174,6 +175,7 @@ func (h *ChannelHandler) validateIntakeRequest(ctx context.Context, actorID, mai
 		ItemTypeID:            req.ItemTypeID,
 		RateLimitPerHour:      req.RateLimitPerHour,
 		ProcessingDisposition: req.ProcessingDisposition,
+		SendConfirmation:      req.SendConfirmation,
 		Status:                status,
 	}, nil
 }

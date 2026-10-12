@@ -2564,6 +2564,14 @@ var Catalog = []Migration{
 		ApplyPostgres:   applyIntakeWorkspacePortalMigration,
 	},
 	{
+		Version:       "20261027_intake_send_confirmation",
+		Name:          "Send an optional submission receipt for an email intake (WI-1712)",
+		CheckSQLite:   sqliteColumnCheck("intakes", "send_confirmation"),
+		CheckPostgres: pgColumnCheck("intakes", "send_confirmation"),
+		SQLite:        `ALTER TABLE intakes ADD COLUMN send_confirmation BOOLEAN NOT NULL DEFAULT false`,
+		Postgres:      `ALTER TABLE intakes ADD COLUMN IF NOT EXISTS send_confirmation BOOLEAN NOT NULL DEFAULT false`,
+	},
+	{
 		Version:       "20261019_email_tracking_completed_at",
 		Name:          "Keep email dedup after an intake-created item is deleted (WI-1658)",
 		CheckSQLite:   sqliteColumnCheck("email_message_tracking", "completed_at"),

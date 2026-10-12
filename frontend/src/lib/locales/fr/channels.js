@@ -231,6 +231,10 @@ export default {
     intakesMailboxAddress: 'Surveillance de {address}',
     intakeLastUID: 'Dernier UID {uid}',
     intakeRateLimited: '{count} retenus',
+    intakeSendConfirmation: 'Envoyer un accusé de réception',
+    intakeSendConfirmationHint:
+      "Envoyer à l'expéditeur une confirmation que sa demande a bien été reçue. L'accusé inclut un lien vers le portail lorsque cet accueil est lié à un portail.",
+    intakeConfirmationOn: 'Accusé actif',
     // Form Channel Configuration
     openForm: 'Ouvrir le formulaire',
     formConfiguration: 'Page publique',

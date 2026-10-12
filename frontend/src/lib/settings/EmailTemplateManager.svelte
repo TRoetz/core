@@ -50,6 +50,13 @@
       { name: '{{.ItemTitle}}', description: 'Item title.' },
       { name: '{{.Content}}', description: 'The reply text. Auto-escaped for HTML safety.' },
       { name: '{{.OriginalSubject}}', description: 'Used as the email subject (with "Re:" prefix added by the threading flow).' },
+      { name: '{{.PortalURL}}', description: 'Link to the request in the portal. Empty when the request is not exposed to a portal.' },
+    ],
+    intake_confirmation: [
+      { name: '{{.FirstName}}', description: 'Name of the person who emailed the intake.' },
+      { name: '{{.ItemKey}}', description: 'Item key of the created request (e.g. ACME-42).' },
+      { name: '{{.ItemTitle}}', description: 'Title of the created request.' },
+      { name: '{{.PortalURL}}', description: 'Link to the request in the portal. Empty when the intake is not linked to a portal.' },
     ],
   };
 

@@ -10,6 +10,7 @@
   import Lozenge from '../../components/Lozenge.svelte';
   import DescriptionText from '../../components/DescriptionText.svelte';
   import StateDisplay from '../../components/StateDisplay.svelte';
+  import Checkbox from '../../components/Checkbox.svelte';
 
   let { channelId, workspaces = [], portals = [] } = $props();
 
@@ -61,6 +62,7 @@
       item_type_id: null,
       rate_limit_per_hour: '',
       processing_disposition: '',
+      send_confirmation: false,
       status: 'enabled'
     };
   }
@@ -138,6 +140,7 @@
           ? null
           : Number(editing.rate_limit_per_hour),
       processing_disposition: editing.processing_disposition || '',
+      send_confirmation: !!editing.send_confirmation,
       status: editing.status || 'enabled'
     };
     try {
@@ -268,6 +271,11 @@
                   {t('channel.intakeRateLimited', { count: intake.rate_limited_count })}
                 </Lozenge>
               {/if}
+              {#if intake.send_confirmation}
+                <Lozenge color="blue" dataTestid="channel-intake-confirmation-{intake.id}">
+                  {t('channel.intakeConfirmationOn')}
+                </Lozenge>
+              {/if}
             </div>
           </div>
           <div class="flex items-center gap-1 flex-shrink-0">
@@ -365,6 +373,13 @@
             bind:value={editing.status}
           />
         </div>
+
+        <Checkbox
+          label={t('channel.intakeSendConfirmation')}
+          hint={t('channel.intakeSendConfirmationHint')}
+          dataTestid="channel-intake-send-confirmation"
+          bind:checked={editing.send_confirmation}
+        />
 
         <div class="flex justify-end gap-2">
           <Button variant="ghost" onclick={() => (editing = null)}>{t('common.cancel')}</Button>

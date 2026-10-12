@@ -32,7 +32,10 @@ type Intake struct {
 	ItemTypeID            *int   `json:"item_type_id,omitempty"`
 	RateLimitPerHour      *int   `json:"rate_limit_per_hour,omitempty"`
 	ProcessingDisposition string `json:"processing_disposition,omitempty"`
-	Status                string `json:"status"`
+	// SendConfirmation emails the sender a receipt when this intake creates a
+	// new item. Off by default.
+	SendConfirmation bool   `json:"send_confirmation"`
+	Status           string `json:"status"`
 	// StatusReason explains a needs_attention status for the admin UI.
 	StatusReason string    `json:"status_reason,omitempty"`
 	CreatedAt    time.Time `json:"created_at"`

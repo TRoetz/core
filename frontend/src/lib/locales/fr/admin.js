@@ -661,6 +661,8 @@ export default {
         invitation: 'Invitation de nouvel utilisateur',
         notification_batch: 'Notifications regroupées',
         portal_reply: 'Réponse client du portail',
+        approval_requested: 'Demande d’approbation du portail',
+        intake_confirmation: 'Accusé de réception e-mail',
       },
     },
 

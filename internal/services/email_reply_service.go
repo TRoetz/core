@@ -29,6 +29,9 @@ type EmailReplyService struct {
 	idResolver *IDResolverService
 	outboxMu   sync.Mutex
 	canonical  bool
+	// baseURL is the browser-visible origin used to build portal request links
+	// in customer emails. Empty disables the link.
+	baseURL string
 	// leaseOwner identifies this process's delivery claims so a manual retry
 	// can tell a live claim from retry backoff (WI-1572).
 	leaseOwner string
@@ -43,6 +46,12 @@ func NewEmailReplyService(db database.Database, smtpSender ThreadedEmailSender) 
 		idResolver: NewIDResolverService(db),
 		leaseOwner: fmt.Sprintf("%s-%d", hostname, os.Getpid()),
 	}
+}
+
+// SetBaseURL sets the browser-visible origin used to build portal request
+// links in customer emails. Called from server startup.
+func (s *EmailReplyService) SetBaseURL(baseURL string) {
+	s.baseURL = strings.TrimRight(strings.TrimSpace(baseURL), "/")
 }
 
 // HandleCommentCreated checks if an outbound email should be sent for a new comment.
@@ -199,18 +208,21 @@ func (s *EmailReplyService) handleCommentCreated(params HandleCommentParams, del
 	// the rendered subject from RenderEmail is discarded so the threading
 	// stays correct.
 	itemKey := fmt.Sprintf("%s-%d", item.WorkspaceKey, item.WorkspaceItemNumber)
+	portalURL := s.portalRequestURL(params.ItemID)
 	_, htmlBody, textBody, err := s.smtpSender.RenderEmail(emailutil.TemplatePortalReply, struct {
 		AuthorName      string
 		ItemKey         string
 		ItemTitle       string
 		Content         string
 		OriginalSubject string
+		PortalURL       string
 	}{
 		AuthorName:      authorName,
 		ItemKey:         itemKey,
 		ItemTitle:       item.Title,
 		Content:         params.Content,
 		OriginalSubject: subject,
+		PortalURL:       portalURL,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to render portal reply email: %w", err)
@@ -497,18 +509,21 @@ func (s *EmailReplyService) sendItemNotice(item *models.Item, toEmail, toName, s
 		authorName = "Support Team"
 	}
 	itemKey := fmt.Sprintf("%s-%d", item.WorkspaceKey, item.WorkspaceItemNumber)
+	portalURL := s.portalRequestURL(item.ID)
 	_, htmlBody, textBody, err := s.smtpSender.RenderEmail(emailutil.TemplatePortalReply, struct {
 		AuthorName      string
 		ItemKey         string
 		ItemTitle       string
 		Content         string
 		OriginalSubject string
+		PortalURL       string
 	}{
 		AuthorName:      authorName,
 		ItemKey:         itemKey,
 		ItemTitle:       item.Title,
 		Content:         message,
 		OriginalSubject: emailSubject,
+		PortalURL:       portalURL,
 	})
 	if err != nil {
 		return false, "", fmt.Errorf("render customer notice email: %w", err)
@@ -550,6 +565,133 @@ func (s *EmailReplyService) sendItemNotice(item *models.Item, toEmail, toName, s
 		)
 	}
 	return true, "", nil
+}
+
+// SendIntakeConfirmation emails the sender a receipt for a request an email
+// intake just created (WI-1712). The message starts a fresh thread and records
+// its own Message-ID, so a reply to the receipt lands on the ticket. Expected
+// skips (missing customer/item, no SMTP) are non-errors.
+func (s *EmailReplyService) SendIntakeConfirmation(itemID, customerID int) error {
+	if !s.smtpSender.IsSMTPConfigured() {
+		return nil
+	}
+	var customerEmail, customerName string
+	if err := s.db.QueryRow(`SELECT email, COALESCE(name, '') FROM portal_customers WHERE id = ?`, customerID).Scan(&customerEmail, &customerName); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil
+		}
+		return fmt.Errorf("load portal customer for intake confirmation: %w", err)
+	}
+	if customerEmail == "" {
+		return nil
+	}
+	item, err := repository.NewItemRepository(s.db).FindByIDWithDetails(itemID)
+	if err != nil {
+		if errors.Is(err, repository.ErrNotFound) {
+			return nil
+		}
+		return fmt.Errorf("load item for intake confirmation: %w", err)
+	}
+	if item.ChannelID == nil {
+		return nil
+	}
+	if customerName == "" {
+		customerName = "there"
+	}
+	itemKey := fmt.Sprintf("%s-%d", item.WorkspaceKey, item.WorkspaceItemNumber)
+	portalURL := s.portalRequestURL(itemID)
+	subject, htmlBody, textBody, err := s.smtpSender.RenderEmail(emailutil.TemplateIntakeConfirmation, struct {
+		FirstName string
+		ItemKey   string
+		ItemTitle string
+		PortalURL string
+	}{
+		FirstName: customerName,
+		ItemKey:   itemKey,
+		ItemTitle: item.Title,
+		PortalURL: portalURL,
+	})
+	if err != nil {
+		return fmt.Errorf("render intake confirmation email: %w", err)
+	}
+
+	messageID := fmt.Sprintf("<ws-confirm-%d-%d@%s>", itemID, time.Now().UnixNano(), s.getSMTPDomain())
+	replyToEmail, replyToName := s.resolveReplyToAddress(itemID, *item.ChannelID)
+	if err := s.smtpSender.SendThreadedEmail(smtp.ThreadedEmailParams{
+		ToEmail:      customerEmail,
+		ToName:       customerName,
+		ReplyToEmail: replyToEmail,
+		ReplyToName:  replyToName,
+		Subject:      subject,
+		HTMLBody:     htmlBody,
+		TextBody:     textBody,
+		MessageID:    messageID,
+	}); err != nil {
+		return fmt.Errorf("send intake confirmation: %w", err)
+	}
+
+	// Record the receipt's Message-ID so a reply that carries only In-Reply-To
+	// resolves to the ticket instead of starting a new one. Best-effort: the
+	// mail is already sent.
+	if _, err := s.db.ExecWrite(`
+		INSERT INTO email_message_tracking (
+			channel_id, message_id, dedup_key, in_reply_to, from_email, from_name, subject,
+			item_id, comment_id, direction, processed_at
+		) VALUES (?, ?, ?, NULL, ?, ?, ?, ?, NULL, 'outbound', CURRENT_TIMESTAMP)
+		ON CONFLICT(channel_id, dedup_key) DO NOTHING
+	`, *item.ChannelID, messageID, messageID, s.getSMTPFromEmail(), customerName, subject, itemID); err != nil {
+		slog.Warn("failed to record intake confirmation in email tracking",
+			"component", "email_reply_service", "item_id", itemID, "message_id", messageID, "error", err)
+	}
+	slog.Info("sent intake confirmation",
+		"component", "email_reply_service", "item_id", itemID, "to", customerEmail)
+	return nil
+}
+
+// portalRequestURL resolves the customer-facing link to an item's request in
+// the portal that exposes it. The item's intake portal wins (email intake with
+// a portal link); otherwise the item's own channel is used (portal/form
+// submissions). Returns empty when the item is not exposed to a portal or the
+// base URL is unset.
+func (s *EmailReplyService) portalRequestURL(itemID int) string {
+	if s.baseURL == "" {
+		return ""
+	}
+	var channelID, intakeID sql.NullInt64
+	if err := s.db.QueryRow(`SELECT channel_id, intake_id FROM items WHERE id = ?`, itemID).Scan(&channelID, &intakeID); err != nil {
+		return ""
+	}
+	if intakeID.Valid {
+		var portalChannelID sql.NullInt64
+		if err := s.db.QueryRow(`SELECT portal_channel_id FROM intakes WHERE id = ?`, intakeID.Int64).Scan(&portalChannelID); err == nil && portalChannelID.Valid {
+			if slug := s.portalSlug(int(portalChannelID.Int64)); slug != "" {
+				return fmt.Sprintf("%s/portal/%s?view=requests&id=%d", s.baseURL, slug, itemID)
+			}
+		}
+	}
+	if channelID.Valid {
+		if slug := s.portalSlug(int(channelID.Int64)); slug != "" {
+			return fmt.Sprintf("%s/portal/%s?view=requests&id=%d", s.baseURL, slug, itemID)
+		}
+	}
+	return ""
+}
+
+// portalSlug returns the slug of a portal channel, or an empty string when the
+// channel is not a portal or has no slug configured.
+func (s *EmailReplyService) portalSlug(channelID int) string {
+	var channelType, configJSON string
+	if err := s.db.QueryRow(`SELECT type, COALESCE(config, '{}') FROM channels WHERE id = ?`, channelID).Scan(&channelType, &configJSON); err != nil {
+		return ""
+	}
+	if channelType != "portal" {
+		return ""
+	}
+	var cfg models.ChannelConfig
+	if err := json.Unmarshal([]byte(configJSON), &cfg); err != nil {
+		return ""
+	}
+	return strings.TrimSpace(cfg.PortalSlug)
 }
 
 // ProcessPendingReplies retries a bounded batch from the durable reply outbox.

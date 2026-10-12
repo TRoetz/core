@@ -46,20 +46,22 @@ CREATE TABLE IF NOT EXISTS intakes (
 	id SERIAL PRIMARY KEY,
 	mailbox_id INTEGER NOT NULL,
 	folder TEXT NOT NULL DEFAULT 'INBOX',
-	target_type TEXT NOT NULL,
-	target_id INTEGER NOT NULL,
+	workspace_id INTEGER,
+	portal_channel_id INTEGER,
 	request_type_id INTEGER,
 	item_type_id INTEGER,
 	rate_limit_per_hour INTEGER,
 	processing_disposition TEXT NOT NULL DEFAULT '',
+	send_confirmation BOOLEAN NOT NULL DEFAULT false,
 	status TEXT NOT NULL DEFAULT 'enabled',
+	status_reason TEXT NOT NULL DEFAULT '',
 	created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
 	updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
 	FOREIGN KEY (mailbox_id) REFERENCES channels(id) ON DELETE CASCADE
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_intakes_mailbox_folder ON intakes(mailbox_id, folder);
-CREATE INDEX IF NOT EXISTS idx_intakes_target ON intakes(target_type, target_id);
+CREATE INDEX IF NOT EXISTS idx_intakes_portal ON intakes(portal_channel_id);
 
 CREATE TABLE IF NOT EXISTS email_intake_state (
 	intake_id INTEGER PRIMARY KEY,

@@ -200,6 +200,9 @@ export default {
     intakesMailboxAddress: '正在监控 {address}',
     intakeLastUID: '最新 UID {uid}',
     intakeRateLimited: '已暂缓 {count} 封',
+    intakeSendConfirmation: '发送提交回执',
+    intakeSendConfirmationHint: '向发件人发送请求已收到的确认邮件。当此收件箱关联门户时，回执会包含门户链接。',
+    intakeConfirmationOn: '回执已开启',
     // Form Channel Configuration
     openForm: 'Open Form',
     formConfiguration: 'Form Configuration',

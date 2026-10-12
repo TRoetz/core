@@ -202,6 +202,10 @@ export default {
     intakesMailboxAddress: 'Überwacht {address}',
     intakeLastUID: 'Letzte UID {uid}',
     intakeRateLimited: '{count} zurückgehalten',
+    intakeSendConfirmation: 'Eingangsbestätigung senden',
+    intakeSendConfirmationHint:
+      'Der absendenden Person eine Bestätigung senden, dass ihre Anfrage eingegangen ist. Die Bestätigung enthält einen Portal-Link, wenn dieser Eingang mit einem Portal verknüpft ist.',
+    intakeConfirmationOn: 'Bestätigung aktiv',
     // Form Channel Configuration
     openForm: 'Open Form',
     formConfiguration: 'Form Configuration',

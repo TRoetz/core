@@ -44,12 +44,26 @@ func SampleData(name string) any {
 			ItemTitle       string
 			Content         string
 			OriginalSubject string
+			PortalURL       string
 		}{
 			AuthorName:      "Sam Patel",
 			ItemKey:         "ACME-42",
 			ItemTitle:       "Cannot reset password",
 			Content:         "Thanks for the report — I've reproduced the issue locally and pushed a fix. Could you confirm it works on your end after refreshing?",
 			OriginalSubject: "Cannot reset password",
+			PortalURL:       "https://app.example.com/portal/acme?view=requests&id=42",
+		}
+	case TemplateIntakeConfirmation:
+		return struct {
+			FirstName string
+			ItemKey   string
+			ItemTitle string
+			PortalURL string
+		}{
+			FirstName: "Alex",
+			ItemKey:   "ACME-42",
+			ItemTitle: "Cannot reset password",
+			PortalURL: "https://app.example.com/portal/acme?view=requests&id=42",
 		}
 	case TemplateApprovalRequested:
 		return struct {

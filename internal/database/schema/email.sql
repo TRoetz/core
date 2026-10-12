@@ -48,20 +48,22 @@ CREATE TABLE IF NOT EXISTS intakes (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
 	mailbox_id INTEGER NOT NULL,
 	folder TEXT NOT NULL DEFAULT 'INBOX',
-	target_type TEXT NOT NULL, -- 'portal' | 'workspace'
-	target_id INTEGER NOT NULL,
+	workspace_id INTEGER, -- routing target; required for new intakes
+	portal_channel_id INTEGER, -- optional portal that exposes the requests
 	request_type_id INTEGER, -- portal target: system Email request type (resolved lazily when NULL)
-	item_type_id INTEGER, -- workspace target
+	item_type_id INTEGER, -- item type created for the routing workspace
 	rate_limit_per_hour INTEGER,
 	processing_disposition TEXT NOT NULL DEFAULT '',
+	send_confirmation BOOLEAN NOT NULL DEFAULT false,
 	status TEXT NOT NULL DEFAULT 'enabled',
+	status_reason TEXT NOT NULL DEFAULT '',
 	created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 	updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 	FOREIGN KEY (mailbox_id) REFERENCES channels(id) ON DELETE CASCADE
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_intakes_mailbox_folder ON intakes(mailbox_id, folder);
-CREATE INDEX IF NOT EXISTS idx_intakes_target ON intakes(target_type, target_id);
+CREATE INDEX IF NOT EXISTS idx_intakes_portal ON intakes(portal_channel_id);
 
 -- Per-folder IMAP watermark. The mailbox connection is polled once, but each
 -- intake keeps its own UIDVALIDITY/UID cursor so folders advance independently.

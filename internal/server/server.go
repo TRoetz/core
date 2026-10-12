@@ -1115,6 +1115,7 @@ func (s *Server) initialize() error {
 
 	// Wire email reply service for bidirectional email threading
 	emailReplyService := services.NewEmailReplyService(s.db, smtpSender)
+	emailReplyService.SetBaseURL(baseURL)
 	if err := services.PrepareDurableEmailReplyEngine(context.Background(), s.eventEngine, emailReplyService); err != nil {
 		return fmt.Errorf("prepare durable email reply consumer: %w", err)
 	}
@@ -1136,6 +1137,10 @@ func (s *Server) initialize() error {
 	// Wire EventCoordinator into email processor so inbound-email-created items
 	// emit the same notifications/webhooks/action events as REST-created ones.
 	s.emailScheduler.SetEventCoordinator(eventCoordinator)
+
+	// Optional intake receipts reuse the reply service's SMTP + portal-link
+	// plumbing (WI-1712).
+	s.emailScheduler.SetConfirmationSender(emailReplyService)
 
 	slog.Info("comment service initialized")
 
