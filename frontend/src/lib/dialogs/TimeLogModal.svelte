@@ -213,7 +213,9 @@
       : {};
     const data = {
       project_id: parseInt(formData.project_id),
-      item_id: formData.item_id ? parseInt(formData.item_id) : undefined,
+      // An explicit null clears an existing link under merge-PATCH; an omitted
+      // key would preserve the stored link after the user cleared the picker.
+      item_id: formData.item_id ? parseInt(formData.item_id) : null,
       description: formData.description,
       ...timeFields
     };
