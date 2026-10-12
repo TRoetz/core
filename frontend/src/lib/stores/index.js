@@ -15,6 +15,7 @@ export { collectionFieldLinks } from './collectionFieldLinks.svelte.js';
 export { homepageStore } from './homepageStore.svelte.js';
 export { i18n, SUPPORTED_LOCALES, t, translateError } from './i18n.svelte.js';
 export { itemDetailStore } from './itemDetailStore.svelte.js';
+export { itemModalStore } from './itemModalStore.svelte.js';
 export { itemTestCaseLinksStore } from './itemTestCaseLinksStore.svelte.js';
 export { getNavigationConfig, shouldNavigateAfterCreate } from './navigationConfig.svelte.js';
 export { isSystemAdmin, permissionStore } from './permissions.svelte.js';

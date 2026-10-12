@@ -24,7 +24,11 @@
     if (!value) return t('settings.configSets.noneAssigned');
     if (!builtinKey) return value;
     if (type === 'workflow') return t('workflows.defaults.default.name');
-    if (type === 'screen') return t('screensPage.defaults.default.name');
+    if (type === 'screen') {
+      const key = `screensPage.defaults.${builtinKey}.name`;
+      const translated = t(key);
+      return translated !== key ? translated : value;
+    }
     if (type === 'notifications') return t('settings.configSets.defaults.notifications.name');
     return value;
   }

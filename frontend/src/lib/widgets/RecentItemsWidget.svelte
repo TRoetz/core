@@ -130,7 +130,7 @@
           <div class="min-w-0 flex-1">
             <p class="truncate text-sm font-medium" style="color: var(--ds-text);">{item.title}</p>
             <p class="text-xs">
-              <ItemKey item={item} />
+              <ItemKey item={item} clickable={false} />
             </p>
           </div>
           <div class="text-xs" style="color: var(--ds-text-subtlest);">

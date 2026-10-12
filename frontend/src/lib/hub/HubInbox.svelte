@@ -87,7 +87,7 @@
         >
           <div class="font-medium text-sm" style="color: var(--ds-text);">{item.title}</div>
           <div class="text-xs">
-            <ItemKey item={item} />
+            <ItemKey item={item} clickable={false} />
           </div>
         </a>
       {/snippet}

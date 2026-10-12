@@ -45,6 +45,13 @@
 
   const dndConfig = $derived([item.id, canDrag]);
 
+  // Real href so the key keeps new-tab affordances; the modal handles plain clicks.
+  const itemHref = $derived(
+    item.workspace_id ?? workspace?.id
+      ? `/workspaces/${item.workspace_id ?? workspace?.id}/items/${item.id}`
+      : null,
+  );
+
   // Board-only fields rendered outside the body chip row.
   const FOOTER_CARD_FIELDS = new Set(['due_date', 'sla']);
   const bodyCardFields = $derived(
@@ -163,6 +170,11 @@
           <ItemKey
             {item}
             {workspace}
+            href={itemHref}
+            onClick={(event) => {
+              event.preventDefault();
+              open(event);
+            }}
             size="compact"
             monospace={false}
             style="color: var(--ds-text-subtlest);"

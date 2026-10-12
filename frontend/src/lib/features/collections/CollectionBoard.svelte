@@ -23,7 +23,6 @@
   import { draggable, dropTargetForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
   import { autoScrollForElements } from '@atlaskit/pragmatic-drag-and-drop-auto-scroll/element';
   import { attachClosestEdge, extractClosestEdge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge';
-  import ItemDetail from '../items/ItemDetail.svelte';
   import PersonalTaskDetail from '../personal/PersonalTaskDetail.svelte';
   import ViewHeader from '../../layout/ViewHeader.svelte';
   import StaticViewBackground from '../../layout/StaticViewBackground.svelte';
@@ -36,7 +35,7 @@
   import ItemKey from '../../components/ItemKey.svelte';
   import CollectionViewSwitcher from './CollectionViewSwitcher.svelte';
   import DropdownMenu from '../../layout/DropdownMenu.svelte';
-  import { backlogStore, workspaceDataStore, workspacesStore, workspacePermissions } from '../../stores/index.js';
+  import { backlogStore, workspaceDataStore, workspacesStore, workspacePermissions, itemModalStore } from '../../stores/index.js';
   import { useCollectionEventStream } from '../../composables/useCollectionEventStream.svelte.js';
   import { invalidateSLAState } from '../sla/slaState.js';
   import { agentRuns } from '../../stores/agentRuns.svelte.js';
@@ -1108,8 +1107,13 @@
   function openItem(itemId, event) {
     // Prevent event bubbling to avoid triggering drag
     event.stopPropagation();
-    selectedItemId = itemId;
-    showItemModal = true;
+    const item = itemsById.get(itemId);
+    if (item && personalWorkspaceIds.has(Number(item.workspace_id))) {
+      selectedItemId = itemId;
+      showItemModal = true;
+      return;
+    }
+    itemModalStore.open(itemId, item?.workspace_id ?? workspaceId);
   }
 
   function getMoveMenuItems(item) {
@@ -1712,7 +1716,7 @@
                       <span class="block font-semibold truncate">{lane.title}</span>
                       {#if lane.parent}
                         <span class="block text-xs font-normal truncate" style="color: var(--ds-text-subtle);">
-                          <ItemKey item={lane.parent} {workspace} /> · {selectedGroupByItemType.name} swimlane
+                          <ItemKey item={lane.parent} {workspace} clickable={false} /> · {selectedGroupByItemType.name} swimlane
                         </span>
                       {:else}
                         <span class="block text-xs font-normal truncate" style="color: var(--ds-text-subtle);">
@@ -1892,23 +1896,14 @@
   </div>
 {/if}
 
-<!-- Item Detail Modal -->
-{#if showItemModal && selectedItemId}
-  {#if selectedItem && personalWorkspaceIds.has(Number(selectedItem.workspace_id))}
-    <PersonalTaskDetail
-      itemId={selectedItemId}
-      workspaceId={selectedItem.workspace_id}
-      onclose={closeItemModal}
-      onupdate={reloadCollection}
-    />
-  {:else}
-    <ItemDetail
-      workspaceId={workspaceId}
-      itemId={selectedItemId}
-      isModal={true}
-      onclose={closeItemModal}
-    />
-  {/if}
+<!-- Personal task detail stays local: it renders a different component. -->
+{#if showItemModal && selectedItemId && selectedItem && personalWorkspaceIds.has(Number(selectedItem.workspace_id))}
+  <PersonalTaskDetail
+    itemId={selectedItemId}
+    workspaceId={selectedItem.workspace_id}
+    onclose={closeItemModal}
+    onupdate={reloadCollection}
+  />
 {/if}
 
 <style>

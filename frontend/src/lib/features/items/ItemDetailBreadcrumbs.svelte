@@ -463,7 +463,7 @@
 
                   <!-- Item Key -->
                   <div class="flex-shrink-0">
-                    <ItemKey item={result} workspace={result.workspace_key ? { key: result.workspace_key } : workspace} />
+                    <ItemKey item={result} workspace={result.workspace_key ? { key: result.workspace_key } : workspace} clickable={false} />
                   </div>
 
                   <!-- Title -->

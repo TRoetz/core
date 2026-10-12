@@ -7,14 +7,13 @@
   import { collectionStore, refreshCollectionDeltas, reloadCollection, refreshCollectionItem } from '../../stores/collectionContext.js';
   import { findOrphansByMissingParent, indexCollectionHierarchy, mergeAncestorContext } from './collectionHierarchy.js';
   import { useGradientStyles, loadWorkspaceGradient } from '../../stores/workspaceGradient.svelte.js';
-  import { workspaceDataStore } from '../../stores/index.js';
+  import { workspaceDataStore, itemModalStore } from '../../stores/index.js';
   import { workspacePermissions } from '../../stores/workspacePermissions.svelte.js';
   import ViewHeader from '../../layout/ViewHeader.svelte';
   import StaticViewBackground from '../../layout/StaticViewBackground.svelte';
   import SubFilterBar from './SubFilterBar.svelte';
   import Select from '../../components/Select.svelte';
   import Toggle from '../../components/Toggle.svelte';
-  import ItemDetail from '../items/ItemDetail.svelte';
   import RoadmapItemPreview from './RoadmapItemPreview.svelte';
   import { useCollectionEventStream } from '../../composables/useCollectionEventStream.svelte.js';
   import { buildHierarchyDatePatches, projectHierarchyDates } from './roadmapHierarchyDates.js';
@@ -172,10 +171,6 @@
 
   // Drag state (bar move/resize)
   let dragInfo = $state(null);
-
-  // Item detail modal
-  let showItemModal = $state(false);
-  let selectedItemId = $state(null);
 
   // Links/dependencies
   let itemLinks = $state({});
@@ -876,8 +871,7 @@
 
   // Item click
   function openItem(itemId) {
-    selectedItemId = itemId;
-    showItemModal = true;
+    itemModalStore.open(itemId, workspaceId);
   }
 
   // --- Bar drag handlers (existing move/resize) ---
@@ -1727,17 +1721,6 @@
   </StaticViewBackground>
 {/if}
 
-<!-- Item Detail Modal -->
-{#if showItemModal && selectedItemId}
-  <ItemDetail
-    itemId={selectedItemId}
-    isModal={true}
-    onclose={() => {
-      showItemModal = false;
-      selectedItemId = null;
-    }}
-  />
-{/if}
 
 <style>
   /* Custom scrollbar for timeline */

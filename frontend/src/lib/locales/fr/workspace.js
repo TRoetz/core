@@ -174,6 +174,13 @@ export default {
     itemCreated: 'Élément créé avec succès',
     itemUpdated: 'Élément mis à jour avec succès',
     itemDeleted: 'Élément supprimé avec succès',
+    deleted: 'Cet élément a été supprimé.',
+    itemTypeChanged: "Type d'élément modifié",
+    subtasksCreated: '{count} sous-tâches créées',
+    subtasksCreated_one: '{count} sous-tâche créée',
+    subtasksCreated_other: '{count} sous-tâches créées',
+    noChildItemType: "Aucun type d'élément enfant disponible",
+    subtasksCreateFailed: 'Échec de la création des sous-tâches',
     assignedToYou: 'Attribué à vous',
     createdByYou: 'Créé par vous',
     recentlyViewed: 'Récemment consultés',
@@ -588,6 +595,25 @@ export default {
     map: 'Carte',
     roadmap: 'Feuille de route',
     publicBoard: 'Tableau public',
+    publish: 'Publier',
+
+    // Public board sharing dialog
+    publicBoardSharing: {
+      title: 'Partager le tableau public',
+      subtitle: 'Publiez cette collection sous forme de tableau Kanban en lecture seule.',
+      enable: 'Activer le partage public',
+      enableHint: 'Toute personne disposant du lien peut consulter le tableau sans se connecter.',
+      boardUrl: 'URL du tableau',
+      slugHint: 'Utilisez 3 à 64 lettres minuscules, chiffres et traits d’union.',
+      copyLink: 'Copier le lien public',
+      copied: 'Copié !',
+      openBoard: 'Ouvrir le tableau',
+      scopeNote:
+        'La requête de la collection doit inclure une portée workspaceKey. Vous devez être administrateur de chaque espace de travail référencé.',
+      save: 'Enregistrer le partage',
+      disable: 'Désactiver le partage',
+      saveError: 'Échec de l’enregistrement des paramètres de partage public.',
+    },
 
     // Roadmap view
     roadmapSettings: 'Paramètres de la feuille de route',

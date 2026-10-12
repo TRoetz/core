@@ -9,7 +9,6 @@
   import EmptyState from '../../components/EmptyState.svelte';
   import { draggable, dropTargetForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
   import { attachClosestEdge, extractClosestEdge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge';
-  import ItemDetail from '../items/ItemDetail.svelte';
   import ViewHeader from '../../layout/ViewHeader.svelte';
   import StaticViewBackground from '../../layout/StaticViewBackground.svelte';
   import SubFilterBar from './SubFilterBar.svelte';
@@ -17,7 +16,7 @@
   import BacklogIterationSection from './BacklogIterationSection.svelte';
   import { sortBacklogIterations } from './backlogIterationOrder.js';
   import ItemPicker from '../../pickers/ItemPicker.svelte';
-  import { backlogStore, workspaceDataStore } from '../../stores/index.js';
+  import { backlogStore, workspaceDataStore, itemModalStore } from '../../stores/index.js';
   import { useCollectionEventStream } from '../../composables/useCollectionEventStream.svelte.js';
   import { errorToast, successToast, warningToast } from '../../stores/toasts.svelte.js';
   import { getIncompleteIterationItems } from './iterationCompletion.js';
@@ -38,8 +37,6 @@
   let backlogItemsById = $derived(new Map(backlogItems.map((item) => [item.id, item])));
   let loading = $state(true);
   let currentCollectionName = $derived(collectionStore.collectionName);
-  let showItemModal = $state(false);
-  let selectedItemId = $state(null);
   let pendingDrops = new Set(); // Track pending drop operations to prevent duplicates
 
   // Edge-based drag state (must use $state for Svelte 5 reactivity)
@@ -317,13 +314,7 @@
     }
     event.preventDefault();
     event.stopPropagation();
-    selectedItemId = itemId;
-    showItemModal = true;
-  }
-
-  function closeItemModal() {
-    showItemModal = false;
-    selectedItemId = null;
+    itemModalStore.open(itemId, workspaceId);
   }
 
   // --- Section collapse / expand ---
@@ -860,16 +851,6 @@
       {t('collections.workspaceNotFound')}
     </div>
   </div>
-{/if}
-
-<!-- Item Detail Modal -->
-{#if showItemModal && selectedItemId}
-  <ItemDetail
-    workspaceId={workspaceId}
-    itemId={selectedItemId}
-    isModal={true}
-    onclose={closeItemModal}
-  />
 {/if}
 
 <!-- Complete Iteration Dialog -->

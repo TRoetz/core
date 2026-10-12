@@ -76,7 +76,7 @@
               class="flex-1 min-w-0 block hover:opacity-90"
             >
               <div class="flex items-center justify-between gap-2">
-                <ItemKey item={ticket} />
+                <ItemKey item={ticket} clickable={false} />
                 {#if ticket.status_name}
                   <Lozenge color="gray">{ticket.status_name}</Lozenge>
                 {/if}

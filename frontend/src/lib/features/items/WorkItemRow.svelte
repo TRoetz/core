@@ -159,7 +159,7 @@
 
       <!-- Item Key -->
       {#if showKey}
-        <ItemKey {item} {workspace} variant="badge" />
+        <ItemKey {item} {workspace} variant="badge" clickable={false} />
       {/if}
 
       <!-- Priority Badge -->

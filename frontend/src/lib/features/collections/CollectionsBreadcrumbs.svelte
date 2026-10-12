@@ -157,7 +157,7 @@
             size="sm"
             icon={IconWorld}
           >
-            {isPublic ? 'Public' : 'Publish'}
+            {isPublic ? t('collections.public') : t('collections.publish')}
           </Button>
         {/if}
 

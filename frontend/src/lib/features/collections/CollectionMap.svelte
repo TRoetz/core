@@ -19,7 +19,6 @@
   import Select from '../../components/Select.svelte';
   import StaticViewBackground from '../../layout/StaticViewBackground.svelte';
   import SubFilterBar from './SubFilterBar.svelte';
-  import ItemDetail from '../items/ItemDetail.svelte';
   import { useCollectionEventStream } from '../../composables/useCollectionEventStream.svelte.js';
   import { infoToast, errorToast } from '../../stores/toasts.svelte.js';
   import ItemKey from '../../components/ItemKey.svelte';
@@ -60,9 +59,6 @@
   let editingItemId = $state(null);
   let editingTitle = $state('');
 
-  // Item detail modal state
-  let selectedItemId = $state(null);
-  let showItemModal = $state(false);
   let mapScrollElement = $state(null);
 
   // Swimlane mode (Pro capability: map.swimlanes)
@@ -672,23 +668,6 @@
     }
   }
 
-  function handleKeyClick(item, event) {
-    event.stopPropagation();
-    openItemModal(item.id, event);
-  }
-
-  function openItemModal(itemId, event) {
-    if (event) {
-      event.stopPropagation();
-    }
-    selectedItemId = itemId;
-    showItemModal = true;
-  }
-
-  function closeItemModal() {
-    showItemModal = false;
-    selectedItemId = null;
-  }
 </script>
 
 {#if loading}
@@ -843,7 +822,6 @@
                   />
                 {/if}
                 <ItemKey item={backboneItem} {workspace}
-                  onClick={(e) => handleKeyClick(backboneItem, e)}
                   style={styles.glassSubtleTextStyle}
                 />
               </div>
@@ -921,7 +899,6 @@
                   <ItemTypeIcon itemType={childItemType} />
                 {/if}
                 <ItemKey item={childItem} {workspace}
-                  onClick={(e) => handleKeyClick(childItem, e)}
                   style={styles.glassSubtleTextStyle}
                 />
               </div>
@@ -1112,13 +1089,3 @@
     color: var(--ds-interactive);
   }
 </style>
-
-<!-- Item Detail Modal -->
-{#if showItemModal && selectedItemId}
-  <ItemDetail
-    isModal={true}
-    itemId={selectedItemId}
-    {workspaceId}
-    onclose={closeItemModal}
-  />
-{/if}

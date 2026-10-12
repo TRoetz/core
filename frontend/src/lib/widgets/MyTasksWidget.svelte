@@ -108,7 +108,7 @@
           <div class="min-w-0 flex-1">
             <p class="truncate text-sm" style="color: var(--ds-text);">{task.title}</p>
             <p class="mt-0.5 flex items-center gap-1 text-xs" style="color: var(--ds-text-subtle);">
-              <ItemKey item={task} />
+              <ItemKey item={task} clickable={false} />
               {#if task.status_name}
                 <span aria-hidden="true">•</span>
                 <span>{task.status_name}</span>

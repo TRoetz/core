@@ -258,6 +258,13 @@ export default {
     itemCreated: 'Item created successfully',
     itemUpdated: 'Item updated successfully',
     itemDeleted: 'Item deleted successfully',
+    deleted: 'This item was deleted.',
+    itemTypeChanged: 'Item type changed',
+    subtasksCreated: 'Created {count} sub-tasks',
+    subtasksCreated_one: 'Created {count} sub-task',
+    subtasksCreated_other: 'Created {count} sub-tasks',
+    noChildItemType: 'No child item type available',
+    subtasksCreateFailed: 'Failed to create sub-tasks',
     assignedToYou: 'Assigned to you',
     createdByYou: 'Created by you',
     recentlyViewed: 'Recently viewed',
@@ -710,6 +717,25 @@ export default {
     map: 'Map',
     roadmap: 'Roadmap',
     publicBoard: 'Public Board',
+    publish: 'Publish',
+
+    // Public board sharing dialog
+    publicBoardSharing: {
+      title: 'Share public board',
+      subtitle: 'Publish this collection as a read-only Kanban board.',
+      enable: 'Enable public sharing',
+      enableHint: 'Anyone with the link can view the board without signing in.',
+      boardUrl: 'Board URL',
+      slugHint: 'Use 3–64 lowercase letters, numbers, and hyphens.',
+      copyLink: 'Copy public link',
+      copied: 'Copied!',
+      openBoard: 'Open board',
+      scopeNote:
+        'The collection query must include a workspaceKey scope. You must be a workspace administrator in every referenced workspace.',
+      save: 'Save sharing',
+      disable: 'Disable sharing',
+      saveError: 'Failed to save public sharing settings.',
+    },
 
     // Map swimlanes (Pro)
     mapSwimlanes: 'Swimlanes',

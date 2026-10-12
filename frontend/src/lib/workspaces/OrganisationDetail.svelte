@@ -462,7 +462,7 @@
                 {item.title}
               </div>
               <div class="text-xs">
-                <ItemKey item={item} />
+                <ItemKey item={item} clickable={false} />
               </div>
             </a>
           {:else}

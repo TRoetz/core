@@ -218,7 +218,7 @@
   }
 
   async function deleteScreen(screen) {
-    if (screen.id === 1) {
+    if (screen.builtin_key) {
       errorToast(t('dialogs.alerts.cannotDeleteDefaultScreen'));
       return;
     }
@@ -280,8 +280,9 @@
       }
     ];
 
-    // Don't show delete option for default screen (ID 1)
-    if (screen.id !== 1) {
+    // Built-in screens back the default configuration set and cannot be
+    // removed.
+    if (!screen.builtin_key) {
       items.push({
         id: 'delete',
         type: 'regular',

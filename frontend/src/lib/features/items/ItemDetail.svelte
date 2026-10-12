@@ -776,7 +776,7 @@ import NativeSelect from '../../components/NativeSelect.svelte';
       typeChangeTarget = null;
       selectedTypeChangeStatusId = null;
       await itemDetailStore.loadItem(workspaceId, item.id);
-      successToast('Item type changed');
+      successToast(t('items.itemTypeChanged'));
     } catch (error) {
       console.error('Failed to change item type:', error);
       typeChangeError = error.message || String(error);
@@ -814,7 +814,7 @@ import NativeSelect from '../../components/NativeSelect.svelte';
     const deletedId = String(itemId);
     if (deletionFeedbackItemId === deletedId) return;
     deletionFeedbackItemId = deletedId;
-    infoToast('This item was deleted.');
+    infoToast(t('items.deleted'));
   }
 
   function handleDeleteComplete(result) {
@@ -1034,7 +1034,7 @@ import NativeSelect from '../../components/NativeSelect.svelte';
     try {
       const childTypeId = availableSubIssueTypes[0]?.id;
       if (!childTypeId) {
-        errorToast('No child item type available');
+        errorToast(t('items.noChildItemType'));
         return;
       }
       for (const task of selectedTasks) {
@@ -1046,13 +1046,13 @@ import NativeSelect from '../../components/NativeSelect.svelte';
           item_type_id: childTypeId,
         });
       }
-      successToast(`Created ${selectedTasks.length} sub-task${selectedTasks.length > 1 ? 's' : ''}`);
+      successToast(t('items.subtasksCreated', { count: selectedTasks.length }));
       closeAIModal();
       // Reload child items
       await itemDetailStore.loadChildItems();
     } catch (err) {
       console.error('Failed to create sub-tasks:', err);
-      errorToast(err.message || 'Failed to create sub-tasks');
+      errorToast(err.message || t('items.subtasksCreateFailed'));
     } finally {
       aiCreating = false;
     }
