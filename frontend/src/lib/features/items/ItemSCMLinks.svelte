@@ -30,7 +30,7 @@
   const hasGitLabPullRequests = $derived(pullRequests.some(link => link.provider_type === 'gitlab'));
   const branchLinks = $derived(links.filter(l => l.link_type === 'branch'));
   const commitLinks = $derived(links.filter(l => l.link_type === 'commit'));
-  // PR rollup follows Jira semantics: OPEN > MERGED > DECLINED
+  // Roll up PR state by precedence: open > merged > closed.
   const prRollupState = $derived(
     pullRequests.some(l => l.state === 'open') ? 'open'
     : pullRequests.some(l => l.state === 'merged') ? 'merged'
