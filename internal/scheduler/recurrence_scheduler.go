@@ -300,6 +300,7 @@ func (rs *RecurrenceScheduler) createInstance(rule *models.RecurrenceRule, templ
 	params := services.ItemCreationParams{
 		WorkspaceID:           template.WorkspaceID,
 		ItemTypeID:            template.ItemTypeID,
+		ValidatingUserID:      actorUserID,
 		Title:                 template.Title,
 		StatusID:              &statusID,
 		DueDate:               &scheduledDate,

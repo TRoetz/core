@@ -348,6 +348,7 @@ func (s *ItemCRUDService) Copy(itemID int, opts CopyOptions) (*CopyResult, error
 	newID, err := CreateItem(s.db, ItemCreationParams{
 		WorkspaceID:           source.WorkspaceID,
 		ItemTypeID:            source.ItemTypeID,
+		ValidatingUserID:      opts.CreatorID,
 		Title:                 opts.NewTitle,
 		Description:           source.Description,
 		StatusID:              source.StatusID,
