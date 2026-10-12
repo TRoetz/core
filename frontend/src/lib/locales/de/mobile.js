@@ -59,7 +59,7 @@ export default {
       running: 'Läuft',
       stop: 'Stoppen',
       idle: 'Kein Timer aktiv',
-      startHelp: 'Starten Sie einen Timer über die Detailansicht eines Arbeitselements.',
+      startHelp: 'Starten Sie einen Timer über die Detailansicht eines Vorgangs.',
       recentWorklogs: 'Letzte Zeiterfassungen',
       empty: 'Noch keine Zeiterfassungen.',
       worklog: 'Zeiterfassung',

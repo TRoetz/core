@@ -262,7 +262,7 @@ export default {
         "name": "Letzte Arbeitsbereiche",
       },
       "savedSearch": {
-        "description": "Arbeitselemente aus einer gespeicherten Sammlung",
+        "description": "Vorgänge aus einer gespeicherten Sammlung",
         "name": "Gespeicherte Suche",
       },
       "unknown": "Unbekannter Widget-Typ: {type}",
@@ -900,7 +900,7 @@ export default {
         "name": "Letzte Elemente",
       },
       "savedSearch": {
-        "description": "Arbeitselemente aus einer gespeicherten Sammlung",
+        "description": "Vorgänge aus einer gespeicherten Sammlung",
         "name": "Gespeicherte Suche",
       },
       "stats": {

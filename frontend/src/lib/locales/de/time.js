@@ -248,7 +248,7 @@ export default {
       subtitle: 'Wöchentliche Zeiterfassungsübersicht',
       total: 'Gesamt',
       noEntries: 'Keine Zeiteinträge diese Woche. Fügen Sie ein Projekt hinzu, um zu beginnen.',
-      projectItem: 'Projekt / Arbeitselement',
+      projectItem: 'Projekt / Vorgang',
       addProject: 'Projekt zur Zeiterfassung hinzufügen...',
       removeProject: 'Aus der Zeiterfassung entfernen',
       showWeekends: 'Wochenenden',

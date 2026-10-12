@@ -433,7 +433,7 @@ export default {
     iconAndColor: 'Symbol & Farbe',
     createsItemType: 'Erstellt Elementtyp',
     selectItemType: 'Elementtyp auswählen...',
-    submissionsCreateItemType: 'Einreichungen erstellen diesen Elementtyp als Arbeitselement',
+    submissionsCreateItemType: 'Einreichungen erstellen diesen Elementtyp als Vorgang',
     creating: 'Wird erstellt...',
   },
   requestForm: {

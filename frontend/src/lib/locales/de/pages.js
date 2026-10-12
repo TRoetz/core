@@ -152,17 +152,17 @@ export default {
     "toggleSubtreeAria": "Untergeordnete Elemente von {title} umschalten",
     "expandAllAria": "Alle erweitern",
     "collapseAllAria": "Alle ausblenden",
-    "workItemsButton": "Arbeitselemente",
-    "workItemsAria": "Verknüpfte Arbeitselemente anzeigen",
-    "workItemsEmpty": "Kein Link zu Arbeitselementen hier noch",
-    "workItemsLoading": "Arbeitselemente werden geladen…",
-    "workItemsTitle": "Arbeitselemente",
-    "addWorkItem": "Arbeitselement hinzufügen",
+    "workItemsButton": "Vorgänge",
+    "workItemsAria": "Verknüpfte Vorgänge anzeigen",
+    "workItemsEmpty": "Kein Link zu Vorgängen hier noch",
+    "workItemsLoading": "Vorgänge werden geladen…",
+    "workItemsTitle": "Vorgänge",
+    "addWorkItem": "Vorgang hinzufügen",
     "addWorkItemCancel": "Abbrechen",
-    "addWorkItemSearchPlaceholder": "Arbeitselemente durchsuchen…",
-    "removeWorkItemLink": "Arbeitselement verknüpfen",
-    "workItemsErrorLoad": "Verknüpfte Arbeitselemente konnten nicht geladen werden",
-    "workItemsErrorLink": "Arbeitselement konnte nicht verknüpft werden",
-    "workItemsErrorUnlink": "Die Verknüpfung des Arbeitselements"
+    "addWorkItemSearchPlaceholder": "Vorgänge durchsuchen…",
+    "removeWorkItemLink": "Vorgang verknüpfen",
+    "workItemsErrorLoad": "Verknüpfte Vorgänge konnten nicht geladen werden",
+    "workItemsErrorLink": "Vorgang konnte nicht verknüpft werden",
+    "workItemsErrorUnlink": "Die Verknüpfung des Vorgangs"
   }
 };

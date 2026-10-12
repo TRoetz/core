@@ -382,7 +382,7 @@ export default {
     clearSearch: 'Suche löschen',
     advancedSearch: 'Erweiterte Suche',
     recentSearches: 'Letzte Suchen',
-    workItem: 'Arbeitselement',
+    workItem: 'Vorgang',
     workspace: 'Workspace',
   },
   about: {

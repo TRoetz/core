@@ -188,9 +188,9 @@ export default {
     remaining: 'Verbleibend',
     byStatusCategory: 'Nach Statuskategorie',
     noStatusData: 'Keine Statusdaten',
-    workItems: 'Arbeitselemente',
+    workItems: 'Vorgänge',
     noItemsAssigned: 'Keine Elemente zugewiesen',
-    assignItemsHint: 'Weisen Sie dieser Iteration Arbeitselemente zu, um den Fortschritt zu verfolgen',
+    assignItemsHint: 'Weisen Sie dieser Iteration Vorgänge zu, um den Fortschritt zu verfolgen',
 
     // Form fields
     iterationName: 'Iterationsname',
@@ -251,9 +251,9 @@ export default {
     noItems: 'Keine Einträge',
     byStatusCategory: 'Nach Statuskategorie',
     noStatusData: 'Keine Statusdaten',
-    workItems: 'Arbeitselemente',
+    workItems: 'Vorgänge',
     noItemsAssigned: 'Keine Einträge zugewiesen',
-    assignItemsHint: 'Weisen Sie diesem Meilenstein Arbeitselemente zu, um den Fortschritt zu verfolgen',
+    assignItemsHint: 'Weisen Sie diesem Meilenstein Vorgänge zu, um den Fortschritt zu verfolgen',
     milestoneName: 'Meilenstein-Name',
     milestoneNamePlaceholder: 'z.B. Q1 Release, Beta-Launch',
     targetDate: 'Zieldatum',

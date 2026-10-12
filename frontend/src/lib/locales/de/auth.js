@@ -149,7 +149,7 @@ export default {
     calendarIntegrationDesc: 'Abonnieren Sie Ihre geplanten Elemente in externen Kalender-Apps',
     loadCalendarFeedSettings: 'Kalender-Feed-Einstellungen laden',
     enableCalendarSubscription: 'Kalenderabonnement aktivieren',
-    calendarSubscriptionDesc: 'Generieren Sie eine Abonnement-URL, um Ihre geplanten Arbeitselemente mit externen Kalenderanwendungen zu synchronisieren.',
+    calendarSubscriptionDesc: 'Generieren Sie eine Abonnement-URL, um Ihre geplanten Vorgänge mit externen Kalenderanwendungen zu synchronisieren.',
     generateCalendarFeedUrl: 'Kalender-Feed-URL generieren',
     yourCalendarFeedUrl: 'Ihre Kalender-Feed-URL',
     showFullUrl: 'Vollständige URL anzeigen',

@@ -160,7 +160,7 @@ export default {
       },
       workItemStaleness: {
         title: 'Qualitätsmetriken',
-        description: 'Festlegen, wann unbearbeitete Arbeitselemente als inaktiv gelten',
+        description: 'Festlegen, wann unbearbeitete Vorgänge als inaktiv gelten',
       },
 
       aiFeatures: {
@@ -909,15 +909,15 @@ export default {
         },
         catch_me_up: {
           name: 'Zusammenfassung',
-          description: 'Zusammenfassung der letzten Aktivitäten eines Arbeitselements',
+          description: 'Zusammenfassung der letzten Aktivitäten eines Vorgangs',
         },
         find_similar: {
           name: 'Ähnliche finden',
-          description: 'Ähnliche Arbeitselemente mittels KI-Analyse finden',
+          description: 'Ähnliche Vorgänge mittels KI-Analyse finden',
         },
         decompose: {
           name: 'Aufteilen',
-          description: 'Arbeitselemente in kleinere Teilaufgaben aufteilen',
+          description: 'Vorgänge in kleinere Teilaufgaben aufteilen',
         },
         release_notes: {
           name: 'Release Notes',
@@ -934,18 +934,18 @@ export default {
       },
     },
     workItemStaleness: {
-      title: 'Inaktivität von Arbeitselementen',
-      subtitle: 'Einen Aktivitätsgrenzwert für Arbeitselementdetails und Analysen verwenden',
-      thresholdTitle: 'Grenzwert für unbearbeitete Arbeitselemente',
+      title: 'Inaktivität von Vorgängen',
+      subtitle: 'Einen Aktivitätsgrenzwert für Vorgangsdetails und Analysen verwenden',
+      thresholdTitle: 'Grenzwert für unbearbeitete Vorgänge',
       thresholdDescription:
-        'Ein nicht abgeschlossenes Arbeitselement gilt nach dieser Anzahl voller Tage ohne Kommentare, Änderungen oder andere erfasste Aktivität als inaktiv.',
+        'Ein nicht abgeschlossener Vorgang gilt nach dieser Anzahl voller Tage ohne Kommentare, Änderungen oder andere erfasste Aktivität als inaktiv.',
       daysLabel: 'Tage ohne Aktivität',
       daysHelper: 'Wählen Sie eine ganze Zahl zwischen 1 und 365.',
       impact: 'Diese Änderung gilt systemweit für alle Arbeitsbereiche und wird sofort wirksam.',
       save: 'Grenzwert speichern',
-      saveSuccess: 'Grenzwert für die Inaktivität von Arbeitselementen gespeichert',
-      saveFailed: 'Grenzwert für die Inaktivität von Arbeitselementen konnte nicht gespeichert werden',
-      loadFailed: 'Einstellungen zur Inaktivität von Arbeitselementen konnten nicht geladen werden',
+      saveSuccess: 'Grenzwert für die Inaktivität von Vorgängen gespeichert',
+      saveFailed: 'Grenzwert für die Inaktivität von Vorgängen konnte nicht gespeichert werden',
+      loadFailed: 'Einstellungen zur Inaktivität von Vorgängen konnten nicht geladen werden',
       validation: 'Geben Sie eine ganze Zahl zwischen 1 und 365 Tagen ein.',
     },
 

@@ -13,7 +13,7 @@ export default withEnglishAdminOperations({
     },
     llmConnections: {
       title: 'KI-Verbindungen', subtitle: 'Anbieter von KI-Modellen für intelligente Funktionen konfigurieren', addConnection: 'Verbindung hinzufügen', empty: 'Noch keine KI-Verbindungen konfiguriert.', addFirst: 'Erste Verbindung hinzufügen',
-      referenced: 'Von aktivierten Funktionen verwendet', visionTitle: 'Dieses Modell kann Bilder in Arbeitselementen analysieren', noVisionTitle: 'Dieses Modell verarbeitet nur Text und kann keine Bilder sehen',
+      referenced: 'Von aktivierten Funktionen verwendet', visionTitle: 'Dieses Modell kann Bilder in Vorgängen analysieren', noVisionTitle: 'Dieses Modell verarbeitet nur Text und kann keine Bilder sehen',
       addTitle: 'KI-Verbindung hinzufügen', editTitle: 'KI-Verbindung bearbeiten', disableWarning: 'Das Deaktivieren dieser Verbindung stoppt abhängige LLM-Aktionsfunktionen zur Laufzeit.',
       disableWarningHelp: 'Verwendet von {capabilities}. Die Funktionen bleiben als aktiviert markiert, schlagen aber fehl, bis die Verbindung wieder aktiviert oder neu zugewiesen wird.',
       namePlaceholder: 'z. B. OpenRouter Claude Sonnet', selectProvider: 'Anbieter auswählen…', keyConfigured: 'Schlüssel konfiguriert (leer lassen, um ihn beizubehalten)', enterApiKey: 'API-Schlüssel eingeben',
@@ -136,7 +136,7 @@ export default withEnglishAdminOperations({
     role: 'Rolle', effectiveAccess: 'Zugriff', assignments: 'Zuweisungen', memberOrGroup: 'Mitglied oder Gruppe', rolesLabel: 'Rollen', actions: 'Aktionen',
     roles: {
       viewer: { name: 'Betrachter', description: 'Inhalte des Arbeitsbereichs ansehen und an Diskussionen teilnehmen' },
-      editor: { name: 'Bearbeiter', description: 'Arbeitselemente in diesem Arbeitsbereich erstellen und bearbeiten' },
+      editor: { name: 'Bearbeiter', description: 'Vorgänge in diesem Arbeitsbereich erstellen und bearbeiten' },
       tester: { name: 'Tester', description: 'Elemente ansehen, Tests ausführen, Testfälle verwalten und Fehler erstellen' },
       administrator: { name: 'Administrator', description: 'Den gesamten Arbeitsbereich einschließlich der Zugriffsrechte verwalten' },
     },

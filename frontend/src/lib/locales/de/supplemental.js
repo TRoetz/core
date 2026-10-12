@@ -315,7 +315,7 @@ export default {
   },
   "commandPalette": {
     "recentlyViewed": {
-      "label": "Zuletzt angesehene Arbeitselemente",
+      "label": "Zuletzt angesehene Vorgänge",
       "description": "Springe zu einem deiner zuletzt 20 angesehenen Artikel",
       "header": "Zuletzt angesehen",
       "searchPlaceholder": "Zuletzt angesehene suchen...",
