@@ -516,13 +516,30 @@ func (p *Processor) findParentItem(ctx context.Context, email *ParsedEmail) *int
 }
 
 // senderIsThreadParticipant reports whether senderEmail is allowed to post
-// onto the given item via an email reply. The checks are item-scoped: a prior
-// sender on the thread, the original creator, or an explicitly added external
-// request participant (WI-1136). The anchor rows minted for portal tickets
-// carry from_email=” so they can never satisfy the prior-participant clause
-// implicitly; participants are granted explicitly through item_participants.
+// onto the given item via an email reply. The checks are item-scoped: the
+// original creator, a current external request participant (WI-1136, including
+// a re-added one), or a prior sender on the thread. An explicit participant
+// removal revokes the implicit thread-membership grant so removing someone is
+// not undone by an old reply in their mailbox. The anchor rows minted for
+// portal tickets carry from_email=” so they can never satisfy the
+// prior-participant clause implicitly.
 func (p *Processor) senderIsThreadParticipant(ctx context.Context, itemID int, senderEmail string) bool {
 	if senderEmail == "" {
+		return false
+	}
+	// Original creator via portal customer.
+	if creatorEmail, err := repository.NewItemRepository(p.db).GetPortalCustomerEmailForItem(itemID); err == nil {
+		if normalizedEmail(creatorEmail) == senderEmail {
+			return true
+		}
+	}
+	// Explicit external request participant, including a re-added one.
+	participants := repository.NewItemParticipantRepository(p.db)
+	if isParticipant, err := participants.IsParticipantEmail(itemID, senderEmail); err == nil && isParticipant {
+		return true
+	}
+	// An explicit removal revokes implicit thread membership.
+	if removed, err := participants.WasParticipantRemoved(itemID, senderEmail); err == nil && removed {
 		return false
 	}
 	// Prior participant on this item's thread (inbound or outbound, any channel).
@@ -531,16 +548,6 @@ func (p *Processor) senderIsThreadParticipant(ctx context.Context, itemID int, s
 		SELECT COUNT(*) FROM email_message_tracking
 		WHERE item_id = ? AND LOWER(from_email) = ?
 	`, itemID, senderEmail).Scan(&priorCount); err == nil && priorCount > 0 {
-		return true
-	}
-	// Original creator via portal customer.
-	if creatorEmail, err := repository.NewItemRepository(p.db).GetPortalCustomerEmailForItem(itemID); err == nil {
-		if normalizedEmail(creatorEmail) == senderEmail {
-			return true
-		}
-	}
-	// Explicit external request participant.
-	if isParticipant, err := repository.NewItemParticipantRepository(p.db).IsParticipantEmail(itemID, senderEmail); err == nil && isParticipant {
 		return true
 	}
 	return false
