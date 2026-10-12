@@ -116,7 +116,7 @@ func (p *Processor) ProcessEmailWithIntake(
 		return nil, fmt.Errorf("channel config is required")
 	}
 	email.From.Address = parsedSender.Address
-	dedupKey := dedupKeyFor(email, channelID, uidValidity)
+	dedupKey := dedupKeyFor(email, channelID, uidValidity, intakeID)
 
 	// 1. Preclaim tracking row. INSERT ... ON CONFLICT DO NOTHING reports 0
 	// rows affected when this dedup_key is already taken — that's our dedup
@@ -259,15 +259,21 @@ func isAutomatedEmail(email *ParsedEmail) bool {
 	return false
 }
 
-// dedupKeyFor uses stable bare Message-IDs or channel-scoped UIDVALIDITY/UID
-// keys. UID resets can reprocess Message-ID-less mail, which cannot otherwise
-// be distinguished across UID spaces.
-func dedupKeyFor(email *ParsedEmail, channelID int, uidValidity uint32) string {
+// dedupKeyFor uses stable bare Message-IDs or folder-scoped synthetic keys.
+// IMAP UID is mailbox/folder-scoped, so the synthetic key includes the intake;
+// two Message-ID-less messages with the same UIDVALIDITY/UID in different
+// folders must not collide. UID resets can reprocess Message-ID-less mail,
+// which cannot otherwise be distinguished across UID spaces.
+func dedupKeyFor(email *ParsedEmail, channelID int, uidValidity uint32, intakeID *int) string {
 	if email.MessageID != "" {
 		// Preserve legacy bare keys while canonicalizing Message-ID elsewhere.
 		return bareMessageID(email.MessageID)
 	}
-	return fmt.Sprintf("synth:%d:%d:%d", channelID, uidValidity, email.UID)
+	intake := 0
+	if intakeID != nil {
+		intake = *intakeID
+	}
+	return fmt.Sprintf("synth:%d:%d:%d:%d", channelID, intake, uidValidity, email.UID)
 }
 
 // DefaultEmailRateLimitPerHour caps new tickets per sender per rolling hour
