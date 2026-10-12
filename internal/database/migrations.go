@@ -2656,6 +2656,14 @@ var Catalog = []Migration{
 		SQLite:        `ALTER TABLE jira_import_jobs ADD COLUMN lease_expires_at BIGINT;`,
 		Postgres:      `ALTER TABLE jira_import_jobs ADD COLUMN IF NOT EXISTS lease_expires_at BIGINT;`,
 	},
+	{
+		Version:       "20261028_jira_import_job_lease_token",
+		Name:          "Fence Jira import workers with an ownership token (WI-1718)",
+		CheckSQLite:   sqliteColumnCheck("jira_import_jobs", "lease_token"),
+		CheckPostgres: pgColumnCheck("jira_import_jobs", "lease_token"),
+		SQLite:        `ALTER TABLE jira_import_jobs ADD COLUMN lease_token TEXT;`,
+		Postgres:      `ALTER TABLE jira_import_jobs ADD COLUMN IF NOT EXISTS lease_token TEXT;`,
+	},
 }
 
 // applyAssetReportsWorkspacePinned backfills form-mode asset reports that have

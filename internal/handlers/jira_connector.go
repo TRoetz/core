@@ -28,7 +28,11 @@ type JiraImportHandler struct {
 	capturePayloadsDir string // JIRA_CAPTURE_PAYLOADS (empty disables capture)
 	mappingFailuresMu  sync.Mutex
 	mappingFailures    map[string]error
-	cacheInvalidator   *services.AuthorizationCacheInvalidator
+	// jobTokens holds the per-run ownership token for each active import, keyed
+	// by job id, so job-state writes can be fenced without threading the token
+	// through every import helper.
+	jobTokens        map[string]string
+	cacheInvalidator *services.AuthorizationCacheInvalidator
 }
 
 func (h *JiraImportHandler) WithAuthorizationCacheInvalidator(invalidator *services.AuthorizationCacheInvalidator) *JiraImportHandler {

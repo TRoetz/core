@@ -34,6 +34,9 @@ CREATE TABLE IF NOT EXISTS jira_import_jobs (
     -- worker renews it; startup reconciliation fails queued/running jobs whose
     -- lease expired so a restart cannot block retry or cleanup.
     lease_expires_at BIGINT,
+    -- Per-run ownership token. Job-state writes are fenced on it so a worker
+    -- whose lease was recovered or cleaned up cannot change the job's state.
+    lease_token TEXT,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
