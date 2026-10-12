@@ -5665,6 +5665,10 @@
                 "description": "The id value.",
                 "type": "integer"
               },
+              "is_internal": {
+                "description": "The is internal value.",
+                "type": "boolean"
+              },
               "item_id": {
                 "description": "The item id value.",
                 "nullable": true,
@@ -5707,6 +5711,7 @@
               "filename",
               "has_thumbnail",
               "id",
+              "is_internal",
               "mime_type",
               "original_filename"
             ],
@@ -9881,12 +9886,25 @@
                   "description": "The inherit project value.",
                   "type": "boolean"
                 },
+                "intake_id": {
+                  "description": "The intake id value.",
+                  "nullable": true,
+                  "type": "integer"
+                },
                 "is_task": {
                   "description": "Whether the item is a personal task. True is valid only in the authenticated caller's personal workspace and only with the Open or Done system status.",
                   "type": "boolean"
                 },
                 "item_type_builtin_key": {
                   "description": "The item type builtin key value.",
+                  "type": "string"
+                },
+                "item_type_color": {
+                  "description": "The item type color value.",
+                  "type": "string"
+                },
+                "item_type_icon": {
+                  "description": "The item type icon value.",
                   "type": "string"
                 },
                 "item_type_id": {
@@ -10389,6 +10407,10 @@
                   },
                   "type": "array"
                 },
+                "portal_org_shared": {
+                  "description": "The portal org shared value.",
+                  "type": "boolean"
+                },
                 "priority_builtin_key": {
                   "description": "The priority builtin key value.",
                   "type": "string"
@@ -10570,6 +10592,7 @@
                 "inherit_project",
                 "is_task",
                 "last_active_at",
+                "portal_org_shared",
                 "title",
                 "updated_at",
                 "workspace_id",
@@ -11210,12 +11233,25 @@
                   "description": "The inherit project value.",
                   "type": "boolean"
                 },
+                "intake_id": {
+                  "description": "The intake id value.",
+                  "nullable": true,
+                  "type": "integer"
+                },
                 "is_task": {
                   "description": "Whether the item is a personal task. True is valid only in the authenticated caller's personal workspace and only with the Open or Done system status.",
                   "type": "boolean"
                 },
                 "item_type_builtin_key": {
                   "description": "The item type builtin key value.",
+                  "type": "string"
+                },
+                "item_type_color": {
+                  "description": "The item type color value.",
+                  "type": "string"
+                },
+                "item_type_icon": {
+                  "description": "The item type icon value.",
                   "type": "string"
                 },
                 "item_type_id": {
@@ -11718,6 +11754,10 @@
                   },
                   "type": "array"
                 },
+                "portal_org_shared": {
+                  "description": "The portal org shared value.",
+                  "type": "boolean"
+                },
                 "priority_builtin_key": {
                   "description": "The priority builtin key value.",
                   "type": "string"
@@ -11899,6 +11939,7 @@
                 "inherit_project",
                 "is_task",
                 "last_active_at",
+                "portal_org_shared",
                 "title",
                 "updated_at",
                 "workspace_id",
@@ -12205,6 +12246,10 @@
                   "description": "The id value.",
                   "type": "integer"
                 },
+                "is_internal": {
+                  "description": "The is internal value.",
+                  "type": "boolean"
+                },
                 "item_id": {
                   "description": "The item id value.",
                   "nullable": true,
@@ -12247,6 +12292,7 @@
                 "filename",
                 "has_thumbnail",
                 "id",
+                "is_internal",
                 "mime_type",
                 "original_filename"
               ],
@@ -12667,12 +12713,25 @@
                   "description": "The inherit project value.",
                   "type": "boolean"
                 },
+                "intake_id": {
+                  "description": "The intake id value.",
+                  "nullable": true,
+                  "type": "integer"
+                },
                 "is_task": {
                   "description": "Whether the item is a personal task. True is valid only in the authenticated caller's personal workspace and only with the Open or Done system status.",
                   "type": "boolean"
                 },
                 "item_type_builtin_key": {
                   "description": "The item type builtin key value.",
+                  "type": "string"
+                },
+                "item_type_color": {
+                  "description": "The item type color value.",
+                  "type": "string"
+                },
+                "item_type_icon": {
+                  "description": "The item type icon value.",
                   "type": "string"
                 },
                 "item_type_id": {
@@ -13175,6 +13234,10 @@
                   },
                   "type": "array"
                 },
+                "portal_org_shared": {
+                  "description": "The portal org shared value.",
+                  "type": "boolean"
+                },
                 "priority_builtin_key": {
                   "description": "The priority builtin key value.",
                   "type": "string"
@@ -13356,6 +13419,7 @@
                 "inherit_project",
                 "is_task",
                 "last_active_at",
+                "portal_org_shared",
                 "title",
                 "updated_at",
                 "workspace_id",
@@ -13861,12 +13925,25 @@
                   "description": "The inherit project value.",
                   "type": "boolean"
                 },
+                "intake_id": {
+                  "description": "The intake id value.",
+                  "nullable": true,
+                  "type": "integer"
+                },
                 "is_task": {
                   "description": "Whether the item is a personal task. True is valid only in the authenticated caller's personal workspace and only with the Open or Done system status.",
                   "type": "boolean"
                 },
                 "item_type_builtin_key": {
                   "description": "The item type builtin key value.",
+                  "type": "string"
+                },
+                "item_type_color": {
+                  "description": "The item type color value.",
+                  "type": "string"
+                },
+                "item_type_icon": {
+                  "description": "The item type icon value.",
                   "type": "string"
                 },
                 "item_type_id": {
@@ -14369,6 +14446,10 @@
                   },
                   "type": "array"
                 },
+                "portal_org_shared": {
+                  "description": "The portal org shared value.",
+                  "type": "boolean"
+                },
                 "priority_builtin_key": {
                   "description": "The priority builtin key value.",
                   "type": "string"
@@ -14550,6 +14631,7 @@
                 "inherit_project",
                 "is_task",
                 "last_active_at",
+                "portal_org_shared",
                 "title",
                 "updated_at",
                 "workspace_id",
@@ -14888,12 +14970,25 @@
                       "description": "The inherit project value.",
                       "type": "boolean"
                     },
+                    "intake_id": {
+                      "description": "The intake id value.",
+                      "nullable": true,
+                      "type": "integer"
+                    },
                     "is_task": {
                       "description": "Whether the item is a personal task. True is valid only in the authenticated caller's personal workspace and only with the Open or Done system status.",
                       "type": "boolean"
                     },
                     "item_type_builtin_key": {
                       "description": "The item type builtin key value.",
+                      "type": "string"
+                    },
+                    "item_type_color": {
+                      "description": "The item type color value.",
+                      "type": "string"
+                    },
+                    "item_type_icon": {
+                      "description": "The item type icon value.",
                       "type": "string"
                     },
                     "item_type_id": {
@@ -15396,6 +15491,10 @@
                       },
                       "type": "array"
                     },
+                    "portal_org_shared": {
+                      "description": "The portal org shared value.",
+                      "type": "boolean"
+                    },
                     "priority_builtin_key": {
                       "description": "The priority builtin key value.",
                       "type": "string"
@@ -15577,6 +15676,7 @@
                     "inherit_project",
                     "is_task",
                     "last_active_at",
+                    "portal_org_shared",
                     "title",
                     "updated_at",
                     "workspace_id",
@@ -15959,12 +16059,25 @@
                       "description": "The inherit project value.",
                       "type": "boolean"
                     },
+                    "intake_id": {
+                      "description": "The intake id value.",
+                      "nullable": true,
+                      "type": "integer"
+                    },
                     "is_task": {
                       "description": "Whether the item is a personal task. True is valid only in the authenticated caller's personal workspace and only with the Open or Done system status.",
                       "type": "boolean"
                     },
                     "item_type_builtin_key": {
                       "description": "The item type builtin key value.",
+                      "type": "string"
+                    },
+                    "item_type_color": {
+                      "description": "The item type color value.",
+                      "type": "string"
+                    },
+                    "item_type_icon": {
+                      "description": "The item type icon value.",
                       "type": "string"
                     },
                     "item_type_id": {
@@ -16467,6 +16580,10 @@
                       },
                       "type": "array"
                     },
+                    "portal_org_shared": {
+                      "description": "The portal org shared value.",
+                      "type": "boolean"
+                    },
                     "priority_builtin_key": {
                       "description": "The priority builtin key value.",
                       "type": "string"
@@ -16648,6 +16765,7 @@
                     "inherit_project",
                     "is_task",
                     "last_active_at",
+                    "portal_org_shared",
                     "title",
                     "updated_at",
                     "workspace_id",
@@ -17087,12 +17205,25 @@
                     "description": "The inherit project value.",
                     "type": "boolean"
                   },
+                  "intake_id": {
+                    "description": "The intake id value.",
+                    "nullable": true,
+                    "type": "integer"
+                  },
                   "is_task": {
                     "description": "Whether the item is a personal task. True is valid only in the authenticated caller's personal workspace and only with the Open or Done system status.",
                     "type": "boolean"
                   },
                   "item_type_builtin_key": {
                     "description": "The item type builtin key value.",
+                    "type": "string"
+                  },
+                  "item_type_color": {
+                    "description": "The item type color value.",
+                    "type": "string"
+                  },
+                  "item_type_icon": {
+                    "description": "The item type icon value.",
                     "type": "string"
                   },
                   "item_type_id": {
@@ -17595,6 +17726,10 @@
                     },
                     "type": "array"
                   },
+                  "portal_org_shared": {
+                    "description": "The portal org shared value.",
+                    "type": "boolean"
+                  },
                   "priority_builtin_key": {
                     "description": "The priority builtin key value.",
                     "type": "string"
@@ -17776,6 +17911,7 @@
                   "inherit_project",
                   "is_task",
                   "last_active_at",
+                  "portal_org_shared",
                   "title",
                   "updated_at",
                   "workspace_id",
@@ -20230,12 +20366,25 @@
                   "description": "The inherit project value.",
                   "type": "boolean"
                 },
+                "intake_id": {
+                  "description": "The intake id value.",
+                  "nullable": true,
+                  "type": "integer"
+                },
                 "is_task": {
                   "description": "Whether the item is a personal task. True is valid only in the authenticated caller's personal workspace and only with the Open or Done system status.",
                   "type": "boolean"
                 },
                 "item_type_builtin_key": {
                   "description": "The item type builtin key value.",
+                  "type": "string"
+                },
+                "item_type_color": {
+                  "description": "The item type color value.",
+                  "type": "string"
+                },
+                "item_type_icon": {
+                  "description": "The item type icon value.",
                   "type": "string"
                 },
                 "item_type_id": {
@@ -20738,6 +20887,10 @@
                   },
                   "type": "array"
                 },
+                "portal_org_shared": {
+                  "description": "The portal org shared value.",
+                  "type": "boolean"
+                },
                 "priority_builtin_key": {
                   "description": "The priority builtin key value.",
                   "type": "string"
@@ -20919,6 +21072,7 @@
                 "inherit_project",
                 "is_task",
                 "last_active_at",
+                "portal_org_shared",
                 "title",
                 "updated_at",
                 "workspace_id",
@@ -21469,12 +21623,25 @@
                 "description": "The inherit project value.",
                 "type": "boolean"
               },
+              "intake_id": {
+                "description": "The intake id value.",
+                "nullable": true,
+                "type": "integer"
+              },
               "is_task": {
                 "description": "Whether the item is a personal task. True is valid only in the authenticated caller's personal workspace and only with the Open or Done system status.",
                 "type": "boolean"
               },
               "item_type_builtin_key": {
                 "description": "The item type builtin key value.",
+                "type": "string"
+              },
+              "item_type_color": {
+                "description": "The item type color value.",
+                "type": "string"
+              },
+              "item_type_icon": {
+                "description": "The item type icon value.",
                 "type": "string"
               },
               "item_type_id": {
@@ -21977,6 +22144,10 @@
                 },
                 "type": "array"
               },
+              "portal_org_shared": {
+                "description": "The portal org shared value.",
+                "type": "boolean"
+              },
               "priority_builtin_key": {
                 "description": "The priority builtin key value.",
                 "type": "string"
@@ -22158,6 +22329,7 @@
               "inherit_project",
               "is_task",
               "last_active_at",
+              "portal_org_shared",
               "title",
               "updated_at",
               "workspace_id",
@@ -23200,12 +23372,25 @@
                   "description": "The inherit project value.",
                   "type": "boolean"
                 },
+                "intake_id": {
+                  "description": "The intake id value.",
+                  "nullable": true,
+                  "type": "integer"
+                },
                 "is_task": {
                   "description": "Whether the item is a personal task. True is valid only in the authenticated caller's personal workspace and only with the Open or Done system status.",
                   "type": "boolean"
                 },
                 "item_type_builtin_key": {
                   "description": "The item type builtin key value.",
+                  "type": "string"
+                },
+                "item_type_color": {
+                  "description": "The item type color value.",
+                  "type": "string"
+                },
+                "item_type_icon": {
+                  "description": "The item type icon value.",
                   "type": "string"
                 },
                 "item_type_id": {
@@ -23708,6 +23893,10 @@
                   },
                   "type": "array"
                 },
+                "portal_org_shared": {
+                  "description": "The portal org shared value.",
+                  "type": "boolean"
+                },
                 "priority_builtin_key": {
                   "description": "The priority builtin key value.",
                   "type": "string"
@@ -23889,6 +24078,7 @@
                 "inherit_project",
                 "is_task",
                 "last_active_at",
+                "portal_org_shared",
                 "title",
                 "updated_at",
                 "workspace_id",
@@ -24252,12 +24442,25 @@
                   "description": "The inherit project value.",
                   "type": "boolean"
                 },
+                "intake_id": {
+                  "description": "The intake id value.",
+                  "nullable": true,
+                  "type": "integer"
+                },
                 "is_task": {
                   "description": "Whether the item is a personal task. True is valid only in the authenticated caller's personal workspace and only with the Open or Done system status.",
                   "type": "boolean"
                 },
                 "item_type_builtin_key": {
                   "description": "The item type builtin key value.",
+                  "type": "string"
+                },
+                "item_type_color": {
+                  "description": "The item type color value.",
+                  "type": "string"
+                },
+                "item_type_icon": {
+                  "description": "The item type icon value.",
                   "type": "string"
                 },
                 "item_type_id": {
@@ -24760,6 +24963,10 @@
                   },
                   "type": "array"
                 },
+                "portal_org_shared": {
+                  "description": "The portal org shared value.",
+                  "type": "boolean"
+                },
                 "priority_builtin_key": {
                   "description": "The priority builtin key value.",
                   "type": "string"
@@ -24941,6 +25148,7 @@
                 "inherit_project",
                 "is_task",
                 "last_active_at",
+                "portal_org_shared",
                 "title",
                 "updated_at",
                 "workspace_id",
@@ -41860,12 +42068,25 @@
                   "description": "The inherit project value.",
                   "type": "boolean"
                 },
+                "intake_id": {
+                  "description": "The intake id value.",
+                  "nullable": true,
+                  "type": "integer"
+                },
                 "is_task": {
                   "description": "Whether the item is a personal task. True is valid only in the authenticated caller's personal workspace and only with the Open or Done system status.",
                   "type": "boolean"
                 },
                 "item_type_builtin_key": {
                   "description": "The item type builtin key value.",
+                  "type": "string"
+                },
+                "item_type_color": {
+                  "description": "The item type color value.",
+                  "type": "string"
+                },
+                "item_type_icon": {
+                  "description": "The item type icon value.",
                   "type": "string"
                 },
                 "item_type_id": {
@@ -42368,6 +42589,10 @@
                   },
                   "type": "array"
                 },
+                "portal_org_shared": {
+                  "description": "The portal org shared value.",
+                  "type": "boolean"
+                },
                 "priority_builtin_key": {
                   "description": "The priority builtin key value.",
                   "type": "string"
@@ -42549,6 +42774,7 @@
                 "inherit_project",
                 "is_task",
                 "last_active_at",
+                "portal_org_shared",
                 "title",
                 "updated_at",
                 "workspace_id",
@@ -44449,12 +44675,25 @@
                       "description": "The inherit project value.",
                       "type": "boolean"
                     },
+                    "intake_id": {
+                      "description": "The intake id value.",
+                      "nullable": true,
+                      "type": "integer"
+                    },
                     "is_task": {
                       "description": "Whether the item is a personal task. True is valid only in the authenticated caller's personal workspace and only with the Open or Done system status.",
                       "type": "boolean"
                     },
                     "item_type_builtin_key": {
                       "description": "The item type builtin key value.",
+                      "type": "string"
+                    },
+                    "item_type_color": {
+                      "description": "The item type color value.",
+                      "type": "string"
+                    },
+                    "item_type_icon": {
+                      "description": "The item type icon value.",
                       "type": "string"
                     },
                     "item_type_id": {
@@ -44957,6 +45196,10 @@
                       },
                       "type": "array"
                     },
+                    "portal_org_shared": {
+                      "description": "The portal org shared value.",
+                      "type": "boolean"
+                    },
                     "priority_builtin_key": {
                       "description": "The priority builtin key value.",
                       "type": "string"
@@ -45138,6 +45381,7 @@
                     "inherit_project",
                     "is_task",
                     "last_active_at",
+                    "portal_org_shared",
                     "title",
                     "updated_at",
                     "workspace_id",
@@ -45520,12 +45764,25 @@
                       "description": "The inherit project value.",
                       "type": "boolean"
                     },
+                    "intake_id": {
+                      "description": "The intake id value.",
+                      "nullable": true,
+                      "type": "integer"
+                    },
                     "is_task": {
                       "description": "Whether the item is a personal task. True is valid only in the authenticated caller's personal workspace and only with the Open or Done system status.",
                       "type": "boolean"
                     },
                     "item_type_builtin_key": {
                       "description": "The item type builtin key value.",
+                      "type": "string"
+                    },
+                    "item_type_color": {
+                      "description": "The item type color value.",
+                      "type": "string"
+                    },
+                    "item_type_icon": {
+                      "description": "The item type icon value.",
                       "type": "string"
                     },
                     "item_type_id": {
@@ -46028,6 +46285,10 @@
                       },
                       "type": "array"
                     },
+                    "portal_org_shared": {
+                      "description": "The portal org shared value.",
+                      "type": "boolean"
+                    },
                     "priority_builtin_key": {
                       "description": "The priority builtin key value.",
                       "type": "string"
@@ -46209,6 +46470,7 @@
                     "inherit_project",
                     "is_task",
                     "last_active_at",
+                    "portal_org_shared",
                     "title",
                     "updated_at",
                     "workspace_id",
@@ -46648,12 +46910,25 @@
                     "description": "The inherit project value.",
                     "type": "boolean"
                   },
+                  "intake_id": {
+                    "description": "The intake id value.",
+                    "nullable": true,
+                    "type": "integer"
+                  },
                   "is_task": {
                     "description": "Whether the item is a personal task. True is valid only in the authenticated caller's personal workspace and only with the Open or Done system status.",
                     "type": "boolean"
                   },
                   "item_type_builtin_key": {
                     "description": "The item type builtin key value.",
+                    "type": "string"
+                  },
+                  "item_type_color": {
+                    "description": "The item type color value.",
+                    "type": "string"
+                  },
+                  "item_type_icon": {
+                    "description": "The item type icon value.",
                     "type": "string"
                   },
                   "item_type_id": {
@@ -47156,6 +47431,10 @@
                     },
                     "type": "array"
                   },
+                  "portal_org_shared": {
+                    "description": "The portal org shared value.",
+                    "type": "boolean"
+                  },
                   "priority_builtin_key": {
                     "description": "The priority builtin key value.",
                     "type": "string"
@@ -47337,6 +47616,7 @@
                   "inherit_project",
                   "is_task",
                   "last_active_at",
+                  "portal_org_shared",
                   "title",
                   "updated_at",
                   "workspace_id",
@@ -48838,12 +49118,25 @@
                 "description": "The inherit project value.",
                 "type": "boolean"
               },
+              "intake_id": {
+                "description": "The intake id value.",
+                "nullable": true,
+                "type": "integer"
+              },
               "is_task": {
                 "description": "Whether the item is a personal task. True is valid only in the authenticated caller's personal workspace and only with the Open or Done system status.",
                 "type": "boolean"
               },
               "item_type_builtin_key": {
                 "description": "The item type builtin key value.",
+                "type": "string"
+              },
+              "item_type_color": {
+                "description": "The item type color value.",
+                "type": "string"
+              },
+              "item_type_icon": {
+                "description": "The item type icon value.",
                 "type": "string"
               },
               "item_type_id": {
@@ -49346,6 +49639,10 @@
                 },
                 "type": "array"
               },
+              "portal_org_shared": {
+                "description": "The portal org shared value.",
+                "type": "boolean"
+              },
               "priority_builtin_key": {
                 "description": "The priority builtin key value.",
                 "type": "string"
@@ -49527,6 +49824,7 @@
               "inherit_project",
               "is_task",
               "last_active_at",
+              "portal_org_shared",
               "title",
               "updated_at",
               "workspace_id",
@@ -54207,12 +54505,25 @@
                 "description": "The inherit project value.",
                 "type": "boolean"
               },
+              "intake_id": {
+                "description": "The intake id value.",
+                "nullable": true,
+                "type": "integer"
+              },
               "is_task": {
                 "description": "Whether the item is a personal task. True is valid only in the authenticated caller's personal workspace and only with the Open or Done system status.",
                 "type": "boolean"
               },
               "item_type_builtin_key": {
                 "description": "The item type builtin key value.",
+                "type": "string"
+              },
+              "item_type_color": {
+                "description": "The item type color value.",
+                "type": "string"
+              },
+              "item_type_icon": {
+                "description": "The item type icon value.",
                 "type": "string"
               },
               "item_type_id": {
@@ -54715,6 +55026,10 @@
                 },
                 "type": "array"
               },
+              "portal_org_shared": {
+                "description": "The portal org shared value.",
+                "type": "boolean"
+              },
               "priority_builtin_key": {
                 "description": "The priority builtin key value.",
                 "type": "string"
@@ -54896,6 +55211,7 @@
               "inherit_project",
               "is_task",
               "last_active_at",
+              "portal_org_shared",
               "title",
               "updated_at",
               "workspace_id",
@@ -55438,12 +55754,25 @@
                 "description": "The inherit project value.",
                 "type": "boolean"
               },
+              "intake_id": {
+                "description": "The intake id value.",
+                "nullable": true,
+                "type": "integer"
+              },
               "is_task": {
                 "description": "Whether the item is a personal task. True is valid only in the authenticated caller's personal workspace and only with the Open or Done system status.",
                 "type": "boolean"
               },
               "item_type_builtin_key": {
                 "description": "The item type builtin key value.",
+                "type": "string"
+              },
+              "item_type_color": {
+                "description": "The item type color value.",
+                "type": "string"
+              },
+              "item_type_icon": {
+                "description": "The item type icon value.",
                 "type": "string"
               },
               "item_type_id": {
@@ -55946,6 +56275,10 @@
                 },
                 "type": "array"
               },
+              "portal_org_shared": {
+                "description": "The portal org shared value.",
+                "type": "boolean"
+              },
               "priority_builtin_key": {
                 "description": "The priority builtin key value.",
                 "type": "string"
@@ -56127,6 +56460,7 @@
               "inherit_project",
               "is_task",
               "last_active_at",
+              "portal_org_shared",
               "title",
               "updated_at",
               "workspace_id",
@@ -70095,12 +70429,25 @@
                         "description": "The inherit project value.",
                         "type": "boolean"
                       },
+                      "intake_id": {
+                        "description": "The intake id value.",
+                        "nullable": true,
+                        "type": "integer"
+                      },
                       "is_task": {
                         "description": "Whether the item is a personal task. True is valid only in the authenticated caller's personal workspace and only with the Open or Done system status.",
                         "type": "boolean"
                       },
                       "item_type_builtin_key": {
                         "description": "The item type builtin key value.",
+                        "type": "string"
+                      },
+                      "item_type_color": {
+                        "description": "The item type color value.",
+                        "type": "string"
+                      },
+                      "item_type_icon": {
+                        "description": "The item type icon value.",
                         "type": "string"
                       },
                       "item_type_id": {
@@ -70603,6 +70950,10 @@
                         },
                         "type": "array"
                       },
+                      "portal_org_shared": {
+                        "description": "The portal org shared value.",
+                        "type": "boolean"
+                      },
                       "priority_builtin_key": {
                         "description": "The priority builtin key value.",
                         "type": "string"
@@ -70784,6 +71135,7 @@
                       "inherit_project",
                       "is_task",
                       "last_active_at",
+                      "portal_org_shared",
                       "title",
                       "updated_at",
                       "workspace_id",
@@ -71147,12 +71499,25 @@
                   "description": "The inherit project value.",
                   "type": "boolean"
                 },
+                "intake_id": {
+                  "description": "The intake id value.",
+                  "nullable": true,
+                  "type": "integer"
+                },
                 "is_task": {
                   "description": "Whether the item is a personal task. True is valid only in the authenticated caller's personal workspace and only with the Open or Done system status.",
                   "type": "boolean"
                 },
                 "item_type_builtin_key": {
                   "description": "The item type builtin key value.",
+                  "type": "string"
+                },
+                "item_type_color": {
+                  "description": "The item type color value.",
+                  "type": "string"
+                },
+                "item_type_icon": {
+                  "description": "The item type icon value.",
                   "type": "string"
                 },
                 "item_type_id": {
@@ -71655,6 +72020,10 @@
                   },
                   "type": "array"
                 },
+                "portal_org_shared": {
+                  "description": "The portal org shared value.",
+                  "type": "boolean"
+                },
                 "priority_builtin_key": {
                   "description": "The priority builtin key value.",
                   "type": "string"
@@ -71836,6 +72205,7 @@
                 "inherit_project",
                 "is_task",
                 "last_active_at",
+                "portal_org_shared",
                 "title",
                 "updated_at",
                 "workspace_id",
@@ -72213,12 +72583,25 @@
                       "description": "The inherit project value.",
                       "type": "boolean"
                     },
+                    "intake_id": {
+                      "description": "The intake id value.",
+                      "nullable": true,
+                      "type": "integer"
+                    },
                     "is_task": {
                       "description": "Whether the item is a personal task. True is valid only in the authenticated caller's personal workspace and only with the Open or Done system status.",
                       "type": "boolean"
                     },
                     "item_type_builtin_key": {
                       "description": "The item type builtin key value.",
+                      "type": "string"
+                    },
+                    "item_type_color": {
+                      "description": "The item type color value.",
+                      "type": "string"
+                    },
+                    "item_type_icon": {
+                      "description": "The item type icon value.",
                       "type": "string"
                     },
                     "item_type_id": {
@@ -72721,6 +73104,10 @@
                       },
                       "type": "array"
                     },
+                    "portal_org_shared": {
+                      "description": "The portal org shared value.",
+                      "type": "boolean"
+                    },
                     "priority_builtin_key": {
                       "description": "The priority builtin key value.",
                       "type": "string"
@@ -72902,6 +73289,7 @@
                     "inherit_project",
                     "is_task",
                     "last_active_at",
+                    "portal_org_shared",
                     "title",
                     "updated_at",
                     "workspace_id",
@@ -73291,12 +73679,25 @@
                       "description": "The inherit project value.",
                       "type": "boolean"
                     },
+                    "intake_id": {
+                      "description": "The intake id value.",
+                      "nullable": true,
+                      "type": "integer"
+                    },
                     "is_task": {
                       "description": "Whether the item is a personal task. True is valid only in the authenticated caller's personal workspace and only with the Open or Done system status.",
                       "type": "boolean"
                     },
                     "item_type_builtin_key": {
                       "description": "The item type builtin key value.",
+                      "type": "string"
+                    },
+                    "item_type_color": {
+                      "description": "The item type color value.",
+                      "type": "string"
+                    },
+                    "item_type_icon": {
+                      "description": "The item type icon value.",
                       "type": "string"
                     },
                     "item_type_id": {
@@ -73799,6 +74200,10 @@
                       },
                       "type": "array"
                     },
+                    "portal_org_shared": {
+                      "description": "The portal org shared value.",
+                      "type": "boolean"
+                    },
                     "priority_builtin_key": {
                       "description": "The priority builtin key value.",
                       "type": "string"
@@ -73980,6 +74385,7 @@
                     "inherit_project",
                     "is_task",
                     "last_active_at",
+                    "portal_org_shared",
                     "title",
                     "updated_at",
                     "workspace_id",
@@ -74080,6 +74486,10 @@
                 "description": "The id value.",
                 "type": "integer"
               },
+              "is_internal": {
+                "description": "The is internal value.",
+                "type": "boolean"
+              },
               "item_id": {
                 "description": "The item id value.",
                 "nullable": true,
@@ -74122,6 +74532,7 @@
               "filename",
               "has_thumbnail",
               "id",
+              "is_internal",
               "mime_type",
               "original_filename"
             ],
@@ -74470,12 +74881,25 @@
                 "description": "The inherit project value.",
                 "type": "boolean"
               },
+              "intake_id": {
+                "description": "The intake id value.",
+                "nullable": true,
+                "type": "integer"
+              },
               "is_task": {
                 "description": "Whether the item is a personal task. True is valid only in the authenticated caller's personal workspace and only with the Open or Done system status.",
                 "type": "boolean"
               },
               "item_type_builtin_key": {
                 "description": "The item type builtin key value.",
+                "type": "string"
+              },
+              "item_type_color": {
+                "description": "The item type color value.",
+                "type": "string"
+              },
+              "item_type_icon": {
+                "description": "The item type icon value.",
                 "type": "string"
               },
               "item_type_id": {
@@ -74978,6 +75402,10 @@
                 },
                 "type": "array"
               },
+              "portal_org_shared": {
+                "description": "The portal org shared value.",
+                "type": "boolean"
+              },
               "priority_builtin_key": {
                 "description": "The priority builtin key value.",
                 "type": "string"
@@ -75159,6 +75587,7 @@
               "inherit_project",
               "is_task",
               "last_active_at",
+              "portal_org_shared",
               "title",
               "updated_at",
               "workspace_id",
@@ -75597,12 +76026,25 @@
                 "description": "The inherit project value.",
                 "type": "boolean"
               },
+              "intake_id": {
+                "description": "The intake id value.",
+                "nullable": true,
+                "type": "integer"
+              },
               "is_task": {
                 "description": "Whether the item is a personal task. True is valid only in the authenticated caller's personal workspace and only with the Open or Done system status.",
                 "type": "boolean"
               },
               "item_type_builtin_key": {
                 "description": "The item type builtin key value.",
+                "type": "string"
+              },
+              "item_type_color": {
+                "description": "The item type color value.",
+                "type": "string"
+              },
+              "item_type_icon": {
+                "description": "The item type icon value.",
                 "type": "string"
               },
               "item_type_id": {
@@ -76105,6 +76547,10 @@
                 },
                 "type": "array"
               },
+              "portal_org_shared": {
+                "description": "The portal org shared value.",
+                "type": "boolean"
+              },
               "priority_builtin_key": {
                 "description": "The priority builtin key value.",
                 "type": "string"
@@ -76286,6 +76732,7 @@
               "inherit_project",
               "is_task",
               "last_active_at",
+              "portal_org_shared",
               "title",
               "updated_at",
               "workspace_id",
@@ -77152,12 +77599,25 @@
                     "description": "The inherit project value.",
                     "type": "boolean"
                   },
+                  "intake_id": {
+                    "description": "The intake id value.",
+                    "nullable": true,
+                    "type": "integer"
+                  },
                   "is_task": {
                     "description": "Whether the item is a personal task. True is valid only in the authenticated caller's personal workspace and only with the Open or Done system status.",
                     "type": "boolean"
                   },
                   "item_type_builtin_key": {
                     "description": "The item type builtin key value.",
+                    "type": "string"
+                  },
+                  "item_type_color": {
+                    "description": "The item type color value.",
+                    "type": "string"
+                  },
+                  "item_type_icon": {
+                    "description": "The item type icon value.",
                     "type": "string"
                   },
                   "item_type_id": {
@@ -77660,6 +78120,10 @@
                     },
                     "type": "array"
                   },
+                  "portal_org_shared": {
+                    "description": "The portal org shared value.",
+                    "type": "boolean"
+                  },
                   "priority_builtin_key": {
                     "description": "The priority builtin key value.",
                     "type": "string"
@@ -77841,6 +78305,7 @@
                   "inherit_project",
                   "is_task",
                   "last_active_at",
+                  "portal_org_shared",
                   "title",
                   "updated_at",
                   "workspace_id",
@@ -78863,12 +79328,25 @@
                     "description": "The inherit project value.",
                     "type": "boolean"
                   },
+                  "intake_id": {
+                    "description": "The intake id value.",
+                    "nullable": true,
+                    "type": "integer"
+                  },
                   "is_task": {
                     "description": "Whether the item is a personal task. True is valid only in the authenticated caller's personal workspace and only with the Open or Done system status.",
                     "type": "boolean"
                   },
                   "item_type_builtin_key": {
                     "description": "The item type builtin key value.",
+                    "type": "string"
+                  },
+                  "item_type_color": {
+                    "description": "The item type color value.",
+                    "type": "string"
+                  },
+                  "item_type_icon": {
+                    "description": "The item type icon value.",
                     "type": "string"
                   },
                   "item_type_id": {
@@ -79371,6 +79849,10 @@
                     },
                     "type": "array"
                   },
+                  "portal_org_shared": {
+                    "description": "The portal org shared value.",
+                    "type": "boolean"
+                  },
                   "priority_builtin_key": {
                     "description": "The priority builtin key value.",
                     "type": "string"
@@ -79552,6 +80034,7 @@
                   "inherit_project",
                   "is_task",
                   "last_active_at",
+                  "portal_org_shared",
                   "title",
                   "updated_at",
                   "workspace_id",
@@ -80039,12 +80522,25 @@
                 "description": "The inherit project value.",
                 "type": "boolean"
               },
+              "intake_id": {
+                "description": "The intake id value.",
+                "nullable": true,
+                "type": "integer"
+              },
               "is_task": {
                 "description": "Whether the item is a personal task. True is valid only in the authenticated caller's personal workspace and only with the Open or Done system status.",
                 "type": "boolean"
               },
               "item_type_builtin_key": {
                 "description": "The item type builtin key value.",
+                "type": "string"
+              },
+              "item_type_color": {
+                "description": "The item type color value.",
+                "type": "string"
+              },
+              "item_type_icon": {
+                "description": "The item type icon value.",
                 "type": "string"
               },
               "item_type_id": {
@@ -80547,6 +81043,10 @@
                 },
                 "type": "array"
               },
+              "portal_org_shared": {
+                "description": "The portal org shared value.",
+                "type": "boolean"
+              },
               "priority_builtin_key": {
                 "description": "The priority builtin key value.",
                 "type": "string"
@@ -80728,6 +81228,7 @@
               "inherit_project",
               "is_task",
               "last_active_at",
+              "portal_org_shared",
               "title",
               "updated_at",
               "workspace_id",
@@ -81159,12 +81660,25 @@
                       "description": "The inherit project value.",
                       "type": "boolean"
                     },
+                    "intake_id": {
+                      "description": "The intake id value.",
+                      "nullable": true,
+                      "type": "integer"
+                    },
                     "is_task": {
                       "description": "Whether the item is a personal task. True is valid only in the authenticated caller's personal workspace and only with the Open or Done system status.",
                       "type": "boolean"
                     },
                     "item_type_builtin_key": {
                       "description": "The item type builtin key value.",
+                      "type": "string"
+                    },
+                    "item_type_color": {
+                      "description": "The item type color value.",
+                      "type": "string"
+                    },
+                    "item_type_icon": {
+                      "description": "The item type icon value.",
                       "type": "string"
                     },
                     "item_type_id": {
@@ -81667,6 +82181,10 @@
                       },
                       "type": "array"
                     },
+                    "portal_org_shared": {
+                      "description": "The portal org shared value.",
+                      "type": "boolean"
+                    },
                     "priority_builtin_key": {
                       "description": "The priority builtin key value.",
                       "type": "string"
@@ -81848,6 +82366,7 @@
                     "inherit_project",
                     "is_task",
                     "last_active_at",
+                    "portal_org_shared",
                     "title",
                     "updated_at",
                     "workspace_id",
@@ -89503,6 +90022,10 @@
                 "description": "The id value.",
                 "type": "integer"
               },
+              "is_internal": {
+                "description": "The is internal value.",
+                "type": "boolean"
+              },
               "item_id": {
                 "description": "The item id value.",
                 "nullable": true,
@@ -89545,6 +90068,7 @@
               "filename",
               "has_thumbnail",
               "id",
+              "is_internal",
               "mime_type",
               "original_filename"
             ],
