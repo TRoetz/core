@@ -144,6 +144,18 @@ export function getBriefingFailures(opts = {}) {
 }
 
 /**
+ * Daily-briefing generation state: feature resolution, the last scheduler tick,
+ * per-user coverage, and the latest briefing row per user. Complements
+ * getBriefingFailures, which only sees rows that recorded an error.
+ * @param {Object} opts
+ * @param {string} [opts.since='24h']
+ * @param {number} [opts.limit=100]
+ */
+export function getBriefingHealth(opts = {}) {
+  return fetchAPI(diagnosticsQuery('briefing-health', opts));
+}
+
+/**
  * Per-pool runner health: live/stale/revoked runners vs queued/running runs.
  * healthy=false means queued work with no live runner to claim it.
  *
