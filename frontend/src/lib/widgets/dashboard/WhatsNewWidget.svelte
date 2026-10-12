@@ -1,8 +1,9 @@
 <script>
-  import { Bell, Eye, Inbox } from '@lucide/svelte';
+  import { Inbox } from '@lucide/svelte';
   import { homepageStore, workspacesStore } from '../../stores';
   import { notifications, notificationActions } from '../../stores/notifications.js';
   import { navigate } from '../../router.js';
+  import DashboardItemRow from './DashboardItemRow.svelte';
   import { t } from '../../stores/i18n.svelte.js';
 
   const MAX_ENTRIES_PER_WORKSPACE = 5;
@@ -31,14 +32,13 @@
       if (!m) continue;
       entries.push({
         id: `n-${n.id}`,
+        kind: 'notification',
         notificationId: n.id,
         workspaceId: parseInt(m[1], 10),
         timestamp: n.timestamp,
-        source: 'notification',
         title: n.message || n.title || t('notifications.notification'),
-        subtitle: null,
-        link: actionUrl,
         read: n.read,
+        link: actionUrl,
       });
     }
 
@@ -46,13 +46,11 @@
       if (!w.last_activity) continue;
       entries.push({
         id: `w-${w.item_id}`,
+        kind: 'item',
         workspaceId: w.workspace_id,
         timestamp: w.last_activity,
-        source: 'watched',
-        title: w.title,
-        subtitle: w.status,
+        item: w,
         link: `/workspaces/${w.workspace_id}/items/${w.item_id}`,
-        read: true,
       });
     }
 
@@ -82,10 +80,15 @@
   });
 
   function open(entry) {
-    if (entry?.source === 'notification' && !entry.read) {
+    if (entry?.kind === 'notification' && !entry.read) {
       notificationActions.markAsRead(entry.notificationId);
     }
     if (entry?.link) navigate(entry.link);
+  }
+
+  function itemKey(item) {
+    if (item.workspace_key == null || item.workspace_item_number == null) return null;
+    return `${item.workspace_key}-${item.workspace_item_number}`;
   }
 </script>
 
@@ -113,43 +116,29 @@
         <ul class="flex flex-col gap-1.5">
           {#each g.entries as e (e.id)}
             <li>
-              <button
-                data-testid="whats-new-entry"
-                data-entry-id={e.id}
-                data-read={e.read}
-                class="whats-new-entry w-full text-left p-2 flex items-start gap-2 rounded border transition-colors"
-                style="border-color: var(--ds-border); color: var(--ds-text);"
-                onclick={() => open(e)}
-              >
-                {#if e.source === 'watched'}
-                  <Eye
-                    class="w-4 h-4 mt-0.5 flex-shrink-0"
-                    style="color: var(--ds-text-subtlest);"
-                  />
-                {:else}
-                  <Bell
-                    class="w-4 h-4 mt-0.5 flex-shrink-0"
-                    style={e.read
-                      ? 'color: var(--ds-text-subtlest);'
-                      : 'color: var(--ds-icon-accent-blue);'}
-                  />
-                {/if}
-                <div class="min-w-0 flex-1">
-                  <p
-                    class="text-sm truncate"
-                    style={e.read ? 'color: var(--ds-text-subtle);' : 'color: var(--ds-text); font-weight: 500;'}
-                  >
-                    {e.title}
-                  </p>
-                  <p
-                    class="text-[0.7rem] mt-0.5 flex items-center gap-1.5"
-                    style="color: var(--ds-text-subtle);"
-                  >
-                    {#if e.subtitle}<span class="truncate">{e.subtitle}</span><span>·</span>{/if}
-                    <span>{homepageStore.formatRelativeTime(e.timestamp)}</span>
-                  </p>
-                </div>
-              </button>
+              {#if e.kind === 'item'}
+                <DashboardItemRow
+                  title={e.item.title}
+                  itemKey={itemKey(e.item)}
+                  statusName={e.item.status}
+                  statusBuiltinKey={e.item.status_builtin_key}
+                  statusColor={e.item.status_color}
+                  priorityName={e.item.priority_name}
+                  priorityBuiltinKey={e.item.priority_builtin_key}
+                  priorityColor={e.item.priority_color}
+                  timestamp={homepageStore.formatRelativeTime(e.timestamp)}
+                  dataTestid="whats-new-entry"
+                  onclick={() => open(e)}
+                />
+              {:else}
+                <DashboardItemRow
+                  title={e.title}
+                  timestamp={homepageStore.formatRelativeTime(e.timestamp)}
+                  unread={!e.read}
+                  dataTestid="whats-new-entry"
+                  onclick={() => open(e)}
+                />
+              {/if}
             </li>
           {/each}
         </ul>
@@ -157,13 +146,3 @@
     {/each}
   </div>
 {/if}
-
-<style>
-  .whats-new-entry {
-    background-color: var(--ds-surface);
-  }
-
-  .whats-new-entry:hover {
-    background-color: var(--ds-background-neutral-hovered);
-  }
-</style>

@@ -5,7 +5,8 @@
 
   let {
     title,
-    itemKey,
+    itemKey = null,
+    unread = false,
     statusName = null,
     statusBuiltinKey = null,
     statusColor = null,
@@ -15,6 +16,7 @@
     dueDate = null,
     timestamp = null,
     density = 'comfortable',
+    dataTestid = 'dashboard-item-row',
     onclick,
   } = $props();
 
@@ -26,8 +28,8 @@
 </script>
 
 <button
-  data-testid="dashboard-item-row"
-  data-item-key={itemKey}
+  data-testid={dataTestid}
+  data-item-key={itemKey ?? undefined}
   data-density={density}
   class="dashboard-item-row w-full flex items-center justify-between gap-3 {rowPadding} rounded border text-left transition-colors"
   style="border-color: var(--ds-border);"
@@ -42,11 +44,17 @@
         aria-label={t('dashboard.states.priorityLabel', { priority: localizedPriorityName })}
       ></span>
     {/if}
-    <span class="text-sm truncate" style="color: var(--ds-text);">{title}</span>
+    <span
+      class="text-sm truncate"
+      style={unread ? 'color: var(--ds-text); font-weight: 500;' : 'color: var(--ds-text);'}
+      >{title}</span
+    >
   </div>
 
   <div class="dashboard-item-meta flex items-center gap-2 flex-shrink-0 text-[0.7rem]" style="color: var(--ds-text-subtle);">
-    <span class="dashboard-item-key font-mono" data-testid="dashboard-item-key">{itemKey}</span>
+    {#if itemKey}
+      <span class="dashboard-item-key font-mono" data-testid="dashboard-item-key">{itemKey}</span>
+    {/if}
     {#if hasStatus}
       <span
         class="dashboard-item-status inline-flex items-center rounded px-1.5 py-[1px] font-medium"
