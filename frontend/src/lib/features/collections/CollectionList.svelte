@@ -3,7 +3,8 @@
   import { t } from '../../stores/i18n.svelte.js';
   import { errorToast } from '../../stores/toasts.svelte.js';
   import { navigate } from '../../router.js';
-  import { applyCollectionItem, collectionStore, reloadCollection } from '../../stores/collectionContext.js';
+  import { applyCollectionItem, collectionStore, refreshCollectionDeltas, reloadCollection } from '../../stores/collectionContext.js';
+  import { useCollectionEventStream } from '../../composables/useCollectionEventStream.svelte.js';
   import { createDeleteItemHandler, createItemActionsBuilder } from '../../utils/workItemTableHelpers.js';
   import {
     getListColumnLabel,
@@ -118,6 +119,14 @@
       : Number(item.workspace_id) === Number(workspaceId);
     if (belongsToView) applyCollectionItem(item);
   });
+
+  // Scoped SSE invalidations (WI-1624): any frame runs the existing delta fetch,
+  // and a reconnect reconciles. Without this the list kept showing items that
+  // were deleted from the item detail modal, unlike the board views.
+  useCollectionEventStream(
+    () => (collectionId ? { kind: 'collection', id: collectionId } : { kind: 'workspace', id: workspaceId }),
+    { onInvalidate: () => refreshCollectionDeltas() }
+  );
 
   // Sync collection name + clear local loading from the central store.
   $effect(() => {

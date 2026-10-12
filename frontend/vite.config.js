@@ -47,6 +47,16 @@ export default defineConfig({
       : []),
   ],
   optimizeDeps: {
+    // Pre-bundle the lazy editor stack instead of excluding it. Vite serves
+    // every dependency of an *excluded* package from source, and the Milkdown
+    // tree is not pure ESM: in dev micromark resolves its `development` export,
+    // which imports the CJS `debug` package, and unified imports CJS `extend`.
+    // Served from source those expose no default export, so the editor's dynamic
+    // import fails with "does not provide an export named 'default'".
+    // Pre-bundling also collapses ~1000 individual module requests into a
+    // handful of chunks, so the comment/page editor appears in under a second
+    // instead of waiting on an on-demand transform storm.
+    //
     // React + jsx-runtime are force-included so the dev optimizer emits all
     // exports (Fragment, jsx, jsxs) — needed by Excalidraw's auto-JSX output.
     // Excalidraw and its mermaid bridge are pre-bundled rather than excluded:
@@ -63,6 +73,11 @@ export default defineConfig({
       'react/jsx-dev-runtime',
       '@excalidraw/excalidraw',
       '@excalidraw/mermaid-to-excalidraw',
+      'debug',
+      'extend',
+      '@milkdown/kit',
+      '@milkdown/utils',
+      '@milkdown/theme-nord',
     ],
     // exclude deps that are only loaded via dynamic import() behind a
     // runtime guard (isTauri, route-level lazy loads). Pre-bundling them
@@ -72,13 +87,6 @@ export default defineConfig({
     // ~30 s in our codebase. Excluded deps are loaded on demand from
     // their original location.
     exclude: [
-      // Milkdown is pure ESM and only loads behind the knowledge-page editor.
-      // It never changes, so pre-bundling it only adds cold-start cost and
-      // re-bundle cost on every optimizer invalidation — serve it from source
-      // and let the browser cache the individual modules instead.
-      '@milkdown/kit',
-      '@milkdown/utils',
-      '@milkdown/theme-nord',
       '@tauri-apps/api',
       '@tauri-apps/api/path',
       '@tauri-apps/plugin-dialog',
