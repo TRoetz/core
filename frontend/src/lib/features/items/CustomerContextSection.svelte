@@ -89,7 +89,7 @@
         <div class="flex items-start gap-2" data-testid="customer-context-requester">
           <User class="w-4 h-4 mt-0.5 flex-shrink-0" style="color: var(--ds-text-subtle);" />
           <div class="min-w-0">
-            <Text variant="subtle" size="xs" weight="semibold" class="uppercase tracking-wider">
+            <Text variant="subtle" size="xs" weight="medium">
               {t('items.customerContextRequester')}
             </Text>
             <div class="text-sm truncate" style="color: var(--ds-text);">
@@ -107,7 +107,7 @@
           <div class="flex items-start gap-2" data-testid="customer-context-organisation">
             <Building2 class="w-4 h-4 mt-0.5 flex-shrink-0" style="color: var(--ds-text-subtle);" />
             <div class="min-w-0">
-              <Text variant="subtle" size="xs" weight="semibold" class="uppercase tracking-wider">
+              <Text variant="subtle" size="xs" weight="medium">
                 {t('items.customerContextOrganisation')}
               </Text>
               <div class="text-sm truncate" style="color: var(--ds-text);">
@@ -119,7 +119,7 @@
 
         {#if organisationId}
           <div data-testid="customer-context-org-tickets">
-            <Text variant="subtle" size="xs" weight="semibold" class="uppercase tracking-wider">
+            <Text variant="subtle" size="xs" weight="medium">
               {t('items.customerContextOrgTickets')}
             </Text>
             {#if organisationTickets.length === 0}
@@ -159,7 +159,7 @@
         <div class="flex items-start gap-2" data-testid="customer-context-assets">
           <Package class="w-4 h-4 mt-0.5 flex-shrink-0" style="color: var(--ds-text-subtle);" />
           <div class="min-w-0 flex-1">
-            <Text variant="subtle" size="xs" weight="semibold" class="uppercase tracking-wider">
+            <Text variant="subtle" size="xs" weight="medium">
               {t('items.customerContextAssets')}
             </Text>
             {#if assets.length === 0}
