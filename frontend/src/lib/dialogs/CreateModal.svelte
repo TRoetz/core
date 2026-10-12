@@ -290,12 +290,25 @@
         }
         close();
       } else if (selectedType === 'milestone') {
+        // Scope the milestone to the opening context when the user may write
+        // there; otherwise fall back to a global milestone, which the
+        // milestone.create permission gating this option already authorizes.
+        const workspaceId = initialWorkspaceId
+          ? Number.parseInt(String(initialWorkspaceId), 10)
+          : null;
+        const canWriteWorkspace =
+          workspaceId != null &&
+          Number.isFinite(workspaceId) &&
+          (workspacePermissions.canAdminWorkspace(workspaceId) ||
+            workspacePermissions.hasPermission(workspaceId, 'item.edit'));
         await milestonesStore.add({
           name: milestoneFormData.name,
           description: milestoneFormData.description,
           target_date: milestoneFormData.target_date || null,
           status: milestoneFormData.status,
-          category_id: null
+          category_id: null,
+          is_global: !canWriteWorkspace,
+          workspace_id: canWriteWorkspace ? workspaceId : null
         });
 
         navigate('/milestones');
