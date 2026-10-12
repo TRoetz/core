@@ -410,10 +410,11 @@ func (h *JiraImportHandler) enqueueJiraImport(
 			return err
 		}
 		if err := jobs.Insert(repository.JiraImportJobInsert{
-			ID:           jobID,
-			ConnectionID: req.ConnectionID,
-			ConfigJSON:   string(configJSON),
-			CreatedBy:    userID,
+			ID:             jobID,
+			ConnectionID:   req.ConnectionID,
+			ConfigJSON:     string(configJSON),
+			CreatedBy:      userID,
+			LeaseExpiresAt: time.Now().UTC().Add(jiraimport.JiraImportLeaseDuration).Unix(),
 		}); err != nil {
 			return err
 		}
