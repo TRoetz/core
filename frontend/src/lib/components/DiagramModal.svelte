@@ -2,6 +2,7 @@
   import ExcalidrawEditor from './ExcalidrawEditor.svelte';
   import Button from './Button.svelte';
   import Input from './Input.svelte';
+  import { convertMermaidToExcalidraw } from '../editors/mermaidConversion.js';
   import { api } from '../api.js';
   import { themeStore } from '../stores/theme.svelte.js';
   import { t } from '../stores/i18n.svelte.js';
@@ -45,13 +46,9 @@
 
   async function seedFromMermaid(source) {
     try {
-      const [{ parseMermaidToExcalidraw }, { convertToExcalidrawElements }] = await Promise.all([
-        import('@excalidraw/mermaid-to-excalidraw'),
-        import('@excalidraw/excalidraw'),
-      ]);
-      const { elements: skeletons, files } = await parseMermaidToExcalidraw(source);
+      const { elements, files } = await convertMermaidToExcalidraw(source);
       initialData = {
-        elements: convertToExcalidrawElements(skeletons),
+        elements,
         appState: {},
         files: files || {},
         scrollToContent: true,
