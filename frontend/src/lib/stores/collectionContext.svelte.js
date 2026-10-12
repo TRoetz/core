@@ -605,6 +605,39 @@ class CollectionStore {
     }
   }
 
+  // The backlog API clamps page_size to 100, so a single request cannot return
+  // an accumulated backlog larger than that. Fetch the pages needed to cover
+  // the loaded range and merge them.
+  async #fetchCompleteBacklog(wsId, colId, limit, subQL, collection, loadId) {
+    const first = await fetchCollectionBacklog(wsId, colId, {
+      page: 1,
+      limit,
+      sub_ql: subQL,
+      collection,
+    });
+    const totalPages = first.pagination?.total_pages ?? 1;
+    const pages = [first];
+    let loadedCount = first.items.length;
+    for (let page = 2; loadedCount < limit && page <= totalPages; page++) {
+      if (loadId !== this.#loadId) return first;
+      const result = await fetchCollectionBacklog(wsId, colId, {
+        page,
+        limit,
+        sub_ql: subQL,
+        collection,
+      });
+      pages.push(result);
+      if (result.items.length === 0) break;
+      loadedCount += result.items.length;
+    }
+    return {
+      ...first,
+      items: pages.flatMap((result) => result.items),
+      pagination: pages.at(-1).pagination,
+      watermark: snapshotWatermark(...pages),
+    };
+  }
+
   async #fetchCompleteMainItems(wsId, colId, limit, boardPartition, collection, loadId, isBoard) {
     const first = await this.#fetchMainItems(
       wsId,
@@ -948,12 +981,14 @@ class CollectionStore {
             )
           : Promise.resolve(null),
         loadsBacklog(this.#currentView)
-          ? fetchCollectionBacklog(this.#wsId, this.#colId, {
-              page: 1,
-              limit: backlogLimit,
-              sub_ql: this.effectiveSubFilterQL || undefined,
+          ? this.#fetchCompleteBacklog(
+              this.#wsId,
+              this.#colId,
+              backlogLimit,
+              this.effectiveSubFilterQL || undefined,
               collection,
-            })
+              loadId
+            )
           : Promise.resolve(null),
         loadsItems(this.#currentView)
           ? this.#fetchBoardDeferredItems(
