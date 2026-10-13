@@ -971,7 +971,9 @@ func (p *Processor) preclaimTracking(
 		email.MessageID,
 		dedupKey,
 		nullString(email.InReplyTo),
-		email.From.Address,
+		// Store the sender normalized so every consumer (erasure, export,
+		// thread participation) can match it consistently.
+		normalizedEmail(email.From.Address),
 		nullString(email.From.Name),
 		nullString(email.Subject),
 		int64(email.UID),
