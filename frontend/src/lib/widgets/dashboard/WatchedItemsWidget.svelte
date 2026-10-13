@@ -1,7 +1,7 @@
 <script>
   import { Eye } from '@lucide/svelte';
   import { homepageStore } from '../../stores';
-  import { navigate } from '../../router.js';
+  import { itemModalStore } from '../../stores/itemModalStore.svelte.js';
   import DashboardItemRow from './DashboardItemRow.svelte';
   import { t } from '../../stores/i18n.svelte.js';
 
@@ -9,7 +9,7 @@
   let loading = $derived(homepageStore.loading);
 
   function open(item) {
-    navigate(`/workspaces/${item.workspace_id}/items/${item.item_id}`);
+    itemModalStore.open(item.item_id, item.workspace_id);
   }
 </script>
 
@@ -31,6 +31,7 @@
         <DashboardItemRow
           title={item.title}
           itemKey={`${item.workspace_key}-${item.workspace_item_number}`}
+          href={`/workspaces/${item.workspace_id}/items/${item.item_id}`}
           statusName={item.status}
           statusBuiltinKey={item.status_builtin_key}
           statusColor={item.status_color}

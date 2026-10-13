@@ -5,6 +5,8 @@
   import { formatRelativeCompact } from '../utils/dateFormatter.js';
   import WidgetState from './WidgetState.svelte';
   import ItemKey from '../components/ItemKey.svelte';
+  import Link from '../components/Link.svelte';
+  import { itemModalStore } from '../stores/itemModalStore.svelte.js';
   import { t } from '../stores/i18n.svelte.js';
 
   let { workspaceId = null, collectionFilter = null, maxItems = 10 } = $props();
@@ -118,9 +120,13 @@
   {#snippet children()}
     <div class="flex flex-col rounded-xl border recent-items-list" style="border-color: var(--ds-border);" data-testid="recent-items-widget">
       {#each items as item (item.item_id)}
-        <a
+        <Link
           class="flex items-center gap-3 px-4 py-3 transition recent-item-row"
           href={`/workspaces/${item.workspace_id}/items/${item.item_id}`}
+          onClick={(event) => {
+            event.preventDefault();
+            itemModalStore.open(item.item_id, item.workspace_id);
+          }}
         >
           <div class="flex-shrink-0">
             <div class="rounded-full bg-ds-accent-blue-subtle text-ds-accent-blue p-2">
@@ -136,7 +142,7 @@
           <div class="text-xs" style="color: var(--ds-text-subtlest);">
             {formatRelativeCompact(item.lastActivityDate)}
           </div>
-        </a>
+        </Link>
       {/each}
     </div>
   {/snippet}
@@ -146,7 +152,7 @@
   .recent-items-list > :not(:last-child) {
     border-bottom: 1px solid var(--ds-border);
   }
-  .recent-item-row:hover {
+  :global(.recent-item-row):hover {
     background-color: var(--ds-background-neutral-hovered);
   }
 </style>

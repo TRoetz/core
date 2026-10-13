@@ -4,7 +4,7 @@
   import { workspacesStore } from '../../stores/workspaces.svelte.js';
   import BasePicker from '../../pickers/BasePicker.svelte';
   import { t } from '../../stores/i18n.svelte.js';
-  import { navigate } from '../../router.js';
+  import { itemModalStore } from '../../stores/itemModalStore.svelte.js';
   import DashboardItemRow from './DashboardItemRow.svelte';
   import {
     resolveDensity,
@@ -160,7 +160,7 @@
   }
 
   function openItem(item) {
-    navigate(`/workspaces/${item.workspace_id}/items/${item.id}`);
+    itemModalStore.open(item.id, item.workspace_id);
   }
 </script>
 
@@ -288,6 +288,7 @@
           <DashboardItemRow
             title={item.title}
             itemKey={getItemKey(item)}
+            href={`/workspaces/${item.workspace_id}/items/${item.id}`}
             statusName={item.status_name}
             statusBuiltinKey={item.status_builtin_key}
             statusColor={item.status_color}

@@ -1,4 +1,4 @@
-import { navigate } from '../../router.js';
+import { itemModalStore } from '../../stores/itemModalStore.svelte.js';
 
 /**
  * Default window for completed items in dashboard task lists: items that
@@ -119,5 +119,5 @@ export function normalizeTaskResponse(response, maxItems = 6) {
 }
 
 export function openTask(task) {
-  navigate(`/workspaces/${task.workspace_id}/items/${task.id}`);
+  itemModalStore.open(task.id, task.workspace_id);
 }

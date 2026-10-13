@@ -1,11 +1,13 @@
 <script>
   import DueMark from './DueMark.svelte';
+  import Link from '../../components/Link.svelte';
   import { t } from '../../stores/i18n.svelte.js';
   import { objectDisplayName } from '../../utils/systemLabels.js';
 
   let {
     title,
     itemKey = null,
+    href = null,
     unread = false,
     statusName = null,
     statusBuiltinKey = null,
@@ -25,16 +27,19 @@
   const localizedPriorityName = $derived(objectDisplayName({ name: priorityName, builtin_key: priorityBuiltinKey }, 'priority'));
   const localizedStatusName = $derived(objectDisplayName({ name: statusName, builtin_key: statusBuiltinKey }, 'status'));
   const rowPadding = $derived(density === 'compact' ? 'p-1.5' : 'p-2');
+  const rowClass = $derived(
+    `dashboard-item-row w-full flex items-center justify-between gap-3 ${rowPadding} rounded border text-left transition-colors`
+  );
+
+  // Link only invokes onClick for an unmodified left click, so this is the
+  // one place that must suppress the anchor's own navigation.
+  function handleActivate(event) {
+    event?.preventDefault?.();
+    onclick?.(event);
+  }
 </script>
 
-<button
-  data-testid={dataTestid}
-  data-item-key={itemKey ?? undefined}
-  data-density={density}
-  class="dashboard-item-row w-full flex items-center justify-between gap-3 {rowPadding} rounded border text-left transition-colors"
-  style="border-color: var(--ds-border);"
-  {onclick}
->
+{#snippet rowContent()}
   <div class="flex items-center gap-1.5 min-w-0 flex-1">
     {#if hasPriority}
       <span
@@ -70,14 +75,42 @@
     {/if}
     <DueMark {dueDate} />
   </div>
-</button>
+{/snippet}
+
+{#if href}
+  <!-- A real href keeps cmd/ctrl/shift/middle-click opening a new tab; Link
+       only diverts an unmodified left click to the onclick handler. -->
+  <Link
+    {href}
+    onClick={handleActivate}
+    data-testid={dataTestid}
+    data-item-key={itemKey ?? undefined}
+    data-density={density}
+    class={rowClass}
+    style="border-color: var(--ds-border);"
+  >
+    {@render rowContent()}
+  </Link>
+{:else}
+  <button
+    data-testid={dataTestid}
+    data-item-key={itemKey ?? undefined}
+    data-density={density}
+    class={rowClass}
+    style="border-color: var(--ds-border);"
+    onclick={handleActivate}
+  >
+    {@render rowContent()}
+  </button>
+{/if}
 
 <style>
-  .dashboard-item-row {
+  /* The row root is rendered by the Link component, so scope it globally. */
+  :global(.dashboard-item-row) {
     background-color: var(--ds-surface);
   }
 
-  .dashboard-item-row:hover {
+  :global(.dashboard-item-row):hover {
     background-color: var(--ds-background-neutral-hovered);
   }
 

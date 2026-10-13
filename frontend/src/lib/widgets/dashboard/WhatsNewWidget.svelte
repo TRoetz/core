@@ -2,6 +2,8 @@
   import { Inbox } from '@lucide/svelte';
   import { homepageStore, workspacesStore } from '../../stores';
   import { notifications, notificationActions } from '../../stores/notifications.js';
+  import { itemModalStore } from '../../stores/itemModalStore.svelte.js';
+  import { itemIdFromActionUrl } from '../../utils/actionUrl.js';
   import { navigate } from '../../router.js';
   import DashboardItemRow from './DashboardItemRow.svelte';
   import { t } from '../../stores/i18n.svelte.js';
@@ -36,6 +38,7 @@
         id: `n-${n.id}`,
         kind: 'notification',
         notificationId: n.id,
+        itemId: itemIdFromActionUrl(actionUrl),
         workspaceId: parseInt(m[1], 10),
         timestamp: n.timestamp,
         title: n.message || n.title || t('notifications.notification'),
@@ -49,6 +52,7 @@
       entries.push({
         id: `w-${w.item_id}`,
         kind: 'item',
+        itemId: w.item_id,
         workspaceId: w.workspace_id,
         timestamp: w.last_active_at,
         item: w,
@@ -84,6 +88,10 @@
   function open(entry) {
     if (entry?.kind === 'notification' && !entry.read) {
       notificationActions.markAsRead(entry.notificationId);
+    }
+    if (entry?.itemId != null) {
+      itemModalStore.open(Number(entry.itemId), entry.workspaceId);
+      return;
     }
     if (entry?.link) navigate(entry.link);
   }
@@ -122,6 +130,7 @@
                 <DashboardItemRow
                   title={e.item.title}
                   itemKey={itemKey(e.item)}
+                  href={`/workspaces/${e.item.workspace_id}/items/${e.item.item_id}`}
                   statusName={e.item.status}
                   statusBuiltinKey={e.item.status_builtin_key}
                   statusColor={e.item.status_color}
@@ -135,6 +144,7 @@
               {:else}
                 <DashboardItemRow
                   title={e.title}
+                  href={e.link}
                   timestamp={homepageStore.formatRelativeTime(e.timestamp)}
                   unread={!e.read}
                   dataTestid="whats-new-entry"

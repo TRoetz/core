@@ -5,6 +5,8 @@
   import DueMark from './dashboard/DueMark.svelte';
   import WidgetState from './WidgetState.svelte';
   import ItemKey from '../components/ItemKey.svelte';
+  import Link from '../components/Link.svelte';
+  import { itemModalStore } from '../stores/itemModalStore.svelte.js';
   import { t } from '../stores/i18n.svelte.js';
 
   let { workspaceId = null, collectionFilter = null, maxItems = 8 } = $props();
@@ -101,9 +103,13 @@
   {#snippet children()}
     <div class="flex flex-col gap-2">
       {#each tasks as task}
-        <a
+        <Link
           class="task-card flex items-center justify-between gap-4 rounded-xl border px-4 py-3"
           href={`/workspaces/${task.workspace_id}/items/${task.id}`}
+          onClick={(event) => {
+            event.preventDefault();
+            itemModalStore.open(task.id, task.workspace_id);
+          }}
         >
           <div class="min-w-0 flex-1">
             <p class="truncate text-sm" style="color: var(--ds-text);">{task.title}</p>
@@ -123,20 +129,20 @@
               </span>
             {/if}
           </div>
-        </a>
+        </Link>
       {/each}
     </div>
   {/snippet}
 </WidgetState>
 
 <style>
-  .task-card {
+  :global(.task-card) {
     box-shadow: var(--ds-shadow-raised);
     border-color: transparent;
     transition: background-color 140ms ease-in-out, box-shadow 140ms ease-in-out;
   }
 
-  .task-card:hover {
+  :global(.task-card):hover {
     background-color: var(--ds-surface-raised-hovered) !important;
   }
 </style>

@@ -1,7 +1,7 @@
 <script>
   import { Clock, Edit, MessageSquare, Eye } from '@lucide/svelte';
   import { homepageStore } from '../../stores';
-  import { navigate } from '../../router.js';
+  import { itemModalStore } from '../../stores/itemModalStore.svelte.js';
   import DashboardItemRow from './DashboardItemRow.svelte';
   import { t } from '../../stores/i18n.svelte.js';
 
@@ -21,7 +21,7 @@
   ];
 
   function open(item) {
-    navigate(`/workspaces/${item.workspace_id}/items/${item.item_id}`);
+    itemModalStore.open(item.item_id, item.workspace_id);
   }
 
   function itemKey(item) {
@@ -66,6 +66,7 @@
           <DashboardItemRow
             title={item.title}
             itemKey={itemKey(item)}
+            href={`/workspaces/${item.workspace_id}/items/${item.item_id}`}
             statusName={item.status}
             statusBuiltinKey={item.status_builtin_key}
             statusColor={item.status_color}
