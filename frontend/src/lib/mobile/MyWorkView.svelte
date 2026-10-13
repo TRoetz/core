@@ -56,7 +56,7 @@
         statusColor: w.status_color,
         priorityName: w.priority_name,
         priorityColor: w.priority_color,
-        timestamp: w.last_activity ? formatRelativeCompact(new Date(w.last_activity)) : null,
+        timestamp: w.last_active_at ? formatRelativeCompact(new Date(w.last_active_at)) : null,
       }));
   }
 

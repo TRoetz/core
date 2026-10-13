@@ -37,7 +37,9 @@
           priorityName={item.priority_name}
           priorityBuiltinKey={item.priority_builtin_key}
           priorityColor={item.priority_color}
-          timestamp={item.last_activity ? homepageStore.formatRelativeTime(item.last_activity) : null}
+          timestamp={item.last_active_at
+            ? homepageStore.formatRelativeTime(item.last_active_at)
+            : null}
           onclick={() => open(item)}
         />
       </li>

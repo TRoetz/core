@@ -8,14 +8,16 @@
 
   const MAX_ENTRIES_PER_WORKSPACE = 5;
   const MAX_WORKSPACES = 5;
+  // What's New is a feed of recent issue updates, so only surface entries
+  // from the last two weeks regardless of read state.
+  const RECENT_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
 
-  let recentNotifications = $derived.by(() => {
-    const dayAgo = Date.now() - 24 * 60 * 60 * 1000;
-    return $notifications.filter((notification) => {
-      if (!notification.read) return true;
-      return new Date(notification.timestamp).getTime() >= dayAgo;
-    });
-  });
+  function isRecent(timestamp) {
+    const ts = new Date(timestamp).getTime();
+    return Number.isFinite(ts) && ts >= Date.now() - RECENT_WINDOW_MS;
+  }
+
+  let recentNotifications = $derived($notifications.filter((n) => isRecent(n.timestamp)));
   let watchedItems = $derived(homepageStore.watchedItems);
   let loading = $derived(homepageStore.loading);
 
@@ -43,12 +45,12 @@
     }
 
     for (const w of watchedItems) {
-      if (!w.last_activity) continue;
+      if (!w.last_active_at || !isRecent(w.last_active_at)) continue;
       entries.push({
         id: `w-${w.item_id}`,
         kind: 'item',
         workspaceId: w.workspace_id,
-        timestamp: w.last_activity,
+        timestamp: w.last_active_at,
         item: w,
         link: `/workspaces/${w.workspace_id}/items/${w.item_id}`,
       });
