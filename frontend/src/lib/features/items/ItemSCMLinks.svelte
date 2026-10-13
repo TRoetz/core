@@ -240,7 +240,7 @@
     <div class="flex items-center gap-1">
       {#if connectionStatus?.connected}
         <button
-          class="p-1 rounded transition-colors opacity-0 group-hover:opacity-100"
+          class="p-1 rounded transition-colors opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 pointer-coarse:opacity-100"
           class:invisible={!expanded}
           onclick={e => { e.stopPropagation(); openCreateBranchModal(); }}
           title={t('scm.createBranch')}
@@ -248,7 +248,7 @@
           <GitBranchPlus class="w-4 h-4" style="color: var(--ds-text-subtle);" />
         </button>
         <button
-          class="p-1 rounded transition-colors opacity-0 group-hover:opacity-100"
+          class="p-1 rounded transition-colors opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 pointer-coarse:opacity-100"
           class:invisible={!expanded}
           onclick={e => { e.stopPropagation(); openAddLinkModal(); }}
           title={t('scm.linkExisting')}
@@ -409,7 +409,7 @@
     </div>
 
     <!-- Actions -->
-    <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+    <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 pointer-coarse:opacity-100 transition-opacity">
       {#if link.link_type === 'branch'}
         <button
           class="p-1 rounded hover:bg-opacity-50"

@@ -270,7 +270,7 @@ import EmptyState from '../components/EmptyState.svelte';
     {#if isEditing}
       <button
         onclick={() => onRemove(report.id)}
-        class="p-2 rounded transition-opacity opacity-0 group-hover:opacity-100"
+        class="p-2 rounded transition-opacity opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 pointer-coarse:opacity-100"
         style="background-color: var(--ds-danger-subtle); color: var(--ds-text-danger);"
         title={t('portal.removeFromSection')}
       >

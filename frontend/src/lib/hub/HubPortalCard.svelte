@@ -107,7 +107,7 @@
       </span>
 
       {#if !hubStore.isEditing}
-        <span class="text-xs flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity" style="color: var(--ds-text-subtle);">
+        <span class="text-xs flex items-center gap-1 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 pointer-coarse:opacity-100 transition-opacity" style="color: var(--ds-text-subtle);">
           {t('common.open', 'Open')}
           <ExternalLink class="w-3 h-3" />
         </span>

@@ -802,7 +802,7 @@
               <button
                 onclick={() => startEditingField(field)}
                 data-testid={`request-type-field-edit-${field.field_identifier}`}
-                class="p-1.5 rounded transition-all opacity-0 group-hover:opacity-100"
+                class="p-1.5 rounded transition-all opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 pointer-coarse:opacity-100"
                 style="color: var(--ds-text-subtle);"
                 title={t('layout.editDisplaySettings')}
               >
@@ -810,7 +810,7 @@
               </button>
               <button
                 onclick={() => removeField(field)}
-                class="p-1.5 rounded transition-all opacity-0 group-hover:opacity-100"
+                class="p-1.5 rounded transition-all opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 pointer-coarse:opacity-100"
                 style="color: var(--ds-status-error);"
                 title={t('requestTypeFields.removeField')}
               >

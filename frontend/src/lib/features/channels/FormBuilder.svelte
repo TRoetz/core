@@ -804,7 +804,7 @@
                 size="small"
                 icon={IconTrash}
                 title={t('forms.deleteForm')}
-                class="opacity-0 group-hover:opacity-100 !text-[var(--ds-text-danger)]"
+                class="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 pointer-coarse:opacity-100 !text-[var(--ds-text-danger)]"
               />
             </div>
           {/each}

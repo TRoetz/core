@@ -575,7 +575,7 @@
 								{/if}
 							</div>
 							{#if comment.source !== 'approval' && authStore.currentUser && (comment.author_id === authStore.currentUser.id || canEditOthersComments) && editingCommentId !== comment.id}
-								<div class="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+								<div class="flex items-center space-x-1 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 pointer-coarse:opacity-100 transition-opacity" data-testid="comment-actions">
 									<button
 										onclick={() => startEdit(comment)}
 										data-testid="comment-edit"

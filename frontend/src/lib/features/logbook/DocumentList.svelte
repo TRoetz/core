@@ -304,7 +304,7 @@
             {/if}
 
             <!-- Hover action buttons -->
-            <div class="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div class="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 pointer-coarse:opacity-100 transition-opacity">
               {#if doc.source_type === 'upload'}
                 <button
                   onclick={(e) => openFile(e, doc.id)}

@@ -1137,7 +1137,7 @@
                         <!-- Remove button -->
                         <button
                           onclick={() => removeStatusFromColumn(colIndex, statusId)}
-                          class="remove-btn opacity-0 group-hover:opacity-100 p-0.5 rounded transition-all flex-shrink-0"
+                          class="remove-btn opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 pointer-coarse:opacity-100 p-0.5 rounded transition-all flex-shrink-0"
                           title={t('common.remove')}
                         >
                           <X class="w-3.5 h-3.5" />

@@ -406,7 +406,7 @@
               {/if}
 
               <!-- Open in new tab button -->
-              <div class="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div class="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 pointer-coarse:opacity-100 transition-opacity">
                 <button
                   onclick={(e) => { e.stopPropagation(); window.open(logbook.getDocumentFileUrl(doc.id), '_blank'); }}
                   class="p-1.5 rounded-lg shadow-sm border transition-colors hover:bg-opacity-90"

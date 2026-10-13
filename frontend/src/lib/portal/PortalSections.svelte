@@ -296,7 +296,7 @@
                             }
                           }
                         }}
-                        class="absolute top-2 right-2 p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                        class="absolute top-2 right-2 p-1 rounded opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 pointer-coarse:opacity-100 transition-opacity cursor-pointer"
                         style="background-color: var(--ds-danger-subtle); color: var(--ds-text-danger);"
                         title={t('portal.removeFromSection')}
                       >

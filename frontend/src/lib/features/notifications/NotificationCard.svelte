@@ -103,7 +103,7 @@
         <!-- Dismiss button (shows on hover) -->
         <button
           onclick={handleDismiss}
-          class="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded dismiss-btn"
+          class="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 pointer-coarse:opacity-100 transition-opacity p-1 rounded dismiss-btn"
           title={t('notifications.dismiss')}
           tabindex="-1"
         >

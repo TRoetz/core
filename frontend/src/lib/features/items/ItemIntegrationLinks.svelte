@@ -143,7 +143,7 @@
     <div class="flex items-center gap-1">
       {#if hasConnection}
         <button
-          class="p-1 rounded transition-colors opacity-0 group-hover:opacity-100"
+          class="p-1 rounded transition-colors opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 pointer-coarse:opacity-100"
           class:invisible={!expanded}
           onclick={e => { e.stopPropagation(); onaddlink?.(); }}
           title={t('integrations.linkPage')}
@@ -217,7 +217,7 @@
               </div>
             </div>
 
-            <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 pointer-coarse:opacity-100 transition-opacity">
               <button
                 class="p-1 rounded hover:bg-[var(--ds-background-neutral-hovered)]"
                 onclick={() => refreshLink(link.id)}

@@ -192,7 +192,7 @@
           {/if}
           {#if !readonly && !disabled}
             <button
-              class="opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+              class="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 pointer-coarse:opacity-100 transition-opacity cursor-pointer"
               onclick={() => removeLink(link.id)}
               title="Remove link"
             >

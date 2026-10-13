@@ -316,7 +316,7 @@
                   {:else if sortKey === column.field_identifier && sortDirection === 'desc'}
                     <ArrowDown class="w-3.5 h-3.5" style="color: var(--ds-text-subtle);" />
                   {:else}
-                    <ArrowUpDown class="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" style="color: var(--ds-text-subtlest);" />
+                    <ArrowUpDown class="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 pointer-coarse:opacity-100 transition-opacity" style="color: var(--ds-text-subtlest);" />
                   {/if}
                 </button>
               {:else}

@@ -371,7 +371,7 @@
                 </button>
 
                 <!-- Actions -->
-                <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 pointer-coarse:opacity-100 transition-opacity">
                   <button
                     class="p-0.5 rounded action-btn"
                     onclick={() => handleNavigateToTask(task)}
