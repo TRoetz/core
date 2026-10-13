@@ -298,7 +298,7 @@ func (m *ConnectionManager) ConnectionRuntime(ctx context.Context, connectionID 
 	if providerConfig.Valid {
 		cfg.ProviderConfig = providerConfig.String
 	}
-	cfg.Protocol = ResolveGenerationProtocol(ProviderType(cfg.ProviderType), cfg.BaseURL, cfg.ProviderConfig)
+	cfg.Protocol = ResolveGenerationProtocolForModel(ProviderType(cfg.ProviderType), cfg.Model, cfg.BaseURL, cfg.ProviderConfig)
 	cfg.VisionMode = ProviderConfigVisionMode(cfg.ProviderConfig)
 	cfg.SupportsVision = EffectiveVision(cfg.VisionMode, m.resolveModelVision(ProviderType(cfg.ProviderType), cfg.Model))
 	resolvedContext, resolvedOutput := m.resolveModelLimits(ProviderType(cfg.ProviderType), cfg.Model)
@@ -703,7 +703,9 @@ func (m *ConnectionManager) TestConnection(id int) error {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	return client.Health(ctx)
+	// A connection test is its own conversation, not a continuation of any user
+	// session, so it gets a dedicated id for the provider's session header.
+	return client.Health(WithSessionID(ctx, NewSessionID("ws-connection-test")))
 }
 
 // PromptConnection runs a one-shot chat completion against an enabled
@@ -735,6 +737,10 @@ func (m *ConnectionManager) PromptConnection(ctx context.Context, connectionID i
 		slog.Int("prompt_chars", len(prompt)),
 	)
 	log.Info("llm test prompt: sending to provider")
+
+	// Isolate the probe from real conversations so provider-side routing and
+	// caching never attribute a test to a user's session.
+	ctx = WithSessionID(ctx, NewSessionID("ws-connection-test"))
 
 	start := time.Now()
 	resp, err := rc.client.Complete(ctx, CompletionRequest{

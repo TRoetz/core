@@ -498,6 +498,12 @@
       options={providers.map(p => ({ value: p.type, label: p.name }))}
       onchange={() => { form.model = ''; form.base_url = ''; }}
     />
+    {#if selectedProvider?.usage_note}
+      <div data-testid="llm-provider-usage-note" class="mt-2 flex items-start gap-2 rounded-md border p-2 text-xs" style="border-color: var(--ds-border); background: var(--ds-surface-sunken); color: var(--ds-text-subtle);">
+        <AlertTriangle size={14} class="mt-0.5 flex-shrink-0" />
+        <span>{selectedProvider.usage_note}</span>
+      </div>
+    {/if}
   </div>
 
   <!-- Base URL (only for local/custom) -->

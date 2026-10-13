@@ -830,6 +830,9 @@ func (h *AIHandler) Chat(w http.ResponseWriter, r *http.Request) {
 	extendWriteDeadline(w)
 	ctx, cancel := context.WithTimeout(r.Context(), llm.DefaultRequestTimeout)
 	defer cancel()
+	// A chat session is the provider-visible conversation: its id stays stable
+	// across turns so routing and prompt caching survive the whole conversation.
+	ctx = llm.WithSessionID(ctx, fmt.Sprintf("ws-chat-%d", session.ID))
 	actingTimezone, err := services.LookupUserTimezone(h.db, mode.actingUserID)
 	if err != nil {
 		_ = runRepo.Finalize(r.Context(), begun.RunID, models.AgentRunStatusFailed,

@@ -82,6 +82,13 @@ func RunAgent(ctx context.Context, client Client, cfg AgentConfig, userMessage s
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
+	// One agent run is one conversation: every iteration and tool round-trip
+	// must reuse the same provider session id. Callers that already attached a
+	// longer-lived conversation id (a chat session) keep it.
+	if SessionIDFromContext(ctx) == "" {
+		ctx = WithSessionID(ctx, NewSessionID("ws-agent"))
+	}
+
 	messages := []Message{
 		{Role: "system", Content: cfg.SystemPrompt},
 	}
