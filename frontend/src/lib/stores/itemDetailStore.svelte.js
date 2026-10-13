@@ -40,6 +40,12 @@ function hasSharedWorkspaceReferences(workspaceId) {
   );
 }
 
+function filterMilestonesByWorkspace(milestones = [], workspace) {
+  const allowedCategoryIds = workspace?.milestone_categories;
+  if (!allowedCategoryIds?.length) return milestones;
+  return milestones.filter((milestone) => allowedCategoryIds.includes(milestone.category_id));
+}
+
 function childItemListsMatch(current = [], next = []) {
   if (current === next) return true;
   if (!Array.isArray(current) || !Array.isArray(next) || current.length !== next.length) {
@@ -325,25 +331,40 @@ class ItemDetailStore {
       if (token !== this.#loadToken) return LOAD_SUPERSEDED;
       const useSharedReferences = hasSharedWorkspaceReferences(wsId);
 
-      this.workspace = useSharedReferences
-        ? workspaceDataStore.workspace
-        : await api.workspaces.get(wsId, requestOptions);
-      this.customFieldDefinitions = useSharedReferences
-        ? workspaceDataStore.customFieldDefinitions
-        : [];
-
-      // Filter milestones by workspace restrictions
-      const allMilestones = useSharedReferences ? workspaceDataStore.milestones : [];
-      if (this.workspace?.milestone_categories?.length > 0) {
-        const allowedCategoryIds = this.workspace.milestone_categories;
-        this.milestones = allMilestones.filter((m) => allowedCategoryIds.includes(m.category_id));
+      if (useSharedReferences) {
+        this.workspace = workspaceDataStore.workspace;
+        this.customFieldDefinitions = workspaceDataStore.customFieldDefinitions;
+        this.milestones = filterMilestonesByWorkspace(
+          workspaceDataStore.milestones,
+          this.workspace
+        );
+        this.iterations = workspaceDataStore.iterations;
+        this.timeProjects = workspaceDataStore.projects;
+        this.itemTypes = workspaceDataStore.itemTypes;
       } else {
-        this.milestones = allMilestones;
-      }
+        // The shared workspace store is a single slot, so a concurrent
+        // initializeGlobal()/initialize() for another scope can replace it
+        // after the await above. Hydrate this item's workspace references
+        // directly instead of rendering against another workspace's (or the
+        // global) snapshot.
+        const [workspace, customFieldDefinitions, milestones, iterations, timeProjects, itemTypes] =
+          await Promise.all([
+            api.workspaces.get(wsId, requestOptions),
+            api.customFields.getAll({}, requestOptions),
+            api.milestones.getAll({ workspace_id: wsId, include_global: true }, requestOptions),
+            api.iterations.getAll({ workspace_id: wsId, include_global: true }, requestOptions),
+            api.time.projects.getByWorkspace(wsId, requestOptions),
+            api.itemTypes.getAll({}, requestOptions),
+          ]);
+        if (token !== this.#loadToken) return LOAD_SUPERSEDED;
 
-      this.iterations = useSharedReferences ? workspaceDataStore.iterations : [];
-      this.timeProjects = useSharedReferences ? workspaceDataStore.projects : [];
-      this.itemTypes = useSharedReferences ? workspaceDataStore.itemTypes : [];
+        this.workspace = workspace;
+        this.customFieldDefinitions = customFieldDefinitions || [];
+        this.milestones = filterMilestonesByWorkspace(milestones, workspace);
+        this.iterations = iterations || [];
+        this.timeProjects = timeProjects || [];
+        this.itemTypes = itemTypes || [];
+      }
       this.priorities = [
         ...(summary.priorities?.length
           ? summary.priorities
