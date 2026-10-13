@@ -4,6 +4,7 @@
   import { errorToast } from '../../stores/toasts.svelte.js';
   import { applyCollectionItem, collectionStore, refreshCollectionDeltas, reloadCollection } from '../../stores/collectionContext.js';
   import { useCollectionEventStream } from '../../composables/useCollectionEventStream.svelte.js';
+  import { useCollectionSearch } from '../../composables/useCollectionSearch.svelte.js';
   import { createDeleteItemHandler, createItemActionsBuilder } from '../../utils/workItemTableHelpers.js';
   import {
     getListColumnLabel,
@@ -55,7 +56,6 @@
   let loadingItems = $state(false);
   let currentCollectionName = $state('Default');
   let currentView = $state('list');
-  let searchQuery = $state('');
   let currentPage = $state(1);
   let itemsPerPage = $state(50);
   let sortKey = $state(null);
@@ -150,18 +150,12 @@
     await loadWorkItems(event.detail.page, event.detail.itemsPerPage);
   }
 
-  // Client-side search filtering on current page of items
-  let filteredItems = $derived.by(() => {
-    if (!searchQuery.trim()) return workItems;
-    const query = searchQuery.toLowerCase();
-    return workItems.filter(item => {
-      if (item.title.toLowerCase().includes(query)) return true;
-      if (item.description && item.description.toLowerCase().includes(query)) return true;
-      const itemKey = `${item.workspace_key || ''}-${item.workspace_item_number}`.toLowerCase();
-      if (itemKey.includes(query)) return true;
-      return false;
-    });
-  });
+  // Server-side search shared with the board: a query spans every page of the
+  // collection instead of filtering the loaded page (GH #328).
+  const search = useCollectionSearch(
+    () => `${workspaceId ?? ''}|${collectionId ?? ''}|${collectionStore.effectiveSubFilterQL}`
+  );
+  let filteredItems = $derived(search.items);
   let filteredItemsById = $derived(new Map(filteredItems.map((item) => [item.id, item])));
 
   // Resolve only the assignees the visible rows reference instead of waiting
@@ -261,8 +255,9 @@
         <div class="flex items-center gap-4">
           <!-- Search -->
           <SearchInput
-            bind:value={searchQuery}
+            bind:value={search.query}
             placeholder={t('common.search')}
+            dataTestid="list-search-input"
           />
           <SubFilterBar {workspaceId} />
         </div>
@@ -277,6 +272,16 @@
           />
         </div>
       </div>
+
+      {#if search.active && (search.debouncing || collectionStore.searchLoading)}
+        <p class="-mt-2 mb-4 text-sm" style="color: var(--ctx-text-subtle, var(--ds-text-subtle));" data-testid="list-search-status">
+          {t('common.searching')}
+        </p>
+      {:else if search.active && collectionStore.searchError}
+        <p class="-mt-2 mb-4 text-sm" style="color: var(--ds-text-danger);" data-testid="list-search-error">
+          {t('common.error')}
+        </p>
+      {/if}
 
       <!-- Work Items Table -->
       {#if loadingItems}
@@ -375,8 +380,30 @@
           </div>
         </div>
 
-        <!-- Pagination -->
-        {#if itemsPagination && itemsPagination.total_items > 0 && workItems.length > 0}
+        <!-- Search results page on the server, so they use load-more instead of
+             the page control that drives the unfiltered list. -->
+        {#if search.active}
+          {#if search.hasMore}
+            <div class="mt-6 text-center">
+              <button
+                data-testid="list-search-load-more"
+                onclick={() => search.loadMore()}
+                disabled={search.loadingMore}
+                class="px-4 py-2 text-sm rounded-lg border transition-colors"
+                style="border-color: var(--ctx-border, var(--ds-border)); color: var(--ds-text);"
+              >
+                {search.loadingMore ? t('common.loading') : t('common.loadMore')}
+                {#if search.remainingCount > 0}
+                  ({search.remainingCount} {t('common.remaining')})
+                {/if}
+              </button>
+            </div>
+          {:else}
+            <div class="mt-4 text-sm text-center" style="color: var(--ctx-text-subtle, var(--ds-text-subtle));" data-testid="list-search-summary">
+              {t('collections.showingWorkItems', { count: filteredItems.length })}
+            </div>
+          {/if}
+        {:else if itemsPagination && itemsPagination.total_items > 0 && workItems.length > 0}
           <div class="mt-6">
             <Pagination
               currentPage={itemsPagination.page}

@@ -1,5 +1,5 @@
 <script>
-  import { onMount } from 'svelte';
+  import { onDestroy, onMount } from 'svelte';
   import { t } from '../../stores/i18n.svelte.js';
   import { api } from '../../api.js';
   import { fetchV2Data } from '../../api/core.js';
@@ -56,8 +56,10 @@
   let bulkTeamId = $state('');
   let teams = $state([]);
 
-  // Client-side search over the loaded rows, matching the list view.
+  // Server-side search, matching the board and list views (GH #328).
   let searchQuery = $state('');
+  let searchDebouncing = $state(false);
+  let searchTimer = null;
 
   // Queue authoring dialog.
   let editorOpen = $state(false);
@@ -124,14 +126,18 @@
 
   const QUEUE_PAGE_SIZE = 100;
 
-  let filteredItems = $derived.by(() => {
-    if (!searchQuery.trim()) return items;
-    const query = searchQuery.toLowerCase();
-    return items.filter((item) => {
-      if (item.title.toLowerCase().includes(query)) return true;
-      const itemKey = `${item.workspace_key || ''}-${item.workspace_item_number}`.toLowerCase();
-      return itemKey.includes(query);
-    });
+  function handleSearchInput() {
+    if (searchTimer) clearTimeout(searchTimer);
+    searchDebouncing = true;
+    searchTimer = setTimeout(() => {
+      searchTimer = null;
+      searchDebouncing = false;
+      void loadItems();
+    }, 250);
+  }
+
+  onDestroy(() => {
+    if (searchTimer) clearTimeout(searchTimer);
   });
 
   // Built-in presets are addressed by their stable key; custom queues by id.
@@ -247,7 +253,7 @@
     activeRef = refs.includes('unassigned') ? 'unassigned' : (refs[0] ?? '');
   }
 
-  async function loadItems() {
+  async function loadItems(search = searchQuery.trim()) {
     if (!activeQueue?.ql) {
       items = [];
       return;
@@ -262,10 +268,15 @@
         page_size: String(QUEUE_PAGE_SIZE),
         sort: '-updated_at',
       });
+      if (search) query.set('search', search);
       const result = (await fetchV2Data(`/items?${query.toString()}`)) ?? [];
       if (loadId !== itemsLoadId) return;
       items = result;
-      itemsTruncated = activeQueueCount > items.length;
+      // A search result set is not the queue's full count; it is truncated when
+      // the page filled up and more matches may exist server-side.
+      itemsTruncated = search
+        ? result.length >= QUEUE_PAGE_SIZE
+        : activeQueueCount > items.length;
       selectedIds = new Set(
         [...selectedIds].filter((id) => items.some((item) => item.id === id))
       );
@@ -287,6 +298,11 @@
     if (ref === activeRef) return;
     activeRef = ref;
     selectedIds = new Set();
+    if (searchTimer) {
+      clearTimeout(searchTimer);
+      searchTimer = null;
+    }
+    searchDebouncing = false;
     searchQuery = '';
     const url = new URL(window.location.href);
     url.searchParams.set('queue', ref);
@@ -523,7 +539,7 @@
   onMount(() => {
     void loadCollection();
     void loadBoardConfiguration();
-    void loadQueues().then(loadItems);
+    void loadQueues().then(() => loadItems());
     void workspaceDataStore.initialize(workspaceId);
     api.teams
       .getAll()
@@ -551,7 +567,7 @@
       <ViewHeader
         viewName={t('supportQueue.title')}
         itemCount={activeQueueCount}
-        shownCount={loadingItems ? null : filteredItems.length}
+        shownCount={loadingItems ? null : items.length}
       />
     </div>
 
@@ -614,6 +630,8 @@
         <SearchInput
           bind:value={searchQuery}
           placeholder={t('common.search')}
+          dataTestid="support-queue-search-input"
+          on_input={handleSearchInput}
         />
         <ColumnSelector
           columns={listColumns}
@@ -623,6 +641,12 @@
           onchange={handleColumnChange}
         />
       </div>
+
+      {#if searchDebouncing}
+        <p class="-mt-2 mb-4 text-sm" style="color: var(--ctx-text-subtle, var(--ds-text-subtle));" data-testid="support-queue-search-status">
+          {t('common.searching')}
+        </p>
+      {/if}
 
     {#if selectedIds.size > 0}
       <div
@@ -690,7 +714,7 @@
         <div class="flex items-center gap-2 py-8">
           <Spinner class="w-4 h-4" />
         </div>
-      {:else if filteredItems.length === 0}
+      {:else if items.length === 0}
         <div data-testid="support-queue-empty">
           <EmptyState title={t('supportQueue.empty')} description={t('supportQueue.emptyDescription')} />
         </div>
@@ -709,7 +733,7 @@
           </TableHeaderBar>
 
           <div>
-            {#each filteredItems as item (item.id)}
+            {#each items as item (item.id)}
               <div
                 class="px-4 py-3 list-row transition-colors"
                 style="border-top: 1px solid var(--ds-border);"

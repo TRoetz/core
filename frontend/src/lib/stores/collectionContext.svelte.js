@@ -38,7 +38,7 @@ const LARGE_COLLECTION_PAGE_SIZE = 250;
 const BOARD_UNFINISHED_PAGE_SIZE = 1000;
 const BOARD_UNTHROTTLED_ITEM_COUNT = 1000;
 const BOARD_BACKGROUND_PAGE_DELAY_MS = 250;
-const BOARD_SEARCH_PAGE_SIZE = 100;
+const SEARCH_PAGE_SIZE = 100;
 
 function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -107,13 +107,14 @@ class CollectionStore {
   boardDeferred = $state(null);
   rightmostCap = $state(null);
 
-  // Board search is a separate server-scoped result set. Keeping it apart
-  // prevents a search from changing the board's normal cap or pagination.
-  boardSearchItems = $state([]);
-  boardSearchPagination = $state(null);
-  boardSearchLoading = $state(false);
-  boardSearchLoadingMore = $state(false);
-  boardSearchError = $state(false);
+  // View search is a separate server-scoped result set, shared by the board
+  // and list views. Keeping it apart prevents a search from changing the
+  // view's normal pagination or completed-item trimming.
+  searchItems = $state([]);
+  searchPagination = $state(null);
+  searchLoading = $state(false);
+  searchLoadingMore = $state(false);
+  searchError = $state(false);
 
   // Backlog pagination
   backlogPagination = $state(null);
@@ -149,7 +150,7 @@ class CollectionStore {
     } catch {
       // Keep the setting usable when browser storage is unavailable.
     }
-    this.clearBoardSearch();
+    this.clearSearch();
     if (this.#wsId || this.#colId) {
       await this.load(this.#wsId, this.#colId, this.#currentView);
     }
@@ -177,8 +178,8 @@ class CollectionStore {
   #boardConfigurationKey = null;
   #boardConfigurationPromise = null;
   #boardConfigurationLoaded = false;
-  #boardSearchId = 0;
-  #boardSearchQuery = '';
+  #searchId = 0;
+  #searchQuery = '';
 
   constructor() {
     this.#unsubscribe = currentRoute.subscribe(($route) => {
@@ -294,7 +295,7 @@ class CollectionStore {
       this.#boardConfigurationPromise = null;
       this.#boardConfigurationLoaded = false;
       this.#changesWatermark = null;
-      this.clearBoardSearch();
+      this.clearSearch();
     }
     this.#wsId = wsId;
     this.#colId = colId;
@@ -718,84 +719,84 @@ class CollectionStore {
     return mainTotal + (this.boardDeferred?.total ?? 0);
   }
 
-  get boardSearchHasMore() {
-    return calcHasMore(this.boardSearchPagination);
+  get searchHasMore() {
+    return calcHasMore(this.searchPagination);
   }
 
-  get boardSearchRemainingCount() {
-    const loaded = this.boardSearchItems.length;
-    return Math.max(0, (this.boardSearchPagination?.total_items ?? loaded) - loaded);
+  get searchRemainingCount() {
+    const loaded = this.searchItems.length;
+    return Math.max(0, (this.searchPagination?.total_items ?? loaded) - loaded);
   }
 
-  clearBoardSearch() {
-    this.#boardSearchId++;
-    this.#boardSearchQuery = '';
-    this.boardSearchItems = [];
-    this.boardSearchPagination = null;
-    this.boardSearchLoading = false;
-    this.boardSearchLoadingMore = false;
-    this.boardSearchError = false;
+  clearSearch() {
+    this.#searchId++;
+    this.#searchQuery = '';
+    this.searchItems = [];
+    this.searchPagination = null;
+    this.searchLoading = false;
+    this.searchLoadingMore = false;
+    this.searchError = false;
   }
 
-  async searchBoardItems(query) {
+  async runSearch(query) {
     const normalized = query.trim();
     if (!normalized) {
-      this.clearBoardSearch();
+      this.clearSearch();
       return;
     }
 
-    const searchId = ++this.#boardSearchId;
-    this.#boardSearchQuery = normalized;
-    this.boardSearchItems = [];
-    this.boardSearchPagination = null;
-    this.boardSearchLoading = true;
-    this.boardSearchError = false;
+    const searchId = ++this.#searchId;
+    this.#searchQuery = normalized;
+    this.searchItems = [];
+    this.searchPagination = null;
+    this.searchLoading = true;
+    this.searchError = false;
 
     try {
-      const result = await this.#fetchBoardSearchPage(normalized, 1);
-      if (searchId !== this.#boardSearchId || normalized !== this.#boardSearchQuery) return;
-      this.boardSearchItems = result.items;
-      this.boardSearchPagination = result.pagination;
+      const result = await this.#fetchSearchPage(normalized, 1);
+      if (searchId !== this.#searchId || normalized !== this.#searchQuery) return;
+      this.searchItems = result.items;
+      this.searchPagination = result.pagination;
     } catch (error) {
-      if (searchId !== this.#boardSearchId) return;
-      console.error('[collectionStore] board search failed:', error);
-      this.boardSearchError = true;
+      if (searchId !== this.#searchId) return;
+      console.error('[collectionStore] search failed:', error);
+      this.searchError = true;
     } finally {
-      if (searchId === this.#boardSearchId) {
-        this.boardSearchLoading = false;
+      if (searchId === this.#searchId) {
+        this.searchLoading = false;
       }
     }
   }
 
-  async loadMoreBoardSearchItems() {
-    if (!this.#boardSearchQuery || !this.boardSearchHasMore || this.boardSearchLoadingMore) return;
+  async loadMoreSearchItems() {
+    if (!this.#searchQuery || !this.searchHasMore || this.searchLoadingMore) return;
 
-    const searchId = ++this.#boardSearchId;
-    const query = this.#boardSearchQuery;
-    const nextPage = (this.boardSearchPagination?.page ?? 0) + 1;
-    this.boardSearchLoadingMore = true;
-    this.boardSearchError = false;
+    const searchId = ++this.#searchId;
+    const query = this.#searchQuery;
+    const nextPage = (this.searchPagination?.page ?? 0) + 1;
+    this.searchLoadingMore = true;
+    this.searchError = false;
 
     try {
-      const result = await this.#fetchBoardSearchPage(query, nextPage);
-      if (searchId !== this.#boardSearchId || query !== this.#boardSearchQuery) return;
-      this.boardSearchItems = [...this.boardSearchItems, ...result.items];
-      this.boardSearchPagination = result.pagination;
+      const result = await this.#fetchSearchPage(query, nextPage);
+      if (searchId !== this.#searchId || query !== this.#searchQuery) return;
+      this.searchItems = [...this.searchItems, ...result.items];
+      this.searchPagination = result.pagination;
     } catch (error) {
-      if (searchId !== this.#boardSearchId) return;
-      console.error('[collectionStore] loading more board search results failed:', error);
-      this.boardSearchError = true;
+      if (searchId !== this.#searchId) return;
+      console.error('[collectionStore] loading more search results failed:', error);
+      this.searchError = true;
     } finally {
-      if (searchId === this.#boardSearchId) {
-        this.boardSearchLoadingMore = false;
+      if (searchId === this.#searchId) {
+        this.searchLoadingMore = false;
       }
     }
   }
 
-  #fetchBoardSearchPage(query, page) {
+  #fetchSearchPage(query, page) {
     return fetchCollectionItems(this.#wsId, this.#colId, {
       page,
-      limit: BOARD_SEARCH_PAGE_SIZE,
+      limit: SEARCH_PAGE_SIZE,
       search: query,
       sub_ql: this.effectiveSubFilterQL || undefined,
       collection: this.boardCollection ?? undefined,
@@ -1195,8 +1196,8 @@ class CollectionStore {
     if (idx !== -1) Object.assign(this.items[idx], updated);
     const bIdx = this.backlogItems.findIndex((i) => i.id === updated.id);
     if (bIdx !== -1) Object.assign(this.backlogItems[bIdx], updated);
-    const searchIdx = this.boardSearchItems.findIndex((i) => i.id === updated.id);
-    if (searchIdx !== -1) Object.assign(this.boardSearchItems[searchIdx], updated);
+    const searchIdx = this.searchItems.findIndex((i) => i.id === updated.id);
+    if (searchIdx !== -1) Object.assign(this.searchItems[searchIdx], updated);
   }
 
   #hideCompletedItem(item) {
@@ -1224,7 +1225,7 @@ class CollectionStore {
       return false;
     });
     this.backlogItems = this.backlogItems.filter((item) => !ids.has(item.id));
-    this.boardSearchItems = this.boardSearchItems.filter((item) => !ids.has(item.id));
+    this.searchItems = this.searchItems.filter((item) => !ids.has(item.id));
 
     const removedBacklog = beforeBacklog - this.backlogItems.length;
     if (removedItems > 0 && this.itemsPagination) {

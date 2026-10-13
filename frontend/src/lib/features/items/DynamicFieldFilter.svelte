@@ -222,6 +222,7 @@
         selectedField={filter.field}
         placeholder="Choose field..."
         {fieldGroups}
+        fieldSource={fieldGroups ? 'standard' : 'catalog'}
         {customFieldItems}
         onSelect={handleFieldSelect}
         onClear={handleFieldClear}

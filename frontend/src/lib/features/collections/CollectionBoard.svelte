@@ -1,5 +1,5 @@
 <script>
-  import { onDestroy, onMount, untrack } from 'svelte';
+  import { onMount, untrack } from 'svelte';
   import { useEventListener } from 'runed';
   import { t } from '../../stores/i18n.svelte.js';
   import { api } from '../../api.js';
@@ -37,6 +37,7 @@
   import DropdownMenu from '../../layout/DropdownMenu.svelte';
   import { backlogStore, workspaceDataStore, workspacesStore, workspacePermissions, itemModalStore } from '../../stores/index.js';
   import { useCollectionEventStream } from '../../composables/useCollectionEventStream.svelte.js';
+  import { useCollectionSearch } from '../../composables/useCollectionSearch.svelte.js';
   import { invalidateSLAState } from '../sla/slaState.js';
   import { agentRuns } from '../../stores/agentRuns.svelte.js';
   import { getVisibleColor, hexToRgb } from '../../utils/colorUtils.js';
@@ -63,26 +64,18 @@
   let projects = $derived(workspaceDataStore.projects);
   let customFieldDefinitions = $derived(workspaceDataStore.customFieldDefinitions);
 
-  let searchQuery = $state('');
-  let searchDebouncing = $state(false);
-  let searchEffectId = 0;
-  let searchActive = $derived(Boolean(searchQuery.trim()));
-  let activeItemsHasMore = $derived(
-    searchActive ? collectionStore.boardSearchHasMore : collectionStore.itemsHasMore
+  // Search is server-scoped and shared with the list view so both find items on
+  // every page (GH #220, GH #328).
+  const search = useCollectionSearch(
+    () => `${workspaceId ?? ''}|${collectionId ?? ''}|${collectionStore.effectiveSubFilterQL}`
   );
-  let activeItemsLoadingMore = $derived(
-    searchActive
-      ? collectionStore.boardSearchLoadingMore
-      : collectionStore.itemsLoadingMore || collectionStore.boardBackgroundLoading
-  );
-  let activeItemsRemainingCount = $derived(
-    searchActive ? collectionStore.boardSearchRemainingCount : collectionStore.itemsRemainingCount
-  );
+  let searchActive = $derived(search.active);
+  let searchDebouncing = $derived(search.debouncing);
+  let activeItemsHasMore = $derived(search.hasMore);
+  let activeItemsLoadingMore = $derived(search.loadingMore);
+  let activeItemsRemainingCount = $derived(search.remainingCount);
 
-  // Dynamic view-specific state — board searches use their own scoped server
-  // result set so normal board pagination and completed-item trimming remain
-  // unchanged when the query is cleared.
-  let items = $derived(searchActive ? collectionStore.boardSearchItems : collectionStore.items);
+  let items = $derived(search.items);
   let itemsById = $derived(new Map(items.map((item) => [item.id, item])));
 
   // Hydrate only the assignees the visible cards reference.
@@ -173,36 +166,6 @@
 
   // Centralized gradient styling
   const styles = useGradientStyles();
-
-  $effect(() => {
-    const query = searchQuery.trim();
-    const scope = `${workspaceId ?? ''}|${collectionId ?? ''}|${collectionStore.effectiveSubFilterQL}`;
-    const effectId = ++searchEffectId;
-    collectionStore.clearBoardSearch();
-
-    if (!query) {
-      searchDebouncing = false;
-      return;
-    }
-
-    searchDebouncing = true;
-    const timer = setTimeout(async () => {
-      await collectionStore.searchBoardItems(query);
-      if (
-        effectId === searchEffectId &&
-        query === searchQuery.trim() &&
-        scope === `${workspaceId ?? ''}|${collectionId ?? ''}|${collectionStore.effectiveSubFilterQL}`
-      ) {
-        searchDebouncing = false;
-      }
-    }, 250);
-
-    return () => clearTimeout(timer);
-  });
-
-  onDestroy(() => {
-    collectionStore.clearBoardSearch();
-  });
 
   $effect(() => {
     if (!boardScrollElement) return;
@@ -937,7 +900,7 @@
     const useServerTotal =
       deferred &&
       !selectedGroupByItemType &&
-      !searchQuery.trim() &&
+      !search.query.trim() &&
       !iterationFilterId &&
       deferred.statusIds.every((statusId) => columnStatusIds.has(statusId));
     if (!useServerTotal) return allColumnItems.length;
@@ -1628,7 +1591,7 @@
         <!-- Controls Bar -->
         <div class="flex flex-wrap items-center gap-4" data-testid="board-controls">
           <SearchInput
-            bind:value={searchQuery}
+            bind:value={search.query}
             placeholder={t('common.search')}
             dataTestid="board-search-input"
           />
@@ -1645,11 +1608,11 @@
       >
       <div class="px-6 py-6 min-w-fit">
 
-      {#if searchActive && (searchDebouncing || collectionStore.boardSearchLoading)}
+      {#if searchActive && (searchDebouncing || collectionStore.searchLoading)}
         <p class="-mt-2 mb-4 text-sm" style="color: var(--ds-text-subtle);" data-testid="board-search-status">
           {t('common.searching')}
         </p>
-      {:else if searchActive && collectionStore.boardSearchError}
+      {:else if searchActive && collectionStore.searchError}
         <p class="-mt-2 mb-4 text-sm" style="color: var(--ds-text-danger);" data-testid="board-search-error">
           {t('common.error')}
         </p>
@@ -1864,7 +1827,7 @@
             <button
               data-testid="board-load-more"
               onclick={() => searchActive
-                ? collectionStore.loadMoreBoardSearchItems()
+                ? search.loadMore()
                 : collectionStore.loadMoreItems()}
               disabled={activeItemsLoadingMore}
               class="px-4 py-2 text-sm  rounded-lg border transition-colors"

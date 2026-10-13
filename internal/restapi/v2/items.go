@@ -806,10 +806,9 @@ func parseItemListAt(r *http.Request, userID int, now time.Time) (Pagination, se
 	if err := parseItemFilters(r, &request.Filters); err != nil {
 		return Pagination{}, services.ItemListRequest{}, err
 	}
-	request.Filters.TextQuery = strings.TrimSpace(query.Get("search"))
-	if request.Filters.TextQuery == "" {
-		request.Filters.TextQuery = ""
-	}
+	// Smart search matches title/description text and, when the query resolves
+	// to a full KEY-NUMBER reference, the item key too.
+	request.Filters.SearchQuery = strings.TrimSpace(query.Get("search"))
 	request.Filters.StatusIDs, err = itemIDList(query.Get("status_id"))
 	if err != nil {
 		return Pagination{}, services.ItemListRequest{}, invalidQuery("status_id")

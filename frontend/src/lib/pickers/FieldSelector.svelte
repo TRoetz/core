@@ -18,6 +18,11 @@
     customFieldItems = null,
     excludedFieldIds = [],
     includeAggregates = false,
+    // 'catalog' surfaces every item field the QL backend accepts (used by the
+    // filter builders) instead of the curated subset, so new backend fields
+    // cannot drift out of reach. 'standard' keeps the curated list for the
+    // action editors, which only support a fixed set of writable fields.
+    fieldSource = 'standard',
     onSelect = () => {},
     onClear = () => {}
   } = $props();
@@ -37,8 +42,29 @@
     return { name: field || fieldKey, description: '' };
   }
 
+  // Catalog fields have no `pickers.fields` entry, so map the few identity
+  // fields users look for by name and fall back to the raw catalog label.
+  const CATALOG_FIELD_LABELS = {
+    key: () => t('common.key'),
+    id: () => t('common.id'),
+    parent: () => getFieldTranslation('parent').name,
+  };
+
+  function catalogFieldName(field) {
+    return CATALOG_FIELD_LABELS[field.name]?.() || field.label || field.name;
+  }
+
+  // Normalize the QL value type to the vocabulary the filter rows render.
+  function catalogFilterType(field) {
+    const source = field.value_help?.source;
+    if (source === 'users' || source === 'teams') return 'user';
+    if (source) return 'enum';
+    if (field.value_type === 'string') return 'text';
+    return field.value_type || 'text';
+  }
+
   // Standard fields grouped by category
-  const standardFields = $derived((fieldGroups || [
+  const curatedFieldGroups = $derived((fieldGroups || [
     {
       category: t('pickers.fieldCategories.basic'),
       fields: [
@@ -90,6 +116,32 @@
       completion: findQlCompletionField(completionCatalog, field),
     })),
   })));
+
+  // Catalog fields not covered by the curated groups (key, id, parent, …) are
+  // appended ungrouped, so the filter picker always matches the backend QL
+  // catalog (GH #328).
+  const standardFields = $derived.by(() => {
+    if (fieldSource !== 'catalog' || !completionCatalog) return curatedFieldGroups;
+
+    const covered = new Set();
+    for (const group of curatedFieldGroups) {
+      for (const field of group.fields) {
+        covered.add(field.id);
+        if (field.completion?.name) covered.add(field.completion.name);
+      }
+    }
+    const extra = (completionCatalog.fields || [])
+      .filter((field) => !/^cfid_\d+$/i.test(field.name) && !covered.has(field.name))
+      .map((field) => ({
+        ...completionFieldToFilterField(field),
+        name: catalogFieldName(field),
+        type: catalogFilterType(field),
+      }));
+
+    return extra.length
+      ? [...curatedFieldGroups, { category: null, fields: extra }]
+      : curatedFieldGroups;
+  });
 
   // Flatten the grouped catalog for BasePicker, tagging each field with the
   // category header it renders under.
