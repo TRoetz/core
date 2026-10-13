@@ -5,6 +5,7 @@
 export const dashboardWidgetCategories = {
   ACTIVITY: 'activity',
   WORK: 'work',
+  SUPPORT: 'support',
   NAVIGATION: 'navigation',
 };
 
