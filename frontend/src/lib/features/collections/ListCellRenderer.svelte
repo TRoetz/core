@@ -15,6 +15,7 @@
   import { Calendar, User, Target, FolderKanban } from '@lucide/svelte';
   import ItemTypeIcon from '../../components/ItemTypeIcon.svelte';
   import { formatDate, formatDateOnly, formatDateTimeLocale } from '../../utils/dateFormatter.js';
+  import { durationToString } from '../../utils/timeUtils.js';
   import {
     priorityPickerConfig as priorityConfig,
     projectPickerConfig as projectConfig,
@@ -338,6 +339,42 @@
         <Calendar class="w-4 h-4 flex-shrink-0" />
         {item.due_date ? formatDateOnly(item.due_date) : '-'}
       </div>
+    {/if}
+
+  {:else if column.field_identifier === 'story_points'}
+    <!-- Story Points -->
+    {#if canEdit}
+      <InlineFieldEditor
+        {item}
+        field="story_points"
+        fieldType="number"
+        placeholder={t('items.setField', { field: t('items.storyPoints').toLowerCase() })}
+        onitemUpdated={(detail) => onitemUpdated?.(detail)}
+        onupdateError={(detail) => onupdateError?.(detail)}
+      />
+    {:else}
+      <span class="text-sm tabular-nums" style="color: var(--ds-text-subtle);">
+        {item.story_points ?? '-'}
+      </span>
+    {/if}
+
+  {:else if column.field_identifier === 'estimate'}
+    <!-- Estimate (stored in minutes, shown as a duration) -->
+    {#if canEdit}
+      <InlineFieldEditor
+        {item}
+        field="estimate_minutes"
+        fieldType="duration"
+        placeholder={t('items.setField', { field: t('items.estimate').toLowerCase() })}
+        onitemUpdated={(detail) => onitemUpdated?.(detail)}
+        onupdateError={(detail) => onupdateError?.(detail)}
+      />
+    {:else}
+      <span class="text-sm" style="color: var(--ds-text-subtle);">
+        {item.estimate_minutes != null && item.estimate_minutes > 0
+          ? durationToString(item.estimate_minutes, { withDays: true })
+          : '-'}
+      </span>
     {/if}
 
   {:else if column.field_identifier === 'created_at'}

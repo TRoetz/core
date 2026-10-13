@@ -4,6 +4,8 @@
   import InlineTextEditor from './InlineTextEditor.svelte';
   import InlineSelectEditor from './InlineSelectEditor.svelte';
   import InlineDateEditor from './InlineDateEditor.svelte';
+  import InlineNumberEditor from './InlineNumberEditor.svelte';
+  import InlineDurationEditor from './InlineDurationEditor.svelte';
 
   let {
     item, field, fieldType = 'text', options = [], placeholder = '',
@@ -78,6 +80,32 @@
   />
 {:else if fieldType === 'date'}
   <InlineDateEditor
+    bind:this={editorComponent}
+    value={fieldValue}
+    {placeholder}
+    {required}
+    {disabled}
+    {className}
+    {enableSingleClick}
+    {enableDoubleClick}
+    onsave={handleSave}
+    onclick={handleClick}
+  />
+{:else if fieldType === 'number'}
+  <InlineNumberEditor
+    bind:this={editorComponent}
+    value={fieldValue}
+    {placeholder}
+    {required}
+    {disabled}
+    {className}
+    {enableSingleClick}
+    {enableDoubleClick}
+    onsave={handleSave}
+    onclick={handleClick}
+  />
+{:else if fieldType === 'duration'}
+  <InlineDurationEditor
     bind:this={editorComponent}
     value={fieldValue}
     {placeholder}
