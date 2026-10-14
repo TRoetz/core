@@ -278,11 +278,19 @@
 
       // Load iterations for this workspace
       try {
-        const iters = await api.iterations.getAll({
-          workspace_id: workspaceId,
-          include_global: !workspace?.is_personal,
-        });
-        allIterations = iters || [];
+        const isPersonal = workspaceDataStore.workspace?.is_personal === true;
+        if (workspaceDataStore.planningCompleteness?.iterations === true) {
+          // Complete bootstrap data avoids a second full iteration fetch.
+          allIterations = (workspaceDataStore.iterations || []).filter(
+            (iteration) => !isPersonal || !iteration.is_global
+          );
+        } else {
+          const iters = await api.iterations.getAll({
+            workspace_id: workspaceId,
+            include_global: !isPersonal,
+          });
+          allIterations = iters || [];
+        }
       } catch (error) {
         console.error('Failed to load iterations:', error);
       }

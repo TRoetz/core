@@ -37,6 +37,9 @@ class WorkspaceDataStore {
   // Resolved effective configuration per item type, keyed by item type id or
   // 'default'. Fetched once per workspace, invalidated on workspace switch.
   screenConfigs = $state({});
+  // Whether bootstrap's milestone/iteration lists are complete directories.
+  // null means the server did not report completeness (unknown, not complete).
+  planningCompleteness = $state(null);
 
   initialLoading = $state(false);
   initialized = $state(false);
@@ -223,6 +226,7 @@ class WorkspaceDataStore {
     this.customFieldDefinitions = [];
     this.labels = [];
     this.screenConfigs = {};
+    this.planningCompleteness = null;
     this.#screenConfigPromises.clear();
     this.#userHydrationPromises.clear();
     this.#userHydrationFailed.clear();
@@ -381,6 +385,8 @@ class WorkspaceDataStore {
     this.priorities = bootstrap?.priorities ?? [];
     this.projects = bootstrap?.projects ?? [];
     this.customFieldDefinitions = bootstrap?.custom_field_definitions ?? [];
+    // Absent metadata means unknown; never treat it as complete.
+    this.planningCompleteness = bootstrap?.planning_completeness ?? null;
   }
 
   hydrateHomepageLayout(workspaceId, layout) {

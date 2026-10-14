@@ -13,9 +13,13 @@ const EMPTY_OPTIONS = Object.freeze({
   loaded: {},
   loading: {},
   fetchedAt: {},
+  complete: {},
 });
 
 const OPTION_TTL_MS = 5 * 60 * 1000;
+// Planning families carry explicit completeness. A partial page is still
+// displayable, but it can never satisfy a caller that needs the full list.
+const PLANNING_FIELDS = new Set(['milestones', 'iterations']);
 const MAX_ASSET_CACHE_ENTRIES = 200;
 
 const OPTION_LOADERS = {
@@ -71,7 +75,7 @@ export class CollectionEditorOptionsStore {
    * Global collections intentionally do not prime this cache because their
    * page-level reference data is not scoped to any one row workspace.
    */
-  prime(workspaceId, values) {
+  prime(workspaceId, values, completeness = null) {
     const id = normalizeWorkspaceId(workspaceId);
     if (!id) return;
 
@@ -81,19 +85,25 @@ export class CollectionEditorOptionsStore {
       loaded: { ...current.loaded },
       loading: { ...current.loading },
       fetchedAt: { ...current.fetchedAt },
+      complete: { ...current.complete },
     };
     let changed = false;
 
     for (const field of ['statuses', 'users', 'milestones', 'iterations', 'projects']) {
+      // A fresh, complete entry is authoritative: a later partial priming pass
+      // must not downgrade it back to an incomplete page.
       if (
         !Array.isArray(values?.[field]) ||
-        (current.loaded[field] && this.#isFresh(current, field))
+        (current.loaded[field] && this.#isFresh(current, field) && this.#isComplete(current, field))
       ) {
         continue;
       }
       next[field] = values[field];
       next.loaded[field] = true;
       next.fetchedAt[field] = Date.now();
+      if (PLANNING_FIELDS.has(field)) {
+        next.complete[field] = completeness?.[field] === true;
+      }
       changed = true;
     }
 
@@ -106,7 +116,13 @@ export class CollectionEditorOptionsStore {
     if (!id || !loader) return [];
 
     const current = this.get(id);
-    if (current.loaded[field] && this.#isFresh(current, field)) return current[field];
+    if (current.loaded[field] && this.#isFresh(current, field)) {
+      // Partial planning data can be displayed, but a caller asking for the
+      // family needs the full directory, so keep loading until it is complete.
+      if (!PLANNING_FIELDS.has(field) || this.#isComplete(current, field)) {
+        return current[field];
+      }
+    }
 
     const pendingKey = `${id}:${field}`;
     const existing = this.#pending.get(pendingKey);
@@ -127,6 +143,11 @@ export class CollectionEditorOptionsStore {
           [field]: options,
           loaded: { ...entry.loaded, [field]: true },
           fetchedAt: { ...entry.fetchedAt, [field]: Date.now() },
+          // The scoped planning loaders drain every page, so a resolved load
+          // is a complete list.
+          complete: PLANNING_FIELDS.has(field)
+            ? { ...entry.complete, [field]: true }
+            : entry.complete,
         }));
         return options;
       })
@@ -205,6 +226,7 @@ export class CollectionEditorOptionsStore {
       [field]: [],
       loaded: { ...entry.loaded, [field]: false },
       fetchedAt: { ...entry.fetchedAt, [field]: 0 },
+      complete: { ...entry.complete, [field]: false },
     }));
   }
 
@@ -225,6 +247,10 @@ export class CollectionEditorOptionsStore {
 
   #isFresh(entry, field) {
     return Date.now() - (entry.fetchedAt[field] ?? 0) <= OPTION_TTL_MS;
+  }
+
+  #isComplete(entry, field) {
+    return !PLANNING_FIELDS.has(field) || entry.complete?.[field] === true;
   }
 }
 

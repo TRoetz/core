@@ -92,13 +92,17 @@
       return;
     }
 
-    collectionEditorOptions.prime(id, {
-      statuses,
-      users,
-      milestones,
-      iterations,
-      projects,
-    });
+    collectionEditorOptions.prime(
+      id,
+      {
+        statuses,
+        users,
+        milestones,
+        iterations,
+        projects,
+      },
+      workspaceDataStore.planningCompleteness
+    );
   });
 
   // Computed: Generate grid-template-columns CSS via the shared list grid

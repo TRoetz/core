@@ -165,13 +165,17 @@
       return;
     }
 
-    collectionEditorOptions.prime(id, {
-      statuses,
-      users,
-      milestones,
-      iterations,
-      projects,
-    });
+    collectionEditorOptions.prime(
+      id,
+      {
+        statuses,
+        users,
+        milestones,
+        iterations,
+        projects,
+      },
+      workspaceDataStore.planningCompleteness
+    );
   });
 
   async function loadCollection() {

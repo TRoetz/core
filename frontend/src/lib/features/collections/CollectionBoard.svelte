@@ -419,10 +419,19 @@
     if (requestedView !== viewSignature) return;
 
     try {
-      const iters = await api.iterations.getAll({
-        workspace_id: requestedWorkspaceId,
-        include_global: !workspaceDataStore.workspace?.is_personal,
-      });
+      const isPersonal = workspaceDataStore.workspace?.is_personal === true;
+      let iters;
+      if (workspaceDataStore.planningCompleteness?.iterations === true) {
+        // Complete bootstrap data avoids a second full iteration fetch.
+        iters = (workspaceDataStore.iterations || []).filter(
+          (iteration) => !isPersonal || !iteration.is_global
+        );
+      } else {
+        iters = await api.iterations.getAll({
+          workspace_id: requestedWorkspaceId,
+          include_global: !isPersonal,
+        });
+      }
       if (requestedView !== viewSignature) return;
       allIterations = iters || [];
 
