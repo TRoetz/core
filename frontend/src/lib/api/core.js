@@ -22,6 +22,11 @@ export const ADMIN_UI_MUTATION_EVENT = 'windshift:admin-ui-mutation';
 // Ensure the clock-drift warning toast fires at most once per session
 let driftWarningShown = false;
 
+// The per-user concurrency limiter (internal/middleware/user_concurrency.go)
+// answers bursts with 429 + Retry-After. Safe, finite reads recover from that
+// within the shared budget; writes are never automatically replayed.
+const SAFE_METHODS = ['GET', 'HEAD', 'OPTIONS'];
+
 // Chromium does not consistently report fetches cancelled by a document
 // navigation as AbortError. Track the page lifecycle explicitly so callers do
 // not mistake unload cancellation for a connectivity failure. `pageshow`
@@ -147,8 +152,8 @@ function createApiError(response, responseText) {
   /** @type {any} */ (error).statusText = response.statusText;
   // Retry-After recovery needs the raw header plus the server clock so a
   // relative HTTP-date delay is measured against the server's now, not ours.
-  /** @type {any} */ (error).retryAfter = response.headers.get('Retry-After');
-  /** @type {any} */ (error).serverDate = response.headers.get('Date');
+  /** @type {any} */ (error).retryAfter = response.headers?.get?.('Retry-After') ?? null;
+  /** @type {any} */ (error).serverDate = response.headers?.get?.('Date') ?? null;
 
   return error;
 }
@@ -312,7 +317,7 @@ async function performFetchAPI(base, endpoint, options = {}) {
     }
 
     const method = String(fetchOptions.method || 'GET').toUpperCase();
-    if (!['GET', 'HEAD', 'OPTIONS'].includes(method)) {
+    if (!SAFE_METHODS.includes(method)) {
       notifyAdminUIMutation(endpoint, method);
     }
 
@@ -334,8 +339,19 @@ export function fetchAPIV2(endpoint, options = {}) {
 }
 
 function isSafeReadMethod(options) {
-  const method = String(options?.method || 'GET').toUpperCase();
-  return method === 'GET' || method === 'HEAD' || method === 'OPTIONS';
+  return SAFE_METHODS.includes(String(options?.method || 'GET').toUpperCase());
+}
+
+/**
+ * Delay before retrying a 429: Retry-After (seconds or HTTP-date) when present,
+ * otherwise 1s then 2s. Jitter is added on top so parallel retries spread out;
+ * it never shortens the server-requested delay.
+ * @param {any} error
+ * @param {number} attempt
+ * @param {() => number} [random]
+ */
+export function concurrencyRetryDelayMs(error, attempt, random = Math.random) {
+  return parseRetryAfterMs(error, attempt) + random() * RETRY_JITTER_MS;
 }
 
 function parseRetryAfterMs(error, attemptIndex) {
@@ -420,11 +436,9 @@ async function performFetchWithRetry(base, endpoint, options) {
       const remainingMs = RETRY_MAX_ELAPSED_MS - (Date.now() - startedAt);
       if (delayMs > remainingMs) throw error;
 
-      // Jitter only ever adds to the server-requested minimum delay; it is
-      // never used to shorten it. The slot is free during this sleep because
-      // the failed attempt already released it.
-      const jitterMs = Math.random() * RETRY_JITTER_MS;
-      await sleepWithAbort(delayMs + jitterMs, options?.signal);
+      // The slot is free during this sleep because the failed attempt already
+      // released it.
+      await sleepWithAbort(concurrencyRetryDelayMs(error, attempt), options?.signal);
 
       if (apiRequestSessionKey !== sessionKey) throw lastError;
     }
