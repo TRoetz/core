@@ -210,27 +210,25 @@ export async function getCollection(collectionId) {
 }
 
 /**
- * Checks if an item would be visible given a set of filters (e.g., collection filters)
+ * Classify an item's membership in the given filters (e.g. collection QL).
+ * An unknown result must never be treated as membership: callers defer to an
+ * authoritative reconciliation instead of inserting a possibly out-of-filter
+ * row.
  * @param {number} itemId - The item ID to check
  * @param {Object} filters - The filters to apply (same format as api.items.getAll)
- * @returns {Promise<boolean>} True if the item is visible with the given filters
+ * @returns {Promise<'member'|'nonmember'|'unknown'>}
  */
 export async function checkItemVisibility(itemId, filters) {
-  if (!itemId) return false;
+  if (!itemId) return 'nonmember';
 
   try {
     // Query the API with the same filters + the specific item ID
     const filtersWithId = { ...filters, id: itemId };
     const response = await api.items.getAll(filtersWithId);
-
-    // Handle paginated response
     const items = response?.data ?? [];
-
-    // Check if the item is in the results
-    return items.some((item) => item.id === itemId);
+    return items.some((item) => item.id === itemId) ? 'member' : 'nonmember';
   } catch (error) {
     console.error(`Failed to check visibility for item ${itemId}:`, error);
-    // If there's an error, assume the item is visible to avoid confusing the user
-    return true;
+    return 'unknown';
   }
 }

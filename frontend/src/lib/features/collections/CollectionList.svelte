@@ -2,7 +2,12 @@
   import { useEventListener } from 'runed';
   import { t } from '../../stores/i18n.svelte.js';
   import { errorToast } from '../../stores/toasts.svelte.js';
-  import { applyCollectionItem, collectionStore, refreshCollectionDeltas, reloadCollection } from '../../stores/collectionContext.js';
+  import {
+    applyCollectionItem,
+    collectionStore,
+    reloadCollection,
+    scheduleCollectionReconciliation,
+  } from '../../stores/collectionContext.js';
   import { useCollectionEventStream } from '../../composables/useCollectionEventStream.svelte.js';
   import { useCollectionSearch } from '../../composables/useCollectionSearch.svelte.js';
   import { createDeleteItemHandler, createItemActionsBuilder } from '../../utils/workItemTableHelpers.js';
@@ -27,7 +32,6 @@
   import ColumnSelector from './ColumnSelector.svelte';
   import SubFilterBar from './SubFilterBar.svelte';
   import LazyRender from '../../components/LazyRender.svelte';
-  import { checkItemVisibility } from './collectionService.js';
   import { useListColumnConfig } from './listColumnConfig.svelte.js';
 
   let { workspaceId, collectionId = null } = $props();
@@ -111,16 +115,15 @@
 
   let gridMinWidth = $derived(listGridMinWidth(listColumns));
 
-  useEventListener(() => window, 'refresh-work-items', async (/** @type {CustomEvent} */ event) => {
+  useEventListener(() => window, 'refresh-work-items', (/** @type {CustomEvent} */ event) => {
     const item = event.detail?.item;
-    if (!item) {
-      reloadCollection();
-      return;
+    // Workspace-scoped views can apply the item immediately as a display
+    // optimization. Collection membership is verified by the store's
+    // coalesced reconciliation instead of one query per event.
+    if (item && !collectionId && Number(item.workspace_id) === Number(workspaceId)) {
+      applyCollectionItem(item);
     }
-    const belongsToView = collectionId
-      ? await checkItemVisibility(item.id, { collection_id: collectionId })
-      : Number(item.workspace_id) === Number(workspaceId);
-    if (belongsToView) applyCollectionItem(item);
+    scheduleCollectionReconciliation();
   });
 
   // Scoped SSE invalidations (WI-1624): any frame runs the existing delta fetch,
@@ -128,7 +131,7 @@
   // were deleted from the item detail modal, unlike the board views.
   useCollectionEventStream(
     () => (collectionId ? { kind: 'collection', id: collectionId } : { kind: 'workspace', id: workspaceId }),
-    { onInvalidate: () => refreshCollectionDeltas() }
+    { onInvalidate: () => scheduleCollectionReconciliation() }
   );
 
   // Sync collection name + clear local loading from the central store.

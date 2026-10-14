@@ -27,7 +27,7 @@ const app = mount(App, {
 initCrossTabSync({
   refreshCollectionDeltas: async () => {
     const { refreshCollectionDeltas } = await import('./lib/stores/collectionContext.js');
-    return refreshCollectionDeltas();
+    await refreshCollectionDeltas();
   },
 });
 

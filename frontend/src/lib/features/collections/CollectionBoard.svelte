@@ -5,7 +5,12 @@
   import { api } from '../../api.js';
   import { BACKGROUND_READ } from '../../api/readScheduler.js';
   import { navigate } from '../../router.js';
-  import { collectionStore, refreshCollectionDeltas, reloadCollection } from '../../stores/collectionContext.js';
+  import {
+    collectionStore,
+    refreshCollectionDeltas,
+    reloadCollection,
+    scheduleCollectionReconciliation,
+  } from '../../stores/collectionContext.js';
   import { useGradientStyles, loadWorkspaceGradient } from '../../stores/workspaceGradient.svelte.js';
   import QuickAddForm from './QuickAddForm.svelte';
   import { getCollection, checkItemVisibility } from './collectionService.js';
@@ -178,25 +183,28 @@
 
   // Listen for newly created items
   async function handleRefreshWorkItems(event) {
-    if (event.detail?.itemId) {
-      try {
-        const newItem = event.detail.item ?? await api.items.get(event.detail.itemId);
-        // Collection membership may span workspaces; verify it server-side.
-        const belongsToView = collectionId
-          ? await checkItemVisibility(newItem.id, { collection_id: collectionId })
-          : Number(newItem.workspace_id) === Number(workspaceId);
-        if (belongsToView) {
-          if (newItem.status_id) {
-            // Item has a status, add it to the board (at the end, since board is ordered by rank)
-            collectionStore.items = [...collectionStore.items, newItem];
-          } else {
-            // Item has no status, add it to backlog (at the end)
-            collectionStore.backlogItems = [...collectionStore.backlogItems, newItem];
-          }
+    if (!event.detail?.itemId) return;
+    try {
+      const newItem = event.detail.item ?? (await api.items.get(event.detail.itemId));
+      // Collection membership may span workspaces; verify it server-side.
+      const membership = collectionId
+        ? await checkItemVisibility(newItem.id, { collection_id: collectionId })
+        : Number(newItem.workspace_id) === Number(workspaceId)
+          ? 'member'
+          : 'nonmember';
+      if (membership === 'member') {
+        if (newItem.status_id) {
+          // Item has a status, add it to the board (at the end, since board is ordered by rank)
+          collectionStore.items = [...collectionStore.items, newItem];
+        } else {
+          // Item has no status, add it to backlog (at the end)
+          collectionStore.backlogItems = [...collectionStore.backlogItems, newItem];
         }
-      } catch (error) {
-        console.error('Failed to load new item:', error);
+      } else if (membership === 'unknown') {
+        scheduleCollectionReconciliation();
       }
+    } catch (error) {
+      console.error('Failed to load new item:', error);
     }
   }
 
@@ -356,17 +364,21 @@
 
       // A collection can span several allowed workspaces while applying other
       // filters. Only add the new item locally when it matches the full view.
-      let belongsToView = true;
+      let membership = 'member';
       if (collectionId) {
         const collection = await getCollection(collectionId);
         if (collection) {
-          belongsToView = await checkItemVisibility(newItem.id, { collection_id: collectionId });
+          membership = await checkItemVisibility(newItem.id, { collection_id: collectionId });
         }
       } else if (workspaceId) {
-        belongsToView = Number(newItem.workspace_id) === Number(workspaceId);
+        membership =
+          Number(newItem.workspace_id) === Number(workspaceId) ? 'member' : 'nonmember';
       }
 
-      if (!belongsToView) {
+      if (membership === 'unknown') {
+        // Never guess membership after a failed verification; reconcile instead.
+        scheduleCollectionReconciliation();
+      } else if (membership === 'nonmember') {
         const selectedWorkspace = availableWorkspaces.find(w => w.id === state.workspaceId);
         const workspaceName = selectedWorkspace?.name || t('collections.anotherWorkspace');
         const reason = collectionId
@@ -382,7 +394,7 @@
         localStorage.setItem('board-quickadd-last-item-type-id', String(state.itemTypeId));
       } catch (e) { /* ignore storage errors */ }
 
-      if (belongsToView) {
+      if (membership === 'member') {
         // The create endpoint returns the complete permission-masked item, so it
         // can be added directly without an immediate GET of the same item.
         collectionStore.items = [...collectionStore.items, newItem];

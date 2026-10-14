@@ -6,4 +6,5 @@ export {
   refreshCollectionDeltas,
   refreshCollectionItem,
   reloadCollection,
+  scheduleCollectionReconciliation,
 } from './collectionContext.svelte.js';

@@ -40,6 +40,9 @@ const BOARD_UNFINISHED_PAGE_SIZE = 1000;
 const BOARD_UNTHROTTLED_ITEM_COUNT = 1000;
 const BOARD_BACKGROUND_PAGE_DELAY_MS = 250;
 const SEARCH_PAGE_SIZE = 100;
+// Local refresh-work-items bursts coalesce into one authoritative delta
+// reconciliation instead of one visibility query per item.
+const LOCAL_RECONCILE_DEBOUNCE_MS = 200;
 
 function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -181,6 +184,9 @@ class CollectionStore {
   #boardConfigurationLoaded = false;
   #searchId = 0;
   #searchQuery = '';
+  #reconcileTimer = null;
+  #reconcileInFlight = null;
+  #reconcilePending = false;
 
   constructor() {
     this.#unsubscribe = currentRoute.subscribe(($route) => {
@@ -367,6 +373,11 @@ class CollectionStore {
     } finally {
       if (loadId === this.#loadId) {
         this.loading = false;
+      }
+      // Local events that arrived during the initial load get one trailing run.
+      if (this.#reconcilePending) {
+        this.#reconcilePending = false;
+        void this.#runLocalReconciliation();
       }
     }
   }
@@ -960,7 +971,7 @@ class CollectionStore {
    * Used by pollers and background updates.
    */
   async refresh() {
-    if (!this.#wsId && !this.#colId) return;
+    if (!this.#wsId && !this.#colId) return false;
     const loadId = ++this.#loadId;
     this.boardBackgroundLoading = false;
 
@@ -978,7 +989,7 @@ class CollectionStore {
           ? (this.boardCollection ?? (await getCollection(this.#colId)))
           : await getCollection(this.#colId)
         : null;
-      if (loadId !== this.#loadId) return;
+      if (loadId !== this.#loadId) return false;
 
       const deferredLoadedCount = this.items.length - this.mainItemsLoadedCount;
       const [itemsResult, backlogResult, deferredResult, countResult] = await Promise.all([
@@ -1014,7 +1025,7 @@ class CollectionStore {
           : Promise.resolve(null),
         this.#refreshCollectionTotal(),
       ]);
-      if (loadId !== this.#loadId) return;
+      if (loadId !== this.#loadId) return false;
 
       this.#applyResults({
         itemsResult,
@@ -1024,11 +1035,13 @@ class CollectionStore {
         boardPartition,
         collection,
       });
+      return true;
     } catch (error) {
-      if (loadId !== this.#loadId) return;
+      if (loadId !== this.#loadId) return false;
       if (!isExpectedBackgroundSyncError(error)) {
         console.error('[collectionStore] Refresh failed:', error);
       }
+      return false;
     }
   }
 
@@ -1126,37 +1139,40 @@ class CollectionStore {
    * server-side sort, or backlog membership changes).
    */
   async refreshDeltas() {
-    if ((!this.#wsId && !this.#colId) || this.loading) return;
-    if (this.#changesWatermark === null) {
-      await this.#primeChangesWatermark();
-      return;
-    }
+    if (!this.#wsId && !this.#colId) return false;
 
     const loadId = this.#loadId;
     try {
+      if (this.#changesWatermark === null) {
+        await this.#primeChangesWatermark();
+        return true;
+      }
+
       const changes = await fetchCollectionItemChanges(this.#wsId, this.#colId, {
         since: this.#changesWatermark,
         sub_ql: this.effectiveSubFilterQL || undefined,
       });
-      if (loadId !== this.#loadId) return;
-      this.#changesWatermark = changes?.watermark ?? this.#changesWatermark;
+      if (loadId !== this.#loadId) return false;
+      const nextWatermark = changes?.watermark ?? this.#changesWatermark;
 
       if (changes?.requires_full_reload) {
-        await this.refresh();
-        return;
+        return await this.refresh();
       }
 
       const removedIds = new Set(changes?.removed_item_ids ?? []);
       if (removedIds.size > 0) {
         // Removed IDs may be off-page or outside the saved query altogether.
-        await this.refresh();
-        return;
+        return await this.refresh();
       }
 
       const changedIds = [...new Set(changes?.changed_item_ids ?? [])].filter(
         (id) => !removedIds.has(id)
       );
-      if (changedIds.length === 0) return;
+      if (changedIds.length === 0) {
+        // Nothing to patch; advancing the cursor is safe.
+        this.#changesWatermark = nextWatermark;
+        return true;
+      }
 
       const loadedMainIds = new Set(this.items.map((item) => item.id));
       const loadedBacklogIds = new Set(this.backlogItems.map((item) => item.id));
@@ -1170,12 +1186,11 @@ class CollectionStore {
         BOARD_VIEWS.has(this.#currentView) ||
         (LIST_VIEWS.has(this.#currentView) && (this.#sortBy || this.#sortDirection));
       if (hasNewVisibleItem || touchesBacklog || usesServerOrderedItems) {
-        await this.refresh();
-        return;
+        return await this.refresh();
       }
 
       const updatedItems = await fetchItemsById(loadedChangedIds);
-      if (loadId !== this.#loadId) return;
+      if (loadId !== this.#loadId) return false;
       for (const updated of updatedItems) {
         this.#applyUpdatedItem(updated);
       }
@@ -1184,9 +1199,45 @@ class CollectionStore {
       this.items = [...this.items];
       this.backlogItems = [...this.backlogItems];
       await this.#refreshCollectionTotal();
+      // Commit the cursor only after the patch applied successfully so a
+      // failure preserves the previous cursor for replay.
+      this.#changesWatermark = nextWatermark;
+      return true;
     } catch (error) {
       if (!isExpectedBackgroundSyncError(error)) {
         console.error('[collectionStore] Delta refresh failed:', error);
+      }
+      return false;
+    }
+  }
+
+  /**
+   * Coalesce local refresh-work-items bursts into one authoritative delta
+   * reconciliation. Debounced and serialized; a burst during an in-flight run
+   * (or initial load) triggers exactly one trailing run.
+   */
+  scheduleLocalReconciliation() {
+    if (this.#reconcileTimer) clearTimeout(this.#reconcileTimer);
+    this.#reconcileTimer = setTimeout(() => {
+      this.#reconcileTimer = null;
+      void this.#runLocalReconciliation();
+    }, LOCAL_RECONCILE_DEBOUNCE_MS);
+  }
+
+  async #runLocalReconciliation() {
+    if (this.loading || this.#reconcileInFlight) {
+      this.#reconcilePending = true;
+      return this.#reconcileInFlight ?? false;
+    }
+    const run = this.refreshDeltas();
+    this.#reconcileInFlight = run;
+    try {
+      return await run;
+    } finally {
+      if (this.#reconcileInFlight === run) this.#reconcileInFlight = null;
+      if (this.#reconcilePending) {
+        this.#reconcilePending = false;
+        void this.#runLocalReconciliation();
       }
     }
   }
@@ -1297,6 +1348,10 @@ class CollectionStore {
     if (this.#unsubscribe) {
       this.#unsubscribe();
     }
+    if (this.#reconcileTimer) {
+      clearTimeout(this.#reconcileTimer);
+      this.#reconcileTimer = null;
+    }
   }
 }
 
@@ -1310,6 +1365,11 @@ export function reloadCollection() {
 /** Poll for cheap collection deltas and patch loaded items when safe */
 export function refreshCollectionDeltas() {
   return collectionStore.refreshDeltas();
+}
+
+/** Coalesce local refresh-work-items events into one reconciliation. */
+export function scheduleCollectionReconciliation() {
+  collectionStore.scheduleLocalReconciliation();
 }
 
 /** Refresh a single item in the store without reloading the entire collection */
