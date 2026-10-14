@@ -19,11 +19,10 @@ const stateCache = new Map();
 const inFlight = new Map();
 const thresholdsCache = new Map();
 const thresholdsPending = new Map();
-const thresholdRevisions = new Map();
 /** @type {Set<(workspaceId: number|string|null) => void>} */
 const thresholdListeners = new Set();
 let stateGeneration = 0;
-let thresholdSessionGeneration = 0;
+let thresholdGeneration = 0;
 
 function pruneCache(cache, now = Date.now()) {
   if (cache.size <= MAX_CACHE_ENTRIES) return;
@@ -53,10 +52,6 @@ function pruneThresholdCache(now = Date.now()) {
 function normalizeWorkspaceKey(workspaceId) {
   const id = Number(workspaceId);
   return Number.isInteger(id) && id > 0 ? id : String(workspaceId);
-}
-
-function thresholdRevision(key) {
-  return thresholdRevisions.get(key) ?? 0;
 }
 
 // Batch coalescing: badges mounted in the same tick share one workspace
@@ -200,28 +195,24 @@ export async function getSLAThresholds(workspaceId) {
   const pending = thresholdsPending.get(key);
   if (pending) return pending;
 
-  const revision = thresholdRevision(key);
-  const session = thresholdSessionGeneration;
+  const generation = thresholdGeneration;
   const promise = api.sla
     .getWarningThresholds(workspaceId, BACKGROUND_READ)
     .then((result) => {
       const value = Array.isArray(result) ? result : [];
-      if (session === thresholdSessionGeneration && revision === thresholdRevision(key)) {
+      if (generation === thresholdGeneration) {
         thresholdsCache.set(key, { value, fetchedAt: Date.now(), failedAt: 0 });
         pruneThresholdCache();
       }
       return value;
     })
     .catch((error) => {
-      if (session !== thresholdSessionGeneration) return null;
+      if (generation !== thresholdGeneration) return null;
       const status = error?.status;
       if (status === 401 || status === 403 || status === 404) {
         // Protected data must not survive an authorization denial.
         thresholdsCache.delete(key);
         return null;
-      }
-      if (revision !== thresholdRevision(key)) {
-        return thresholdsCache.get(key)?.value ?? null;
       }
       const previous = thresholdsCache.get(key);
       thresholdsCache.set(key, {
@@ -257,15 +248,14 @@ export function invalidateSLAState() {
  * not call this.
  */
 export function invalidateSLAThresholds(workspaceId) {
+  thresholdGeneration++;
   if (workspaceId == null) {
-    thresholdSessionGeneration++;
     thresholdsCache.clear();
     thresholdsPending.clear();
     for (const listener of thresholdListeners) listener(null);
     return;
   }
   const key = normalizeWorkspaceKey(workspaceId);
-  thresholdRevisions.set(key, thresholdRevision(key) + 1);
   thresholdsCache.delete(key);
   thresholdsPending.delete(key);
   for (const listener of thresholdListeners) listener(workspaceId);

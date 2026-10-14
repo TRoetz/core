@@ -1,4 +1,4 @@
-// Shared, session-scoped read scheduler for opted-in API requests.
+// Shared per-tab read scheduler for opted-in API requests.
 //
 // GH #338: several independent hydration families (dependencies, assignee
 // hydration, SLA chunks, follow-up board pages) each launched their own
@@ -211,8 +211,9 @@ export function scheduleRead(priority, externalSignal, task) {
 }
 
 /**
- * Cancel queued and active opted-in work. Called when the authenticated
- * session changes so an old session's reads cannot keep occupying slots.
+ * Cancel all queued and active opted-in work. Exposed for explicit teardown
+ * and tests; the session layer intentionally does not call it, keeping the
+ * scheduler independent of auth.
  */
 export function resetReadScheduler() {
   for (const job of [...foregroundQueue, ...backgroundQueue]) {

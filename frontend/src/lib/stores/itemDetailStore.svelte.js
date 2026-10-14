@@ -34,12 +34,6 @@ function isAbortError(error) {
 // item by the time the caller resumes.
 const LOAD_SUPERSEDED = Object.freeze({ status: 'superseded' });
 
-function hasSharedWorkspaceReferences(workspaceId) {
-  return (
-    workspaceDataStore.initialized && Number(workspaceDataStore.workspaceId) === Number(workspaceId)
-  );
-}
-
 function filterMilestonesByWorkspace(milestones = [], workspace) {
   const allowedCategoryIds = workspace?.milestone_categories;
   if (!allowedCategoryIds?.length) return milestones;
@@ -750,14 +744,10 @@ class ItemDetailStore {
     try {
       const ancestors = await api.items.getAncestors(this.item.id, requestOptions);
       try {
-        // Reuse the already-loaded type list (set by #loadItemTypeData, which
-        // runs first); only fetch as a fallback if it isn't populated yet.
-        const itemTypesData = this.itemTypes?.length
-          ? this.itemTypes
-          : await api.itemTypes.getAll({}, requestOptions);
+        // The type list came with the workspace reference snapshot.
         this.parentHierarchy = ancestors.map((ancestor) => {
           if (ancestor.item_type_id) {
-            const itemType = itemTypesData.find((type) => type.id === ancestor.item_type_id);
+            const itemType = this.itemTypes.find((type) => type.id === ancestor.item_type_id);
             return { ...ancestor, itemType };
           }
           return ancestor;
@@ -776,15 +766,9 @@ class ItemDetailStore {
 
   async #loadItemTypeData(requestOptions = {}) {
     try {
-      const useSharedReferences = hasSharedWorkspaceReferences(this.workspaceId);
-      const [itemTypesData, hierarchyLevels] = await Promise.all([
-        useSharedReferences
-          ? Promise.resolve(workspaceDataStore.itemTypes)
-          : api.itemTypes.getAll({}, requestOptions),
-        api.hierarchyLevels.getAll({}, requestOptions),
-      ]);
-
-      this.itemTypes = itemTypesData || [];
+      // The type list already came with the workspace reference snapshot; only
+      // the hierarchy-level catalog needs its own read here.
+      const hierarchyLevels = await api.hierarchyLevels.getAll({}, requestOptions);
 
       if (this.item.item_type_id) {
         this.currentItemType = this.itemTypes.find((type) => type.id === this.item.item_type_id);

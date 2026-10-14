@@ -203,25 +203,12 @@ export function createDependencyLoader(options = {}) {
     return [...entry.outgoing, ...entry.incoming];
   }
 
-  function outgoing(id) {
-    return get(id)?.outgoing ?? [];
-  }
-
   /** Mark retained data stale so the next ensure refetches it. */
   function invalidate(ids) {
     const next = { ...entries };
     for (const id of ids ?? []) {
       const key = Number(id);
       if (next[key]) next[key] = { ...next[key], status: 'stale' };
-    }
-    entries = next;
-  }
-
-  function invalidateAll() {
-    /** @type {Record<number, DependencyEntry>} */
-    const next = {};
-    for (const [id, entry] of Object.entries(entries)) {
-      next[id] = { ...entry, status: 'stale' };
     }
     entries = next;
   }
@@ -245,9 +232,7 @@ export function createDependencyLoader(options = {}) {
     ensure,
     get,
     merged,
-    outgoing,
     invalidate,
-    invalidateAll,
     reset,
   };
 }
