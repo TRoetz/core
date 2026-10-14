@@ -3,7 +3,7 @@
   import { untrack } from 'svelte';
   import { t } from '../../stores/i18n.svelte.js';
   import { api } from '../../api.js';
-  import { BACKGROUND_READ } from '../../api/readScheduler.js';
+  import { createDependencyLoader } from './dependencyLoader.svelte.js';
   import { navigate } from '../../router.js';
   import { collectionStore, refreshCollectionDeltas, reloadCollection, refreshCollectionItem } from '../../stores/collectionContext.js';
   import { findOrphansByMissingParent, indexCollectionHierarchy, mergeAncestorContext } from './collectionHierarchy.js';
@@ -173,9 +173,15 @@
   // Drag state (bar move/resize)
   let dragInfo = $state(null);
 
-  // Links/dependencies
-  let itemLinks = $state({});
-  const ROADMAP_LINK_CHUNK = 100;
+  // Links/dependencies. The roadmap projects outgoing links only.
+  const roadmapDependencyLoader = createDependencyLoader();
+  let itemLinks = $derived.by(() => {
+    const map = {};
+    for (const [id, entry] of Object.entries(roadmapDependencyLoader.entries)) {
+      if (entry.outgoing?.length) map[id] = entry.outgoing;
+    }
+    return map;
+  });
 
   // Timeline computation
   let containerWidth = $state(1200);
@@ -741,27 +747,7 @@
   async function loadLinksForItems(items) {
     if (!roadmapConfig.dependency_link_type_id) return;
     const ids = items.filter((i) => i?.id != null).map((i) => i.id);
-    const newLinks = {};
-    for (const id of ids) newLinks[id] = [];
-    const chunks = [];
-    for (let i = 0; i < ids.length; i += ROADMAP_LINK_CHUNK) {
-      chunks.push(ids.slice(i, i + ROADMAP_LINK_CHUNK));
-    }
-    const groupsPerChunk = await Promise.all(
-      chunks.map(async (chunk) => {
-        try {
-          return await api.links.getForItems(chunk, BACKGROUND_READ);
-        } catch {
-          return {};
-        }
-      })
-    );
-    for (const groups of groupsPerChunk) {
-      for (const [id, group] of Object.entries(groups)) {
-        newLinks[id] = group?.outgoing || [];
-      }
-    }
-    itemLinks = newLinks;
+    await roadmapDependencyLoader.ensure(ids);
   }
 
   // Load config data

@@ -3,7 +3,6 @@
   import { useEventListener } from 'runed';
   import { t } from '../../stores/i18n.svelte.js';
   import { api } from '../../api.js';
-  import { BACKGROUND_READ } from '../../api/readScheduler.js';
   import { navigate } from '../../router.js';
   import {
     collectionStore,
@@ -43,6 +42,7 @@
   import DropdownMenu from '../../layout/DropdownMenu.svelte';
   import { backlogStore, workspaceDataStore, workspacesStore, workspacePermissions, itemModalStore } from '../../stores/index.js';
   import { useCollectionEventStream } from '../../composables/useCollectionEventStream.svelte.js';
+  import { createDependencyLoader } from './dependencyLoader.svelte.js';
   import { useCollectionSearch } from '../../composables/useCollectionSearch.svelte.js';
   import { invalidateSLAState } from '../sla/slaState.js';
   import { agentRuns } from '../../stores/agentRuns.svelte.js';
@@ -100,10 +100,8 @@
   let showItemModal = $state(false);
   let selectedItemId = $state(null);
 
-  // Cached outgoing and incoming links for dependency hover summaries.
-  let dependencyLinksByItem = $state({});
-  let dependencyLinksToken = 0; // guards against stale async when items change
-  const DEPENDENCY_LINK_CHUNK = 100;
+  // Scope-owned dependency-link loader for hover summaries and blocker counts.
+  const dependencyLoader = createDependencyLoader();
 
   // Quick-add state per column
   let quickAddState = $state({});
@@ -485,7 +483,7 @@
     const view = viewSignature;
     if (view === setupViewSignature) return;
     setupViewSignature = view;
-    dependencyLinksByItem = {};
+    dependencyLoader.reset();
     allIterations = [];
     iterationFilterId = null;
     groupByItemTypeId = null;
@@ -515,48 +513,14 @@
     }
   });
 
-  // Preload dependency links when the loaded item set changes.
+  // Preload dependency links when the loaded item set changes. Overlapping
+  // waves join pending ids; each successful chunk commits independently.
   $effect(() => {
     if (collectionStore.items.length > 0 && !collectionStore.loading) {
       // Avoid subscribing this effect to cache writes.
-      untrack(() => loadDependencyLinksForItems(collectionStore.items));
+      untrack(() => dependencyLoader.ensure(collectionStore.items.map((item) => item.id)));
     }
   });
-
-  // Fetch and cache merged links for dependency summaries.
-  async function loadDependencyLinksForItems(items) {
-    const toFetch = items.filter((i) => i?.id != null && !dependencyLinksByItem[i.id]);
-    if (toFetch.length === 0) return;
-    const token = ++dependencyLinksToken;
-    const ids = toFetch.map((i) => i.id);
-    // Batch at the canonical API cap.
-    const chunks = [];
-    for (let i = 0; i < ids.length; i += DEPENDENCY_LINK_CHUNK) {
-      chunks.push(ids.slice(i, i + DEPENDENCY_LINK_CHUNK));
-    }
-    const groupsPerChunk = await Promise.all(
-      chunks.map(async (chunk) => {
-        try {
-          return await api.links.getForItems(chunk, BACKGROUND_READ);
-        } catch {
-          return {};
-        }
-      })
-    );
-    if (token !== dependencyLinksToken) return; // a newer load superseded us
-    const next = { ...dependencyLinksByItem };
-    // Seed every requested id so items with no links are cached and not re-fetched.
-    for (const id of ids) next[id] = next[id] ?? [];
-    for (const groups of groupsPerChunk) {
-      for (const [id, group] of Object.entries(groups)) {
-        const all = [];
-        if (group?.outgoing) all.push(...group.outgoing);
-        if (group?.incoming) all.push(...group.incoming);
-        next[id] = all;
-      }
-    }
-    dependencyLinksByItem = next;
-  }
 
   async function loadBoardConfig() {
     const requestedView = viewSignature;
@@ -1819,7 +1783,7 @@
                                 labels={wdsLabels}
                                 {customFieldDefinitions}
                                 {users}
-                                dependencyLinks={dependencyLinksByItem[item.id] ?? []}
+                                dependencyLinks={dependencyLoader.merged(item.id)}
                                 moveMenuItems={canDragCard ? moveMenuItems : []}
                                 showMoveMenu={canDragCard}
                                 closestEdge={dragState.get(item.id)?.closestEdge}
