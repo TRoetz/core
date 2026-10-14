@@ -210,6 +210,25 @@ export class CollectionEditorOptionsStore {
     return promise;
   }
 
+  /**
+   * Drop one option family across every workspace. Global planning mutations
+   * change a global-inclusive directory, so every scoped cache is stale.
+   */
+  invalidateFamily(field) {
+    if (!field) return;
+    const next = { ...this.byWorkspace };
+    for (const [workspaceId, entry] of Object.entries(next)) {
+      next[workspaceId] = {
+        ...entry,
+        [field]: [],
+        loaded: { ...entry.loaded, [field]: false },
+        fetchedAt: { ...entry.fetchedAt, [field]: 0 },
+        complete: { ...entry.complete, [field]: false },
+      };
+    }
+    this.byWorkspace = next;
+  }
+
   invalidate(workspaceId, field = null) {
     const id = normalizeWorkspaceId(workspaceId);
     if (!id) return;

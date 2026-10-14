@@ -30,6 +30,8 @@
   import CreatePRFromBranchModal from '../../dialogs/CreatePRFromBranchModal.svelte';
   import { getShortcutDisplay } from '../../utils/keyboardShortcuts.js';
   import { workspacePermissions } from '../../stores';
+  import { workspaceDataStore } from '../../stores/workspaceDataStore.svelte.js';
+  import { collectionEditorOptions } from '../../stores/collectionEditorOptions.svelte.js';
   import { t } from '../../stores/i18n.svelte.js';
   import { formatDateOnly, formatCustomFieldDate } from '../../utils/dateFormatter.js';
   import { parseDuration, durationToString } from '../../utils/timeUtils.js';
@@ -145,6 +147,42 @@
     oneditRecurrence = null,
     onrequestmerge = null,
   } = $props();
+
+  // Detail owns one scoped milestone options loader. Complete workspace
+  // snapshots seed it; partial/unknown lists load every page on first open.
+  function filterMilestonesByWorkspace(list = [], scope) {
+    const allowedCategoryIds = scope?.milestone_categories;
+    if (!allowedCategoryIds?.length) return list;
+    return list.filter((milestone) => allowedCategoryIds.includes(milestone.category_id));
+  }
+
+  const milestoneWorkspaceId = $derived(item?.workspace_id ?? workspace?.id ?? null);
+  const milestoneOptionsEntry = $derived(collectionEditorOptions.get(milestoneWorkspaceId));
+
+  $effect(() => {
+    const wsId = milestoneWorkspaceId;
+    if (!wsId || !Array.isArray(milestones)) return;
+    const isActiveWorkspace = Number(workspaceDataStore.workspaceId) === Number(wsId);
+    const complete =
+      isActiveWorkspace && workspaceDataStore.planningCompleteness?.milestones === true;
+    const isPersonal = workspaceDataStore.workspace?.is_personal === true;
+    collectionEditorOptions.prime(
+      wsId,
+      { milestones: milestones.filter((milestone) => !isPersonal || !milestone.is_global) },
+      { milestones: complete }
+    );
+  });
+
+  async function openMilestoneOptions() {
+    if (milestoneWorkspaceId) {
+      await collectionEditorOptions.load(milestoneWorkspaceId, 'milestones');
+    }
+  }
+
+  const milestonePickerOptions = $derived(
+    filterMilestonesByWorkspace(milestoneOptionsEntry.milestones, workspace)
+  );
+  const milestonePickerLoading = $derived(milestoneOptionsEntry.loading.milestones === true);
 
   // State for SCM Link modals
   let showAddSCMLinkModal = $state(false);
@@ -874,6 +912,9 @@
           multiple={true}
           value={itemMilestones}
           workspaceId={item.workspace_id}
+          milestones={milestonePickerOptions}
+          loading={milestonePickerLoading}
+          onOpen={openMilestoneOptions}
           disabled={!canEdit || !isSystemFieldEditable('milestone')}
           class="w-full"
           onSelect={({ ids }) => {
