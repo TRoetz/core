@@ -587,9 +587,14 @@
 
 {#snippet itemCell(item)}
   <div class="flex min-w-0 items-baseline gap-2">
-    <ItemKey {item} workspace={$currentWorkspace} />
+    <ItemKey
+      {item}
+      workspace={$currentWorkspace}
+      dataTestid={`analytics-attention-key-${item.id}`}
+    />
     <button
       type="button"
+      data-testid={`analytics-attention-title-${item.id}`}
       class="truncate text-left font-medium text-ds-text hover:text-ds-text-link hover:underline"
       onclick={() => openItem(item)}
     >
