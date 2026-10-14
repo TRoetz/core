@@ -19,7 +19,11 @@
   import { workspaceDataStore } from '../stores/workspaceDataStore.svelte.js';
   import { dateInputToISOString } from '../utils/dateFormatter.js';
   import { parseDuration } from '../utils/timeUtils.js';
-  import { defaultCustomFieldValue, isBooleanCustomFieldType } from '../utils/customFieldTypes.js';
+  import {
+    defaultCustomFieldValue,
+    isBooleanCustomFieldType,
+    isCreateRenderableCustomFieldType,
+  } from '../utils/customFieldTypes.js';
   import { t, translateError } from '../stores/i18n.svelte.js';
 
   /**
@@ -200,6 +204,8 @@
         fieldDef: customFieldsById.get(parseInt(screenField.field_identifier, 10)),
       }))
       .filter((entry) => !!entry.fieldDef)
+      // Linking fields need an existing item; a create form cannot satisfy them.
+      .filter((entry) => isCreateRenderableCustomFieldType(entry.fieldDef.field_type))
   );
 
   const configuredSystemFields = $derived.by(() =>
@@ -457,7 +463,7 @@
       const previousValues = customFieldValues;
       customFieldValues = {};
       for (const field of allCustomFields) {
-        if (customIds.includes(field.id)) {
+        if (customIds.includes(field.id) && isCreateRenderableCustomFieldType(field.field_type)) {
           const previous = previousValues[field.id];
           customFieldValues[field.id] =
             previous !== undefined && previous !== null && previous !== ''
@@ -656,6 +662,9 @@
         const fieldId = parseInt(field.field_identifier, 10);
         const value = customFieldValues[fieldId];
         const fieldDef = customFieldsById.get(fieldId);
+        // Linking fields are not renderable on create; ignore a legacy
+        // required flag rather than blocking submission forever.
+        if (!isCreateRenderableCustomFieldType(fieldDef?.field_type)) continue;
         if (isBooleanCustomFieldType(fieldDef?.field_type)) continue;
         if (isEmptyValue(value)) {
           error = t('mobile.create.requiredField', { field: fieldDef?.name || t('mobile.create.customField') });

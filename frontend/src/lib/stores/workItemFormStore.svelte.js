@@ -1,6 +1,10 @@
 // Centralized reactive state for the work-item create form.
 import { api } from '../api.js';
-import { defaultCustomFieldValue, isBooleanCustomFieldType } from '../utils/customFieldTypes.js';
+import {
+  defaultCustomFieldValue,
+  isBooleanCustomFieldType,
+  isCreateRenderableCustomFieldType,
+} from '../utils/customFieldTypes.js';
 import { dateInputToISOString } from '../utils/dateFormatter.js';
 import { isGenericSubtaskType, sortItemTypesByHierarchy } from '../utils/hierarchy.js';
 import {
@@ -560,8 +564,11 @@ class WorkItemFormStore {
         .filter((field) => field.field_type === 'custom')
         .map((field) => parseInt(field.field_identifier, 10));
 
-      const filteredCustomFields = this.allCustomFields.filter((field) =>
-        customFieldIds.includes(field.id)
+      // Linking fields need an existing item and cannot be filled during
+      // create, so keep them out of the rendered fields and the payload.
+      const filteredCustomFields = this.allCustomFields.filter(
+        (field) =>
+          customFieldIds.includes(field.id) && isCreateRenderableCustomFieldType(field.field_type)
       );
 
       // Keep values the user already entered for fields that remain configured
@@ -657,6 +664,11 @@ class WorkItemFormStore {
       this.#templatesInFlightKey = null;
       return;
     }
+    // Wait for the workspace's effective configuration first: the unfiltered
+    // global catalog can hold a type this workspace does not bind, and a
+    // request for its templates 404s before the config set filters it out.
+    if (this.configSetLoadedForWorkspace !== workspaceId) return;
+
     const key = `${workspaceId}:${itemTypeId}`;
     // Never cache resolved keys: templates can change while the modal is open.
     if (this.#templatesInFlightKey === key) return;
@@ -918,6 +930,9 @@ class WorkItemFormStore {
           const fieldId = parseInt(field.field_identifier, 10);
           const value = this.customFieldValues[fieldId];
           const fieldDef = this.allCustomFields.find((f) => f.id === fieldId);
+          // Linking fields are not renderable on create; ignore a legacy
+          // required flag rather than blocking submission forever.
+          if (!isCreateRenderableCustomFieldType(fieldDef?.field_type)) continue;
           if (isBooleanCustomFieldType(fieldDef?.field_type)) continue;
           if (this.#isEmptyValue(value)) {
             errors.push(`${fieldDef?.name || 'Custom field'} is required`);
