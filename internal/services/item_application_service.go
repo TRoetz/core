@@ -794,6 +794,17 @@ func (s *ItemApplicationService) ReparentChildren(ctx context.Context, actor Aud
 	if err != nil || len(children) == 0 {
 		return ItemMutationCount{Count: len(children)}, err
 	}
+	// Cross-workspace children exist by design. Reparenting a child changes its
+	// hierarchy, so require item.edit in every child's workspace and refuse the
+	// whole operation otherwise, mirroring cascade deletion.
+	for _, child := range children {
+		if child.WorkspaceID == item.WorkspaceID {
+			continue
+		}
+		if err := s.require(actor.UserID, child.WorkspaceID, models.PermissionItemEdit); err != nil {
+			return ItemMutationCount{}, err
+		}
+	}
 	tx, err := s.db.Begin()
 	if err != nil {
 		return ItemMutationCount{}, err
@@ -1167,11 +1178,60 @@ func (s *ItemApplicationService) Children(ctx context.Context, userID, itemID in
 	return items, nil
 }
 
+// filterViewableByWorkspace drops items whose workspace the caller cannot view.
+// Workspaces in alwaysAllowed are kept without a permission lookup: the caller
+// was already authorized on the starting item there, possibly through an
+// approval pool rather than membership. Decisions are cached per workspace.
+func (s *ItemApplicationService) filterViewableByWorkspace(userID int, items []models.Item, alwaysAllowed ...int) ([]models.Item, error) {
+	if len(items) == 0 {
+		return items, nil
+	}
+	allowed := make(map[int]bool, len(alwaysAllowed))
+	for _, id := range alwaysAllowed {
+		allowed[id] = true
+	}
+	permissions := make(map[int]bool)
+	out := make([]models.Item, 0, len(items))
+	for _, item := range items {
+		if allowed[item.WorkspaceID] {
+			out = append(out, item)
+			continue
+		}
+		viewable, ok := permissions[item.WorkspaceID]
+		if !ok {
+			if s.perm == nil {
+				viewable = false
+			} else {
+				var err error
+				viewable, err = s.perm.HasWorkspacePermission(userID, item.WorkspaceID, models.PermissionItemView)
+				if err != nil {
+					return nil, err
+				}
+			}
+			permissions[item.WorkspaceID] = viewable
+		}
+		if viewable {
+			out = append(out, item)
+		}
+	}
+	return out, nil
+}
+
 func (s *ItemApplicationService) Ancestors(ctx context.Context, userID, itemID int) ([]models.Item, error) {
 	if err := s.requireView(ctx, userID, itemID); err != nil {
 		return nil, err
 	}
 	items, err := s.hierarchy.GetAncestorsContext(ctx, itemID)
+	if err != nil {
+		return nil, err
+	}
+	// Cross-workspace ancestors exist by design; drop the ones the caller
+	// cannot view instead of disclosing their content through a visible item.
+	workspaceID, err := s.items.GetWorkspaceIDCtx(ctx, itemID)
+	if err != nil {
+		return nil, err
+	}
+	items, err = s.filterViewableByWorkspace(userID, items, workspaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -1224,6 +1284,15 @@ func (s *ItemApplicationService) BatchAncestors(ctx context.Context, userID int,
 	if err != nil {
 		return nil, err
 	}
+	// Ancestor chains can cross into workspaces the caller cannot view; drop
+	// those entries before enrichment so their content never leaves the service.
+	for id, chain := range chains {
+		filtered, err := s.filterViewableByWorkspace(userID, chain)
+		if err != nil {
+			return nil, err
+		}
+		chains[id] = filtered
+	}
 	// Enrich every distinct ancestor once, then index by id for regrouping.
 	seen := make(map[int]struct{})
 	flat := make([]models.Item, 0)
@@ -1261,6 +1330,16 @@ func (s *ItemApplicationService) Descendants(ctx context.Context, userID, itemID
 		return nil, err
 	}
 	items, err := s.hierarchy.GetDescendantsContext(ctx, itemID, maxDepth)
+	if err != nil {
+		return nil, err
+	}
+	// Cross-workspace descendants exist by design; drop the ones the caller
+	// cannot view instead of disclosing their content through a visible item.
+	workspaceID, err := s.items.GetWorkspaceIDCtx(ctx, itemID)
+	if err != nil {
+		return nil, err
+	}
+	items, err = s.filterViewableByWorkspace(userID, items, workspaceID)
 	if err != nil {
 		return nil, err
 	}
