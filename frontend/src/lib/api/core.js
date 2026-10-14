@@ -5,7 +5,7 @@ import {
   isClockDriftSignificant,
   updateOffset,
 } from '../utils/serverClock.js';
-import { READ_PRIORITY, resetReadScheduler, scheduleRead } from './readScheduler.js';
+import { READ_PRIORITY, scheduleRead } from './readScheduler.js';
 
 // Bounded recovery for transient per-user concurrency rejections. Only safe,
 // finite reads are eligible; mutations are never automatically replayed.
@@ -101,16 +101,8 @@ function notifyAdminUIMutation(endpoint, method) {
 export function setAPIRequestSessionKey(sessionKey) {
   const nextKey = sessionKey == null ? null : String(sessionKey);
   if (nextKey === apiRequestSessionKey) return;
-  const previousKey = apiRequestSessionKey;
   apiRequestSessionKey = nextKey;
   inFlightGetRequests.clear();
-  // Cancel prior opted-in work only when leaving or switching an authenticated
-  // session. The initial null -> key transition (auth resolving on boot) must
-  // not abort reads that already started with the session cookie; the route
-  // singleton can begin a collection load before auth settles.
-  if (previousKey !== null) {
-    resetReadScheduler();
-  }
 }
 
 export function clearAPIRequestSessionKey() {
