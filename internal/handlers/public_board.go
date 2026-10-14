@@ -174,7 +174,7 @@ func (h *PublicBoardHandler) GetPublicBoardItem(w http.ResponseWriter, r *http.R
 	var collectionID int
 	err = h.db.QueryRow(`
 		SELECT id FROM collections
-		WHERE public_slug = ? AND is_public = true AND public_slug IS NOT NULL
+		WHERE public_slug = ? AND is_public = true AND is_private = false AND public_slug IS NOT NULL
 	`, slug).Scan(&collectionID)
 	if errors.Is(err, sql.ErrNoRows) {
 		respondNotFound(w, r, "board")
@@ -274,7 +274,7 @@ func (h *PublicBoardHandler) GetPublicBoard(w http.ResponseWriter, r *http.Reque
 	err := h.db.QueryRow(`
 		SELECT id, name, COALESCE(description, ''), COALESCE(ql_query, ''), updated_at
 		FROM collections
-		WHERE public_slug = ? AND is_public = true AND public_slug IS NOT NULL
+		WHERE public_slug = ? AND is_public = true AND is_private = false AND public_slug IS NOT NULL
 	`, slug).Scan(&collectionID, &collectionName, &collectionDescription, &qlQuery, &updatedAt)
 
 	if errors.Is(err, sql.ErrNoRows) {
@@ -719,7 +719,7 @@ func (h *PublicBoardHandler) DownloadAttachment(w http.ResponseWriter, r *http.R
 	var collectionID int
 	err = h.db.QueryRow(`
 		SELECT id FROM collections
-		WHERE public_slug = ? AND is_public = true AND public_slug IS NOT NULL
+		WHERE public_slug = ? AND is_public = true AND is_private = false AND public_slug IS NOT NULL
 	`, slug).Scan(&collectionID)
 	if err != nil {
 		respondNotFound(w, r, "attachment")

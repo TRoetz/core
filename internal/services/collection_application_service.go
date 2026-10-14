@@ -323,6 +323,12 @@ func (s *CollectionApplicationService) Update(actor AuditActor, id int, update C
 	if update.PublicSlugSet {
 		collection.PublicSlug = update.PublicSlug
 	}
+	// Private overrides public sharing: a collection marked private must never
+	// stay anonymously readable at its public slug.
+	if collection.IsPrivate {
+		collection.IsPublic = false
+		collection.PublicSlug = nil
+	}
 	if err := sanitizeCollectionModel(collection); err != nil {
 		return nil, err
 	}
