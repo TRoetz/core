@@ -156,11 +156,12 @@
     return list.filter((milestone) => allowedCategoryIds.includes(milestone.category_id));
   }
 
-  const milestoneWorkspaceId = $derived(item?.workspace_id ?? workspace?.id ?? null);
-  const milestoneOptionsEntry = $derived(collectionEditorOptions.get(milestoneWorkspaceId));
+  // The item's owning workspace scopes every lazily loaded editor option.
+  const detailWorkspaceId = $derived(item?.workspace_id ?? workspace?.id ?? null);
+  const editorOptionsEntry = $derived(collectionEditorOptions.get(detailWorkspaceId));
 
   $effect(() => {
-    const wsId = milestoneWorkspaceId;
+    const wsId = detailWorkspaceId;
     if (!wsId || !Array.isArray(milestones)) return;
     const isActiveWorkspace = Number(workspaceDataStore.workspaceId) === Number(wsId);
     const complete =
@@ -174,15 +175,34 @@
   });
 
   async function openMilestoneOptions() {
-    if (milestoneWorkspaceId) {
-      await collectionEditorOptions.load(milestoneWorkspaceId, 'milestones');
+    if (detailWorkspaceId) {
+      await collectionEditorOptions.load(detailWorkspaceId, 'milestones');
+    }
+  }
+
+  // Assignee and team options load on first open only. The authorized
+  // assignable-users endpoint (not the user-display cache) keeps agent
+  // presence and assignability semantics intact.
+  async function openAssigneeOptions() {
+    if (detailWorkspaceId) {
+      await collectionEditorOptions.load(detailWorkspaceId, 'users');
+    }
+  }
+
+  async function openTeamOptions() {
+    if (detailWorkspaceId) {
+      await collectionEditorOptions.load(detailWorkspaceId, 'teams');
     }
   }
 
   const milestonePickerOptions = $derived(
-    filterMilestonesByWorkspace(milestoneOptionsEntry.milestones, workspace)
+    filterMilestonesByWorkspace(editorOptionsEntry.milestones, workspace)
   );
-  const milestonePickerLoading = $derived(milestoneOptionsEntry.loading.milestones === true);
+  const milestonePickerLoading = $derived(editorOptionsEntry.loading.milestones === true);
+  const assigneeOptions = $derived(editorOptionsEntry.users);
+  const assigneeOptionsLoading = $derived(editorOptionsEntry.loading.users === true);
+  const teamOptions = $derived(editorOptionsEntry.teams);
+  const teamOptionsLoading = $derived(editorOptionsEntry.loading.teams === true);
 
   // State for SCM Link modals
   let showAddSCMLinkModal = $state(false);
@@ -837,6 +857,10 @@
           showUnassigned={true}
           disabled={!canEdit || !isSystemFieldEditable('assignee')}
           workspaceId={item?.workspace_id}
+          users={assigneeOptions}
+          loading={assigneeOptionsLoading}
+          onOpen={openAssigneeOptions}
+          autoOpen={editingAssignee}
           class="w-full"
           onSelect={(selectedUser) => {
             onsaveField?.({
@@ -872,6 +896,9 @@
           value={item.team_id ?? null}
           placeholder={t('items.selectTeam')}
           disabled={!canEdit || !isSystemFieldEditable('team')}
+          teams={teamOptions}
+          loading={teamOptionsLoading}
+          onOpen={openTeamOptions}
           class="w-full"
           onSelect={(selectedTeam) => {
             onsaveField?.({

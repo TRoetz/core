@@ -13,7 +13,9 @@
     showSelectedInTrigger = true,
     children: customTrigger = null,
     teams = null,
+    loading = false,
     searchTestid = 'team-picker-search',
+    onOpen = null,
     onSelect = () => {},
     onCancel = () => {}
   } = $props();
@@ -33,7 +35,7 @@
 <BasePicker
   bind:value
   items={teamList}
-  loading={teams === null ? loader.loading : false}
+  loading={teams === null ? loader.loading : loading}
   placeholder={resolvedPlaceholder}
   {disabled}
   allowClear={true}
@@ -44,6 +46,7 @@
   getLabel={(team) => team?.name ?? ''}
   {searchTestid}
   optionTestid={(opt) => `team-picker-option-${opt.value}`}
+  onOpen={() => onOpen?.()}
   onSelect={(team) => onSelect(team)}
   onCancel={() => onCancel()}
 >

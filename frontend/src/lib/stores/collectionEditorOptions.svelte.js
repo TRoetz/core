@@ -3,6 +3,7 @@ import { api } from '../api.js';
 const EMPTY_OPTIONS = Object.freeze({
   statuses: [],
   users: [],
+  teams: [],
   milestones: [],
   iterations: [],
   priorities: [],
@@ -25,6 +26,7 @@ const MAX_ASSET_CACHE_ENTRIES = 200;
 const OPTION_LOADERS = {
   statuses: (workspaceId) => api.workspaces.getStatuses(workspaceId),
   users: (workspaceId) => api.getAssignableUsers(workspaceId),
+  teams: () => api.teams.getAll(),
   milestones: (workspaceId) =>
     api.milestones.getAll({ workspace_id: workspaceId, include_global: true }),
   iterations: (workspaceId) => api.iterations.getAll({ workspace_id: workspaceId }),
