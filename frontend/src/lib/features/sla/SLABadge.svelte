@@ -3,7 +3,7 @@
   import Lozenge from '../../components/Lozenge.svelte';
   import { t } from '../../stores/i18n.svelte.js';
   import { formatInstant } from '../../utils/dateFormatter.js';
-  import { getItemSLA, getSLAThresholds } from './slaState.js';
+  import { getItemSLA, getSLAThresholds, onSLAThresholdsInvalidated } from './slaState.js';
 
   let { itemId = null, workspaceId = null, refreshToken = 0 } = $props();
 
@@ -37,6 +37,21 @@
   });
 
   useEventListener(() => window, 'refresh-work-items', () => void load(itemId, workspaceId, refreshToken));
+
+  // A threshold mutation in this tab must refresh mounted badges immediately;
+  // failed mutations never emit, and other tabs pick the change up once the
+  // five-minute threshold freshness expires.
+  $effect(() => {
+    return onSLAThresholdsInvalidated((invalidatedWorkspaceId) => {
+      if (
+        invalidatedWorkspaceId != null &&
+        Number(invalidatedWorkspaceId) !== Number(workspaceId)
+      ) {
+        return;
+      }
+      void load(itemId, workspaceId, refreshToken);
+    });
+  });
 
   function formatDuration(ms) {
     if (ms == null) return '';

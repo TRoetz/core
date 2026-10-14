@@ -1,6 +1,7 @@
 import { derived, writable } from 'svelte/store';
 import { setAPIRequestSessionKey } from '../api/core.js';
 import { api } from '../api.js';
+import { resetSLAState } from '../features/sla/slaState.js';
 import { clearStores, getStoreValue } from './storeUtils.js';
 import { workspacesStore } from './workspaces.svelte.js';
 
@@ -45,14 +46,25 @@ function createAuthStore() {
   // server does not expose the cookie token, so user id + session creation
   // time is the stable public session marker; tests/legacy responses may
   // provide an explicit id instead.
+  let lastSessionKey = null;
   combined.subscribe((state) => {
     if (!state.isAuthenticated || state.user?.id == null) {
+      if (lastSessionKey !== null) {
+        // Protected SLA data must not survive a session change.
+        resetSLAState();
+        lastSessionKey = null;
+      }
       setAPIRequestSessionKey(null);
       return;
     }
     const marker =
       state.session?.id || state.session?.created_at || state.session?.expires_at || 'active';
-    setAPIRequestSessionKey(`auth:${state.user.id}:${marker}`);
+    const nextKey = `auth:${state.user.id}:${marker}`;
+    if (nextKey !== lastSessionKey) {
+      resetSLAState();
+      lastSessionKey = nextKey;
+    }
+    setAPIRequestSessionKey(nextKey);
   });
 
   return {

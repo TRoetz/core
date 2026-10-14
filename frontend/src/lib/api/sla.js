@@ -58,8 +58,8 @@ export const sla = {
     fetchAPI(`${workspaceBase(workspaceId)}/metrics/${metricId}`, { method: 'DELETE' }),
 
   // --- Warning thresholds ---
-  getWarningThresholds: (workspaceId) =>
-    fetchAPI(`${workspaceBase(workspaceId)}/warning-thresholds`),
+  getWarningThresholds: (workspaceId, requestOptions = {}) =>
+    fetchAPI(`${workspaceBase(workspaceId)}/warning-thresholds`, requestOptions),
   createWarningThreshold: (workspaceId, data) =>
     fetchAPI(`${workspaceBase(workspaceId)}/warning-thresholds`, {
       method: 'POST',
