@@ -14,6 +14,15 @@ export const ADMIN_UI_MUTATION_EVENT = 'windshift:admin-ui-mutation';
 // Ensure the clock-drift warning toast fires at most once per session
 let driftWarningShown = false;
 
+// The per-user concurrency limiter (internal/middleware/user_concurrency.go)
+// answers bursts with 429 + Retry-After. Views that fan out many reads at once
+// (collection boards, the item detail fallback) would otherwise surface
+// "Too many concurrent requests" as a hard failure. Safe methods are retried a
+// bounded number of times; writes are never retried here.
+const CONCURRENCY_RETRY_ATTEMPTS = 2;
+const CONCURRENCY_RETRY_MAX_DELAY_MS = 5000;
+const SAFE_METHODS = ['GET', 'HEAD', 'OPTIONS'];
+
 // Chromium does not consistently report fetches cancelled by a document
 // navigation as AbortError. Track the page lifecycle explicitly so callers do
 // not mistake unload cancellation for a connectivity failure. `pageshow`
@@ -134,8 +143,73 @@ function createApiError(response, responseText) {
   // Add HTTP status info
   /** @type {any} */ (error).status = response.status;
   /** @type {any} */ (error).statusText = response.statusText;
+  /** @type {any} */ (error).retryAfter = response.headers?.get?.('Retry-After') ?? null;
 
   return error;
+}
+
+/**
+ * Delay before retrying a 429: Retry-After (seconds) when present, otherwise
+ * exponential backoff, capped and jittered so parallel requests spread out.
+ * @param {any} error
+ * @param {number} attempt
+ */
+export function concurrencyRetryDelayMs(error, attempt, random = Math.random) {
+  const seconds = Number(error?.retryAfter);
+  const base =
+    error?.retryAfter != null && Number.isFinite(seconds) && seconds >= 0
+      ? seconds * 1000
+      : 500 * 2 ** attempt;
+  return Math.min(base, CONCURRENCY_RETRY_MAX_DELAY_MS) + Math.floor(random() * 250);
+}
+
+/**
+ * @param {number} ms
+ * @param {AbortSignal | null | undefined} signal
+ */
+function waitForRetry(ms, signal) {
+  return new Promise((resolve, reject) => {
+    const aborted = () => new DOMException('The operation was aborted', 'AbortError');
+    if (signal?.aborted) {
+      reject(aborted());
+      return;
+    }
+    const timer = setTimeout(() => {
+      signal?.removeEventListener('abort', onAbort);
+      resolve(undefined);
+    }, ms);
+    function onAbort() {
+      clearTimeout(timer);
+      reject(aborted());
+    }
+    signal?.addEventListener('abort', onAbort, { once: true });
+  });
+}
+
+/**
+ * performFetchAPI plus bounded retries of safe requests rejected by the
+ * per-user concurrency limiter.
+ * @param {string} base
+ * @param {string} endpoint
+ * @param {RequestInit & { timeout?: number; text?: boolean }} [options]
+ */
+async function performFetchWithRetry(base, endpoint, options = {}) {
+  const method = String(options.method || 'GET').toUpperCase();
+  const retryable = SAFE_METHODS.includes(method);
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      return await performFetchAPI(base, endpoint, options);
+    } catch (error) {
+      if (
+        !retryable ||
+        /** @type {any} */ (error)?.status !== 429 ||
+        attempt >= CONCURRENCY_RETRY_ATTEMPTS
+      ) {
+        throw error;
+      }
+      await waitForRetry(concurrencyRetryDelayMs(error, attempt), options.signal);
+    }
+  }
 }
 
 /**
@@ -297,7 +371,7 @@ async function performFetchAPI(base, endpoint, options = {}) {
     }
 
     const method = String(fetchOptions.method || 'GET').toUpperCase();
-    if (!['GET', 'HEAD', 'OPTIONS'].includes(method)) {
+    if (!SAFE_METHODS.includes(method)) {
       notifyAdminUIMutation(endpoint, method);
     }
 
@@ -360,13 +434,13 @@ export async function fetchAllV2Pages(endpoint, options = {}) {
 
 function fetchFromAPI(base, endpoint, options) {
   const key = inFlightGETKey(base, endpoint, options);
-  if (!key) return performFetchAPI(base, endpoint, options);
+  if (!key) return performFetchWithRetry(base, endpoint, options);
 
   const existing = inFlightGetRequests.get(key);
   if (existing) return existing;
 
   let trackedRequest;
-  trackedRequest = performFetchAPI(base, endpoint, options).finally(() => {
+  trackedRequest = performFetchWithRetry(base, endpoint, options).finally(() => {
     if (inFlightGetRequests.get(key) === trackedRequest) {
       inFlightGetRequests.delete(key);
     }
