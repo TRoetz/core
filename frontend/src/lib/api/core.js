@@ -101,10 +101,16 @@ function notifyAdminUIMutation(endpoint, method) {
 export function setAPIRequestSessionKey(sessionKey) {
   const nextKey = sessionKey == null ? null : String(sessionKey);
   if (nextKey === apiRequestSessionKey) return;
+  const previousKey = apiRequestSessionKey;
   apiRequestSessionKey = nextKey;
   inFlightGetRequests.clear();
-  // An old session's opted-in reads must not keep occupying scheduler slots.
-  resetReadScheduler();
+  // Cancel prior opted-in work only when leaving or switching an authenticated
+  // session. The initial null -> key transition (auth resolving on boot) must
+  // not abort reads that already started with the session cookie; the route
+  // singleton can begin a collection load before auth settles.
+  if (previousKey !== null) {
+    resetReadScheduler();
+  }
 }
 
 export function clearAPIRequestSessionKey() {
@@ -429,8 +435,11 @@ async function performFetchWithRetry(base, endpoint, options) {
       lastError = error;
       if (/** @type {any} */ (error)?.status !== 429) throw error;
       const isLastAttempt = attempt >= RETRY_MAX_ATTEMPTS - 1;
-      // A session change must not continue an old session's retry sequence.
-      if (isLastAttempt || apiRequestSessionKey !== sessionKey) throw error;
+      // A session replacement must not continue an old session's retry
+      // sequence. A read that started before auth settled (null key) may still
+      // retry once the authenticated session is established.
+      const sessionReplaced = sessionKey !== null && apiRequestSessionKey !== sessionKey;
+      if (isLastAttempt || sessionReplaced) throw error;
 
       const delayMs = parseRetryAfterMs(error, attempt);
       const remainingMs = RETRY_MAX_ELAPSED_MS - (Date.now() - startedAt);
@@ -440,7 +449,7 @@ async function performFetchWithRetry(base, endpoint, options) {
       // released it.
       await sleepWithAbort(concurrencyRetryDelayMs(error, attempt), options?.signal);
 
-      if (apiRequestSessionKey !== sessionKey) throw lastError;
+      if (sessionKey !== null && apiRequestSessionKey !== sessionKey) throw lastError;
     }
   }
 

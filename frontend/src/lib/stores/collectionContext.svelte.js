@@ -369,7 +369,11 @@ class CollectionStore {
       }
     } catch (error) {
       if (loadId !== this.#loadId) return;
-      console.error('[collectionStore] Load failed:', error);
+      // Page teardown and session replacement abort in-flight reads; that is
+      // expected control flow, not a load failure to surface.
+      if (!isExpectedBackgroundSyncError(error)) {
+        console.error('[collectionStore] Load failed:', error);
+      }
     } finally {
       if (loadId === this.#loadId) {
         this.loading = false;
