@@ -1,5 +1,6 @@
 import { api } from '../api.js';
 import { workspaceOnlyViews, workspaceViewItems } from '../navigation/workspaceNavigation.js';
+import { collectionStore } from './collectionContext.js';
 
 // Every collection-scoped view, used whenever a scope has no explicit
 // enabled-views setting or its lookup fails.
@@ -47,7 +48,7 @@ function createViewSettingsStore() {
     const promise = (async () => {
       let entry = DEFAULT_ENTRY;
       try {
-        const config = await api.collections.getBoardConfiguration(collectionId, workspaceId);
+        const config = await resolveBoardConfiguration(workspaceId, collectionId);
         const enabled = config?.view_settings?.enabled_views;
         entry = {
           // Missing or empty settings mean the workspace default (everything
@@ -68,6 +69,25 @@ function createViewSettingsStore() {
     } finally {
       inflight.delete(key);
     }
+  }
+
+  /**
+   * Prefer the collection view's board-configuration request for the same
+   * scope so navigation does not issue a duplicate plain-config read. The
+   * one-microtask wait lets a sibling view effect register its bootstrap in
+   * the same flush; navigation-only scopes still use the lightweight endpoint.
+   */
+  async function resolveBoardConfiguration(workspaceId, collectionId) {
+    let peeked = collectionStore.peekBoardConfiguration(workspaceId, collectionId);
+    if (!peeked) {
+      await Promise.resolve();
+      peeked = collectionStore.peekBoardConfiguration(workspaceId, collectionId);
+    }
+    if (peeked) {
+      if (peeked.config !== undefined) return peeked.config;
+      return await peeked.pending;
+    }
+    return api.collections.getBoardConfiguration(collectionId, workspaceId);
   }
 
   /** Enabled view ids for a scope; the workspace default while unloaded. */

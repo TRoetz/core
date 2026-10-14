@@ -547,6 +547,20 @@ class CollectionStore {
     return request;
   }
 
+  /**
+   * Non-starting view of the board-configuration request for a scope. Returns
+   * the cached config, the in-flight bootstrap promise, or null when this store
+   * has not loaded that scope. Navigation joins this instead of issuing a
+   * duplicate plain-config request.
+   */
+  peekBoardConfiguration(wsId = this.#wsId, colId = this.#colId) {
+    const key = `${colId ?? ''}|${wsId ?? ''}`;
+    if (this.#boardConfigurationKey !== key) return null;
+    if (this.#boardConfigurationLoaded) return { config: this.boardConfiguration };
+    if (this.#boardConfigurationPromise) return { pending: this.#boardConfigurationPromise };
+    return null;
+  }
+
   invalidateBoardConfiguration(wsId = this.#wsId, colId = this.#colId) {
     const key = `${colId ?? ''}|${wsId ?? ''}`;
     if (this.#boardConfigurationKey !== key) return;
