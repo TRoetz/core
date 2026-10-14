@@ -20,6 +20,8 @@ class WorkspaceDataStore {
   #screenConfigPromises = new Map();
   /** @type {Map<number, Promise<object|null>>} */
   #userHydrationPromises = new Map();
+  /** @type {Map<number, Promise<object|null>>} */
+  #bootstrapPromises = new Map();
   /** @type {Set<number>} */
   #userHydrationFailed = new Set();
   workspace = $state(null);
@@ -163,6 +165,54 @@ class WorkspaceDataStore {
   }
 
   /**
+   * Reference data for one workspace without activating it. Returns the active
+   * scope's loaded fields when they match; otherwise issues one deduplicated
+   * bootstrap request instead of a fan-out of domain reads. A different active
+   * scope (e.g. a global board) is left intact.
+   * @param {number|string} workspaceId
+   * @returns {Promise<object|null>}
+   */
+  async getReferenceSnapshot(workspaceId) {
+    const id = typeof workspaceId === 'string' ? parseInt(workspaceId, 10) : workspaceId;
+    if (!Number.isInteger(id) || id <= 0) return null;
+
+    const isActive = Number(this.workspaceId) === id;
+    if (isActive && this._initPromise) {
+      await this._initPromise;
+    }
+    if (isActive && this.workspaceId === id && this.initialized) {
+      return {
+        workspace: this.workspace,
+        custom_field_definitions: this.customFieldDefinitions,
+        milestones: this.milestones,
+        iterations: this.iterations,
+        projects: this.projects,
+        item_types: this.itemTypes,
+        statuses: this.statuses,
+        users: this.users,
+        priorities: this.priorities,
+        planning_completeness: this.planningCompleteness,
+      };
+    }
+
+    const pending = this.#bootstrapPromises.get(id);
+    if (pending) return pending;
+    const promise = api.workspaces
+      .getBootstrap(id, FOREGROUND_READ)
+      .catch((error) => {
+        if (error?.status === 404) return null;
+        throw error;
+      })
+      .finally(() => {
+        if (this.#bootstrapPromises.get(id) === promise) {
+          this.#bootstrapPromises.delete(id);
+        }
+      });
+    this.#bootstrapPromises.set(id, promise);
+    return promise;
+  }
+
+  /**
    * Silent re-fetch of all reference data. On error, keeps stale data.
    */
   async refresh() {
@@ -230,6 +280,7 @@ class WorkspaceDataStore {
     this.#screenConfigPromises.clear();
     this.#userHydrationPromises.clear();
     this.#userHydrationFailed.clear();
+    this.#bootstrapPromises.clear();
     this.lastRefreshedAt = null;
   }
 

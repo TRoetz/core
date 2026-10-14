@@ -292,9 +292,16 @@ class ItemDetailStore {
     this.loadingChildItems = true;
 
     try {
-      let workspaceInitPromise = isNumericID(effectiveWorkspaceId)
-        ? workspaceDataStore.initialize(effectiveWorkspaceId)
+      // Do not activate a different scope (e.g. a global board) just because
+      // the item lives in a workspace; the reference snapshot below handles it.
+      const activeScope = workspaceDataStore.initialized
+        ? Number(workspaceDataStore.workspaceId)
         : null;
+      let workspaceInitPromise =
+        isNumericID(effectiveWorkspaceId) &&
+        (activeScope === null || activeScope === Number(effectiveWorkspaceId))
+          ? workspaceDataStore.initialize(effectiveWorkspaceId)
+          : null;
       const summary = lookupWorkspaceKey
         ? await api.items.getDetailSummaryByKey(
             lookupWorkspaceKey,
@@ -325,52 +332,33 @@ class ItemDetailStore {
       const wsId = effectiveWorkspaceId || itemData.workspace_id;
       this.workspaceId = wsId;
 
-      // Share MainApp's in-flight workspace bootstrap.
-      workspaceInitPromise ??= workspaceDataStore.initialize(wsId);
-      await workspaceInitPromise;
-      if (token !== this.#loadToken) return LOAD_SUPERSEDED;
-      const useSharedReferences = hasSharedWorkspaceReferences(wsId);
-
-      if (useSharedReferences) {
-        this.workspace = workspaceDataStore.workspace;
-        this.customFieldDefinitions = workspaceDataStore.customFieldDefinitions;
-        this.milestones = filterMilestonesByWorkspace(
-          workspaceDataStore.milestones,
-          this.workspace
-        );
-        this.iterations = workspaceDataStore.iterations;
-        this.timeProjects = workspaceDataStore.projects;
-        this.itemTypes = workspaceDataStore.itemTypes;
-      } else {
-        // The shared workspace store is a single slot, so a concurrent
-        // initializeGlobal()/initialize() for another scope can replace it
-        // after the await above. Hydrate this item's workspace references
-        // directly instead of rendering against another workspace's (or the
-        // global) snapshot.
-        const [workspace, customFieldDefinitions, milestones, iterations, timeProjects, itemTypes] =
-          await Promise.all([
-            api.workspaces.get(wsId, requestOptions),
-            api.customFields.getAll({}, requestOptions),
-            api.milestones.getAll({ workspace_id: wsId, include_global: true }, requestOptions),
-            api.iterations.getAll({ workspace_id: wsId, include_global: true }, requestOptions),
-            api.time.projects.getByWorkspace(wsId, requestOptions),
-            api.itemTypes.getAll({}, requestOptions),
-          ]);
+      // Activate the item's workspace only when no other scope is active. A
+      // global board must keep its own references; the snapshot below is
+      // fetched without clobbering it.
+      const currentScope = workspaceDataStore.initialized
+        ? Number(workspaceDataStore.workspaceId)
+        : null;
+      if (currentScope === null || currentScope === Number(wsId)) {
+        workspaceInitPromise ??= workspaceDataStore.initialize(wsId);
+        await workspaceInitPromise;
         if (token !== this.#loadToken) return LOAD_SUPERSEDED;
-
-        this.workspace = workspace;
-        this.customFieldDefinitions = customFieldDefinitions || [];
-        this.milestones = filterMilestonesByWorkspace(milestones, workspace);
-        this.iterations = iterations || [];
-        this.timeProjects = timeProjects || [];
-        this.itemTypes = itemTypes || [];
       }
+
+      // One aggregate bootstrap request instead of six independent domain
+      // reads when the shared store serves a different scope. A fresh
+      // snapshot needs no recovery request.
+      const references = await workspaceDataStore.getReferenceSnapshot(wsId);
+      if (token !== this.#loadToken) return LOAD_SUPERSEDED;
+      this.workspace = references?.workspace ?? null;
+      this.customFieldDefinitions = references?.custom_field_definitions ?? [];
+      this.milestones = filterMilestonesByWorkspace(references?.milestones ?? [], this.workspace);
+      this.iterations = references?.iterations ?? [];
+      this.timeProjects = references?.projects ?? [];
+      this.itemTypes = references?.item_types ?? [];
       this.priorities = [
         ...(summary.priorities?.length
           ? summary.priorities
-          : useSharedReferences
-            ? workspaceDataStore.priorities
-            : []),
+          : (references?.priorities ?? workspaceDataStore.priorities ?? [])),
       ].sort((a, b) => a.sort_order - b.sort_order);
 
       this.requestTypeFields = summary.request_type_fields || [];
