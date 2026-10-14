@@ -1137,8 +1137,11 @@
     outline: none;
   }
 
+  /* Show the placeholder only for a truly empty document. `:only-child` ignores
+     text nodes, so match the empty-paragraph trailing break by class — a hard
+     break (`<br data-type="hardbreak">`) must not re-trigger the placeholder. */
   :global(.milkdown-editor:not(.readonly) .ProseMirror[data-placeholder]:has(> p:first-child:last-child:empty)::before),
-  :global(.milkdown-editor:not(.readonly) .ProseMirror[data-placeholder]:has(> p:first-child:last-child > br:only-child)::before) {
+  :global(.milkdown-editor:not(.readonly) .ProseMirror[data-placeholder]:has(> p:first-child:last-child > br.ProseMirror-trailingBreak:only-child)::before) {
     content: attr(data-placeholder);
     float: left;
     color: var(--ds-text-subtlest, #9ca3af);
