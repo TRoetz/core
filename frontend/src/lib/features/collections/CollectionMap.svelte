@@ -6,7 +6,6 @@
   import { getCollection, checkItemVisibility } from '../collections/collectionService.js';
   import {
     collectionStore,
-    refreshCollectionDeltas,
     reloadCollection,
     scheduleCollectionReconciliation,
   } from '../../stores/collectionContext.js';
@@ -30,6 +29,7 @@
   import Lozenge from '../../components/Lozenge.svelte';
   import { getStatusCategory } from '../../utils/statusColors.js';
   import CollectionViewSwitcher from './CollectionViewSwitcher.svelte';
+  import CollectionHierarchyLoadMore from './CollectionHierarchyLoadMore.svelte';
   import QuickAddForm from './QuickAddForm.svelte';
   import { childItemTypesForParent } from '../../utils/hierarchy.js';
   import { indexCollectionHierarchy } from './collectionHierarchy.js';
@@ -194,7 +194,7 @@
   // Scoped SSE invalidations (WI-1624): any frame runs the existing delta fetch.
   useCollectionEventStream(
     () => (collectionId ? { kind: 'collection', id: collectionId } : { kind: 'workspace', id: workspaceId }),
-    { onInvalidate: () => refreshCollectionDeltas() }
+    { onInvalidate: () => scheduleCollectionReconciliation() }
   );
 
   async function loadAllData() {
@@ -1052,6 +1052,7 @@
       </div>
     </div>
 
+    <CollectionHierarchyLoadMore testid="map-load-more" />
   </StaticViewBackground>
 {:else}
   <div class="p-6">

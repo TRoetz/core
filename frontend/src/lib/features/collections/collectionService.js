@@ -232,3 +232,28 @@ export async function checkItemVisibility(itemId, filters) {
     return 'unknown';
   }
 }
+
+/**
+ * Decide whether a just-created item belongs in the current collection view.
+ * Collection QL and sub-filters depend on server state, so membership is
+ * verified rather than inferred from the workspace. An `unknown` result must
+ * never be treated as membership; callers reconcile instead.
+ *
+ * @param {{ id: number, workspace_id?: number|string }} item
+ * @param {{ workspaceId?: number|string|null, collectionId?: number|string|null, subFilterQL?: string }} scope
+ * @returns {Promise<'member'|'nonmember'|'unknown'>}
+ */
+export async function resolveCreatedItemMembership(
+  item,
+  { workspaceId, collectionId, subFilterQL } = {}
+) {
+  if (collectionId || subFilterQL) {
+    const filters = collectionId ? { collection_id: collectionId } : { workspace_id: workspaceId };
+    if (subFilterQL) filters.sub_ql = subFilterQL;
+    return checkItemVisibility(item.id, filters);
+  }
+  if (workspaceId) {
+    return Number(item.workspace_id) === Number(workspaceId) ? 'member' : 'nonmember';
+  }
+  return 'member';
+}

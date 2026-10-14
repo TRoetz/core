@@ -381,7 +381,7 @@ class CollectionStore {
       // Local events that arrived during the initial load get one trailing run.
       if (this.#reconcilePending) {
         this.#reconcilePending = false;
-        void this.#runLocalReconciliation();
+        void this.refreshDeltas();
       }
     }
   }
@@ -1152,11 +1152,96 @@ class CollectionStore {
   }
 
   /**
-   * Poll for cheap deltas and patch loaded rows by ID. Falls back to a full
+   * Insert a just-created item into the loaded projection. `backlog` targets
+   * the backlog array, otherwise the main items array. Deduplicates by id so
+   * repeated create events (modal plus delta or cross-tab frame) cannot append
+   * the same row twice.
+   */
+  insertCreatedItem(item, { backlog = false } = {}) {
+    if (!item?.id) return;
+    const target = backlog ? this.backlogItems : this.items;
+    if (target.some((existing) => existing.id === item.id)) return;
+    if (backlog) this.backlogItems = [...this.backlogItems, item];
+    else this.items = [...this.items, item];
+  }
+
+  /**
+   * Merge a patch into every loaded projection that holds the item. This is the
+   * only path components use to reflect a confirmed mutation. Update-only: a
+   * missing row is off-page or filtered out, so the next reconciliation owns it.
+   */
+  patchItem(itemId, patch) {
+    if (itemId == null || !patch) return;
+    const apply = (list) => {
+      let found = false;
+      const next = list.map((item) => {
+        if (item.id !== itemId) return item;
+        found = true;
+        return { ...item, ...patch };
+      });
+      return found ? next : list;
+    };
+    const items = apply(this.items);
+    if (items !== this.items) this.items = items;
+    const backlog = apply(this.backlogItems);
+    if (backlog !== this.backlogItems) this.backlogItems = backlog;
+    const search = apply(this.searchItems);
+    if (search !== this.searchItems) this.searchItems = search;
+  }
+
+  /**
+   * Move a loaded backlog row to the start or end of the backlog list after the
+   * server confirmed the new rank.
+   */
+  moveBacklogItemToBoundary(item, boundary) {
+    if (!item?.id) return;
+    const others = this.backlogItems.filter((existing) => existing.id !== item.id);
+    this.backlogItems = boundary === 'start' ? [item, ...others] : [...others, item];
+  }
+
+  /**
+   * Replace the cached board configuration for a scope after a successful save.
+   * A scope that is not currently loaded is left alone; its next load fetches
+   * the saved config.
+   */
+  setBoardConfiguration(config, workspaceId = this.#wsId, collectionId = this.#colId) {
+    const key = `${collectionId ?? ''}|${workspaceId ?? ''}`;
+    if (this.#boardConfigurationKey !== key) return;
+    this.boardConfiguration = config;
+    this.#boardConfigurationLoaded = true;
+  }
+
+  /**
+   * The single reconciliation entry point. Local events, SSE invalidations and
+   * cross-tab broadcasts all funnel here; callers must not fetch deltas on
+   * their own. Single-flight: concurrent requests join the active run, and a
+   * request that arrives during a run or the initial load is replayed exactly
+   * once after it settles.
+   */
+  refreshDeltas() {
+    if (this.loading || this.#reconcileInFlight) {
+      this.#reconcilePending = true;
+      return this.#reconcileInFlight ?? Promise.resolve(false);
+    }
+    const run = this.#fetchDeltas();
+    this.#reconcileInFlight = run;
+    const settle = () => {
+      if (this.#reconcileInFlight === run) this.#reconcileInFlight = null;
+      if (this.#reconcilePending) {
+        this.#reconcilePending = false;
+        void this.refreshDeltas();
+      }
+    };
+    void run.then(settle, settle);
+    return run;
+  }
+
+  /**
+   * Fetch cheap deltas and patch loaded rows by ID. Falls back to a full
    * refresh when the delta implies structural uncertainty (new visible item,
    * server-side sort, or backlog membership changes).
    */
-  async refreshDeltas() {
+  async #fetchDeltas() {
     if (!this.#wsId && !this.#colId) return false;
 
     const loadId = this.#loadId;
@@ -1230,34 +1315,16 @@ class CollectionStore {
   }
 
   /**
-   * Coalesce local refresh-work-items bursts into one authoritative delta
-   * reconciliation. Debounced and serialized; a burst during an in-flight run
-   * (or initial load) triggers exactly one trailing run.
+   * Debounce local refresh-work-items, SSE and cross-tab bursts into one
+   * reconciliation. refreshDeltas() remains the single owner that serializes
+   * runs and retains a trailing run.
    */
   scheduleLocalReconciliation() {
     if (this.#reconcileTimer) clearTimeout(this.#reconcileTimer);
     this.#reconcileTimer = setTimeout(() => {
       this.#reconcileTimer = null;
-      void this.#runLocalReconciliation();
+      void this.refreshDeltas();
     }, LOCAL_RECONCILE_DEBOUNCE_MS);
-  }
-
-  async #runLocalReconciliation() {
-    if (this.loading || this.#reconcileInFlight) {
-      this.#reconcilePending = true;
-      return this.#reconcileInFlight ?? false;
-    }
-    const run = this.refreshDeltas();
-    this.#reconcileInFlight = run;
-    try {
-      return await run;
-    } finally {
-      if (this.#reconcileInFlight === run) this.#reconcileInFlight = null;
-      if (this.#reconcilePending) {
-        this.#reconcilePending = false;
-        void this.#runLocalReconciliation();
-      }
-    }
   }
 
   async #primeChangesWatermark() {
@@ -1380,12 +1447,7 @@ export function reloadCollection() {
   collectionStore.refresh();
 }
 
-/** Poll for cheap collection deltas and patch loaded items when safe */
-export function refreshCollectionDeltas() {
-  return collectionStore.refreshDeltas();
-}
-
-/** Coalesce local refresh-work-items events into one reconciliation. */
+/** Coalesce local refresh-work-items, SSE and cross-tab events into one reconciliation. */
 export function scheduleCollectionReconciliation() {
   collectionStore.scheduleLocalReconciliation();
 }

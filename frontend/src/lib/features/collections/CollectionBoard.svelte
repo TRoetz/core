@@ -6,13 +6,12 @@
   import { navigate } from '../../router.js';
   import {
     collectionStore,
-    refreshCollectionDeltas,
     reloadCollection,
     scheduleCollectionReconciliation,
   } from '../../stores/collectionContext.js';
   import { useGradientStyles, loadWorkspaceGradient } from '../../stores/workspaceGradient.svelte.js';
   import QuickAddForm from './QuickAddForm.svelte';
-  import { getCollection, checkItemVisibility } from './collectionService.js';
+  import { resolveCreatedItemMembership } from './collectionService.js';
   import {
     RIGHTMOST_COLUMN_LIMIT,
     boardStatusIdForItem,
@@ -179,25 +178,26 @@
     });
   });
 
+  // An active sub-filter makes workspace equality insufficient; verify it too.
+  function createdItemScope() {
+    return {
+      workspaceId,
+      collectionId,
+      subFilterQL: collectionStore.subFilterQL ? collectionStore.effectiveSubFilterQL : '',
+    };
+  }
+
   // Listen for newly created items
   async function handleRefreshWorkItems(event) {
     if (!event.detail?.itemId) return;
     try {
       const newItem = event.detail.item ?? (await api.items.get(event.detail.itemId));
-      // Collection membership may span workspaces; verify it server-side.
-      const membership = collectionId
-        ? await checkItemVisibility(newItem.id, { collection_id: collectionId })
-        : Number(newItem.workspace_id) === Number(workspaceId)
-          ? 'member'
-          : 'nonmember';
+      const membership = await resolveCreatedItemMembership(newItem, createdItemScope());
       if (membership === 'member') {
-        if (newItem.status_id) {
-          // Item has a status, add it to the board (at the end, since board is ordered by rank)
-          collectionStore.items = [...collectionStore.items, newItem];
-        } else {
-          // Item has no status, add it to backlog (at the end)
-          collectionStore.backlogItems = [...collectionStore.backlogItems, newItem];
-        }
+        // A create event can arrive more than once (modal event plus a delta or
+        // cross-tab frame). insertCreatedItem deduplicates by id and routes an
+        // item without a status to the backlog.
+        collectionStore.insertCreatedItem(newItem, { backlog: !newItem.status_id });
       } else if (membership === 'unknown') {
         scheduleCollectionReconciliation();
       }
@@ -362,16 +362,7 @@
 
       // A collection can span several allowed workspaces while applying other
       // filters. Only add the new item locally when it matches the full view.
-      let membership = 'member';
-      if (collectionId) {
-        const collection = await getCollection(collectionId);
-        if (collection) {
-          membership = await checkItemVisibility(newItem.id, { collection_id: collectionId });
-        }
-      } else if (workspaceId) {
-        membership =
-          Number(newItem.workspace_id) === Number(workspaceId) ? 'member' : 'nonmember';
-      }
+      const membership = await resolveCreatedItemMembership(newItem, createdItemScope());
 
       if (membership === 'unknown') {
         // Never guess membership after a failed verification; reconcile instead.
@@ -395,7 +386,7 @@
       if (membership === 'member') {
         // The create endpoint returns the complete permission-masked item, so it
         // can be added directly without an immediate GET of the same item.
-        collectionStore.items = [...collectionStore.items, newItem];
+        collectionStore.insertCreatedItem(newItem);
 
         // Toast feedback
         showCreatedItemToast(newItem);
@@ -542,7 +533,7 @@
   // and a reconnect reconciles. No polling fallback.
   useCollectionEventStream(
     () => (collectionId ? { kind: 'collection', id: collectionId } : { kind: 'workspace', id: workspaceId }),
-    { onInvalidate: () => refreshCollectionDeltas() }
+    { onInvalidate: () => scheduleCollectionReconciliation() }
   );
 
   // SLA badges ride a board-level cadence instead of the SSE stream. Coupling
@@ -671,11 +662,7 @@
 
     try {
       const updatedItem = await api.items.update(item.id, { parent_id: targetParentId });
-      collectionStore.items = collectionStore.items.map(existing =>
-        existing.id === item.id
-          ? { ...existing, ...updatedItem, parent_id: targetParentId }
-          : existing
-      );
+      collectionStore.patchItem(item.id, { ...updatedItem, parent_id: targetParentId });
       return { ...item, ...updatedItem, parent_id: targetParentId };
     } catch (error) {
       console.error('Failed to move item to swimlane:', error);
@@ -987,9 +974,19 @@
     const parentIds = new Set(parentItems.map(item => item.id));
     const visibleItemIds = new Set(filteredItems.map(item => item.id));
 
+    // Bucket children by parent once instead of rescanning filteredItems per
+    // parent; the scan is O(parents × items) on large boards.
+    const childrenByParent = new Map();
+    for (const item of filteredItems) {
+      if (item.parent_id == null || item.parent_id === item.id) continue;
+      const bucket = childrenByParent.get(item.parent_id);
+      if (bucket) bucket.push(item);
+      else childrenByParent.set(item.parent_id, [item]);
+    }
+
     const lanes = parentItems
       .map(parent => {
-        const laneItems = filteredItems.filter(item => item.parent_id === parent.id && item.id !== parent.id);
+        const laneItems = childrenByParent.get(parent.id) ?? [];
         return {
           id: `parent-${parent.id}`,
           title: parent.title,
@@ -1301,16 +1298,12 @@
   }
 
   function updateLocalItemStatus(itemId, statusId) {
-    collectionStore.items = collectionStore.items.map(item =>
-      item.id === itemId ? { ...item, status_id: statusId } : item
-    );
+    collectionStore.patchItem(itemId, { status_id: statusId });
   }
 
   function mergeLocalItem(itemId, updatedItem) {
     if (!updatedItem) return;
-    collectionStore.items = collectionStore.items.map(item =>
-      item.id === itemId ? { ...item, ...updatedItem } : item
-    );
+    collectionStore.patchItem(itemId, updatedItem);
   }
 
   async function handleEdgeBasedDrop(draggedItem, targetItem, closestEdge, targetStatus, targetLaneParentId = undefined) {

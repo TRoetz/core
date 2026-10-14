@@ -5,7 +5,12 @@
   import { api } from '../../api.js';
   import { createDependencyLoader } from './dependencyLoader.svelte.js';
   import { navigate } from '../../router.js';
-  import { collectionStore, refreshCollectionDeltas, reloadCollection, refreshCollectionItem } from '../../stores/collectionContext.js';
+  import {
+    collectionStore,
+    reloadCollection,
+    refreshCollectionItem,
+    scheduleCollectionReconciliation,
+  } from '../../stores/collectionContext.js';
   import { findOrphansByMissingParent, indexCollectionHierarchy, mergeAncestorContext } from './collectionHierarchy.js';
   import { useGradientStyles, loadWorkspaceGradient } from '../../stores/workspaceGradient.svelte.js';
   import { workspaceDataStore, itemModalStore } from '../../stores/index.js';
@@ -16,6 +21,7 @@
   import Select from '../../components/Select.svelte';
   import Toggle from '../../components/Toggle.svelte';
   import RoadmapItemPreview from './RoadmapItemPreview.svelte';
+  import CollectionHierarchyLoadMore from './CollectionHierarchyLoadMore.svelte';
   import { useCollectionEventStream } from '../../composables/useCollectionEventStream.svelte.js';
   import { buildHierarchyDatePatches, projectHierarchyDates } from './roadmapHierarchyDates.js';
   import { boardColumnsForSave } from '../../utils/workItemListColumns.js';
@@ -740,7 +746,7 @@
   // Scoped SSE invalidations (WI-1624): any frame runs the existing delta fetch.
   useCollectionEventStream(
     () => (collectionId ? { kind: 'collection', id: collectionId } : { kind: 'workspace', id: workspaceId }),
-    { onInvalidate: () => refreshCollectionDeltas() }
+    { onInvalidate: () => scheduleCollectionReconciliation() }
   );
 
   // Load links for visible items in batched requests instead of one per item.
@@ -1704,6 +1710,10 @@
             </div>
           </div>
         </div>
+      {/if}
+
+      {#if roadmapConfig.start_field_id}
+        <CollectionHierarchyLoadMore testid="roadmap-load-more" />
       {/if}
   </StaticViewBackground>
 {/if}

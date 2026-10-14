@@ -7,7 +7,6 @@ export { capabilitiesStore } from './capabilities.svelte.js';
 export {
   collectionData,
   collectionStore,
-  refreshCollectionDeltas,
   reloadCollection,
 } from './collectionContext.js';
 export { collectionEditorOptions } from './collectionEditorOptions.svelte.js';

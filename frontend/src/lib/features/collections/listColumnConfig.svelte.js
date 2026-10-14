@@ -79,7 +79,7 @@ export function useListColumnConfig(getScope) {
       columns = listColumnsFromConfig(saved);
       // Keep the store's cached config current so switching views does not
       // show the columns from before this save.
-      collectionStore.boardConfiguration = saved;
+      collectionStore.setBoardConfiguration(saved, workspaceId, collectionId);
       // The write may also change view settings; drop the cached navigation
       // entry so it re-reads instead of keeping a stale copy.
       if (collectionId) {

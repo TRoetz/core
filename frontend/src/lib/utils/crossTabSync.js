@@ -44,7 +44,7 @@ export function notifyItemMutation(detail = {}) {
 
 /**
  * Installs one debounced listener for other tabs' mutations.
- * @param {{ refreshCollectionDeltas?: () => Promise<void>|void, debounceMs?: number }} [handlers]
+ * @param {{ onInvalidate?: () => Promise<void>|void, debounceMs?: number }} [handlers]
  * @returns {() => void} disposer
  */
 export function initCrossTabSync(handlers = {}) {
@@ -65,14 +65,14 @@ export function initCrossTabSync(handlers = {}) {
   const onMessage = (/** @type {MessageEvent} */ event) => {
     const data = event?.data;
     if (!data || data.origin === tabId) return; // ignore self echoes
-    if (typeof handlers.refreshCollectionDeltas !== 'function') return;
+    if (typeof handlers.onInvalidate !== 'function') return;
 
-    // Coalesce bulk mutations into one refresh.
+    // Coalesce bulk mutations into one invalidation.
     if (refreshTimer !== null) clearTimeout(refreshTimer);
     refreshTimer = setTimeout(() => {
       refreshTimer = null;
-      Promise.resolve(handlers.refreshCollectionDeltas()).catch((err) =>
-        console.warn('[crossTabSync] refreshCollectionDeltas failed:', err)
+      Promise.resolve(handlers.onInvalidate()).catch((err) =>
+        console.warn('[crossTabSync] invalidation handler failed:', err)
       );
     }, debounceMs);
   };

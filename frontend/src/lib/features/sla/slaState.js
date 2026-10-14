@@ -22,7 +22,10 @@ const thresholdsPending = new Map();
 /** @type {Set<(workspaceId: number|string|null) => void>} */
 const thresholdListeners = new Set();
 let stateGeneration = 0;
-let thresholdGeneration = 0;
+// Threshold invalidation is per workspace: bumping one workspace must not
+// discard a successful in-flight fetch for another.
+let thresholdEpoch = 0;
+const thresholdGenerations = new Map();
 
 function pruneCache(cache, now = Date.now()) {
   if (cache.size <= MAX_CACHE_ENTRIES) return;
@@ -52,6 +55,10 @@ function pruneThresholdCache(now = Date.now()) {
 function normalizeWorkspaceKey(workspaceId) {
   const id = Number(workspaceId);
   return Number.isInteger(id) && id > 0 ? id : String(workspaceId);
+}
+
+function thresholdGenerationFor(key) {
+  return `${thresholdEpoch}:${thresholdGenerations.get(key) ?? 0}`;
 }
 
 // Batch coalescing: badges mounted in the same tick share one workspace
@@ -178,7 +185,9 @@ function fetchItemSLA(itemId) {
  * empty list.
  */
 export async function getSLAThresholds(workspaceId) {
-  if (!workspaceId || !api.sla?.getWarningThresholds) return [];
+  if (!api.sla?.getWarningThresholds) return [];
+  // A missing workspace is unknown, not a configured-empty threshold list.
+  if (!workspaceId) return null;
   const key = normalizeWorkspaceKey(workspaceId);
   const now = Date.now();
   const cached = thresholdsCache.get(key);
@@ -195,19 +204,19 @@ export async function getSLAThresholds(workspaceId) {
   const pending = thresholdsPending.get(key);
   if (pending) return pending;
 
-  const generation = thresholdGeneration;
+  const generation = thresholdGenerationFor(key);
   const promise = api.sla
     .getWarningThresholds(workspaceId, BACKGROUND_READ)
     .then((result) => {
       const value = Array.isArray(result) ? result : [];
-      if (generation === thresholdGeneration) {
+      if (generation === thresholdGenerationFor(key)) {
         thresholdsCache.set(key, { value, fetchedAt: Date.now(), failedAt: 0 });
         pruneThresholdCache();
       }
       return value;
     })
     .catch((error) => {
-      if (generation !== thresholdGeneration) return null;
+      if (generation !== thresholdGenerationFor(key)) return null;
       const status = error?.status;
       if (status === 401 || status === 403 || status === 404) {
         // Protected data must not survive an authorization denial.
@@ -248,14 +257,15 @@ export function invalidateSLAState() {
  * not call this.
  */
 export function invalidateSLAThresholds(workspaceId) {
-  thresholdGeneration++;
   if (workspaceId == null) {
+    thresholdEpoch++;
     thresholdsCache.clear();
     thresholdsPending.clear();
     for (const listener of thresholdListeners) listener(null);
     return;
   }
   const key = normalizeWorkspaceKey(workspaceId);
+  thresholdGenerations.set(key, (thresholdGenerations.get(key) ?? 0) + 1);
   thresholdsCache.delete(key);
   thresholdsPending.delete(key);
   for (const listener of thresholdListeners) listener(workspaceId);

@@ -3,7 +3,6 @@ export {
   applyCollectionItem,
   collectionData,
   collectionStore,
-  refreshCollectionDeltas,
   refreshCollectionItem,
   reloadCollection,
   scheduleCollectionReconciliation,

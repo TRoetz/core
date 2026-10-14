@@ -349,10 +349,17 @@ class ItemDetailStore {
       this.iterations = references?.iterations ?? [];
       this.timeProjects = references?.projects ?? [];
       this.itemTypes = references?.item_types ?? [];
+      // The loaded-scope priorities are only a valid fallback for the active
+      // scope. A null snapshot for a foreign item must not borrow them.
+      const referencesInActiveScope =
+        workspaceDataStore.initialized && Number(workspaceDataStore.workspaceId) === Number(wsId);
+      const fallbackPriorities = referencesInActiveScope
+        ? (workspaceDataStore.priorities ?? [])
+        : [];
       this.priorities = [
         ...(summary.priorities?.length
           ? summary.priorities
-          : (references?.priorities ?? workspaceDataStore.priorities ?? [])),
+          : (references?.priorities ?? fallbackPriorities)),
       ].sort((a, b) => a.sort_order - b.sort_order);
 
       this.requestTypeFields = summary.request_type_fields || [];

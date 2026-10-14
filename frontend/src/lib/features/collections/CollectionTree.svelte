@@ -1,7 +1,11 @@
 <script>
   import { onMount, untrack } from 'svelte';
   import { api } from '../../api.js';
-  import { applyCollectionItem, collectionStore, refreshCollectionDeltas } from '../../stores/collectionContext.js';
+  import {
+    applyCollectionItem,
+    collectionStore,
+    scheduleCollectionReconciliation,
+  } from '../../stores/collectionContext.js';
   import { useCollectionEventStream } from '../../composables/useCollectionEventStream.svelte.js';
   import { t } from '../../stores/i18n.svelte.js';
   import { errorToast } from '../../stores/toasts.svelte.js';
@@ -29,6 +33,7 @@
   } from '../../utils/workItemListColumns.js';
   import ListCellRenderer from './ListCellRenderer.svelte';
   import ColumnSelector from './ColumnSelector.svelte';
+  import CollectionHierarchyLoadMore from './CollectionHierarchyLoadMore.svelte';
   import { useListColumnConfig } from './listColumnConfig.svelte.js';
   import {
     findOrphansByMissingParent,
@@ -69,14 +74,10 @@
   );
   let hierarchyIndex = $derived(indexCollectionHierarchy(allItems));
   // Filter-scoped item total from the server: everything the tree contains
-  // across all pages, independent of expansion state or the current page.
+  // across all pages, independent of expansion state or the loaded page.
   // Drives the header's "N shown" so it cannot be misread as per-page count.
   let matchingItemCount = $derived(collectionStore.itemsPagination?.total_items ?? null);
   
-  // Pagination state
-  let currentPage = $state(1);
-  let itemsPerPage = $state(50);
-
   // Test case toggle state
   let showTestCases = $state(false);
   let loadingTestCases = $state(false);
@@ -94,7 +95,7 @@
   // were deleted from the item detail modal, unlike the board views.
   useCollectionEventStream(
     () => (collectionId ? { kind: 'collection', id: collectionId } : { kind: 'workspace', id: workspaceId }),
-    { onInvalidate: () => refreshCollectionDeltas() }
+    { onInvalidate: () => scheduleCollectionReconciliation() }
   );
 
   // On mount, request the same page size used by collection store filter reloads.
@@ -357,40 +358,13 @@
     showTestCaseModal = true;
   }
 
-  function getPaginatedRootItems() {
-    const rootItems = getRootItems();
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    
-    return rootItems.slice(startIndex, endIndex);
-  }
-
-  function getTotalRootItems() {
-    return getRootItems().length;
-  }
-
-  function getTotalPages() {
-    const total = getTotalRootItems();
-    return total === 0 ? 1 : Math.ceil(total / itemsPerPage);
-  }
-
-  let paginationInfo = $derived({
-    start: (currentPage - 1) * itemsPerPage + 1,
-    end: Math.min(currentPage * itemsPerPage, getTotalRootItems()),
-    total: getTotalRootItems()
-  });
-
-  function goToPage(page) {
-    currentPage = page;
-  }
-
   function getIndentLevel(level) {
     return `${level * 1.5}rem`;
   }
 
   function renderTreeItems(parentId = null, level = 0, result = [], rootItems = null) {
-    // For root level, use paginated items, otherwise get all children
-    const items = parentId === null ? (rootItems || getPaginatedRootItems()) : getItemsByParent(parentId);
+    // The root level renders every loaded root; children follow the loaded set.
+    const items = parentId === null ? (rootItems || getRootItems()) : getItemsByParent(parentId);
 
     for (const item of items) {
       // Add the current item with its level and children info
@@ -429,7 +403,7 @@
   // Svelte 5 automatically tracks dependencies accessed inside renderTreeItems()
   let treeData = $derived(
     allItems.length > 0
-      ? renderTreeItems(null, 0, [], getPaginatedRootItems())
+      ? renderTreeItems(null, 0, [], getRootItems())
       : []
   );
 
@@ -442,32 +416,6 @@
   let gridTemplateColumns = $derived(`${hierarchyWidth}rem ${listGridTemplateColumns(listColumns)}`);
   let gridMinWidth = $derived(`calc(${listGridMinWidth(listColumns)} + ${hierarchyWidth + 1}rem)`);
 </script>
-
-{#snippet paginationControls()}
-  <div class="flex items-center gap-2">
-    <button
-      class="px-3 py-2 text-sm border rounded disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-      style="{styles.glassStyle(12)} {styles.glassTextStyle}"
-      onclick={() => goToPage(currentPage - 1)}
-      disabled={currentPage === 1}
-    >
-      {t('common.previous')}
-    </button>
-
-    <span class="px-4 py-2 text-sm" style="color: var(--ctx-text, var(--ds-text));">
-      {t('collectionTree.pageOfTotal', { current: currentPage, total: getTotalPages() })}
-    </span>
-
-    <button
-      class="px-3 py-2 text-sm border rounded disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-      style="{styles.glassStyle(12)} {styles.glassTextStyle}"
-      onclick={() => goToPage(currentPage + 1)}
-      disabled={currentPage === getTotalPages()}
-    >
-      {t('common.next')}
-    </button>
-  </div>
-{/snippet}
 
 {#if loading}
   <div class="p-6">
@@ -549,15 +497,6 @@
             {/if}
           </div>
 
-          <!-- Pagination Info and Controls -->
-          {#if getTotalPages() > 1}
-            <div class="flex items-center gap-4">
-              <span class="text-sm" style="color: var(--ctx-text, var(--ds-text));">
-                {t('collectionTree.showingRootItems', { start: paginationInfo.start, end: paginationInfo.end, total: paginationInfo.total })}
-              </span>
-              {@render paginationControls()}
-            </div>
-          {/if}
         </div>
 
         <!-- Table Container -->
@@ -674,13 +613,9 @@
         </div>
       </div>
 
-        <!-- Bottom Pagination -->
-        {#if getTotalPages() > 1}
-          <div class="flex justify-center items-center gap-4 mt-6 pt-4 border-t" style="border-color: var(--ds-border);">
-            {@render paginationControls()}
-          </div>
-        {/if}
       {/if}
+
+      <CollectionHierarchyLoadMore testid="tree-load-more" />
   </StaticViewBackground>
 {:else}
   <div class="p-6">
