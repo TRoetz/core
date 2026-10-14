@@ -3,6 +3,7 @@
   import { useEventListener } from 'runed';
   import { t } from '../../stores/i18n.svelte.js';
   import { api } from '../../api.js';
+  import { BACKGROUND_READ } from '../../api/readScheduler.js';
   import { navigate } from '../../router.js';
   import { collectionStore, refreshCollectionDeltas, reloadCollection } from '../../stores/collectionContext.js';
   import { useGradientStyles, loadWorkspaceGradient } from '../../stores/workspaceGradient.svelte.js';
@@ -515,7 +516,7 @@
     const groupsPerChunk = await Promise.all(
       chunks.map(async (chunk) => {
         try {
-          return await api.links.getForItems(chunk);
+          return await api.links.getForItems(chunk, BACKGROUND_READ);
         } catch {
           return {};
         }

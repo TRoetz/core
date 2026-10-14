@@ -1,3 +1,4 @@
+import { BACKGROUND_READ } from '../../api/readScheduler.js';
 import { api } from '../../api.js';
 
 // Item SLA reads are pure and cheap on the server, but a list/board page shows
@@ -91,7 +92,7 @@ async function flushBatchItemSLA(workspaceId, queue) {
     chunks.map(async (chunkIds) => {
       let batch;
       try {
-        batch = (await api.sla.getItemSLABatch(workspaceId, chunkIds)) ?? {};
+        batch = (await api.sla.getItemSLABatch(workspaceId, chunkIds, BACKGROUND_READ)) ?? {};
       } catch {
         // A failed chunk resolves unset rather than issuing one request per
         // item, which would amplify load under rate limiting or outages.
@@ -124,7 +125,7 @@ function fetchItemSLA(itemId) {
   const generation = cacheGeneration;
   let request;
   request = api.sla
-    .getItemSLA(itemId)
+    .getItemSLA(itemId, BACKGROUND_READ)
     .then((value) => {
       if (generation === cacheGeneration) {
         stateCache.set(itemId, { value: value ?? [], at: Date.now() });

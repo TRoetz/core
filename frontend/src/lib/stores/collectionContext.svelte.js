@@ -1,3 +1,4 @@
+import { BACKGROUND_READ, FOREGROUND_READ } from '../api/readScheduler.js';
 import { api } from '../api.js';
 import {
   RIGHTMOST_COLUMN_LIMIT,
@@ -331,6 +332,7 @@ class CollectionStore {
               limit: DEFAULT_PAGE_SIZE,
               sub_ql: this.effectiveSubFilterQL || undefined,
               collection,
+              requestOptions: FOREGROUND_READ,
             })
           : Promise.resolve(null),
         loadsItems(view)
@@ -430,7 +432,7 @@ class CollectionStore {
     const requestId = ++this.#countRequestId;
     const loadId = this.#loadId;
     try {
-      const result = await fetchCollectionTotal(this.#wsId, this.#colId);
+      const result = await fetchCollectionTotal(this.#wsId, this.#colId, FOREGROUND_READ);
       if (requestId === this.#countRequestId && loadId === this.#loadId) {
         this.collectionTotal = result.total;
         this.#changesWatermark = minimumWatermark(this.#changesWatermark, result.watermark);
@@ -558,6 +560,7 @@ class CollectionStore {
         limit: pageLimit,
         sub_ql: this.effectiveSubFilterQL || undefined,
         collection,
+        requestOptions: FOREGROUND_READ,
         ...this.#itemSortOptions(),
         ...this.#boardExclusionFilter(boardPartition?.statusIds ?? null),
       });
@@ -584,6 +587,7 @@ class CollectionStore {
           limit: BOARD_UNFINISHED_PAGE_SIZE,
           sub_ql: this.effectiveSubFilterQL || undefined,
           collection,
+          requestOptions: BACKGROUND_READ,
           ...this.#itemSortOptions(),
           ...this.#boardExclusionFilter(boardPartition?.statusIds),
         });
@@ -615,6 +619,7 @@ class CollectionStore {
       limit,
       sub_ql: subQL,
       collection,
+      requestOptions: FOREGROUND_READ,
     });
     const totalPages = first.pagination?.total_pages ?? 1;
     const pages = [first];
@@ -626,6 +631,7 @@ class CollectionStore {
         limit,
         sub_ql: subQL,
         collection,
+        requestOptions: BACKGROUND_READ,
       });
       pages.push(result);
       if (result.items.length === 0) break;
@@ -664,6 +670,7 @@ class CollectionStore {
         limit: BOARD_UNFINISHED_PAGE_SIZE,
         sub_ql: this.effectiveSubFilterQL || undefined,
         collection,
+        requestOptions: BACKGROUND_READ,
         ...this.#itemSortOptions(),
         ...this.#boardExclusionFilter(boardPartition?.statusIds),
       });
@@ -688,6 +695,7 @@ class CollectionStore {
       limit,
       sub_ql: this.effectiveSubFilterQL || undefined,
       collection,
+      requestOptions: FOREGROUND_READ,
       status_id: boardPartition.statusIds.join(','),
       completed_activity_days: boardPartition.completedActivityDays || undefined,
       ...(boardPartition.capped
@@ -800,6 +808,7 @@ class CollectionStore {
       search: query,
       sub_ql: this.effectiveSubFilterQL || undefined,
       collection: this.boardCollection ?? undefined,
+      requestOptions: FOREGROUND_READ,
       ...this.#itemSortOptions(),
     });
   }
@@ -834,6 +843,7 @@ class CollectionStore {
         page: nextPage,
         limit: pagination?.limit ?? DEFAULT_PAGE_SIZE,
         sub_ql: this.effectiveSubFilterQL || undefined,
+        requestOptions: BACKGROUND_READ,
         ...this.#itemSortOptions(),
         ...(deferred
           ? {
@@ -880,6 +890,7 @@ class CollectionStore {
         page: nextPage,
         limit: this.backlogPagination?.limit ?? DEFAULT_PAGE_SIZE,
         sub_ql: this.effectiveSubFilterQL || undefined,
+        requestOptions: BACKGROUND_READ,
       });
 
       if (loadId !== this.#loadId) return;
@@ -912,6 +923,7 @@ class CollectionStore {
           page,
           limit,
           sub_ql: this.effectiveSubFilterQL || undefined,
+          requestOptions: FOREGROUND_READ,
           ...this.#itemSortOptions(),
         }),
         this.#refreshCollectionTotal(),

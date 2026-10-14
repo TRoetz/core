@@ -1,3 +1,4 @@
+import { BACKGROUND_READ, FOREGROUND_READ } from '../api/readScheduler.js';
 import { api } from '../api.js';
 import {
   canRunBackgroundSync,
@@ -249,7 +250,7 @@ class WorkspaceDataStore {
         const pending = this.#userHydrationPromises.get(id);
         if (pending) return pending;
         const promise = api
-          .getUser(id)
+          .getUser(id, BACKGROUND_READ)
           .catch((error) => {
             // A denied or missing user is permanent for this scope; do not
             // retry it on every row update. Transient failures may retry.
@@ -294,7 +295,7 @@ class WorkspaceDataStore {
 
     const workspaceId = this.workspaceId;
     const promise = api.workspaces
-      .getEffectiveConfig(workspaceId, itemTypeId)
+      .getEffectiveConfig(workspaceId, itemTypeId, FOREGROUND_READ)
       .then((config) => {
         if (this.workspaceId === workspaceId) {
           this.screenConfigs = { ...this.screenConfigs, [key]: config };
@@ -364,7 +365,7 @@ class WorkspaceDataStore {
 
   /** @private */
   async _fetchAll(workspaceId) {
-    const bootstrap = await api.workspaces.getBootstrap(workspaceId);
+    const bootstrap = await api.workspaces.getBootstrap(workspaceId, FOREGROUND_READ);
 
     // Race condition guard
     if (this.workspaceId !== workspaceId) return;
@@ -390,10 +391,10 @@ class WorkspaceDataStore {
   /** @private */
   async _fetchAllGlobal() {
     const [itemTypesData, statusesData, statusCategoriesData, prioritiesData] = await Promise.all([
-      api.itemTypes.getAll(),
-      api.statuses.getAll(),
-      api.statusCategories.getAll(),
-      api.priorities.getAll(),
+      api.itemTypes.getAll({}, FOREGROUND_READ),
+      api.statuses.getAll({}, FOREGROUND_READ),
+      api.statusCategories.getAll({}, FOREGROUND_READ),
+      api.priorities.getAll({}, FOREGROUND_READ),
     ]);
 
     if (this.workspaceId !== 'global') return;
@@ -413,7 +414,7 @@ class WorkspaceDataStore {
     this.labels = [];
 
     try {
-      const cfData = await api.customFields.getAll();
+      const cfData = await api.customFields.getAll({}, FOREGROUND_READ);
       if (this.workspaceId === 'global') {
         this.customFieldDefinitions = cfData || [];
       }

@@ -15,6 +15,14 @@ export const READ_PRIORITY = Object.freeze({
   BACKGROUND: 'background',
 });
 
+// Reusable request-option presets for the two scheduler classes.
+export const FOREGROUND_READ = Object.freeze({
+  readPolicy: { priority: READ_PRIORITY.FOREGROUND },
+});
+export const BACKGROUND_READ = Object.freeze({
+  readPolicy: { priority: READ_PRIORITY.BACKGROUND },
+});
+
 export const MAX_ACTIVE_READS = 8;
 export const MAX_ACTIVE_BACKGROUND_READS = 2;
 export const MAX_PENDING_READS = 256;

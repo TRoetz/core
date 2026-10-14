@@ -53,15 +53,18 @@ function collectionPagination(pagination) {
 }
 
 // Use the authorized item query without view filters, fetching only one summary.
-export async function fetchCollectionTotal(workspaceId, collectionId) {
+export async function fetchCollectionTotal(workspaceId, collectionId, requestOptions = {}) {
   const scope = collectionId ? { collection_id: collectionId } : { workspace_id: workspaceId };
-  const response = await api.items.getAll({
-    ...scope,
-    page: 1,
-    limit: 1,
-    omit_descriptions: true,
-    include_watermark: true,
-  });
+  const response = await api.items.getAll(
+    {
+      ...scope,
+      page: 1,
+      limit: 1,
+      omit_descriptions: true,
+      include_watermark: true,
+    },
+    requestOptions
+  );
   return {
     total: response?.pagination?.total_items ?? null,
     watermark: response?.meta?.watermark ?? 0,
@@ -78,7 +81,14 @@ export async function fetchCollectionTotal(workspaceId, collectionId) {
 export async function fetchCollectionItems(
   workspaceId,
   collectionId,
-  { page, limit, sub_ql, collection: preloadedCollection, ...extraFilters } = {}
+  {
+    page,
+    limit,
+    sub_ql,
+    collection: preloadedCollection,
+    requestOptions = {},
+    ...extraFilters
+  } = {}
 ) {
   let collectionName = 'Default';
   let collection = null;
@@ -108,7 +118,7 @@ export async function fetchCollectionItems(
     filters.workspace_id = workspaceId;
   }
 
-  const response = await api.items.getAll(filters);
+  const response = await api.items.getAll(filters, requestOptions);
   const items = response?.data ?? [];
   const pagination = collectionPagination(response?.pagination);
   const sortableFields = response?.meta?.sortable_fields ?? [];
@@ -123,12 +133,12 @@ export async function fetchCollectionItems(
  * Fetches backlog items for a collection.
  * @param {string|number} workspaceId
  * @param {string|number|null} collectionId
- * @param {{ page?: number, limit?: number, sub_ql?: string, collection?: any }} [options]
+ * @param {{ page?: number, limit?: number, sub_ql?: string, collection?: any, requestOptions?: object }} [options]
  */
 export async function fetchCollectionBacklog(
   workspaceId,
   collectionId,
-  { page, limit, sub_ql, collection: preloadedCollection } = {}
+  { page, limit, sub_ql, collection: preloadedCollection, requestOptions = {} } = {}
 ) {
   let collectionName = 'Default';
 
@@ -146,6 +156,7 @@ export async function fetchCollectionBacklog(
     sub_ql,
     omit_descriptions: true,
     include_watermark: true,
+    requestOptions,
   });
   const items = response?.data ?? [];
   const pagination = collectionPagination(response?.pagination);
@@ -157,19 +168,19 @@ export async function fetchCollectionBacklog(
  * Fetches cheap item deltas for the current workspace/collection view.
  * @param {string|number|null} workspaceId
  * @param {string|number|null} collectionId
- * @param {{ since?: number|string, sub_ql?: string }} [options]
+ * @param {{ since?: number|string, sub_ql?: string, requestOptions?: object }} [options]
  */
 export async function fetchCollectionItemChanges(
   workspaceId,
   collectionId,
-  { since, sub_ql } = {}
+  { since, sub_ql, requestOptions = {} } = {}
 ) {
   const filters = {};
   if (workspaceId) filters.workspace_id = workspaceId;
   if (collectionId) filters.collection_id = collectionId;
   if (since !== undefined && since !== null) filters.since = since;
   if (sub_ql) filters.sub_ql = sub_ql;
-  return api.items.getChanges(filters);
+  return api.items.getChanges(filters, requestOptions);
 }
 
 /**
