@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -765,13 +766,12 @@ func (h *OnCallHandler) RespondSwapRequest(w http.ResponseWriter, r *http.Reques
 
 // ListPolicies returns all escalation policies for a team.
 func (h *OnCallHandler) ListPolicies(w http.ResponseWriter, r *http.Request) {
-	_, ok := RequireAuth(w, r)
+	teamID, ok := requireIDParam(w, r, "id")
 	if !ok {
 		return
 	}
 
-	teamID, ok := requireIDParam(w, r, "id")
-	if !ok {
+	if !h.canViewTeamOnCall(w, r, teamID) {
 		return
 	}
 
@@ -823,11 +823,6 @@ func (h *OnCallHandler) CreatePolicy(w http.ResponseWriter, r *http.Request) {
 
 // GetPolicy returns a single escalation policy by ID.
 func (h *OnCallHandler) GetPolicy(w http.ResponseWriter, r *http.Request) {
-	_, ok := RequireAuth(w, r)
-	if !ok {
-		return
-	}
-
 	id, ok := requireIDParam(w, r, "id")
 	if !ok {
 		return
@@ -842,8 +837,56 @@ func (h *OnCallHandler) GetPolicy(w http.ResponseWriter, r *http.Request) {
 		respondInternalError(w, r, err)
 		return
 	}
+	if !h.canViewTeamOnCall(w, r, policy.TeamID) {
+		return
+	}
 
 	respondJSONOK(w, policy)
+}
+
+// validateEscalationRuleTargets rejects rule targets that fall outside the
+// policy's team. An escalation rule pages whatever it names, so a rule whose
+// target belongs to another team would leak incident detail and let one team's
+// admin direct another team's rotation. user targets must be team members or
+// admins; team and on_call_schedule targets must be the policy's own team.
+func (h *OnCallHandler) validateEscalationRuleTargets(policy *models.OnCallEscalationPolicy, rules []models.EscalationRuleInput) error {
+	for i, rule := range rules {
+		switch rule.TargetType {
+		case "team":
+			if rule.TargetID != policy.TeamID {
+				return fmt.Errorf("rule %d: target team must be the policy's team", i+1)
+			}
+		case "on_call_schedule":
+			schedule, err := h.onCallRepo.GetScheduleByID(rule.TargetID)
+			if err != nil {
+				if errors.Is(err, repository.ErrNotFound) {
+					return fmt.Errorf("rule %d: on-call schedule was not found", i+1)
+				}
+				return err
+			}
+			if schedule.TeamID != policy.TeamID {
+				return fmt.Errorf("rule %d: on-call schedule belongs to another team", i+1)
+			}
+		case "user":
+			member, err := h.teamRepo.IsTeamMember(policy.TeamID, rule.TargetID)
+			if err != nil {
+				return err
+			}
+			if member {
+				continue
+			}
+			admin, err := h.teamRepo.IsTeamAdmin(policy.TeamID, rule.TargetID)
+			if err != nil {
+				return err
+			}
+			if !admin {
+				return fmt.Errorf("rule %d: target user is not a member of the policy's team", i+1)
+			}
+		default:
+			return fmt.Errorf("rule %d: target_type must be user, team, or on_call_schedule", i+1)
+		}
+	}
+	return nil
 }
 
 // UpdatePolicy updates an existing escalation policy.
@@ -903,6 +946,11 @@ func (h *OnCallHandler) SetRules(w http.ResponseWriter, r *http.Request) {
 
 	req, ok := decodeJSON[models.SetEscalationRulesRequest](w, r)
 	if !ok {
+		return
+	}
+
+	if err := h.validateEscalationRuleTargets(policy, req.Rules); err != nil {
+		respondValidationError(w, r, err.Error())
 		return
 	}
 
