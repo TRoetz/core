@@ -150,6 +150,22 @@ type mentionEmailOutboxRow struct {
 	AttemptCount   int
 }
 
+// RefreshPendingMentionContent rewrites the body of still-pending mention
+// emails for a source after its content was edited. Delivered and discarded
+// rows are left alone, so a recipient never receives a stale pre-edit body.
+func (s *MentionEmailService) RefreshPendingMentionContent(sourceType string, sourceID int, content string) error {
+	_, err := s.db.ExecWrite(`
+		UPDATE mention_email_outbox
+		SET content = ?, updated_at = CURRENT_TIMESTAMP
+		WHERE delivered_at IS NULL AND discarded_at IS NULL
+		  AND mention_id IN (SELECT id FROM mentions WHERE source_type = ? AND source_id = ?)
+	`, content, sourceType, sourceID)
+	if err != nil {
+		return fmt.Errorf("refresh pending mention email content: %w", err)
+	}
+	return nil
+}
+
 // ProcessPendingMentions retries a bounded batch from the durable mention
 // outbox. It is called by NotificationScheduler before it claims the generic
 // digest batches, so a successfully delivered mention email suppresses the
