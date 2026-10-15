@@ -2159,6 +2159,9 @@ var Catalog = []Migration{
 					AND child.relname = 'incident_notification_state'
 					AND parent.relname = 'on_call_escalation_rules'
 			) THEN 1 ELSE 0 END`,
+		// Databases stamped before the constraint was renamed to match the
+		// fresh-schema default are restamped rather than rejected.
+		Superseded: []string{"f5adf8c7e589157ad5b7b2a254875f05d0d78382ce4997c43696d7f88293e8f2"},
 		SQLite: `
 			ALTER TABLE incidents DROP COLUMN dedup_key;
 			DELETE FROM incident_notification_state WHERE escalation_rule_id NOT IN (SELECT id FROM on_call_escalation_rules);
@@ -2187,8 +2190,8 @@ var Catalog = []Migration{
 		Postgres: `
 			ALTER TABLE incidents DROP COLUMN IF EXISTS dedup_key;
 			DELETE FROM incident_notification_state WHERE escalation_rule_id NOT IN (SELECT id FROM on_call_escalation_rules);
-			ALTER TABLE incident_notification_state DROP CONSTRAINT IF EXISTS incident_notification_state_escalation_rule_fkey;
-			ALTER TABLE incident_notification_state ADD CONSTRAINT incident_notification_state_escalation_rule_fkey
+			ALTER TABLE incident_notification_state DROP CONSTRAINT IF EXISTS incident_notification_state_escalation_rule_id_fkey;
+			ALTER TABLE incident_notification_state ADD CONSTRAINT incident_notification_state_escalation_rule_id_fkey
 				FOREIGN KEY (escalation_rule_id) REFERENCES on_call_escalation_rules(id) ON DELETE CASCADE;
 		`,
 	},
