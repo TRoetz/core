@@ -26259,6 +26259,11 @@
                   "description": "The asset type name value.",
                   "type": "string"
                 },
+                "creator_portal_customer_id": {
+                  "description": "The creator portal customer id value.",
+                  "nullable": true,
+                  "type": "integer"
+                },
                 "description": {
                   "description": "The description value.",
                   "type": "string"

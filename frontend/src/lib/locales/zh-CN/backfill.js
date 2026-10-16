@@ -396,6 +396,7 @@ export default {
     "mergeDuplicateLabel": "重复工单",
     "mergeFailed": "合并重复项失败",
     "mergeHelp": "搜索重复工单。其评论、附件和邮件会话将移至此处，重复工单会显示指回本工单的链接。",
+    "mergeDifferentRequester": "这两个工单的请求人不同。重复工单的评论会移至此处但会被标记为私密；其文件、邮件会话和参与者将保留在重复工单上。",
     "mergeMenu": "将重复项合并到此处",
     "mergeSelfError": "工单不能合并到自身",
     "mergeSuccess": "重复项已合并到本工单",

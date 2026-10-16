@@ -400,6 +400,10 @@ type LinkableItem struct {
 	ItemTypeName        string `json:"item_type_name,omitempty"`
 	ItemTypeIcon        string `json:"item_type_icon,omitempty"`
 	ItemTypeColor       string `json:"item_type_color,omitempty"`
+	// CreatorPortalCustomerID is the requester for customer-facing items; nil
+	// for internal items. Merge uses it to warn before folding tickets with
+	// different requesters.
+	CreatorPortalCustomerID *int `json:"creator_portal_customer_id,omitempty"`
 	// For assets
 	AssetSetID        *int   `json:"asset_set_id,omitempty"`
 	AssetSetName      string `json:"asset_set_name,omitempty"`

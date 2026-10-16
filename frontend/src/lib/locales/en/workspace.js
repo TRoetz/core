@@ -385,6 +385,7 @@ export default {
     mergeTitle: 'Merge duplicate into this ticket',
     mergeDuplicateLabel: 'Duplicate ticket',
     mergeHelp: 'Search for the duplicate ticket. Its comments, attachments and email thread move here, and the duplicate shows a link back to this ticket.',
+    mergeDifferentRequester: 'These tickets have different requesters. The duplicate’s comments move here but are marked private, and its files, email thread, and participants stay on the duplicate.',
     mergeSelfError: 'A ticket cannot be merged into itself',
     mergeConfirm: 'Merge',
     mergeWorking: 'Merging…',

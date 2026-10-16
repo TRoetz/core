@@ -92,6 +92,18 @@
     }
   }
 
+  // Merge folds a different requester's ticket in a degraded way: comments
+  // move but become private, and files, email thread, and participants stay
+  // on the duplicate (WI-1566). Warn before the agent commits.
+  function requesterID(entry) {
+    const value = entry?.creator_portal_customer_id;
+    return value == null ? null : Number(value);
+  }
+
+  let differentRequester = $derived(
+    !!selectedDuplicate && requesterID(item) !== requesterID(selectedDuplicate)
+  );
+
   function close() {
     isOpen = false;
   }
@@ -140,6 +152,15 @@
       />
       <DescriptionText>{t('items.mergeHelp')}</DescriptionText>
     </div>
+    {#if differentRequester}
+      <div
+        class="text-sm rounded p-2"
+        style="background: var(--ds-surface-warning, rgba(234, 88, 12, 0.1)); color: var(--ds-text-warning, var(--ds-text));"
+        data-testid="item-merge-requester-warning"
+      >
+        {t('items.mergeDifferentRequester')}
+      </div>
+    {/if}
     {#if error}
       <div class="text-sm rounded p-2" style="background: var(--ds-surface-danger, rgba(239, 68, 68, 0.1)); color: var(--ds-text-danger);" data-testid="item-merge-error">
         {error}

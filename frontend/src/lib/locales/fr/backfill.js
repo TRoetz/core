@@ -250,6 +250,7 @@ export default {
     "mergeDuplicateLabel": "Ticket en double",
     "mergeFailed": "Échec de la fusion du doublon",
     "mergeHelp": "Recherchez le ticket en double. Ses commentaires, pièces jointes et fil d'e-mails sont déplacés ici, et le doublon affiche un lien vers ce ticket.",
+    "mergeDifferentRequester": "Ces tickets ont des demandeurs différents. Les commentaires du doublon sont déplacés ici mais marqués comme privés ; ses fichiers, son fil d'e-mails et ses participants restent sur le doublon.",
     "mergeMenu": "Fusionner le doublon ici",
     "mergeSelfError": "Un ticket ne peut pas être fusionné avec lui-même",
     "mergeSuccess": "Doublon fusionné dans ce ticket",

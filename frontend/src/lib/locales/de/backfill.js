@@ -383,6 +383,7 @@ export default {
     "mergeDuplicateLabel": "Doppeltes Ticket",
     "mergeFailed": "Duplikat konnte nicht zusammengeführt werden",
     "mergeHelp": "Suchen Sie das doppelte Ticket. Dessen Kommentare, Anhänge und E-Mail-Verlauf werden hierher verschoben, und das Duplikat zeigt einen Link zurück zu diesem Ticket.",
+    "mergeDifferentRequester": "Diese Tickets haben unterschiedliche Anfragende. Die Kommentare des Duplikats werden hierher verschoben, aber als privat markiert; Dateien, E-Mail-Verlauf und Teilnehmende bleiben am Duplikat.",
     "mergeMenu": "Duplikat hierher zusammenführen",
     "mergeSelfError": "Ein Ticket kann nicht mit sich selbst zusammengeführt werden",
     "mergeSuccess": "Duplikat in dieses Ticket zusammengeführt",
