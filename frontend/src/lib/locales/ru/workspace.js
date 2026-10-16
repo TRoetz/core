@@ -17,9 +17,15 @@ export default {
   },
 
   items: {
-    requesterOpenTickets: 'Возможные дубликаты',
+    requesterOpenTickets: 'Другие открытые заявки этого заявителя',
     requesterOpenTicketsHelp:
-      'Другие открытые обращения этого автора — возможно, переписка относится к одному из них. Объедините, чтобы сохранить одну ветку.',
+      'Другие открытые заявки того же заявителя — возможно, это обращение относится к одной из них. Объедините, чтобы сохранить одну переписку.',
+    requesterOpenTicketsEmpty: 'У этого заявителя нет других открытых заявок.',
+    findDuplicates: 'Найти дубликаты',
+    findDuplicatesFailed: 'Не удалось найти дубликаты',
+    aiSuggested: 'ИИ',
+    aiSuggestionsTemporary: 'Предложения ИИ временные и не сохраняются в заявке.',
+    mergeIntoThisTicket: 'Объединить сюда',
     customerContext: 'Контекст клиента',
     customerContextRequester: 'Заявитель',
     customerContextOrganisation: 'Организация',

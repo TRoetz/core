@@ -1687,17 +1687,19 @@ func (r *ItemRepository) ResolveItemKeyReferencesInWorkspaces(keys []string, wor
 }
 
 type CandidateItem struct {
-	ID          int
-	ItemKey     string
-	Title       string
-	StatusName  string
-	Description string
+	ID                      int
+	ItemKey                 string
+	Title                   string
+	StatusName              string
+	Description             string
+	CreatorPortalCustomerID *int
 }
 
 func (r *ItemRepository) ListOpenCandidatesInWorkspace(workspaceID, excludeID, limit int) ([]CandidateItem, error) {
 	rows, err := r.db.Query(
 		`SELECT i.id, w.key || '-' || CAST(i.workspace_item_number AS TEXT) as item_key, i.title,
-		        COALESCE(s.name, '') as status_name, COALESCE(i.description, '') as description
+		        COALESCE(s.name, '') as status_name, COALESCE(i.description, '') as description,
+		        i.creator_portal_customer_id
 		 FROM items i
 		 JOIN workspaces w ON i.workspace_id = w.id
 		 LEFT JOIN statuses s ON i.status_id = s.id
@@ -1715,8 +1717,13 @@ func (r *ItemRepository) ListOpenCandidatesInWorkspace(workspaceID, excludeID, l
 	results := []CandidateItem{}
 	for rows.Next() {
 		var c CandidateItem
-		if err := rows.Scan(&c.ID, &c.ItemKey, &c.Title, &c.StatusName, &c.Description); err != nil {
+		var creatorPortalCustomerID sql.NullInt64
+		if err := rows.Scan(&c.ID, &c.ItemKey, &c.Title, &c.StatusName, &c.Description, &creatorPortalCustomerID); err != nil {
 			return nil, fmt.Errorf("scan candidate row: %w", err)
+		}
+		if creatorPortalCustomerID.Valid {
+			v := int(creatorPortalCustomerID.Int64)
+			c.CreatorPortalCustomerID = &v
 		}
 		results = append(results, c)
 	}

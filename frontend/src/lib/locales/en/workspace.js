@@ -110,9 +110,15 @@ export default {
   },
 
   items: {
-    requesterOpenTickets: 'Possible duplicates',
+    requesterOpenTickets: 'Other open tickets from this requester',
     requesterOpenTicketsHelp:
-      "Other open tickets from the same requester — this conversation may belong on one of them. Merge to keep one thread.",
+      'Other open tickets from the same requester — this conversation may belong on one of them. Merge to keep one thread.',
+    requesterOpenTicketsEmpty: 'No other open tickets from this requester.',
+    findDuplicates: 'Find duplicates',
+    findDuplicatesFailed: 'Could not search for duplicates',
+    aiSuggested: 'AI',
+    aiSuggestionsTemporary: 'AI suggestions are temporary and are not saved to this ticket.',
+    mergeIntoThisTicket: 'Merge into this',
     customerContext: 'Customer context',
     customerContextRequester: 'Requester',
     customerContextOrganisation: 'Organisation',
