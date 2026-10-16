@@ -184,6 +184,13 @@
 		return typeof fieldName === 'string' && fieldName.startsWith('approval_');
 	}
 
+	// Merge and split rows name another ticket by id; the server resolves the
+	// key into resolved_new_value. They render as a single reference line
+	// instead of an "old → new" pair.
+	function isTicketReferenceEntry(fieldName) {
+		return fieldName === 'merged_into_item_id' || fieldName === 'merged_item_id' || fieldName === 'split_item_id';
+	}
+
 	// Format field name for display
 	function formatFieldName(fieldName) {
 		// Handle special field names for attachments and diagrams
@@ -193,6 +200,9 @@
 			'diagram_created': 'diagram',
 			'diagram_updated': 'diagram',
 			'diagram_deleted': 'diagram removed',
+			'merged_into_item_id': 'merged into',
+			'merged_item_id': 'merged duplicate',
+			'split_item_id': 'split into',
 			'approval_requested': 'Approval requested',
 			'approval_approve': 'Approved',
 			'approval_reject': 'Rejected',
@@ -359,6 +369,9 @@
 									{#if change.new_value && change.new_value !== ''}
 										<span class="quote">"{formatValue(change.new_value, change.resolved_new_value)}"</span>
 									{/if}
+								{:else if isTicketReferenceEntry(change.field_name)}
+									<span class="action">{formatFieldName(change.field_name)}</span>
+									<span class="new">{formatValue(change.new_value, change.resolved_new_value)}</span>
 								{:else if change.field_name === 'diagram_updated' && (change.old_value === null || change.old_value === undefined || change.old_value === '')}
 									<span class="action">updated</span>
 									<span class="new">{formatValue(change.new_value, change.resolved_new_value)}</span>

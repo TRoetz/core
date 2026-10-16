@@ -1673,7 +1673,7 @@ func (s *ItemApplicationService) resolveHistoryValue(field, value string, allowe
 		return s.resolver.ResolvePriorityName(id)
 	case "status_id":
 		return s.resolver.ResolveStatusName(id)
-	case "parent_id":
+	case "parent_id", "merged_into_item_id", "merged_item_id", "split_item_id":
 		return s.resolver.ResolveItemKey(id)
 	case "project_id":
 		if allowedProjects != nil {

@@ -349,6 +349,15 @@ func (s *ItemLifecycleService) Merge(ctx context.Context, input ItemMergeInput) 
 			}); err != nil {
 				return err
 			}
+			// The canonical records its half of the fold so its own history
+			// explains where the duplicate's content came from.
+			if err := s.items.RecordHistory(tx, repository.HistoryEntry{
+				ItemID: target.ID, UserID: input.ActorUserID,
+				FieldName: "merged_item_id", OldValueNull: true,
+				NewValue: fmt.Sprintf("%d", plan.item.ID), ChangedAt: now,
+			}); err != nil {
+				return err
+			}
 
 			// The duplicate is a redirect now: abandon its running SLA cycles so
 			// armed warning/breach jobs stop firing for a ticket whose content
