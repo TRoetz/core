@@ -144,6 +144,11 @@ CREATE TABLE IF NOT EXISTS email_message_tracking (
 	-- reprocessing the same email. It is only cleared when the channel is
 	-- deleted and cascades the tracking rows.
 	completed_at DATETIME,
+	-- skipped_reason records machine-generated mail (bounces, auto-replies)
+	-- that intake deliberately did not turn into a ticket. The value is a
+	-- SystemMailCategory; NULL for mail that was processed normally. Surfaced
+	-- by the admin email-intake diagnostics view.
+	skipped_reason TEXT,
 	processed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	FOREIGN KEY (channel_id) REFERENCES channels(id) ON DELETE CASCADE,
 	FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE SET NULL,

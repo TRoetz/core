@@ -53,6 +53,7 @@ type DiagnosticsHandler struct {
 	memoryBudget        config.MemoryBudget
 	eventStore          *domainevents.Store
 	scmHealthRepo       *repository.SCMHealthRepository
+	channelRepo         *repository.ChannelRepository
 }
 
 // NewDiagnosticsHandler creates a new diagnostics handler.
@@ -78,6 +79,7 @@ func NewDiagnosticsHandler(
 	memoryBudget config.MemoryBudget,
 	eventStore *domainevents.Store,
 	scmHealthRepo *repository.SCMHealthRepository,
+	channelRepo *repository.ChannelRepository,
 ) *DiagnosticsHandler {
 	return &DiagnosticsHandler{
 		sessionManager:      sessionManager,
@@ -101,6 +103,7 @@ func NewDiagnosticsHandler(
 		memoryBudget:        memoryBudget,
 		eventStore:          eventStore,
 		scmHealthRepo:       scmHealthRepo,
+		channelRepo:         channelRepo,
 	}
 }
 
@@ -117,6 +120,55 @@ func (h *DiagnosticsHandler) GetSCMConnections(w http.ResponseWriter, r *http.Re
 		connections = []repository.SCMConnectionDiagnostic{}
 	}
 	respondJSONOK(w, connections)
+}
+
+// GetEmailIntakeDiagnostics returns machine-generated inbound mail that intake
+// deliberately did not turn into a ticket (bounces and auto-replies), plus
+// per-category counts for the window. These messages are intentionally absent
+// from the work item list; this view is the audit trail that keeps them
+// observable.
+//
+// Query parameters:
+//   - since: duration string (default "24h")
+//   - limit: max rows (default 25, capped at 200)
+//
+// GET /api/admin/diagnostics/email-intake
+func (h *DiagnosticsHandler) GetEmailIntakeDiagnostics(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+
+	since, err := parseSinceDuration(q.Get("since"), 24*time.Hour)
+	if err != nil {
+		respondValidationError(w, r, err.Error())
+		return
+	}
+
+	limit := 25
+	if v := q.Get("limit"); v != "" {
+		if parsed, convErr := strconv.Atoi(v); convErr == nil && parsed > 0 {
+			limit = parsed
+			if limit > 200 {
+				limit = 200
+			}
+		}
+	}
+
+	windowStart := time.Now().Add(-since)
+	counts, err := h.channelRepo.CountSystemMailByCategory(r.Context(), windowStart)
+	if err != nil {
+		respondInternalError(w, r, err)
+		return
+	}
+	messages, err := h.channelRepo.ListSystemMail(r.Context(), windowStart, limit)
+	if err != nil {
+		respondInternalError(w, r, err)
+		return
+	}
+
+	respondJSONOK(w, map[string]any{
+		"since":    windowStart,
+		"counts":   counts,
+		"messages": messages,
+	})
 }
 
 // GetCacheMemory returns the configured process budget and live BigCache

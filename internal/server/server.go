@@ -1721,6 +1721,7 @@ func (s *Server) initialize() error {
 				s.memoryBudget,
 				s.eventEngine.Store(),
 				repository.NewSCMHealthRepository(s.db),
+				repository.NewChannelRepository(s.db),
 			),
 			AgentSecurity: handlers.NewAgentSecurityHandler(
 				agentSecurityRepo,

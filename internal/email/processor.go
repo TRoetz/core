@@ -134,6 +134,23 @@ func (p *Processor) ProcessEmailWithIntake(
 		return &ProcessingResult{Action: ActionDeferred}, nil
 	}
 
+	// 1b. Machine-generated mail (bounces, auto-replies) never becomes a ticket
+	// or comment. Record it on the tracking row and finalize the claim so an
+	// operator can inspect it in admin diagnostics and a redelivery stays deduped.
+	if info, ok := ClassifySystemMail(email); ok {
+		p.markSystemMailSkipped(ctx, channelID, dedupKey, info)
+		slog.Info("skipped system-generated email",
+			"channel_id", channelID,
+			"message_id", email.MessageID,
+			"category", info.Category,
+			"detail", info.Detail,
+		)
+		return &ProcessingResult{
+			Action:     ActionSkipped,
+			SkipReason: string(info.Category),
+		}, nil
+	}
+
 	// 2. Find or create portal customer by email
 	customerID, err := p.findOrCreatePortalCustomer(ctx, email.From.Address, email.From.Name, channelID, config)
 	if err != nil {
@@ -192,11 +209,11 @@ func (p *Processor) ProcessEmailWithIntake(
 		)
 	}
 
-	// 6. Optional receipt for a newly created item. Auto-generated mail is
-	// skipped so an auto-responder cannot bounce receipts back and forth.
-	// Best-effort: a delivery failure must not fail ingestion or reopen the
-	// tracking claim.
-	if result.Action == ActionItemCreated && result.ItemID != nil && intake != nil && intake.SendConfirmation && p.confirmationSender != nil && !isAutomatedEmail(email) {
+	// 6. Optional receipt for a newly created item. Auto-generated mail and
+	// mail that is itself a reply are skipped so an auto-responder cannot bounce
+	// receipts back and forth with the mailbox. Best-effort: a delivery failure
+	// must not fail ingestion or reopen the tracking claim.
+	if result.Action == ActionItemCreated && result.ItemID != nil && intake != nil && intake.SendConfirmation && p.confirmationSender != nil && !isAutomatedEmail(email) && !email.IsReply() {
 		if err := p.confirmationSender.SendIntakeConfirmation(*result.ItemID, customerID); err != nil {
 			slog.Warn("failed to send intake confirmation email",
 				"error", err,
@@ -340,6 +357,20 @@ func (p *Processor) markRateLimited(ctx context.Context, channelID int, dedupKey
 		WHERE channel_id = ? AND dedup_key = ?
 	`, channelID, dedupKey); err != nil {
 		slog.Warn("failed to mark email rate limited", "error", err, "channel_id", channelID, "dedup_key", dedupKey)
+	}
+}
+
+// markSystemMailSkipped finalizes the claimed tracking row for machine-
+// generated mail. completed_at is what keeps the message deduped (the item and
+// comment refs stay NULL), and skipped_reason is the admin diagnostics hook.
+func (p *Processor) markSystemMailSkipped(ctx context.Context, channelID int, dedupKey string, info SystemMailInfo) {
+	if _, err := p.db.ExecWriteContext(ctx, `
+		UPDATE email_message_tracking
+		SET skipped_reason = ?, completed_at = CURRENT_TIMESTAMP
+		WHERE channel_id = ? AND dedup_key = ? AND completed_at IS NULL
+	`, string(info.Category), channelID, dedupKey); err != nil {
+		slog.Warn("failed to mark system email skipped",
+			"error", err, "channel_id", channelID, "dedup_key", dedupKey, "category", info.Category)
 	}
 }
 

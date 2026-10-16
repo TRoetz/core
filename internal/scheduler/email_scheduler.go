@@ -477,6 +477,7 @@ func (es *EmailScheduler) pollIntake(
 			"intake_id", intake.ID,
 			"message_id", parsed.MessageID,
 			"action", result.Action,
+			"skip_reason", result.SkipReason,
 			"item_id", result.ItemID,
 			"comment_id", result.CommentID,
 		)

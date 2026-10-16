@@ -2764,6 +2764,14 @@ var Catalog = []Migration{
 			WHERE NOT EXISTS (SELECT 1 FROM customer_organisations WHERE builtin_key = 'no_customer');
 		`,
 	},
+	{
+		Version:       "20261031_email_tracking_skipped_reason",
+		Name:          "Record machine-generated inbound mail that was not turned into a ticket",
+		CheckSQLite:   sqliteColumnCheck("email_message_tracking", "skipped_reason"),
+		CheckPostgres: pgColumnCheck("email_message_tracking", "skipped_reason"),
+		SQLite:        `ALTER TABLE email_message_tracking ADD COLUMN skipped_reason TEXT`,
+		Postgres:      `ALTER TABLE email_message_tracking ADD COLUMN IF NOT EXISTS skipped_reason TEXT`,
+	},
 }
 
 // applyAssetReportsWorkspacePinned backfills form-mode asset reports that have

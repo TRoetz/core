@@ -1206,6 +1206,97 @@ func (r *ChannelRepository) CountRateLimitedEmails(ctx context.Context, channelI
 	return total, nil
 }
 
+// SystemMailRow is a machine-generated inbound message that intake
+// deliberately did not turn into a ticket (bounce or auto-reply).
+type SystemMailRow struct {
+	ID          int       `json:"id"`
+	ChannelID   int       `json:"channel_id"`
+	ChannelName string    `json:"channel_name"`
+	IntakeID    *int      `json:"intake_id,omitempty"`
+	FromEmail   string    `json:"from_email"`
+	FromName    string    `json:"from_name"`
+	Subject     string    `json:"subject"`
+	Category    string    `json:"category"`
+	ProcessedAt time.Time `json:"processed_at"`
+}
+
+// SystemMailCategoryCount is one bucket in the system-mail summary.
+type SystemMailCategoryCount struct {
+	Category string `json:"category"`
+	Count    int    `json:"count"`
+}
+
+// ListSystemMail returns the most recent skipped system-mail rows across all
+// email channels, newest first. Rows are joined with the mailbox name so the
+// admin diagnostics view can show where the message arrived.
+func (r *ChannelRepository) ListSystemMail(ctx context.Context, since time.Time, limit int) ([]SystemMailRow, error) {
+	if limit < 1 {
+		limit = 25
+	}
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT emt.id, emt.channel_id, c.name, emt.intake_id, emt.from_email,
+		       COALESCE(emt.from_name, ''), COALESCE(emt.subject, ''),
+		       emt.skipped_reason, emt.processed_at
+		FROM email_message_tracking emt
+		JOIN channels c ON c.id = emt.channel_id
+		WHERE emt.skipped_reason IS NOT NULL AND emt.processed_at >= ?
+		ORDER BY emt.processed_at DESC
+		LIMIT ?
+	`, since, limit)
+	if err != nil {
+		return nil, fmt.Errorf("list skipped system mail: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	out := make([]SystemMailRow, 0, limit)
+	for rows.Next() {
+		var row SystemMailRow
+		var intakeID sql.NullInt64
+		if err := rows.Scan(&row.ID, &row.ChannelID, &row.ChannelName, &intakeID, &row.FromEmail,
+			&row.FromName, &row.Subject, &row.Category, &row.ProcessedAt); err != nil {
+			return nil, fmt.Errorf("scan skipped system mail row: %w", err)
+		}
+		if intakeID.Valid {
+			v := int(intakeID.Int64)
+			row.IntakeID = &v
+		}
+		out = append(out, row)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate skipped system mail rows: %w", err)
+	}
+	return out, nil
+}
+
+// CountSystemMailByCategory aggregates skipped system-mail rows per category
+// for the given window, ordered by descending count.
+func (r *ChannelRepository) CountSystemMailByCategory(ctx context.Context, since time.Time) ([]SystemMailCategoryCount, error) {
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT skipped_reason, COUNT(*)
+		FROM email_message_tracking
+		WHERE skipped_reason IS NOT NULL AND processed_at >= ?
+		GROUP BY skipped_reason
+		ORDER BY COUNT(*) DESC
+	`, since)
+	if err != nil {
+		return nil, fmt.Errorf("count skipped system mail by category: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	out := make([]SystemMailCategoryCount, 0, 4)
+	for rows.Next() {
+		var count SystemMailCategoryCount
+		if err := rows.Scan(&count.Category, &count.Count); err != nil {
+			return nil, fmt.Errorf("scan skipped system mail count: %w", err)
+		}
+		out = append(out, count)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate skipped system mail counts: %w", err)
+	}
+	return out, nil
+}
+
 // GetEarliestRateLimitedUID returns the lowest IMAP UID among rate-limited
 // messages recorded in the given UIDVALIDITY epoch. ok is false when there is
 // nothing to requeue. UIDs from older epochs are ignored: they are meaningless

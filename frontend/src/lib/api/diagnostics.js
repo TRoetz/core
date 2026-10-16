@@ -190,6 +190,20 @@ export function getSCMConnectionHealth() {
 }
 
 /**
+ * Machine-generated inbound mail (bounces and auto-replies) that intake
+ * deliberately did not turn into work items, plus per-category counts.
+ *
+ * @param {Object} opts
+ * @param {string} [opts.since='24h']
+ * @param {number} [opts.limit=25]
+ * @returns {Promise<{since: string, counts: Array<{category: string, count: number}>,
+ *   messages: Array<object>}>}
+ */
+export function getEmailIntakeDiagnostics(opts = {}) {
+  return fetchAPI(diagnosticsQuery('email-intake', opts));
+}
+
+/**
  * Global recurrence-rule cardinality and scheduler queue pressure.
  *
  * @returns {Promise<object>}
