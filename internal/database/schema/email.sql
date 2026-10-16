@@ -161,6 +161,8 @@ CREATE INDEX IF NOT EXISTS idx_email_message_tracking_in_reply_to ON email_messa
 CREATE UNIQUE INDEX IF NOT EXISTS idx_email_message_tracking_dedup ON email_message_tracking(channel_id, dedup_key);
 CREATE INDEX IF NOT EXISTS idx_email_message_tracking_sender ON email_message_tracking(from_email);
 CREATE INDEX IF NOT EXISTS idx_email_message_tracking_channel_sender_time ON email_message_tracking(channel_id, LOWER(from_email), processed_at);
+CREATE INDEX IF NOT EXISTS idx_email_message_tracking_intake_sender_time ON email_message_tracking(intake_id, LOWER(from_email), processed_at);
+CREATE INDEX IF NOT EXISTS idx_email_message_tracking_item_time ON email_message_tracking(item_id, processed_at);
 
 -- Durable at-least-once queue for comment replies. Sending SMTP inline is an
 -- optimization; a transient failure leaves this row pending for the

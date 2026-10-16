@@ -2772,6 +2772,27 @@ var Catalog = []Migration{
 		SQLite:        `ALTER TABLE email_message_tracking ADD COLUMN skipped_reason TEXT`,
 		Postgres:      `ALTER TABLE email_message_tracking ADD COLUMN IF NOT EXISTS skipped_reason TEXT`,
 	},
+	{
+		// Per-email lookups keyed on normalized addresses or item id scanned
+		// whole tables at the target intake volume (WI-1767). Expression and
+		// composite indexes keep intake, rate limiting, and reply threading on
+		// an index search; the queries keep their LOWER(...) form so the
+		// expression indexes apply.
+		Version:       "20261101_email_lookup_indexes",
+		Name:          "Index email intake and reply threading lookups (WI-1767)",
+		CheckSQLite:   sqliteIndexCheck("idx_email_message_tracking_intake_sender_time"),
+		CheckPostgres: pgIndexCheck("idx_email_message_tracking_intake_sender_time"),
+		SQLite: `
+			CREATE INDEX IF NOT EXISTS idx_portal_customers_email_lower ON portal_customers(LOWER(email));
+			CREATE INDEX IF NOT EXISTS idx_email_message_tracking_intake_sender_time ON email_message_tracking(intake_id, LOWER(from_email), processed_at);
+			CREATE INDEX IF NOT EXISTS idx_email_message_tracking_item_time ON email_message_tracking(item_id, processed_at);
+		`,
+		Postgres: `
+			CREATE INDEX IF NOT EXISTS idx_portal_customers_email_lower ON portal_customers(LOWER(email));
+			CREATE INDEX IF NOT EXISTS idx_email_message_tracking_intake_sender_time ON email_message_tracking(intake_id, LOWER(from_email), processed_at);
+			CREATE INDEX IF NOT EXISTS idx_email_message_tracking_item_time ON email_message_tracking(item_id, processed_at);
+		`,
+	},
 }
 
 // applyAssetReportsWorkspacePinned backfills form-mode asset reports that have
