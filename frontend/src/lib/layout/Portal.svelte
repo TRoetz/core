@@ -134,8 +134,11 @@
   // Track auth check completion to prevent flash of unauthenticated content
   let authCheckComplete = $state(false);
 
-  // Track if we've synced the URL state (to avoid re-syncing on every change)
-  let urlStateSynced = $state(false);
+  // Track the auth state we last synced the URL view state for. A deep link
+  // followed while signed out resolves its target only after sign-in, so the
+  // sync has to run once more when auth flips. It must not re-run on every
+  // route change, which would re-fetch a request the store already selected.
+  let urlStateSyncedForAuth = $state(/** @type {boolean|null} */ (null));
 
   // Track previous auth state to detect login events
   let previousAuthState = $state(false);
@@ -189,26 +192,26 @@
     portalAuthStore.reset();
   });
 
-  // Sync portal view state from URL after auth check completes
+  // Sync portal view state from URL once the auth check completes and again
+  // when the customer signs in, so magic-link deep links land on their target.
   $effect(() => {
-    if (!authCheckComplete || urlStateSynced) return;
-
-    // Only sync once on initial load
-    urlStateSynced = true;
+    if (!authCheckComplete || urlStateSyncedForAuth === isUserAuthenticated) return;
+    urlStateSyncedForAuth = isUserAuthenticated;
 
     if (viewParam === 'requests') {
       // Set showMyRequests directly (don't toggle, which would navigate again)
       portalRequestsStore.setVisible(true);
 
-      // If a specific request ID is in URL, load and view it
-      if (requestIdParam) {
+      // If a specific request ID is in URL, load and view it. Signed-out
+      // visitors cannot read it yet; the post-login pass retries.
+      if (requestIdParam && isUserAuthenticated) {
         portalRequestsStore.loadAndView(requestIdParam);
       }
     } else if (viewParam === 'approvals') {
       portalApprovalsStore.setVisible(true);
 
       // Deep-link to a specific approval (magic-link `&next=` lands here).
-      if (approvalIdParam) {
+      if (approvalIdParam && isUserAuthenticated) {
         portalApprovalsStore.loadAndView(approvalIdParam);
       }
     } else {
