@@ -135,6 +135,11 @@ func NewNotificationScheduler(db database.Database, smtpSender SMTPSender, batch
 		outboxBatchSize: defaultOutboxBatchSize,
 	}
 	scheduler.claimOwner = fmt.Sprintf("notification-scheduler-%d-%p", time.Now().UnixNano(), scheduler)
+	// Hold users in an SMTP failure cooldown out of the per-tick recipient scan
+	// instead of claiming and releasing their rows every tick (WI-1768).
+	if notifSvc != nil {
+		notifSvc.SetRecipientEligibility(func(email string) bool { return !scheduler.inCooldown(email) })
+	}
 	return scheduler
 }
 

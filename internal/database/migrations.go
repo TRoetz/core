@@ -2793,6 +2793,26 @@ var Catalog = []Migration{
 			CREATE INDEX IF NOT EXISTS idx_email_message_tracking_item_time ON email_message_tracking(item_id, processed_at);
 		`,
 	},
+	{
+		// The digest recipient scan groups by user and orders by the oldest
+		// eligible notification. A partial index keeps suppressed and sent rows
+		// out of the access path so it stays small as notifications accumulate
+		// (WI-1768).
+		Version:       "20261102_notification_digest_recipient_index",
+		Name:          "Index the notification digest recipient scan (WI-1768)",
+		CheckSQLite:   sqliteIndexCheck("idx_notifications_email_digest_pending"),
+		CheckPostgres: pgIndexCheck("idx_notifications_email_digest_pending"),
+		SQLite: `
+			CREATE INDEX IF NOT EXISTS idx_notifications_email_digest_pending
+				ON notifications(user_id, timestamp)
+				WHERE sent_at IS NULL AND read = false AND email_delivery_state IN ('pending', 'failed');
+		`,
+		Postgres: `
+			CREATE INDEX IF NOT EXISTS idx_notifications_email_digest_pending
+				ON notifications(user_id, timestamp)
+				WHERE sent_at IS NULL AND read = false AND email_delivery_state IN ('pending', 'failed');
+		`,
+	},
 }
 
 // applyAssetReportsWorkspacePinned backfills form-mode asset reports that have
