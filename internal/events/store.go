@@ -373,7 +373,7 @@ func (s *Store) Reconcile(ctx context.Context, limit int) (int64, error) {
 		if remaining <= 0 {
 			break
 		}
-		created, _, err := s.reconcileConsumer(ctx, key, 0, remaining)
+		created, _, err := s.reconcileConsumer(ctx, key, 0, time.Time{}, remaining)
 		if err != nil {
 			return total, err
 		}
@@ -409,16 +409,56 @@ func (s *Store) ActiveConsumerKeys(ctx context.Context) ([]string, error) {
 }
 
 // reconcileConsumer creates pending deliveries for one active consumer for
-// events with an id greater than afterID. It returns the number of created
-// deliveries and the highest event id visible once the scan finished, which
-// callers may store as the next afterID only after a short (exhaustive) scan.
+// events with an id greater than afterID. When since is non-zero it also
+// restricts the scan to events recorded at or after that time, which is how
+// the periodic safety rescan stays bounded (WI-1770). It returns the number of
+// created deliveries and the highest event id visible once the scan finished,
+// which callers may store as the next afterID only after a short (exhaustive)
+// scan.
 func (s *Store) reconcileConsumer(
 	ctx context.Context,
 	consumerKey string,
-	afterID, limit int64,
+	afterID int64,
+	since time.Time,
+	limit int64,
 ) (created, maxSeen int64, err error) {
 	if limit <= 0 {
 		return 0, 0, errors.New("reconcile limit must be positive")
+	}
+	args := []any{afterID, consumerKey}
+	if !since.IsZero() {
+		args = append(args, since)
+	}
+	query := reconcileConsumerQuery(s.db.GetDriverName(), !since.IsZero())
+	args = append(args, limit)
+	result, err := s.db.ExecWriteContext(ctx, query, args...)
+	if err != nil {
+		return 0, 0, fmt.Errorf("reconcile domain event deliveries for %q: %w", consumerKey, err)
+	}
+	created, err = result.RowsAffected()
+	if err != nil {
+		return 0, 0, fmt.Errorf("read reconciled delivery count for %q: %w", consumerKey, err)
+	}
+	if err := s.db.QueryRowContext(ctx, `
+		SELECT COALESCE(MAX(id), 0) FROM domain_events
+	`).Scan(&maxSeen); err != nil {
+		return 0, 0, fmt.Errorf("read max domain event id for %q reconcile: %w", consumerKey, err)
+	}
+	return created, maxSeen, nil
+}
+
+// reconcileConsumerQuery builds the delivery-insertion statement. withSince
+// adds the recorded_at lower bound the bounded safety rescan relies on so the
+// planner can use idx_domain_events_recorded_at instead of scanning the full
+// retained history (WI-1770).
+func reconcileConsumerQuery(driver string, withSince bool) string {
+	recordedAtFilter := ""
+	orderBy := "ORDER BY e.id"
+	if withSince {
+		recordedAtFilter = "\n\t\t  AND e.recorded_at >= ?"
+		// Ordering by the window column lets the planner range-scan
+		// idx_domain_events_recorded_at instead of walking the whole id range.
+		orderBy = "ORDER BY e.recorded_at, e.id"
 	}
 	query := `
 		INSERT INTO domain_event_deliveries (
@@ -430,7 +470,7 @@ func (s *Store) reconcileConsumer(
 		JOIN domain_events e
 		  ON e.id > ? AND e.id >= c.start_event_id
 		WHERE c.consumer_key = ?
-		  AND c.is_active = true
+		  AND c.is_active = true` + recordedAtFilter + `
 		  AND EXISTS (
 			SELECT 1 FROM domain_event_subscriptions subscription
 			WHERE subscription.consumer_key = c.consumer_key
@@ -448,28 +488,13 @@ func (s *Store) reconcileConsumer(
 			WHERE delivery.event_id = e.id
 			  AND delivery.consumer_key = c.consumer_key
 		  )
-		ORDER BY e.id
+		` + orderBy + `
 		LIMIT ?
 	`
-	if s.db.GetDriverName() == "sqlite" {
-		query = strings.Replace(query, "INSERT INTO domain_event_deliveries", "INSERT OR IGNORE INTO domain_event_deliveries", 1)
-	} else {
-		query += " ON CONFLICT (event_id, consumer_key) DO NOTHING"
+	if driver == "sqlite" {
+		return strings.Replace(query, "INSERT INTO domain_event_deliveries", "INSERT OR IGNORE INTO domain_event_deliveries", 1)
 	}
-	result, err := s.db.ExecWriteContext(ctx, query, afterID, consumerKey, limit)
-	if err != nil {
-		return 0, 0, fmt.Errorf("reconcile domain event deliveries for %q: %w", consumerKey, err)
-	}
-	created, err = result.RowsAffected()
-	if err != nil {
-		return 0, 0, fmt.Errorf("read reconciled delivery count for %q: %w", consumerKey, err)
-	}
-	if err := s.db.QueryRowContext(ctx, `
-		SELECT COALESCE(MAX(id), 0) FROM domain_events
-	`).Scan(&maxSeen); err != nil {
-		return 0, 0, fmt.Errorf("read max domain event id for %q reconcile: %w", consumerKey, err)
-	}
-	return created, maxSeen, nil
+	return query + " ON CONFLICT (event_id, consumer_key) DO NOTHING"
 }
 
 // Claim leases the next causally eligible delivery for one consumer.

@@ -22,15 +22,20 @@ type Handler interface {
 
 // Config controls bounded worker behavior.
 type Config struct {
-	WorkerCount                int
-	PollInterval               time.Duration
-	LeaseDuration              time.Duration
-	HandlerTimeout             time.Duration
-	ReconcileBatch             int
+	WorkerCount    int
+	PollInterval   time.Duration
+	LeaseDuration  time.Duration
+	HandlerTimeout time.Duration
+	ReconcileBatch int
+	// ReconcileLookback bounds the periodic safety rescan: it re-checks events
+	// recorded within this window so a late-committing transaction cannot be
+	// missed, without rescanning the full retained history (WI-1770).
+	ReconcileLookback time.Duration
+	// SafetyReconcileInterval is how often the bounded safety rescan runs.
+	SafetyReconcileInterval    time.Duration
 	MaxAttempts                int
 	BaseRetryDelay             time.Duration
 	MaxRetryDelay              time.Duration
-	FullReconcileInterval      time.Duration
 	RetentionInterval          time.Duration
 	CompletedDeliveryRetention time.Duration
 	EventRetention             time.Duration
@@ -45,10 +50,11 @@ func DefaultConfig() Config {
 		LeaseDuration:              45 * time.Second,
 		HandlerTimeout:             30 * time.Second,
 		ReconcileBatch:             250,
+		ReconcileLookback:          5 * time.Minute,
+		SafetyReconcileInterval:    time.Minute,
 		MaxAttempts:                8,
 		BaseRetryDelay:             time.Second,
 		MaxRetryDelay:              5 * time.Minute,
-		FullReconcileInterval:      time.Minute,
 		RetentionInterval:          6 * time.Hour,
 		CompletedDeliveryRetention: 30 * 24 * time.Hour,
 		EventRetention:             90 * 24 * time.Hour,
@@ -72,8 +78,8 @@ func (c Config) validate() error {
 	if c.ReconcileBatch <= 0 || c.MaxAttempts <= 0 {
 		return errors.New("reconcile batch and max attempts must be positive")
 	}
-	if c.FullReconcileInterval <= 0 {
-		return errors.New("full reconcile interval must be positive")
+	if c.SafetyReconcileInterval <= 0 || c.ReconcileLookback <= 0 {
+		return errors.New("safety reconcile interval and lookback must be positive")
 	}
 	if c.BaseRetryDelay <= 0 || c.MaxRetryDelay < c.BaseRetryDelay {
 		return errors.New("retry delays are invalid")
@@ -106,8 +112,8 @@ type Engine struct {
 
 	// reconcileCursors tracks, per consumer, the highest event id a short
 	// (exhaustive) scan has covered. Only the reconcile goroutine touches it.
-	reconcileCursors  map[string]int64
-	lastFullReconcile time.Time
+	reconcileCursors    map[string]int64
+	lastSafetyReconcile time.Time
 
 	now    func() time.Time
 	jitter func(time.Duration) time.Duration
@@ -288,9 +294,10 @@ func (e *Engine) reconcileLoop(ctx context.Context) {
 }
 
 // reconcile creates missing deliveries. Per consumer it normally scans only
-// events past the in-memory cursor; a full history scan runs periodically to
-// bound the delay of events whose inserting transaction was still in flight
-// when a cursor advanced past their (lower) id.
+// events past the in-memory cursor. Periodically it also re-checks events
+// recorded within ReconcileLookback so an event whose inserting transaction
+// committed after a cursor advanced past its (lower) id is still delivered,
+// without rescanning the full retained history.
 func (e *Engine) reconcile(ctx context.Context) (int64, error) {
 	keys, err := e.store.ActiveConsumerKeys(ctx)
 	if err != nil {
@@ -301,15 +308,15 @@ func (e *Engine) reconcile(ctx context.Context) (int64, error) {
 			delete(e.reconcileCursors, key)
 		}
 	}
-	full := e.fullReconcileDue()
+	since, safety := e.safetyReconcileWindow()
 	var total int64
 	for _, key := range keys {
 		afterID := e.reconcileCursors[key]
-		if full {
+		if safety {
 			afterID = 0
 		}
 		for {
-			created, maxSeen, err := e.store.reconcileConsumer(ctx, key, afterID, int64(e.config.ReconcileBatch))
+			created, maxSeen, err := e.store.reconcileConsumer(ctx, key, afterID, since, int64(e.config.ReconcileBatch))
 			if err != nil {
 				return total, err
 			}
@@ -326,13 +333,20 @@ func (e *Engine) reconcile(ctx context.Context) (int64, error) {
 	return total, nil
 }
 
-func (e *Engine) fullReconcileDue() bool {
+// safetyReconcileWindow reports the lower recorded_at bound for the periodic
+// safety rescan. The first pass after startup scans from the (empty) cursor,
+// which is a full history backstop; the safety clock starts then.
+func (e *Engine) safetyReconcileWindow() (time.Time, bool) {
 	now := e.now()
-	if e.lastFullReconcile.IsZero() || now.Sub(e.lastFullReconcile) >= e.config.FullReconcileInterval {
-		e.lastFullReconcile = now
-		return true
+	if e.lastSafetyReconcile.IsZero() {
+		e.lastSafetyReconcile = now
+		return time.Time{}, false
 	}
-	return false
+	if now.Sub(e.lastSafetyReconcile) >= e.config.SafetyReconcileInterval {
+		e.lastSafetyReconcile = now
+		return now.Add(-e.config.ReconcileLookback), true
+	}
+	return time.Time{}, false
 }
 
 func (e *Engine) workerLoop(ctx context.Context) {
