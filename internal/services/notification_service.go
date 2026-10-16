@@ -283,28 +283,34 @@ func (ns *NotificationService) unreadEmailBatches(maxBatchSize int, now time.Tim
 // suppressNotificationEmails moves rows the recipient may not see to the
 // terminal suppressed state so they are not rescanned every tick. Only rows
 // still in an eligible state are touched, so a concurrent live claim is not
-// disturbed.
+// disturbed. The IDs are written in bounded batches: a recipient can hold far
+// more invisible rows than a single statement accepts bind variables, and one
+// oversized UPDATE must not fail the whole digest tick (WI-1768).
 func (ns *NotificationService) suppressNotificationEmails(ids []int, now time.Time) error {
-	if len(ids) == 0 {
-		return nil
-	}
-	placeholders := make([]string, len(ids))
-	args := []any{notificationEmailSuppressed, now}
-	for i, id := range ids {
-		placeholders[i] = "?"
-		args = append(args, id)
-	}
-	args = append(args, notificationEmailPending, notificationEmailFailed, notificationEmailClaimed, now)
-	if _, err := ns.db.ExecWrite(`
-		UPDATE notifications
-		SET email_delivery_state = ?, email_claim_owner = NULL, email_claim_token = NULL,
-		    email_claim_expires_at = NULL, updated_at = ?
-		WHERE id IN (`+strings.Join(placeholders, ",")+`)
-		  AND sent_at IS NULL AND read = false
-		  AND (email_delivery_state IN (?, ?) OR
-		       (email_delivery_state = ? AND (email_claim_expires_at IS NULL OR email_claim_expires_at <= ?)))
-	`, args...); err != nil {
-		return fmt.Errorf("suppress invisible notification emails: %w", err)
+	// SQLite's default SQLITE_MAX_VARIABLE_NUMBER is 32766 and PostgreSQL's is
+	// 65535; 500 stays well clear of both while keeping the statement count low.
+	const suppressBatchSize = 500
+	for start := 0; start < len(ids); start += suppressBatchSize {
+		end := min(start+suppressBatchSize, len(ids))
+		chunk := ids[start:end]
+		placeholders := make([]string, len(chunk))
+		args := []any{notificationEmailSuppressed, now}
+		for i, id := range chunk {
+			placeholders[i] = "?"
+			args = append(args, id)
+		}
+		args = append(args, notificationEmailPending, notificationEmailFailed, notificationEmailClaimed, now)
+		if _, err := ns.db.ExecWrite(`
+			UPDATE notifications
+			SET email_delivery_state = ?, email_claim_owner = NULL, email_claim_token = NULL,
+			    email_claim_expires_at = NULL, updated_at = ?
+			WHERE id IN (`+strings.Join(placeholders, ",")+`)
+			  AND sent_at IS NULL AND read = false
+			  AND (email_delivery_state IN (?, ?) OR
+			       (email_delivery_state = ? AND (email_claim_expires_at IS NULL OR email_claim_expires_at <= ?)))
+		`, args...); err != nil {
+			return fmt.Errorf("suppress invisible notification emails: %w", err)
+		}
 	}
 	return nil
 }
