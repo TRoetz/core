@@ -1574,7 +1574,7 @@ func (h *ChannelHandler) ListEmailReplies(w http.ResponseWriter, r *http.Request
 
 	type emailReply struct {
 		ID            int        `json:"id"`
-		CommentID     int        `json:"comment_id"`
+		CommentID     *int       `json:"comment_id,omitempty"`
 		ItemID        int        `json:"item_id"`
 		ToEmail       string     `json:"to_email"`
 		ToName        string     `json:"to_name"`
@@ -1593,7 +1593,6 @@ func (h *ChannelHandler) ListEmailReplies(w http.ResponseWriter, r *http.Request
 	for _, row := range rows {
 		reply := emailReply{
 			ID:           row.ID,
-			CommentID:    row.CommentID,
 			ItemID:       row.ItemID,
 			ToEmail:      row.ToEmail,
 			ToName:       row.ToName,
@@ -1602,6 +1601,10 @@ func (h *ChannelHandler) ListEmailReplies(w http.ResponseWriter, r *http.Request
 			LastError:    row.LastError.String,
 			CreatedAt:    row.CreatedAt,
 			WorkspaceKey: row.WorkspaceKey,
+		}
+		if row.CommentID.Valid {
+			commentID := int(row.CommentID.Int64)
+			reply.CommentID = &commentID
 		}
 		if row.NextAttemptAt.Valid {
 			t := row.NextAttemptAt.Time

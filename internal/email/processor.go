@@ -23,10 +23,10 @@ import (
 	"uuid"
 )
 
-// IntakeConfirmationSender emails the sender a receipt after an intake creates
+// IntakeConfirmationSender queues the sender's receipt after an intake creates
 // a new item. EmailReplyService implements it; tests substitute fakes.
 type IntakeConfirmationSender interface {
-	SendIntakeConfirmation(itemID, customerID int) error
+	EnqueueIntakeConfirmation(itemID, customerID int) error
 }
 
 // Processor handles email-to-item/comment conversion
@@ -211,11 +211,11 @@ func (p *Processor) ProcessEmailWithIntake(
 
 	// 6. Optional receipt for a newly created item. Auto-generated mail and
 	// mail that is itself a reply are skipped so an auto-responder cannot bounce
-	// receipts back and forth with the mailbox. Best-effort: a delivery failure
-	// must not fail ingestion or reopen the tracking claim.
+	// receipts back and forth with the mailbox. The receipt is queued in the
+	// durable outbox, so a slow or failing SMTP server never stalls polling.
 	if result.Action == ActionItemCreated && result.ItemID != nil && intake != nil && intake.SendConfirmation && p.confirmationSender != nil && !isAutomatedEmail(email) && !email.IsReply() {
-		if err := p.confirmationSender.SendIntakeConfirmation(*result.ItemID, customerID); err != nil {
-			slog.Warn("failed to send intake confirmation email",
+		if err := p.confirmationSender.EnqueueIntakeConfirmation(*result.ItemID, customerID); err != nil {
+			slog.Warn("failed to queue intake confirmation email",
 				"error", err,
 				"channel_id", channelID,
 				"intake_id", intake.ID,

@@ -2813,6 +2813,28 @@ var Catalog = []Migration{
 				WHERE sent_at IS NULL AND read = false AND email_delivery_state IN ('pending', 'failed');
 		`,
 	},
+	{
+		// Intake receipts move from an inline SMTP send to the durable reply
+		// outbox (WI-1769). Receipts have no comment, so comment_id becomes
+		// nullable and a kind discriminator plus a partial unique index keeps
+		// one receipt per item. SQLite cannot drop NOT NULL in place.
+		Version:       "20261103_email_confirmation_outbox",
+		Name:          "Queue intake confirmation receipts in the durable reply outbox (WI-1769)",
+		CheckSQLite:   sqliteColumnCheck("email_reply_outbox", "kind"),
+		CheckPostgres: pgColumnCheck("email_reply_outbox", "kind"),
+		Postgres: `
+			ALTER TABLE email_reply_outbox ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT 'reply';
+			ALTER TABLE email_reply_outbox ALTER COLUMN comment_id DROP NOT NULL;
+			DROP INDEX IF EXISTS uq_email_reply_outbox_comment_recipient;
+			CREATE UNIQUE INDEX IF NOT EXISTS uq_email_reply_outbox_comment_recipient
+				ON email_reply_outbox(comment_id, to_email) WHERE comment_id IS NOT NULL;
+			CREATE UNIQUE INDEX IF NOT EXISTS uq_email_reply_outbox_confirmation
+				ON email_reply_outbox(item_id) WHERE kind = 'intake_confirmation';
+		`,
+		// The SQL field stays non-empty so the runner reaches ApplySQLite.
+		SQLite:      "applySQLiteEmailReplyOutboxConfirmation:v1",
+		ApplySQLite: applySQLiteEmailReplyOutboxConfirmation,
+	},
 }
 
 // applyAssetReportsWorkspacePinned backfills form-mode asset reports that have
@@ -3545,6 +3567,103 @@ func applySQLiteEmailReplyOutboxPerRecipient(db Database) (retErr error) {
 
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("commit email_reply_outbox rebuild: %w", err)
+	}
+	return nil
+}
+
+// applySQLiteEmailReplyOutboxConfirmation rebuilds email_reply_outbox with a
+// nullable comment_id, a kind discriminator, and the partial unique indexes
+// that keep replies and intake receipts idempotent (WI-1769). SQLite cannot
+// drop a NOT NULL constraint in place, so the rows are copied into a fresh
+// table and swapped. Existing rows are comment replies.
+func applySQLiteEmailReplyOutboxConfirmation(db Database) (retErr error) {
+	sqliteDB, ok := db.(*SQLiteDB)
+	if !ok {
+		return fmt.Errorf("expected SQLite database, got %T", db)
+	}
+
+	ctx := context.Background()
+	conn, err := sqliteDB.writeConn.Conn(ctx)
+	if err != nil {
+		return fmt.Errorf("acquire SQLite write connection: %w", err)
+	}
+	defer func() { _ = conn.Close() }()
+
+	var foreignKeysEnabled bool
+	if err := conn.QueryRowContext(ctx, "PRAGMA foreign_keys").Scan(&foreignKeysEnabled); err != nil {
+		return fmt.Errorf("read foreign_keys pragma: %w", err)
+	}
+	if foreignKeysEnabled {
+		if _, err := conn.ExecContext(ctx, "PRAGMA foreign_keys=OFF"); err != nil {
+			return fmt.Errorf("disable foreign keys: %w", err)
+		}
+		defer func() {
+			if _, err := conn.ExecContext(ctx, "PRAGMA foreign_keys=ON"); retErr == nil && err != nil {
+				retErr = fmt.Errorf("restore foreign keys: %w", err)
+			}
+		}()
+	}
+
+	tx, err := conn.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin email_reply_outbox confirmation rebuild: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	statements := []string{
+		`CREATE TABLE email_reply_outbox_migration (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			kind TEXT NOT NULL DEFAULT 'reply',
+			comment_id INTEGER,
+			channel_id INTEGER NOT NULL,
+			item_id INTEGER NOT NULL,
+			to_email TEXT NOT NULL,
+			to_name TEXT NOT NULL DEFAULT '',
+			subject TEXT NOT NULL,
+			html_body TEXT NOT NULL,
+			text_body TEXT NOT NULL,
+			message_id TEXT NOT NULL,
+			in_reply_to TEXT NOT NULL DEFAULT '',
+			references_json TEXT NOT NULL DEFAULT '[]',
+			from_email TEXT NOT NULL,
+			from_name TEXT NOT NULL DEFAULT '',
+			reply_to_email TEXT NOT NULL DEFAULT '',
+			reply_to_name TEXT NOT NULL DEFAULT '',
+			attempt_count INTEGER NOT NULL DEFAULT 0,
+			next_attempt_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			lease_owner TEXT,
+			last_error TEXT,
+			delivered_at DATETIME,
+			discarded_at DATETIME,
+			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			FOREIGN KEY (comment_id) REFERENCES comments(id) ON DELETE CASCADE,
+			FOREIGN KEY (channel_id) REFERENCES channels(id) ON DELETE CASCADE,
+			FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE
+		)`,
+		`INSERT INTO email_reply_outbox_migration (
+			id, kind, comment_id, channel_id, item_id, to_email, to_name, subject, html_body, text_body,
+			message_id, in_reply_to, references_json, from_email, from_name, reply_to_email, reply_to_name,
+			attempt_count, next_attempt_at, lease_owner, last_error, delivered_at, discarded_at, created_at, updated_at
+		)
+		SELECT id, 'reply', comment_id, channel_id, item_id, to_email, to_name, subject, html_body, text_body,
+			message_id, in_reply_to, references_json, from_email, from_name, reply_to_email, reply_to_name,
+			attempt_count, next_attempt_at, lease_owner, last_error, delivered_at, discarded_at, created_at, updated_at
+		FROM email_reply_outbox`,
+		`DROP TABLE email_reply_outbox`,
+		`ALTER TABLE email_reply_outbox_migration RENAME TO email_reply_outbox`,
+		`CREATE INDEX idx_email_reply_outbox_pending ON email_reply_outbox(delivered_at, next_attempt_at)`,
+		`CREATE UNIQUE INDEX uq_email_reply_outbox_comment_recipient ON email_reply_outbox(comment_id, to_email) WHERE comment_id IS NOT NULL`,
+		`CREATE UNIQUE INDEX uq_email_reply_outbox_confirmation ON email_reply_outbox(item_id) WHERE kind = 'intake_confirmation'`,
+	}
+	for _, statement := range statements {
+		if _, err := tx.ExecContext(ctx, statement); err != nil {
+			return fmt.Errorf("rebuild email_reply_outbox for confirmations: %w", err)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit email_reply_outbox confirmation rebuild: %w", err)
 	}
 	return nil
 }

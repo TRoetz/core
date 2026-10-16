@@ -1428,7 +1428,7 @@ const (
 // envelope metadata and delivery state, never message content.
 type EmailReplyOutboxRow struct {
 	ID            int
-	CommentID     int
+	CommentID     sql.NullInt64
 	ItemID        int
 	ToEmail       string
 	ToName        string

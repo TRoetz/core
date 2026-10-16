@@ -169,7 +169,10 @@ CREATE INDEX IF NOT EXISTS idx_email_message_tracking_item_time ON email_message
 -- notification scheduler instead of silently losing the customer reply.
 CREATE TABLE IF NOT EXISTS email_reply_outbox (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
-	comment_id INTEGER NOT NULL,
+	-- kind separates comment replies from intake receipts. Receipts have no
+	-- comment_id; the partial unique indexes below keep each kind idempotent.
+	kind TEXT NOT NULL DEFAULT 'reply',
+	comment_id INTEGER,
 	channel_id INTEGER NOT NULL,
 	item_id INTEGER NOT NULL,
 	to_email TEXT NOT NULL,
@@ -209,7 +212,14 @@ CREATE INDEX IF NOT EXISTS idx_email_reply_outbox_pending
 -- One outbound reply per comment recipient (WI-1136): the creator plus every
 -- external request participant gets their own row.
 CREATE UNIQUE INDEX IF NOT EXISTS uq_email_reply_outbox_comment_recipient
-	ON email_reply_outbox(comment_id, to_email);
+	ON email_reply_outbox(comment_id, to_email)
+	WHERE comment_id IS NOT NULL;
+
+-- One intake receipt per item (WI-1769), so re-processing the same email
+-- cannot enqueue a second receipt.
+CREATE UNIQUE INDEX IF NOT EXISTS uq_email_reply_outbox_confirmation
+	ON email_reply_outbox(item_id)
+	WHERE kind = 'intake_confirmation';
 
 -- Email OAuth state for tracking OAuth flow state
 CREATE TABLE IF NOT EXISTS email_oauth_state (
