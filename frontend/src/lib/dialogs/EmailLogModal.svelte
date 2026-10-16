@@ -521,7 +521,9 @@
               {/if}
             {/snippet}
             {#snippet outboxActions(reply)}
-              {#if isReplyPending(reply)}
+              {#if isReplyPending(reply) && reply.comment_id}
+                <!-- Intake receipts have no comment_id; the retry/discard
+                     endpoints are comment-keyed, so they are not actionable. -->
                 <div class="flex items-center gap-1.5">
                   <Button
                     onclick={() => retryReply(reply)}
