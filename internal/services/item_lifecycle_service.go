@@ -310,7 +310,11 @@ func (s *ItemLifecycleService) Merge(ctx context.Context, input ItemMergeInput) 
 				if _, err := tx.Exec(`UPDATE email_message_tracking SET item_id = ? WHERE item_id = ?`, target.ID, plan.item.ID); err != nil {
 					return fmt.Errorf("re-point email threads from item %d: %w", plan.item.ID, err)
 				}
-				if _, err := tx.Exec(`UPDATE email_reply_outbox SET item_id = ? WHERE item_id = ?`, target.ID, plan.item.ID); err != nil {
+				// Only replies follow the content. Intake receipts are one per
+				// item (uq_email_reply_outbox_confirmation), so moving a
+				// duplicate's receipt onto a canonical that already has one
+				// would violate that index; the duplicate keeps its receipt.
+				if _, err := tx.Exec(`UPDATE email_reply_outbox SET item_id = ? WHERE item_id = ? AND kind = 'reply'`, target.ID, plan.item.ID); err != nil {
 					return fmt.Errorf("re-point pending replies from item %d: %w", plan.item.ID, err)
 				}
 				// External participants follow the content too, or a source-only
