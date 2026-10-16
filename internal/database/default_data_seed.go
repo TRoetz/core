@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
+
+	"windshift/internal/models"
 )
 
 // Both engines run one shared fresh-install seed sequence so their default
@@ -350,6 +352,16 @@ func seedDefaultData(w seedWriter) error {
 		configSetID, notificationSettingID,
 	); err != nil {
 		return fmt.Errorf("failed to link notification setting to configuration set: %w", err)
+	}
+
+	// 19. Placeholder organisation that absorbs projects and worklogs created
+	// without a real customer, keeping the required-customer invariant.
+	if _, err := w.Exec(
+		"INSERT INTO customer_organisations (builtin_key, name, description, active) VALUES (?, ?, ?, ?)",
+		models.CustomerOrganisationBuiltinNoCustomer, "No customer",
+		"Placeholder for projects and worklogs without a customer", true,
+	); err != nil {
+		return fmt.Errorf("failed to create no-customer organisation: %w", err)
 	}
 
 	return nil

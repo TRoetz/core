@@ -10,6 +10,7 @@
   import TimeLogModal from '../../dialogs/TimeLogModal.svelte';
   import PageHeader from '../../layout/PageHeader.svelte';
   import { t } from '../../stores/i18n.svelte.js';
+  import { customerDisplayName, customerOrganisationName } from '../../utils/customerLabel.js';
   import { formatDateOnly, getUserTimezone } from '../../utils/dateFormatter.js';
   import { serverNow } from '../../utils/serverClock.js';
   import { authStore } from '../../stores/auth.svelte.js';
@@ -177,7 +178,7 @@
       .filter(p => !visibleProjectIds.has(p.id))
       .map(p => {
         const customer = customers.find(c => c.id === p.customer_id);
-        return { ...p, subtitle: customer?.name || '' };
+        return { ...p, subtitle: customerOrganisationName(customer, t) };
       })
   );
 
@@ -196,7 +197,7 @@
         projectName: project.name,
         itemId: null,
         itemTitle: null,
-        customerName: customers.find(c => c.id === project.customer_id)?.name || '',
+        customerName: customerOrganisationName(customers.find(c => c.id === project.customer_id), t),
         isPinned: pinnedProjectIds.includes(project.id),
         days: new Map(),
       });
@@ -212,7 +213,7 @@
           projectName: wl.project_name || 'Unknown Project',
           itemId: wl.item_id || null,
           itemTitle: wl.item_title || null,
-          customerName: wl.customer_name || '',
+          customerName: customerDisplayName(wl.customer_name, wl.customer_builtin_key, t),
           isPinned: pinnedProjectIds.includes(wl.project_id),
           days: new Map(),
         });

@@ -23,6 +23,7 @@ export default {
     resumeTimer: 'Timer fortsetzen',
     timeLogged: 'Zeit erfolgreich erfasst',
     timeTrackingProject: 'Zeiterfassungsprojekt',
+    noCustomer: 'Kein Kunde',
     workItemOptional: 'Vorgang (Optional)',
     whatDidYouWorkOn: 'Woran haben Sie gearbeitet?',
     start: 'Start',

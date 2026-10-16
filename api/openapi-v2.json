@@ -22932,6 +22932,10 @@
                   "description": "The created at value.",
                   "type": "integer"
                 },
+                "customer_builtin_key": {
+                  "description": "The customer builtin key value.",
+                  "type": "string"
+                },
                 "customer_id": {
                   "description": "The customer id value.",
                   "type": "integer"
@@ -29632,6 +29636,10 @@
                 "description": "The created at value.",
                 "type": "string"
               },
+              "customer_builtin_key": {
+                "description": "The customer builtin key value.",
+                "type": "string"
+              },
               "customer_id": {
                 "description": "The customer id value.",
                 "nullable": true,
@@ -29710,6 +29718,10 @@
                 "created_at": {
                   "description": "The created at value.",
                   "type": "integer"
+                },
+                "customer_builtin_key": {
+                  "description": "The customer builtin key value.",
+                  "type": "string"
                 },
                 "customer_id": {
                   "description": "The customer id value.",
@@ -29864,6 +29876,10 @@
                   "description": "The created at value.",
                   "type": "string"
                 },
+                "customer_builtin_key": {
+                  "description": "The customer builtin key value.",
+                  "type": "string"
+                },
                 "customer_id": {
                   "description": "The customer id value.",
                   "nullable": true,
@@ -29944,6 +29960,11 @@
               "created_at": {
                 "description": "The created at value.",
                 "type": "integer"
+              },
+              "customer_builtin_key": {
+                "description": "The customer builtin key value.",
+                "nullable": true,
+                "type": "string"
               },
               "customer_name": {
                 "description": "The customer name value.",
@@ -30030,6 +30051,10 @@
             "items": {
               "additionalProperties": false,
               "properties": {
+                "customer_builtin_key": {
+                  "description": "The customer builtin key value.",
+                  "type": "string"
+                },
                 "customer_id": {
                   "description": "The customer id value.",
                   "type": "integer"
@@ -30082,6 +30107,10 @@
             "items": {
               "additionalProperties": false,
               "properties": {
+                "customer_builtin_key": {
+                  "description": "The customer builtin key value.",
+                  "type": "string"
+                },
                 "customer_id": {
                   "description": "The customer id value.",
                   "type": "integer"
@@ -30146,6 +30175,10 @@
                 "created_at": {
                   "description": "The created at value.",
                   "type": "integer"
+                },
+                "customer_builtin_key": {
+                  "description": "The customer builtin key value.",
+                  "type": "string"
                 },
                 "customer_id": {
                   "description": "The customer id value.",
@@ -30281,6 +30314,10 @@
               "created_at": {
                 "description": "The created at value.",
                 "type": "integer"
+              },
+              "customer_builtin_key": {
+                "description": "The customer builtin key value.",
+                "type": "string"
               },
               "customer_id": {
                 "description": "The customer id value.",
@@ -44164,6 +44201,10 @@
                   "description": "The created at value.",
                   "type": "string"
                 },
+                "customer_builtin_key": {
+                  "description": "The customer builtin key value.",
+                  "type": "string"
+                },
                 "customer_id": {
                   "description": "The customer id value.",
                   "nullable": true,
@@ -57897,6 +57938,10 @@
                 "description": "The created at value.",
                 "type": "string"
               },
+              "customer_builtin_key": {
+                "description": "The customer builtin key value.",
+                "type": "string"
+              },
               "customer_id": {
                 "description": "The customer id value.",
                 "nullable": true,
@@ -58025,6 +58070,10 @@
               "created_at": {
                 "description": "The created at value.",
                 "type": "integer"
+              },
+              "customer_builtin_key": {
+                "description": "The customer builtin key value.",
+                "type": "string"
               },
               "customer_id": {
                 "description": "The customer id value.",
@@ -85820,6 +85869,7 @@
           },
           "customer_id": {
             "description": "The customer id value.",
+            "nullable": true,
             "type": "integer"
           },
           "description": {
@@ -85848,7 +85898,6 @@
         },
         "required": [
           "color",
-          "customer_id",
           "description",
           "hourly_rate",
           "name",
@@ -86032,6 +86081,10 @@
                 "description": "The created at value.",
                 "type": "string"
               },
+              "customer_builtin_key": {
+                "description": "The customer builtin key value.",
+                "type": "string"
+              },
               "customer_id": {
                 "description": "The customer id value.",
                 "nullable": true,
@@ -86186,6 +86239,11 @@
                 "description": "The created at value.",
                 "type": "integer"
               },
+              "customer_builtin_key": {
+                "description": "The customer builtin key value.",
+                "nullable": true,
+                "type": "string"
+              },
               "customer_name": {
                 "description": "The customer name value.",
                 "nullable": true,
@@ -86325,6 +86383,10 @@
               "created_at": {
                 "description": "The created at value.",
                 "type": "integer"
+              },
+              "customer_builtin_key": {
+                "description": "The customer builtin key value.",
+                "type": "string"
               },
               "customer_id": {
                 "description": "The customer id value.",

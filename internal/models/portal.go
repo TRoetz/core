@@ -261,7 +261,10 @@ type PortalCustomerRole struct {
 
 // CustomerOrganisation represents a B2B entity for time tracking
 type CustomerOrganisation struct {
-	ID                int            `json:"id"`
+	ID int `json:"id"`
+	// BuiltinKey identifies system-managed rows (see
+	// CustomerOrganisationBuiltinNoCustomer). Empty for ordinary organisations.
+	BuiltinKey        string         `json:"builtin_key,omitempty"`
 	Name              string         `json:"name"`
 	Email             string         `json:"email"`
 	Description       string         `json:"description"`
@@ -274,6 +277,10 @@ type CustomerOrganisation struct {
 	CreatedAt time.Time      `json:"created_at"`
 	UpdatedAt time.Time      `json:"updated_at"`
 }
+
+// CustomerOrganisationBuiltinNoCustomer is the builtin_key of the placeholder
+// organisation that owns projects and worklogs created without a real customer.
+const CustomerOrganisationBuiltinNoCustomer = "no_customer"
 
 // Portal organisation request-sharing modes stored in
 // CustomerOrganisation.Settings under "request_sharing".

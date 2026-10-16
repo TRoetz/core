@@ -5,6 +5,7 @@
   import Spinner from '../components/Spinner.svelte';
   import { api } from '../api.js';
   import { t } from '../stores/i18n.svelte.js';
+  import { realCustomers } from '../utils/customerLabel.js';
 
   let {
     isOpen = false,
@@ -40,7 +41,7 @@
         api.customerOrganisations.getAll()
       ]);
       groups = groupsData || [];
-      organisations = orgsData || [];
+      organisations = realCustomers(orgsData);
 
       // Initialize from request type
       if (requestType) {

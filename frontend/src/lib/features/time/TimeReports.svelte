@@ -11,6 +11,7 @@
   import StatCard from '../../components/StatCard.svelte';
   import Chart from '../../widgets/Chart.svelte';
   import { t } from '../../stores/i18n.svelte.js';
+  import { customerDisplayName, customerOrganisationName } from '../../utils/customerLabel.js';
   import { formatDateOnly, getUserTimezone } from '../../utils/dateFormatter.js';
   import { formatAuthenticatedInstant } from '../../utils/authenticatedDateFormatter.js';
   import { authStore } from '../../stores/auth.svelte.js';
@@ -124,7 +125,7 @@
 
   const reportColumns = $derived([
     { key: 'date', label: t('common.date'), render: (w) => formatDateOnly(dateKeyInZone(w.start_time, reportTimezone)) },
-    { key: 'customer_name', label: t('time.reports.customer') },
+    { key: 'customer_name', label: t('time.reports.customer'), render: (w) => customerDisplayName(w.customer_name, w.customer_builtin_key, t) },
     { key: 'project_name', label: t('time.reports.project'), slot: 'project' },
     { key: 'description', label: t('common.description') },
     { key: 'time', label: t('common.time'), slot: 'time' },
@@ -295,6 +296,16 @@
     return formatAuthenticatedInstant(unixTimestamp * 1000, { hour: '2-digit', minute: '2-digit', hour12: false });
   }
 
+  function worklogCustomerName(worklog) {
+    return customerDisplayName(worklog.customer_name, worklog.customer_builtin_key, t);
+  }
+
+  function topCustomerName() {
+    return summary.topCustomer
+      ? customerDisplayName(summary.topCustomer.name, summary.topCustomer.builtinKey, t)
+      : '';
+  }
+
   // Export functions
   function exportToCSV() {
     exportLoading = true;
@@ -317,7 +328,7 @@
     allEntries.forEach(worklog => {
       csvData.push([
         dateKeyInZone(worklog.start_time, reportTimezone),
-        worklog.customer_name,
+        worklogCustomerName(worklog),
         worklog.project_name,
         worklog.description,
         formatTime(worklog.start_time),
@@ -334,7 +345,7 @@
       csvData.push(['Top Project', '', summary.topProject.name, '', '', '', summary.topProject.hours]);
     }
     if (summary.topCustomer) {
-      csvData.push(['Top Customer', summary.topCustomer.name, '', '', '', '', summary.topCustomer.hours]);
+      csvData.push(['Top Customer', topCustomerName(), '', '', '', '', summary.topCustomer.hours]);
     }
 
     downloadCSV(csvData, `time-report-${filters.date_from}-to-${filters.date_to}.csv`);
@@ -350,7 +361,7 @@
       csvData.push([
         dateKeyInZone(worklog.start_time, reportTimezone),
         worklog.user_name || 'Unknown',
-        worklog.customer_name,
+        worklogCustomerName(worklog),
         worklog.project_name,
         worklog.description,
         formatTime(worklog.start_time),
@@ -419,12 +430,12 @@
         { label: 'Total Entries', value: summary.totalEntries },
         { label: 'Average Hours per Day', value: `${summary.averageHoursPerDay}h` },
         { label: 'Top Project', value: `${summary.topProject?.name || 'N/A'} (${summary.topProject?.hours || 0}h)` },
-        { label: 'Top Customer', value: `${summary.topCustomer?.name || 'N/A'} (${summary.topCustomer?.hours || 0}h)` },
+        { label: 'Top Customer', value: `${topCustomerName() || 'N/A'} (${summary.topCustomer?.hours || 0}h)` },
       ],
       entries: allEntries.map((worklog) => ({
         heading: `${formatDateOnly(dateKeyInZone(worklog.start_time, reportTimezone))} — ${worklog.project_name}`,
         fields: [
-          { label: 'Customer', value: worklog.customer_name },
+          { label: 'Customer', value: worklogCustomerName(worklog) },
           { label: 'Duration', value: formatDuration(worklog.duration_minutes) },
           { label: 'Description', value: worklog.description },
           { label: 'Time', value: `${formatTime(worklog.start_time)} – ${formatTime(worklog.end_time)}` },
@@ -571,7 +582,7 @@
           showUnassigned={true}
           unassignedLabel={t('time.reports.allCustomers')}
           getValue={(item) => item.id}
-          getLabel={(item) => item.name}
+          getLabel={(item) => customerOrganisationName(item, t)}
         />
       </div>
       <div>

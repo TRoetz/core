@@ -18,6 +18,7 @@
   import TextField from '../components/TextField.svelte';
   import CustomFieldRenderer from '../features/items/CustomFieldRenderer.svelte';
   import { t } from '../stores/i18n.svelte.js';
+  import { realCustomers } from '../utils/customerLabel.js';
   import { permissionStore, isSystemAdmin } from '../stores';
   import AlertBox from '../components/AlertBox.svelte';
 
@@ -149,7 +150,7 @@
   async function loadOrganisations() {
     try {
       const result = await api.customerOrganisations.getAll();
-      customerOrganisations = result || [];
+      customerOrganisations = realCustomers(result);
     } catch (err) {
       console.error('Failed to load customer organisations:', err);
       error = t('workspaces.customers.failedToLoadOrganisations');

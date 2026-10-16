@@ -1,4 +1,5 @@
 import { api } from '../api.js';
+import { realCustomers } from '../utils/customerLabel.js';
 import { getUserTimezone } from '../utils/dateFormatter.js';
 import { formatClockInZone, monthBoundsInZone } from '../utils/worklogTimezone.js';
 import { authStore } from './auth.svelte.js';
@@ -68,8 +69,9 @@ class TimeEntryStore {
         this.loadWorkspaces(),
       ]);
 
-      // Show onboarding if no customers or projects
-      if (this.customers.length === 0 && this.projects.length === 0) {
+      // Show onboarding if no real customers or projects (the built-in
+      // no-customer placeholder does not count as a customer).
+      if (realCustomers(this.customers).length === 0 && this.projects.length === 0) {
         this.showOnboarding = true;
       }
     } finally {

@@ -1,4 +1,5 @@
 import { api } from '../api.js';
+import { realCustomers } from '../utils/customerLabel.js';
 
 const EMPTY_OPTIONS = Object.freeze({
   statuses: [],
@@ -42,7 +43,7 @@ const OPTION_LOADERS = {
   },
   projects: (workspaceId) => api.workspaces.getProjects(workspaceId),
   portalCustomers: () => api.portalCustomers.getAll(),
-  customerOrganisations: () => api.customerOrganisations.getAll(),
+  customerOrganisations: async () => realCustomers(await api.customerOrganisations.getAll()),
   personalLabels: () => api.personalLabels.getAll(null),
 };
 

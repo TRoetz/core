@@ -2741,6 +2741,29 @@ var Catalog = []Migration{
 				ON mention_email_outbox(mention_id);
 		`,
 	},
+	{
+		Version:       "20261030_customer_organisations_builtin_key",
+		Name:          "Add stable builtin_key to customer organisations (no-customer placeholder)",
+		CheckSQLite:   sqliteColumnCheck("customer_organisations", "builtin_key"),
+		CheckPostgres: pgColumnCheck("customer_organisations", "builtin_key"),
+		// Existing installs keep working without a customer: the placeholder row
+		// absorbs projects and worklogs that would otherwise need a real one.
+		// Fresh installs get the row from the default-data seed instead.
+		SQLite: `
+			ALTER TABLE customer_organisations ADD COLUMN builtin_key TEXT;
+			CREATE UNIQUE INDEX IF NOT EXISTS uq_customer_organisations_builtin_key ON customer_organisations(builtin_key) WHERE builtin_key IS NOT NULL;
+			INSERT INTO customer_organisations (builtin_key, name, description, active)
+			SELECT 'no_customer', 'No customer', 'Placeholder for projects and worklogs without a customer', true
+			WHERE NOT EXISTS (SELECT 1 FROM customer_organisations WHERE builtin_key = 'no_customer');
+		`,
+		Postgres: `
+			ALTER TABLE customer_organisations ADD COLUMN IF NOT EXISTS builtin_key TEXT;
+			CREATE UNIQUE INDEX IF NOT EXISTS uq_customer_organisations_builtin_key ON customer_organisations(builtin_key) WHERE builtin_key IS NOT NULL;
+			INSERT INTO customer_organisations (builtin_key, name, description, active)
+			SELECT 'no_customer', 'No customer', 'Placeholder for projects and worklogs without a customer', true
+			WHERE NOT EXISTS (SELECT 1 FROM customer_organisations WHERE builtin_key = 'no_customer');
+		`,
+	},
 }
 
 // applyAssetReportsWorkspacePinned backfills form-mode asset reports that have
