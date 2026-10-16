@@ -934,7 +934,7 @@ func (h *DiagnosticsHandler) PurgeWebhookDeliveries(w http.ResponseWriter, r *ht
 // GetSchedulerRuns returns recent in-process scheduler tick history.
 //
 // Query params:
-//   - scheduler: "" (any), "briefing", "email", "recurrence", "notification"
+//   - scheduler: "" (any), "briefing", "email", "email_outbox", "recurrence", "notification"
 //   - status:    "" (any), "success", or "failed"
 //   - since:     duration string (default "24h")
 //   - limit:     max rows (default 25, capped at 200)

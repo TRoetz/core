@@ -49,14 +49,17 @@ type NotificationScheduler struct {
 	runRepo       *repository.SchedulerRunRepository
 	notifSvc      *services.NotificationService
 	batchInterval time.Duration
-	replyOutbox   emailReplyOutbox
-	mentionOutbox mentionEmailOutbox
-	claimOwner    string
-	claimLease    time.Duration
-	now           func() time.Time
-	runCancel     context.CancelFunc
-	runDone       chan struct{}
-	runNow        chan chan struct{}
+	// outboxBatchSize is how many reply/mention outbox rows the digest's
+	// backstop pass claims. Set from WINDSHIFT_EMAIL_OUTBOX_BATCH_SIZE.
+	outboxBatchSize int
+	replyOutbox     emailReplyOutbox
+	mentionOutbox   mentionEmailOutbox
+	claimOwner      string
+	claimLease      time.Duration
+	now             func() time.Time
+	runCancel       context.CancelFunc
+	runDone         chan struct{}
+	runNow          chan chan struct{}
 
 	// Per-user failure tracking for the circuit breaker. Keyed by user email
 	// (matching how we fan-out batches today). Resets on restart — the goal
@@ -97,6 +100,17 @@ func (ns *NotificationScheduler) SetMentionEmailOutbox(outbox mentionEmailOutbox
 	ns.mu.Unlock()
 }
 
+// SetOutboxBatchSize overrides how many outbox rows the digest's backstop
+// pass claims. A non-positive value keeps the built-in default.
+func (ns *NotificationScheduler) SetOutboxBatchSize(size int) {
+	if size <= 0 {
+		return
+	}
+	ns.mu.Lock()
+	ns.outboxBatchSize = size
+	ns.mu.Unlock()
+}
+
 // NewNotificationScheduler creates a new notification scheduler. batchInterval
 // is the tick cadence (resolved from config); a non-positive value falls back
 // to defaultBatchInterval. notifSvc supplies the unread-notification batches so
@@ -106,18 +120,19 @@ func NewNotificationScheduler(db database.Database, smtpSender SMTPSender, batch
 		batchInterval = defaultBatchInterval
 	}
 	scheduler := &NotificationScheduler{
-		db:            db,
-		stopChan:      make(chan struct{}),
-		running:       false,
-		smtpSender:    smtpSender,
-		runRepo:       repository.NewSchedulerRunRepository(db),
-		notifSvc:      notifSvc,
-		batchInterval: batchInterval,
-		failCounts:    make(map[string]int),
-		skipUntil:     make(map[string]time.Time),
-		claimLease:    notificationClaimLease,
-		now:           time.Now,
-		runNow:        make(chan chan struct{}),
+		db:              db,
+		stopChan:        make(chan struct{}),
+		running:         false,
+		smtpSender:      smtpSender,
+		runRepo:         repository.NewSchedulerRunRepository(db),
+		notifSvc:        notifSvc,
+		batchInterval:   batchInterval,
+		failCounts:      make(map[string]int),
+		skipUntil:       make(map[string]time.Time),
+		claimLease:      notificationClaimLease,
+		now:             time.Now,
+		runNow:          make(chan chan struct{}),
+		outboxBatchSize: defaultOutboxBatchSize,
 	}
 	scheduler.claimOwner = fmt.Sprintf("notification-scheduler-%d-%p", time.Now().UnixNano(), scheduler)
 	return scheduler
@@ -218,9 +233,10 @@ func (ns *NotificationScheduler) processPendingNotificationsContext(ctx context.
 	ns.mu.RLock()
 	replyOutbox := ns.replyOutbox
 	mentionOutbox := ns.mentionOutbox
+	outboxBatchSize := ns.outboxBatchSize
 	ns.mu.RUnlock()
 	if replyOutbox != nil {
-		delivered, err := replyOutbox.ProcessPendingReplies(ctx, maxBatchSize)
+		delivered, err := replyOutbox.ProcessPendingReplies(ctx, outboxBatchSize)
 		batchesProcessed += delivered
 		if err != nil {
 			slog.Error("Failed to process pending threaded email replies", slog.Any("error", err))
@@ -230,7 +246,7 @@ func (ns *NotificationScheduler) processPendingNotificationsContext(ctx context.
 	// Deliver mention emails before claiming the digest so a successful send
 	// marks the matching notification sent and the digest skips it.
 	if mentionOutbox != nil {
-		delivered, err := mentionOutbox.ProcessPendingMentions(ctx, maxBatchSize)
+		delivered, err := mentionOutbox.ProcessPendingMentions(ctx, outboxBatchSize)
 		batchesProcessed += delivered
 		if err != nil {
 			slog.Error("Failed to process pending mention emails", slog.Any("error", err))

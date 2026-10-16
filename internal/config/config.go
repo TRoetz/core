@@ -207,6 +207,13 @@ type NotificationConfig struct {
 	// (WINDSHIFT_NOTIFICATION_BATCH_INTERVAL). Zero means the scheduler uses
 	// its built-in default.
 	BatchInterval time.Duration
+	// OutboxInterval is how often the dedicated outbound email pool drains the
+	// threaded-reply and mention outboxes (WINDSHIFT_EMAIL_OUTBOX_INTERVAL).
+	// Zero means the scheduler uses its built-in default (1 minute).
+	OutboxInterval time.Duration
+	// OutboxBatchSize is how many outbox rows one drain pass claims
+	// (WINDSHIFT_EMAIL_OUTBOX_BATCH_SIZE). Zero means the built-in default.
+	OutboxBatchSize int
 }
 
 // OutboundTLSConfig controls process-wide certificate verification for

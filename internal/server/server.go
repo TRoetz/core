@@ -140,6 +140,7 @@ type Server struct {
 	notificationManager          *handlers.NotificationManager
 	notificationService          *services.NotificationService
 	notificationScheduler        *scheduler.NotificationScheduler
+	outboundEmailScheduler       *scheduler.OutboundEmailScheduler
 	recurrenceScheduler          *scheduler.RecurrenceScheduler
 	cfvCleanupScheduler          *scheduler.CFVCleanupScheduler
 	todoistSyncScheduler         *scheduler.TodoistSyncScheduler
@@ -516,8 +517,17 @@ func (s *Server) initialize() error {
 
 	smtpSender := smtp.NewNotificationSMTPSender(s.db)
 	s.notificationScheduler = scheduler.NewNotificationScheduler(s.db, smtpSender, cfg.Notification.BatchInterval, s.notificationService)
+	if cfg.Notification.OutboxBatchSize > 0 {
+		s.notificationScheduler.SetOutboxBatchSize(cfg.Notification.OutboxBatchSize)
+	}
 	s.notificationScheduler.Start()
 	slog.Info("notification scheduler started")
+
+	// The outbound email pool drains the threaded-reply and @mention outboxes
+	// on a fast, bounded cadence, separate from the 5-minute digest batching.
+	s.outboundEmailScheduler = scheduler.NewOutboundEmailScheduler(s.db, smtpSender, cfg.Notification.OutboxInterval, cfg.Notification.OutboxBatchSize)
+	s.outboundEmailScheduler.Start()
+	slog.Info("outbound email scheduler started")
 
 	// WorkflowService is constructed here (moved up from later in bootstrap) so the
 	// recurrence scheduler can resolve a workspace+item-type's initial status the
@@ -1121,6 +1131,7 @@ func (s *Server) initialize() error {
 	}
 	commentService.SetEmailReplyService(emailReplyService)
 	s.notificationScheduler.SetEmailReplyOutbox(emailReplyService)
+	s.outboundEmailScheduler.SetEmailReplyOutbox(emailReplyService)
 
 	// Dedicated @mention emails (WI-1726): carry the message body and
 	// re-authorize the recipient before SMTP delivery. mentionService was
@@ -1134,6 +1145,7 @@ func (s *Server) initialize() error {
 	mentionEmailService.SetBaseURL(baseURL)
 	mentionService.SetMentionEmailNotifier(mentionEmailService)
 	s.notificationScheduler.SetMentionEmailOutbox(mentionEmailService)
+	s.outboundEmailScheduler.SetMentionEmailOutbox(mentionEmailService)
 
 	// External request participants (WI-1136): the reply service sends the
 	// customer-facing "you were added" notice.
@@ -2301,6 +2313,11 @@ func (s *Server) Shutdown(ctx context.Context) error {
 	if s.notificationScheduler != nil {
 		slog.Info("stopping notification scheduler")
 		s.notificationScheduler.Stop()
+	}
+
+	if s.outboundEmailScheduler != nil {
+		slog.Info("stopping outbound email scheduler")
+		s.outboundEmailScheduler.Stop()
 	}
 
 	if s.recurrenceScheduler != nil {
