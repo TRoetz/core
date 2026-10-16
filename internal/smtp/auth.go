@@ -22,8 +22,10 @@ const (
 // preserves the historical behavior for servers that advertise it.
 var authAutoPreference = []string{AuthMethodPlain, AuthMethodLogin, AuthMethodCRAMMD5}
 
-// errAuthRequiresTLS mirrors net/smtp's own guard in PlainAuth: credentials
-// are never sent on an unencrypted connection, whatever mechanism is chosen.
+// errAuthRequiresTLS keeps credentials off unencrypted connections, whatever
+// mechanism is chosen. It is deliberately stricter than net/smtp's PlainAuth,
+// which still allows plaintext AUTH to localhost, because dispatch only ever
+// authenticates after STARTTLS or implicit TLS.
 var errAuthRequiresTLS = errors.New("SMTP authentication requires an encrypted connection")
 
 // normalizeAuthMethod lowercases and trims, mapping "" to AuthMethodAuto.
@@ -52,8 +54,16 @@ func newSMTPAuth(method, username, password, host string) (smtp.Auth, error) {
 	if !AuthMethodAllowed(method) {
 		return nil, fmt.Errorf("SMTP auth method %q not allowed; use \"auto\", \"plain\", \"login\", \"cram-md5\", or \"none\"", method)
 	}
-	if method == AuthMethodNone || username == "" || password == "" {
+	if method == AuthMethodNone {
 		return nil, nil
+	}
+	if username == "" || password == "" {
+		if method == AuthMethodAuto {
+			// No credentials stored: keep the historical unauthenticated send
+			// instead of failing channels that never had them.
+			return nil, nil
+		}
+		return nil, fmt.Errorf("SMTP auth method %q requires both a username and a password", method)
 	}
 	return &selectingAuth{method: method, username: username, password: password, host: host}, nil
 }

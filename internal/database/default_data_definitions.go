@@ -166,7 +166,8 @@ const defaultNotificationChannelConfig = `{
 	"smtp_password": "",
 	"smtp_from_email": "",
 	"smtp_from_name": "Windshift",
-	"smtp_encryption": "tls"
+	"smtp_encryption": "tls",
+	"smtp_auth_method": "auto"
 }`
 
 type defaultTheme struct {
