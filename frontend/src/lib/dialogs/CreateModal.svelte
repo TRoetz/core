@@ -248,7 +248,7 @@
         throw new Error('Image upload failed');
       }
 
-      const downloadUrl = api.attachments.getDownloadUrl(attachmentId);
+      const downloadUrl = api.attachments.getContentUrl(attachmentId);
       updatedDescription = updatedDescription.split(image.url).join(downloadUrl);
     }
 

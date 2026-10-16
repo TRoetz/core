@@ -379,7 +379,7 @@
           }
           if (result.success && result.attachment) {
             const src = downloadUrlBase === '/api/attachments'
-              ? api.attachments.getDownloadUrl(result.attachment.id)
+              ? api.attachments.getContentUrl(result.attachment.id)
               : `${downloadUrlBase}/${result.attachment.id}/download`;
             const node = schema?.nodes?.image?.createAndFill({
               src,

@@ -5638,6 +5638,10 @@
         "format": "binary",
         "type": "string"
       },
+      "GetAttachmentsAttachmentIdDownloadResult": {
+        "format": "binary",
+        "type": "string"
+      },
       "GetAttachmentsAttachmentIdResult": {
         "additionalProperties": false,
         "properties": {
@@ -101204,6 +101208,63 @@
               "application/octet-stream": {
                 "schema": {
                   "$ref": "#/components/schemas/GetAttachmentsAttachmentIdContentResult"
+                }
+              }
+            },
+            "description": "Download item attachment response."
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationError"
+          },
+          "403": {
+            "$ref": "#/components/responses/PermissionError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Download item attachment",
+        "tags": [
+          "Work items"
+        ],
+        "x-required-scopes": [
+          "items:read"
+        ]
+      }
+    },
+    "/attachments/{attachment_id}/download": {
+      "get": {
+        "description": "Download item attachment. Results include only resources visible to the authenticated caller; collections use their documented stable order and bounds.",
+        "operationId": "getAttachmentsAttachmentIdDownload",
+        "parameters": [
+          {
+            "description": "The attachment identifier.",
+            "in": "path",
+            "name": "attachment_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetAttachmentsAttachmentIdDownloadResult"
                 }
               }
             },

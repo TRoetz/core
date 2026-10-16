@@ -2838,6 +2838,34 @@
         ]
       }
     },
+    "/attachments/{attachment_id}/download": {
+      "get": {
+        "description": "Download item attachment. Results include only resources visible to the authenticated caller; collections use their documented stable order and bounds.",
+        "parameters": [
+          {
+            "Name": "attachment_id",
+            "In": "path",
+            "Description": "The attachment identifier.",
+            "Required": true,
+            "Schema": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "401": {},
+          "403": {},
+          "404": {},
+          "429": {},
+          "500": {}
+        },
+        "summary": "Download item attachment",
+        "tags": [
+          "Work items"
+        ]
+      }
+    },
     "/attachments/{attachment_id}/thumbnail": {
       "get": {
         "description": "Get item attachment thumbnail. Results include only resources visible to the authenticated caller; collections use their documented stable order and bounds.",

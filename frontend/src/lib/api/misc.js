@@ -121,7 +121,12 @@ export const attachments = {
     return response.json();
   },
 
-  getDownloadUrl: (attachmentId) => `/api/v2/attachments/${attachmentId}/content`,
+  // URL for rendering an attachment inline (images, PDFs). Renderable media
+  // is served inline; other types fall back to a forced download.
+  getContentUrl: (attachmentId) => `/api/v2/attachments/${attachmentId}/content`,
+
+  // URL that always forces a download.
+  getDownloadUrl: (attachmentId) => `/api/v2/attachments/${attachmentId}/download`,
 
   // Get thumbnail URL for image attachments
   getThumbnailUrl: (attachmentId) => `/api/v2/attachments/${attachmentId}/thumbnail`,
