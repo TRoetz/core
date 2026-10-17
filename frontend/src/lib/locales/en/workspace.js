@@ -1022,6 +1022,11 @@ export default {
       loadRecalculationsFailed: 'Failed to load recalculation work',
       noRecalculations: 'No pending recalculation work.',
       jobKind: 'Kind',
+      jobKinds: {
+        recalcItem: 'Item recalculation',
+        recalcMetric: 'Metric recalculation',
+        recalcCalendar: 'Calendar recalculation',
+      },
       jobTarget: 'Target',
       attempts: 'Attempts',
       jobState: 'State',
@@ -1037,7 +1042,7 @@ export default {
       bindingCreated: 'Team bound',
       bindingRemoved: 'Binding removed',
       bindingDenied:
-        'You must be an administrator of both the team and this workspace to change a binding.',
+        'You need to administer the team and this workspace, or be a global administrator, to change a binding.',
       removeBindingBlocked:
         'This binding cannot be removed while an SLA goal still uses one of the team’s calendars.',
       loadBindingsFailed: 'Failed to load team bindings',
@@ -1047,7 +1052,7 @@ export default {
       selectTeam: 'Select a team',
       selectTeamRequired: 'Select a team to bind.',
       bindingConsentHelp:
-        'Both the team and the workspace must consent. You need to be an administrator of both.',
+        'Both the team and the workspace must consent. Administer both, or be a global administrator.',
       reportTitle: 'SLA Compliance Report',
       reportSubtitle:
         'Completed, breached, and ongoing aggregates per metric, with the breached-cycle list for the selected window.',
@@ -1112,6 +1117,13 @@ export default {
       recurring: 'Repeats yearly',
       setDefault: 'Set as the workspace default calendar',
       applyToOngoing: 'Apply this change to ongoing cycles too',
+      applyToOngoingHint:
+        'Recalculates every ongoing cycle that uses this calendar in this workspace.',
+      applyToOngoingTeamHint:
+        'Recalculates every ongoing cycle that uses this calendar, in every workspace bound to this team.',
+      applyToOngoingImpact:
+        'Right now that is {cycles} ongoing cycle(s) across {workspaces} workspace(s).',
+      applyToOngoingNoImpact: 'No bound workspace currently references this calendar.',
       owner: 'Owner',
       sharedByTeam: 'Shared by team',
       ownedByWorkspace: 'This workspace',

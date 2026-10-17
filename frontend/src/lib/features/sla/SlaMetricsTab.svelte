@@ -52,7 +52,7 @@
     };
   }
 
-  async function loadMetrics(workspace, generation) {
+  async function loadMetrics(workspace = workspaceId, generation = requestGeneration) {
     try {
       loading = true;
       error = null;

@@ -1519,6 +1519,12 @@ func (r *SLARepository) UpdateCycle(ctx context.Context, tx database.Tx, cycle *
 const jobColumns = `id, kind, threshold_key, cycle_id, item_id, metric_id, due_at, deadline_at,
 	cursor, attempts, lease_owner, last_error, state, created_at`
 
+// jobColumnsPrefixed qualifies jobColumns for the "sla_jobs j" alias. Declared
+// explicitly (not derived from jobColumns) so joined queries stay in scanJob's
+// column order when the base constant's formatting changes.
+const jobColumnsPrefixed = `j.id, j.kind, j.threshold_key, j.cycle_id, j.item_id, j.metric_id, j.due_at,
+	j.deadline_at, j.cursor, j.attempts, j.lease_owner, j.last_error, j.state, j.created_at`
+
 func scanJob(scanner interface{ Scan(...any) error }) (models.SLAJob, error) {
 	var job models.SLAJob
 	var cycleID, itemID, metricID sql.NullInt64
@@ -1887,10 +1893,10 @@ func floatToMs(value sql.NullFloat64) *int64 {
 
 // ListRecalculationJobs returns pending recalculation work for a workspace.
 func (r *SLARepository) ListRecalculationJobs(ctx context.Context, workspaceID int) ([]models.SLAJob, error) {
-	rows, err := r.db.QueryContext(ctx, `SELECT `+jobColumns+` FROM sla_jobs j
+	rows, err := r.db.QueryContext(ctx, `SELECT `+jobColumnsPrefixed+` FROM sla_jobs j
 		LEFT JOIN sla_metrics m ON m.id = j.metric_id
 		LEFT JOIN items i ON i.id = j.item_id
-		WHERE j.kind IN ('recalc_item', 'recalc_metric')
+		WHERE j.kind IN ('recalc_item', 'recalc_metric', 'recalc_calendar')
 		  AND (m.workspace_id = ? OR i.workspace_id = ?)
 		ORDER BY j.due_at`, workspaceID, workspaceID)
 	if err != nil {

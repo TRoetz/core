@@ -1169,6 +1169,10 @@ export default {
       "allMetrics": "Toutes les métriques",
       "apply": "Appliquer",
       "applyToOngoing": "Appliquer aussi ce changement aux cycles en cours",
+      "applyToOngoingHint": "Recalcule chaque cycle en cours qui utilise ce calendrier dans cet espace de travail.",
+      "applyToOngoingTeamHint": "Recalcule chaque cycle en cours qui utilise ce calendrier, dans chaque espace de travail lié à cette équipe.",
+      "applyToOngoingImpact": "Actuellement, cela représente {cycles} cycles en cours dans {workspaces} espaces de travail.",
+      "applyToOngoingNoImpact": "Aucun espace de travail lié ne référence actuellement ce calendrier.",
       "attempts": "Tentatives",
       "availableCalendars": "Calendriers disponibles",
       "avgElapsed": "Moy. écoulé / objectif",
@@ -1258,6 +1262,11 @@ export default {
       "holidays": "Jours fériés",
       "jobFailed": "Échec",
       "jobKind": "Type",
+      "jobKinds": {
+        "recalcItem": "Recalcul d'élément",
+        "recalcMetric": "Recalcul de métrique",
+        "recalcCalendar": "Recalcul de calendrier"
+      },
       "jobPending": "En attente",
       "jobState": "État",
       "jobTarget": "Cible",

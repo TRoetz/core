@@ -162,6 +162,11 @@ export default {
       loadRecalculationsFailed: 'Не удалось загрузить работу по пересчёту',
       noRecalculations: 'Ожидающей работы по пересчёту нет.',
       jobKind: 'Тип',
+      jobKinds: {
+        recalcItem: 'Пересчёт элемента',
+        recalcMetric: 'Пересчёт метрики',
+        recalcCalendar: 'Пересчёт календаря',
+      },
       jobTarget: 'Цель',
       attempts: 'Попытки',
       jobState: 'Состояние',
@@ -241,6 +246,12 @@ export default {
       recurring: 'Повторяется ежегодно',
       setDefault: 'Сделать календарём по умолчанию для пространства',
       applyToOngoing: 'Применить изменение и к текущим циклам',
+      applyToOngoingHint:
+        'Пересчитывает все текущие циклы, использующие этот календарь в этом пространстве.',
+      applyToOngoingTeamHint:
+        'Пересчитывает все текущие циклы, использующие этот календарь, во всех пространствах, привязанных к этой команде.',
+      applyToOngoingImpact: 'Сейчас это {cycles} текущих циклов в {workspaces} пространствах.',
+      applyToOngoingNoImpact: 'Ни одно привязанное пространство сейчас не ссылается на этот календарь.',
       owner: 'Владелец',
       sharedByTeam: 'Предоставлен командой',
       ownedByWorkspace: 'Это пространство',

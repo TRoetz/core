@@ -45,12 +45,13 @@
   let error = $state(null);
   let coverage = $state(null);
   let coverageLoading = $state(false);
+  let ongoingImpact = $state(null);
 
   const timezoneOptions = $derived.by(() => {
     const zones = formData.timezone && !baseTimezoneIds.includes(formData.timezone)
       ? [formData.timezone, ...baseTimezoneIds]
       : baseTimezoneIds;
-    return zones;
+    return zones.map((tz) => ({ value: tz, label: tz }));
   });
 
   $effect(() => {
@@ -85,6 +86,35 @@
       active = false;
     };
   });
+
+  // Team calendars can be referenced by any bound workspace, so surface the
+  // concrete recalculation scope before the admin applies an edit to ongoing
+  // cycles.
+  $effect(() => {
+    const teamId = calendar?.team_id;
+    const id = calendar?.id;
+    if (!isOpen || !teamId || !id || !api.sla?.getTeamCalendarImpact) {
+      ongoingImpact = null;
+      return;
+    }
+    let active = true;
+    api.sla
+      .getTeamCalendarImpact(teamId, id)
+      .then((value) => {
+        if (active) ongoingImpact = value;
+      })
+      .catch(() => {
+        if (active) ongoingImpact = null;
+      });
+    return () => {
+      active = false;
+    };
+  });
+
+  const impactWorkspaces = $derived(ongoingImpact?.workspaces?.length ?? 0);
+  const impactCycles = $derived(
+    (ongoingImpact?.workspaces ?? []).reduce((sum, workspace) => sum + (workspace.ongoing_cycles ?? 0), 0)
+  );
 
   function formatWeekly(ms) {
     if (ms == null || ms === 0) return '0m';
@@ -333,9 +363,30 @@
       </div>
 
       {#if calendar}
-        <div class="form-group flex items-center gap-2">
-          <Toggle bind:checked={formData.apply_to_ongoing} dataTestid="sla-calendar-apply-ongoing" />
-          <span>{t('workspaceSettings.serviceLevels.applyToOngoing')}</span>
+        <div class="form-group">
+          <div class="flex items-center gap-2">
+            <Toggle bind:checked={formData.apply_to_ongoing} dataTestid="sla-calendar-apply-ongoing" />
+            <span>{t('workspaceSettings.serviceLevels.applyToOngoing')}</span>
+          </div>
+          <p class="mt-1 text-xs" style="color: var(--ds-text-subtle)">
+            {calendar.team_id
+              ? t('workspaceSettings.serviceLevels.applyToOngoingTeamHint')
+              : t('workspaceSettings.serviceLevels.applyToOngoingHint')}
+          </p>
+          {#if calendar.team_id && ongoingImpact}
+            <p
+              class="mt-1 text-xs"
+              data-testid="sla-calendar-ongoing-impact"
+              style="color: var(--ds-text-subtle)"
+            >
+              {impactWorkspaces > 0
+                ? t('workspaceSettings.serviceLevels.applyToOngoingImpact', {
+                    cycles: impactCycles,
+                    workspaces: impactWorkspaces,
+                  })
+                : t('workspaceSettings.serviceLevels.applyToOngoingNoImpact')}
+            </p>
+          {/if}
         </div>
       {/if}
 

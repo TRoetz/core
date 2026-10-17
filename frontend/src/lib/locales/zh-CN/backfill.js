@@ -1012,6 +1012,10 @@ export default {
       "allMetrics": "所有指标",
       "apply": "应用",
       "applyToOngoing": "也将此更改应用到进行中的周期",
+      "applyToOngoingHint": "重新计算此工作区中使用此日历的所有进行中周期。",
+      "applyToOngoingTeamHint": "重新计算使用此日历的所有进行中周期，涵盖绑定到此团队的所有工作区。",
+      "applyToOngoingImpact": "目前涉及 {workspaces} 个工作区中的 {cycles} 个进行中周期。",
+      "applyToOngoingNoImpact": "当前没有已绑定的工作区引用此日历。",
       "attempts": "尝试次数",
       "availableCalendars": "可用日历",
       "avgElapsed": "平均已用 / 目标",
@@ -1101,6 +1105,11 @@ export default {
       "holidays": "假日",
       "jobFailed": "失败",
       "jobKind": "类型",
+      "jobKinds": {
+        "recalcItem": "事项重新计算",
+        "recalcMetric": "指标重新计算",
+        "recalcCalendar": "日历重新计算"
+      },
       "jobPending": "待处理",
       "jobState": "状态",
       "jobTarget": "目标",

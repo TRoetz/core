@@ -954,6 +954,10 @@ export default {
       "allMetrics": "Alle Metriken",
       "apply": "Anwenden",
       "applyToOngoing": "Diese Änderung auch auf laufende Zyklen anwenden",
+      "applyToOngoingHint": "Berechnet jeden laufenden Zyklus neu, der diesen Kalender in diesem Arbeitsbereich verwendet.",
+      "applyToOngoingTeamHint": "Berechnet jeden laufenden Zyklus neu, der diesen Kalender verwendet – in jedem mit diesem Team verbundenen Arbeitsbereich.",
+      "applyToOngoingImpact": "Aktuell betrifft das {cycles} laufende Zyklen in {workspaces} Arbeitsbereichen.",
+      "applyToOngoingNoImpact": "Derzeit verweist kein gebundener Arbeitsbereich auf diesen Kalender.",
       "attempts": "Versuche",
       "availableCalendars": "Verfügbare Kalender",
       "avgElapsed": "Durchschn. verstrichen / Ziel",
@@ -1043,6 +1047,11 @@ export default {
       "holidays": "Feiertage",
       "jobFailed": "Fehlgeschlagen",
       "jobKind": "Art",
+      "jobKinds": {
+        "recalcItem": "Element-Neuberechnung",
+        "recalcMetric": "Metrik-Neuberechnung",
+        "recalcCalendar": "Kalender-Neuberechnung"
+      },
       "jobPending": "Ausstehend",
       "jobState": "Status",
       "jobTarget": "Ziel",
