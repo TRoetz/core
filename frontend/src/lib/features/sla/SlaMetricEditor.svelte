@@ -3,10 +3,14 @@
   import ModalHeader from '../../dialogs/ModalHeader.svelte';
   import DialogFooter from '../../dialogs/DialogFooter.svelte';
   import Button from '../../components/Button.svelte';
+  import TextField from '../../components/TextField.svelte';
+  import SelectField from '../../components/SelectField.svelte';
   import Input from '../../components/Input.svelte';
   import Select from '../../components/Select.svelte';
   import Toggle from '../../components/Toggle.svelte';
-  import Textarea from '../../components/Textarea.svelte';
+  import Panel from '../../components/Panel.svelte';
+  import Text from '../../components/Text.svelte';
+  import AlertBox from '../../components/AlertBox.svelte';
   import CategoryMultiSelect from '../../pickers/CategoryMultiSelect.svelte';
   import QlQueryBar from '../shared/QlQueryBar.svelte';
   import { api } from '../../api.js';
@@ -261,49 +265,62 @@
 
     <div class="px-6 py-4 max-h-[70vh] overflow-y-auto">
       {#if error}
-        <div class="mb-3 text-sm" style="color: var(--ds-text-danger)" data-testid="sla-metric-error">
-          {error}
+        <div class="mb-4" data-testid="sla-metric-error">
+          <AlertBox variant="error" message={error} />
         </div>
       {/if}
 
-      <div class="form-group">
-        <label for="sla-metric-name">{t('common.name')}</label>
-        <Input id="sla-metric-name" type="text" bind:value={formData.name} dataTestid="sla-metric-name" />
+      <TextField
+        class="mb-4"
+        label={t('common.name')}
+        labelColor="default"
+        id="sla-metric-name"
+        type="text"
+        bind:value={formData.name}
+        dataTestid="sla-metric-name"
+      />
+
+      <div class="grid grid-cols-2 gap-4 mb-4">
+        <SelectField
+          label={t('workspaceSettings.serviceLevels.displayFormat')}
+          labelColor="default"
+          id="sla-metric-format"
+          bind:value={formData.display_format}
+          options={[
+            { value: 'time', label: t('workspaceSettings.serviceLevels.displayFormats.time') },
+            { value: 'due_date', label: t('workspaceSettings.serviceLevels.displayFormats.dueDate') },
+          ]}
+        />
+        <TextField
+          label={t('workspaceSettings.serviceLevels.order')}
+          labelColor="default"
+          id="sla-metric-position"
+          type="number"
+          bind:value={formData.position}
+          dataTestid="sla-metric-position"
+        />
       </div>
 
-      <div class="grid grid-cols-2 gap-4">
-        <div class="form-group">
-          <label for="sla-metric-format">{t('workspaceSettings.serviceLevels.displayFormat')}</label>
-          <Select
-            id="sla-metric-format"
-            bind:value={formData.display_format}
-            options={[
-              { value: 'time', label: t('workspaceSettings.serviceLevels.displayFormats.time') },
-              { value: 'due_date', label: t('workspaceSettings.serviceLevels.displayFormats.dueDate') },
-            ]}
-          />
-        </div>
-        <div class="form-group">
-          <label for="sla-metric-position">{t('workspaceSettings.serviceLevels.order')}</label>
-          <Input id="sla-metric-position" type="number" bind:value={formData.position} dataTestid="sla-metric-position" />
-        </div>
+      <div class="mb-4">
+        <Toggle
+          bind:checked={formData.is_active}
+          label={t('workspaceSettings.serviceLevels.metricActive')}
+          dataTestid="sla-metric-active"
+        />
       </div>
 
-      <div class="form-group flex items-center gap-2">
-        <Toggle bind:checked={formData.is_active} dataTestid="sla-metric-active" />
-        <span>{t('workspaceSettings.serviceLevels.metricActive')}</span>
-      </div>
-
-      <fieldset class="form-group" data-testid="sla-metric-conditions">
-        <legend>{t('workspaceSettings.serviceLevels.conditions')}</legend>
-        <p class="text-xs mb-2" style="color: var(--ds-text-subtle)">
+      <fieldset class="mb-4" data-testid="sla-metric-conditions">
+        <legend>
+          <Text as="span" weight="semibold">{t('workspaceSettings.serviceLevels.conditions')}</Text>
+        </legend>
+        <Text as="p" variant="subtle" size="xs" class="mb-2">
           {t('workspaceSettings.serviceLevels.conditionsHelp')}
-        </p>
+        </Text>
         {#each PHASES as phase (phase)}
           <div class="mb-3" data-testid="sla-metric-phase-{phase}">
-            <div class="text-sm font-medium mb-1">
+            <Text as="p" size="sm" weight="medium" class="mb-1">
               {t(`workspaceSettings.serviceLevels.phases.${phase}`)}
-            </div>
+            </Text>
             {#each formData.conditions[phase] as condition, index (index)}
               <div class="flex flex-wrap items-center gap-2 py-1">
                 <Select
@@ -354,10 +371,12 @@
         {/each}
       </fieldset>
 
-      <fieldset class="form-group" data-testid="sla-metric-goals">
-        <legend>{t('workspaceSettings.serviceLevels.goals')}</legend>
+      <fieldset class="mb-4" data-testid="sla-metric-goals">
+        <legend>
+          <Text as="span" weight="semibold">{t('workspaceSettings.serviceLevels.goals')}</Text>
+        </legend>
         {#each formData.goals as goal, goalIndex (goalIndex)}
-          <div class="mb-3 rounded border p-3" style="border-color: var(--ds-border)">
+          <Panel padding="compact" class="mb-3">
             <div class="flex items-start gap-2">
               <div class="flex-1">
                 <QlQueryBar
@@ -372,13 +391,13 @@
                   }}
                 />
                 {#if goal.error}
-                  <div class="text-xs mt-1" style="color: var(--ds-text-danger)" data-testid="sla-goal-error-{goalIndex}">
-                    {goal.error}
+                  <div class="mt-1" data-testid="sla-goal-error-{goalIndex}">
+                    <Text as="p" variant="danger" size="xs">{goal.error}</Text>
                   </div>
                 {:else}
-                  <div class="text-xs mt-1" style="color: var(--ds-text-subtle)">
+                  <Text as="p" variant="subtle" size="xs" class="mt-1">
                     {t('workspaceSettings.serviceLevels.goalQueryOptionalHint')}
-                  </div>
+                  </Text>
                 {/if}
               </div>
               <Button
@@ -431,7 +450,7 @@
                 />
               </div>
             {/if}
-          </div>
+          </Panel>
         {/each}
         <Button variant="default" size="small" icon={Plus} onclick={addGoal} dataTestid="sla-goal-add">
           {t('workspaceSettings.serviceLevels.addGoal')}
