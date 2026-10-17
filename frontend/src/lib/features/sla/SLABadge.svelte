@@ -1,6 +1,7 @@
 <script>
   import { useEventListener } from 'runed';
   import Lozenge from '../../components/Lozenge.svelte';
+  import Tooltip from '../../components/Tooltip.svelte';
   import { t } from '../../stores/i18n.svelte.js';
   import { formatInstant } from '../../utils/dateFormatter.js';
   import { getItemSLA, getSLAThresholds, onSLAThresholdsInvalidated } from './slaState.js';
@@ -129,7 +130,9 @@
   {:else if signal.warning}
     <Lozenge color="yellow" text={t('items.sla.warning')} />
   {:else if signal.outsideHours}
-    <Lozenge color="blue" text={t('items.sla.outsideHours')} />
+    <Tooltip content={t('items.sla.outsideHours')}>
+      <Lozenge color="blue" text={t('items.sla.paused')} dataTestid="sla-badge-paused-outside-hours" />
+    </Tooltip>
   {:else if signal.displayFormat === 'due_date' && signal.cycle.next_deadline_at}
     <span class="text-xs" style="color: var(--ds-text-subtle)">
       {t('items.sla.dueOn', { date: formatDeadline(signal.cycle) })}

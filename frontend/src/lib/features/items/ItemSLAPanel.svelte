@@ -2,7 +2,8 @@
   import { useEventListener } from 'runed';
   import { api } from '../../api.js';
   import Lozenge from '../../components/Lozenge.svelte';
-  import { Gauge, AlertTriangle, PauseCircle, Clock, CalendarClock } from '@lucide/svelte';
+  import Tooltip from '../../components/Tooltip.svelte';
+  import { Gauge, Clock } from '@lucide/svelte';
   import { t } from '../../stores/i18n.svelte.js';
   import { formatInstant } from '../../utils/dateFormatter.js';
 
@@ -121,7 +122,9 @@
                   <Lozenge color="yellow" text={t('items.sla.paused')} />
                 {/if}
                 {#if !cycle.within_calendar_hours && !cycle.paused}
-                  <Lozenge color="blue" text={t('items.sla.outsideHours')} />
+                  <Tooltip content={t('items.sla.outsideHours')}>
+                    <Lozenge color="blue" text={t('items.sla.paused')} dataTestid="item-sla-paused-outside-hours-{state.metric_id}" />
+                  </Tooltip>
                 {/if}
               </div>
               <div class="text-xs mt-1" style="color: var(--ds-text-subtle)">
