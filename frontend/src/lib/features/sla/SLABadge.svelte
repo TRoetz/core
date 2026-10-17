@@ -98,7 +98,10 @@
       if (!cycle) continue;
       const breached = !!cycle.breached;
       const paused = !!cycle.paused;
-      const outsideHours = !paused && cycle.within_calendar_hours === false;
+      // A cycle without a matched goal reports within_calendar_hours=false,
+      // but that is the synthetic 24/7 placeholder, not a service-hours pause.
+      const outsideHours =
+        !paused && cycle.goal_duration_ms > 0 && cycle.within_calendar_hours === false;
       const percent = warningPercentFor(state.metric_id);
       const warning =
         !breached &&
