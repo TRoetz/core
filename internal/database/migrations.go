@@ -2835,6 +2835,41 @@ var Catalog = []Migration{
 		SQLite:      "applySQLiteEmailReplyOutboxConfirmation:v1",
 		ApplySQLite: applySQLiteEmailReplyOutboxConfirmation,
 	},
+	{
+		// Priority-scoped targets are replaced by one goal per target, with
+		// priority-specific durations expressed through the goal's QL query.
+		// Collapse any multi-target goal to a single target (the fallback when
+		// present, otherwise the lowest position) and drop the now-unused
+		// columns.
+		Version:       "20261104_sla_single_goal_target",
+		Name:          "Collapse SLA goals to one target and drop priority/fallback columns",
+		CheckSQLite:   "SELECT CASE WHEN (SELECT COUNT(*) FROM pragma_table_info('sla_goal_targets') WHERE name IN ('priority_id', 'is_fallback')) = 0 THEN 1 ELSE 0 END",
+		CheckPostgres: "SELECT CASE WHEN (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=current_schema() AND table_name='sla_goal_targets' AND column_name IN ('priority_id', 'is_fallback')) = 0 THEN 1 ELSE 0 END",
+		SQLite: `
+			DELETE FROM sla_goal_targets
+			WHERE id IN (
+				SELECT id FROM (
+					SELECT id, ROW_NUMBER() OVER (PARTITION BY goal_id ORDER BY is_fallback DESC, position ASC, id ASC) AS rn
+					FROM sla_goal_targets
+				) ranked
+				WHERE rn > 1
+			);
+			ALTER TABLE sla_goal_targets DROP COLUMN is_fallback;
+			ALTER TABLE sla_goal_targets DROP COLUMN priority_id;
+		`,
+		Postgres: `
+			DELETE FROM sla_goal_targets
+			WHERE id IN (
+				SELECT id FROM (
+					SELECT id, ROW_NUMBER() OVER (PARTITION BY goal_id ORDER BY is_fallback DESC, position ASC, id ASC) AS rn
+					FROM sla_goal_targets
+				) ranked
+				WHERE rn > 1
+			);
+			ALTER TABLE sla_goal_targets DROP COLUMN IF EXISTS is_fallback;
+			ALTER TABLE sla_goal_targets DROP COLUMN IF EXISTS priority_id;
+		`,
+	},
 }
 
 // applyAssetReportsWorkspacePinned backfills form-mode asset reports that have

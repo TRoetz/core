@@ -18,7 +18,6 @@
   let calendars = $state([]);
   let statuses = $state([]);
   let statusCategories = $state([]);
-  let priorities = $state([]);
   let loading = $state(true);
   let error = $state(null);
   let showEditor = $state(false);
@@ -68,17 +67,15 @@
   }
 
   async function loadReferenceData(workspace, generation) {
-    const [calendarList, statusList, categoryList, priorityList] = await Promise.all([
+    const [calendarList, statusList, categoryList] = await Promise.all([
       api.sla.getAvailableCalendars(workspace).catch(() => []),
       api.statuses.getAll().catch(() => []),
       api.statusCategories.getAll().catch(() => []),
-      api.priorities.getAll().catch(() => []),
     ]);
     if (generation !== requestGeneration) return;
     calendars = calendarList ?? [];
     statuses = statusList ?? [];
     statusCategories = categoryList ?? [];
-    priorities = priorityList ?? [];
   }
 
   let requestGeneration = 0;
@@ -271,7 +268,6 @@
   {calendars}
   {statuses}
   {statusCategories}
-  {priorities}
   onSave={save}
   onClose={() => {
     showEditor = false;

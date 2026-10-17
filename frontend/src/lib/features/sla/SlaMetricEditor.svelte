@@ -20,7 +20,6 @@
     calendars = [],
     statuses = [],
     statusCategories = [],
-    priorities = [],
     onSave,
     onClose,
   } = $props();
@@ -59,7 +58,7 @@
   }
 
   function blankTarget() {
-    return { is_fallback: true, priority_id: null, value: 4, unit: 'h', calendar_id: calendars[0]?.id ?? 0 };
+    return { value: 4, unit: 'h', calendar_id: calendars[0]?.id ?? 0 };
   }
 
   function blankGoal() {
@@ -106,9 +105,8 @@
     const goals = (source.goals ?? []).map((goal) => ({
       ql_query: goal.ql_query ?? '',
       error: null,
-      targets: (goal.targets ?? []).map((target) => ({
-        is_fallback: !!target.is_fallback,
-        priority_id: target.priority_id ?? null,
+      // One target per goal: priority-specific durations are separate goals.
+      targets: (goal.targets ?? []).slice(0, 1).map((target) => ({
         ...msToUnit(target.target_ms),
         calendar_id: target.calendar_id,
       })),
@@ -163,16 +161,6 @@
     formData.goals = goals;
   }
 
-  function addTarget(goalIndex) {
-    formData.goals[goalIndex].targets = [...formData.goals[goalIndex].targets, blankTarget()];
-  }
-
-  function removeTarget(goalIndex, targetIndex) {
-    formData.goals[goalIndex].targets = formData.goals[goalIndex].targets.filter(
-      (_, i) => i !== targetIndex
-    );
-  }
-
   function buildPayload() {
     const conditions = [];
     for (const phase of PHASES) {
@@ -195,10 +183,8 @@
       position,
       ql_query: goal.ql_query.trim(),
       import_status: 'native',
-      targets: goal.targets.map((target, targetPosition) => ({
+      targets: goal.targets.slice(0, 1).map((target, targetPosition) => ({
         position: targetPosition,
-        is_fallback: target.is_fallback,
-        priority_id: target.is_fallback ? null : target.priority_id,
         target_ms: unitToMs(target.value, target.unit),
         calendar_id: Number(target.calendar_id),
       })),
@@ -216,22 +202,19 @@
 
   async function validate() {
     if (!formData.name.trim()) return t('workspaceSettings.serviceLevels.nameRequired');
+    if (formData.goals.length === 0) return t('workspaceSettings.serviceLevels.goalRequired');
     for (const goal of formData.goals) {
       goal.error = null;
-      if (!goal.ql_query.trim()) return t('workspaceSettings.serviceLevels.goalQueryRequired');
-      if (goal.targets.length === 0) return t('workspaceSettings.serviceLevels.targetRequired');
-      for (const target of goal.targets) {
-        if (!target.calendar_id) return t('workspaceSettings.serviceLevels.targetCalendarRequired');
-        if (unitToMs(target.value, target.unit) <= 0) {
-          return t('workspaceSettings.serviceLevels.targetDurationRequired');
-        }
-        if (!target.is_fallback && !target.priority_id) {
-          return t('workspaceSettings.serviceLevels.targetPriorityRequired');
-        }
+      const target = goal.targets[0];
+      if (!target) return t('workspaceSettings.serviceLevels.targetRequired');
+      if (!target.calendar_id) return t('workspaceSettings.serviceLevels.targetCalendarRequired');
+      if (unitToMs(target.value, target.unit) <= 0) {
+        return t('workspaceSettings.serviceLevels.targetDurationRequired');
       }
     }
-    // Validate each goal's QL against the item query parser before saving.
+    // A blank query matches every item; only non-blank queries need parsing.
     for (const goal of formData.goals) {
+      if (!goal.ql_query.trim()) continue;
       const queryError = await api.sla.validateGoalQuery(workspaceId, goal.ql_query);
       if (queryError) {
         goal.error = queryError;
@@ -392,6 +375,10 @@
                   <div class="text-xs mt-1" style="color: var(--ds-text-danger)" data-testid="sla-goal-error-{goalIndex}">
                     {goal.error}
                   </div>
+                {:else}
+                  <div class="text-xs mt-1" style="color: var(--ds-text-subtle)">
+                    {t('workspaceSettings.serviceLevels.goalQueryOptionalHint')}
+                  </div>
                 {/if}
               </div>
               <Button
@@ -421,59 +408,29 @@
                 dataTestid="sla-goal-remove-{goalIndex}"
               />
             </div>
-            {#each goal.targets as target, targetIndex (targetIndex)}
+            {#if goal.targets[0]}
               <div class="flex flex-wrap items-center gap-2 py-1">
-                <Toggle
-                  bind:checked={target.is_fallback}
-                  label={t('workspaceSettings.serviceLevels.fallback')}
-                  dataTestid="sla-target-fallback-{goalIndex}-{targetIndex}"
-                />
-                {#if !target.is_fallback}
-                  <Select
-                    id="sla-target-priority-{goalIndex}-{targetIndex}"
-                    bind:value={target.priority_id}
-                    options={priorities.map((priority) => ({
-                      value: priority.id,
-                      label: priority.name,
-                    }))}
-                  />
-                {/if}
                 <Input
                   type="number"
                   min="1"
-                  bind:value={target.value}
+                  bind:value={goal.targets[0].value}
                   ariaLabel={t('workspaceSettings.serviceLevels.duration')}
-                  dataTestid="sla-target-value-{goalIndex}-{targetIndex}"
+                  dataTestid="sla-target-value-{goalIndex}"
                 />
                 <Select
-                  id="sla-target-unit-{goalIndex}-{targetIndex}"
-                  bind:value={target.unit}
+                  id="sla-target-unit-{goalIndex}"
+                  bind:value={goal.targets[0].unit}
                   options={DURATION_UNITS.map((unit) => ({ value: unit.value, label: t(unit.labelKey) }))}
                 />
                 <Select
-                  id="sla-target-calendar-{goalIndex}-{targetIndex}"
-                  bind:value={target.calendar_id}
+                  id="sla-target-calendar-{goalIndex}"
+                  class="min-w-40"
+                  menuWidth="16rem"
+                  bind:value={goal.targets[0].calendar_id}
                   options={calendars.map((calendar) => ({ value: calendar.id, label: calendar.name }))}
                 />
-                <Button
-                  variant="default"
-                  size="small"
-                  icon={Trash2}
-                  onclick={() => removeTarget(goalIndex, targetIndex)}
-                  title={t('common.remove')}
-                  dataTestid="sla-target-remove-{goalIndex}-{targetIndex}"
-                />
               </div>
-            {/each}
-            <Button
-              variant="default"
-              size="small"
-              icon={Plus}
-              onclick={() => addTarget(goalIndex)}
-              dataTestid="sla-target-add-{goalIndex}"
-            >
-              {t('workspaceSettings.serviceLevels.addTarget')}
-            </Button>
+            {/if}
           </div>
         {/each}
         <Button variant="default" size="small" icon={Plus} onclick={addGoal} dataTestid="sla-goal-add">

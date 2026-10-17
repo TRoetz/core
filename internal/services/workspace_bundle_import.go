@@ -370,36 +370,57 @@ func (s *WorkspaceBundleImportService) buildSLAMetricInput(ctx context.Context, 
 	}
 	for i := range metric.Goals {
 		goal := &metric.Goals[i]
-		resolved := models.SLAGoal{
-			Position:     goal.Position,
-			QLQuery:      strings.TrimSpace(goal.QLQuery),
-			ImportStatus: "native",
+		baseQL := strings.TrimSpace(goal.QLQuery)
+		if baseQL == "" {
+			baseQL = "1 = 1"
 		}
-		if resolved.QLQuery == "" {
-			resolved.QLQuery = "1 = 1"
+		newGoal := func(query string) models.SLAGoal {
+			return models.SLAGoal{QLQuery: query, ImportStatus: "native"}
 		}
-		for j := range goal.Targets {
-			target := &goal.Targets[j]
+		resolveTarget := func(target *WorkspaceBundleSLATarget) (models.SLAGoalTarget, error) {
 			calendarID, ok := calendarIDByRef[target.CalendarRef]
 			if !ok {
-				return SLAMetricInput{}, fmt.Errorf("SLA metric %q goal %d target %d: calendar_ref %q is not a bundled calendar", metric.Name, i, j, target.CalendarRef)
+				return models.SLAGoalTarget{}, fmt.Errorf("calendar_ref %q is not a bundled calendar", target.CalendarRef)
 			}
-			resolvedTarget := models.SLAGoalTarget{
-				Position:   j,
-				IsFallback: target.IsFallback,
-				TargetMs:   target.TargetMs,
-				CalendarID: calendarID,
-			}
-			if !target.IsFallback && strings.TrimSpace(target.PriorityName) != "" {
-				priorityID, err := s.priorityIDByName(ctx, target.PriorityName)
-				if err != nil {
-					return SLAMetricInput{}, err
-				}
-				resolvedTarget.PriorityID = &priorityID
-			}
-			resolved.Targets = append(resolved.Targets, resolvedTarget)
+			return models.SLAGoalTarget{TargetMs: target.TargetMs, CalendarID: calendarID}, nil
 		}
-		input.Goals = append(input.Goals, resolved)
+
+		// One goal per target: priority targets get their own goal with the
+		// priority appended to the base query, and the fallback keeps the base
+		// query so first-match-wins preserves priority precedence.
+		var fallback *WorkspaceBundleSLATarget
+		for j := range goal.Targets {
+			target := &goal.Targets[j]
+			priorityName := strings.TrimSpace(target.PriorityName)
+			if target.IsFallback || priorityName == "" {
+				if fallback == nil {
+					fallback = &goal.Targets[j]
+				}
+				continue
+			}
+			if _, err := s.priorityIDByName(ctx, priorityName); err != nil {
+				return SLAMetricInput{}, fmt.Errorf("SLA metric %q goal %d target %d: %w", metric.Name, i, j, err)
+			}
+			resolvedTarget, err := resolveTarget(target)
+			if err != nil {
+				return SLAMetricInput{}, fmt.Errorf("SLA metric %q goal %d target %d: %w", metric.Name, i, j, err)
+			}
+			resolved := newGoal(combineGoalQuery(baseQL, priorityName))
+			resolved.Targets = []models.SLAGoalTarget{resolvedTarget}
+			input.Goals = append(input.Goals, resolved)
+		}
+		if fallback != nil {
+			resolvedTarget, err := resolveTarget(fallback)
+			if err != nil {
+				return SLAMetricInput{}, fmt.Errorf("SLA metric %q goal %d fallback: %w", metric.Name, i, err)
+			}
+			resolved := newGoal(baseQL)
+			resolved.Targets = []models.SLAGoalTarget{resolvedTarget}
+			input.Goals = append(input.Goals, resolved)
+		}
+	}
+	for i := range input.Goals {
+		input.Goals[i].Position = i
 	}
 	return input, nil
 }

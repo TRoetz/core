@@ -38800,10 +38800,6 @@
                             "description": "The goal id value.",
                             "type": "integer"
                           },
-                          "is_fallback": {
-                            "description": "The is fallback value.",
-                            "type": "boolean"
-                          },
                           "metric_id": {
                             "description": "The metric id value.",
                             "type": "integer"
@@ -38811,11 +38807,6 @@
                           "metric_name": {
                             "description": "The metric name value.",
                             "type": "string"
-                          },
-                          "priority_id": {
-                            "description": "The priority id value.",
-                            "nullable": true,
-                            "type": "integer"
                           },
                           "target_id": {
                             "description": "The target id value.",
@@ -38828,7 +38819,6 @@
                         },
                         "required": [
                           "goal_id",
-                          "is_fallback",
                           "metric_id",
                           "metric_name",
                           "target_id",
@@ -39157,17 +39147,8 @@
                             "description": "The id value.",
                             "type": "integer"
                           },
-                          "is_fallback": {
-                            "description": "The is fallback value.",
-                            "type": "boolean"
-                          },
                           "position": {
                             "description": "The position value.",
-                            "type": "integer"
-                          },
-                          "priority_id": {
-                            "description": "The priority id value.",
-                            "nullable": true,
                             "type": "integer"
                           },
                           "source_id": {
@@ -39189,7 +39170,6 @@
                           "calendar_id",
                           "goal_id",
                           "id",
-                          "is_fallback",
                           "position",
                           "target_ms"
                         ],
@@ -39406,17 +39386,8 @@
                               "description": "The id value.",
                               "type": "integer"
                             },
-                            "is_fallback": {
-                              "description": "The is fallback value.",
-                              "type": "boolean"
-                            },
                             "position": {
                               "description": "The position value.",
-                              "type": "integer"
-                            },
-                            "priority_id": {
-                              "description": "The priority id value.",
-                              "nullable": true,
                               "type": "integer"
                             },
                             "source_id": {
@@ -39438,7 +39409,6 @@
                             "calendar_id",
                             "goal_id",
                             "id",
-                            "is_fallback",
                             "position",
                             "target_ms"
                           ],
@@ -91418,17 +91388,8 @@
                         "description": "The id value.",
                         "type": "integer"
                       },
-                      "is_fallback": {
-                        "description": "The is fallback value.",
-                        "type": "boolean"
-                      },
                       "position": {
                         "description": "The position value.",
-                        "type": "integer"
-                      },
-                      "priority_id": {
-                        "description": "The priority id value.",
-                        "nullable": true,
                         "type": "integer"
                       },
                       "source_id": {
@@ -91450,7 +91411,6 @@
                       "calendar_id",
                       "goal_id",
                       "id",
-                      "is_fallback",
                       "position",
                       "target_ms"
                     ],
@@ -91631,17 +91591,8 @@
                             "description": "The id value.",
                             "type": "integer"
                           },
-                          "is_fallback": {
-                            "description": "The is fallback value.",
-                            "type": "boolean"
-                          },
                           "position": {
                             "description": "The position value.",
-                            "type": "integer"
-                          },
-                          "priority_id": {
-                            "description": "The priority id value.",
-                            "nullable": true,
                             "type": "integer"
                           },
                           "source_id": {
@@ -91663,7 +91614,6 @@
                           "calendar_id",
                           "goal_id",
                           "id",
-                          "is_fallback",
                           "position",
                           "target_ms"
                         ],
@@ -96180,17 +96130,8 @@
                         "description": "The id value.",
                         "type": "integer"
                       },
-                      "is_fallback": {
-                        "description": "The is fallback value.",
-                        "type": "boolean"
-                      },
                       "position": {
                         "description": "The position value.",
-                        "type": "integer"
-                      },
-                      "priority_id": {
-                        "description": "The priority id value.",
-                        "nullable": true,
                         "type": "integer"
                       },
                       "source_id": {
@@ -96212,7 +96153,6 @@
                       "calendar_id",
                       "goal_id",
                       "id",
-                      "is_fallback",
                       "position",
                       "target_ms"
                     ],
@@ -96393,17 +96333,8 @@
                             "description": "The id value.",
                             "type": "integer"
                           },
-                          "is_fallback": {
-                            "description": "The is fallback value.",
-                            "type": "boolean"
-                          },
                           "position": {
                             "description": "The position value.",
-                            "type": "integer"
-                          },
-                          "priority_id": {
-                            "description": "The priority id value.",
-                            "nullable": true,
                             "type": "integer"
                           },
                           "source_id": {
@@ -96425,7 +96356,6 @@
                           "calendar_id",
                           "goal_id",
                           "id",
-                          "is_fallback",
                           "position",
                           "target_ms"
                         ],
