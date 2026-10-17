@@ -175,6 +175,7 @@ export default {
       outsideHours: 'Outside service hours',
       elapsedOfGoal: '{elapsed} elapsed of {goal} goal',
       notRunning: 'No running cycle',
+      noGoal: 'No goal matched for this item',
       completedCycles: 'Completed cycles ({count})',
       coverageDiscrepancies: {
         sla_wider: 'This SLA counts time outside the bound team’s service hours.',
@@ -957,6 +958,7 @@ export default {
       reorderFailed: 'Failed to reorder metrics',
       noMetrics: 'No SLA metrics yet.',
       nameRequired: 'Name is required.',
+      goalRequired: 'Add at least one goal so the SLA has a target.',
       goalQueryRequired: 'Every goal needs a query.',
       targetRequired: 'Every goal needs at least one target.',
       targetCalendarRequired: 'Every target needs a calendar.',
@@ -989,6 +991,7 @@ export default {
       },
       goals: 'Goals',
       goalQueryPlaceholder: 'QL query, e.g. priority = High',
+      goalQueryOptionalHint: 'Optional — leave blank to match all tickets.',
       addGoal: 'Add goal',
       addTarget: 'Add target',
       fallback: 'Fallback',

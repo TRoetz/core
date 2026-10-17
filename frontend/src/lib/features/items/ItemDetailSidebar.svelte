@@ -20,6 +20,7 @@
   import { errorToast } from '../../stores/toasts.svelte.js';
   import ItemSCMLinks from './ItemSCMLinks.svelte';
   import ItemIntegrationLinks from './ItemIntegrationLinks.svelte';
+  import ItemSLAPanel from './ItemSLAPanel.svelte';
   import ZammadItemPanel from './ZammadItemPanel.svelte';
 	import RequesterOpenTickets from './RequesterOpenTickets.svelte';
   import CustomerContextSection from './CustomerContextSection.svelte';
@@ -633,6 +634,9 @@
 >
   <!-- Panel Content -->
   <div class="flex-1 px-4 py-4 overflow-y-auto">
+    {#if item?.id}
+      <ItemSLAPanel itemId={item.id} />
+    {/if}
     <!-- DETAILS Section Header -->
     <div class="flex items-center justify-between mb-4">
       <Text variant="subtle" size="xs" weight="semibold" class="uppercase tracking-wider">{t('common.details')}</Text>
