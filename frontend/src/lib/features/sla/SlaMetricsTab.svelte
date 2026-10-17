@@ -40,10 +40,9 @@
         position: goal.position ?? index,
         ql_query: goal.ql_query ?? '',
         import_status: goal.import_status || 'native',
-        targets: (goal.targets ?? []).map((target, targetIndex) => ({
+        // A goal has exactly one target; priority-specific durations are separate goals.
+        targets: (goal.targets ?? []).slice(0, 1).map((target, targetIndex) => ({
           position: target.position ?? targetIndex,
-          is_fallback: target.is_fallback,
-          priority_id: target.priority_id ?? null,
           target_ms: target.target_ms,
           calendar_id: target.calendar_id,
         })),
