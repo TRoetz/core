@@ -11,7 +11,7 @@ export default {
       },
       work: {
         title: 'Arbeit',
-        subtitle: 'Ihre persönliche Liste und die Ihnen zugewiesenen Einträge',
+        subtitle: 'Ihre persönliche Liste und die Ihnen zugewiesenen Vorgänge',
       },
       workspaces: {
         title: 'Arbeitsbereiche',
@@ -25,7 +25,7 @@ export default {
       },
       yourActivity: {
         name: 'Ihre Aktivität',
-        description: 'Kürzlich angesehene, bearbeitete oder kommentierte Einträge',
+        description: 'Kürzlich angesehene, bearbeitete oder kommentierte Vorgänge',
       },
       whatsNew: {
         name: 'Neuigkeiten',
@@ -33,19 +33,19 @@ export default {
       },
       personalTasks: {
         name: 'Persönliche Aufgaben',
-        description: 'Einträge aus Ihrer persönlichen Aufgabenliste',
+        description: 'Vorgänge aus Ihrer persönlichen Aufgabenliste',
       },
       savedSearch: {
         name: 'Gespeicherte Suche',
-        description: 'Einträge aus einer gespeicherten Sammlung anzeigen',
+        description: 'Vorgänge aus einer gespeicherten Sammlung anzeigen',
       },
       assignedToMe: {
         name: 'Mir zugewiesen',
-        description: 'Ihnen zugewiesene offene Einträge aus allen Arbeitsbereichen',
+        description: 'Ihnen zugewiesene offene Vorgänge aus allen Arbeitsbereichen',
       },
       watchedItems: {
-        name: 'Beobachtete Einträge',
-        description: 'Einträge, denen Sie folgen',
+        name: 'Beobachtete Vorgänge',
+        description: 'Vorgänge, denen Sie folgen',
       },
       upcomingMilestones: {
         name: 'Anstehende Meilensteine',
@@ -72,7 +72,7 @@ export default {
       },
       work: {
         name: 'Arbeit',
-        description: 'Einträge, Meilensteine und Ihnen zugewiesene Aufgaben',
+        description: 'Vorgänge, Meilensteine und Ihnen zugewiesene Aufgaben',
       },
       support: {
         name: 'Support',
@@ -104,7 +104,7 @@ export default {
       addSectionsHint: 'Wählen Sie Bearbeiten, um Bereiche zum Dashboard hinzuzufügen',
     },
     states: {
-      assignedLoadError: 'Die Ihnen zugewiesenen Einträge konnten nicht geladen werden',
+      assignedLoadError: 'Die Ihnen zugewiesenen Vorgänge konnten nicht geladen werden',
       assignedEmpty: 'Ihnen ist derzeit nichts zugewiesen',
       personalTasksLoadError: 'Ihre persönlichen Aufgaben konnten nicht geladen werden',
       personalTasksEmpty: 'Ihre persönliche Aufgabenliste ist leer',
@@ -133,7 +133,7 @@ export default {
       milestoneProgress: '{done} von {total} erledigt',
       daysOverdue: '{days} Tage überfällig',
       daysLeft: 'Noch {days} Tage',
-      watchedItemsEmpty: 'Sie beobachten derzeit keine Einträge',
+      watchedItemsEmpty: 'Sie beobachten derzeit keine Vorgänge',
       workspaceWithId: 'Arbeitsbereich {id}',
     },
   },

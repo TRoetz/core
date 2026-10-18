@@ -128,7 +128,7 @@ var shippedSystemTranslations = []SystemTranslation{
 	{ObjectType: "workspace_role", BuiltinKey: "editor", Field: "name", Locale: "de", Value: "Bearbeiter"},
 	{ObjectType: "workspace_role", BuiltinKey: "editor", Field: "description", Locale: "de", Value: "Vorgänge in diesem Arbeitsbereich erstellen und bearbeiten"},
 	{ObjectType: "workspace_role", BuiltinKey: "tester", Field: "name", Locale: "de", Value: "Tester"},
-	{ObjectType: "workspace_role", BuiltinKey: "tester", Field: "description", Locale: "de", Value: "Elemente ansehen, Tests ausführen, Testfälle verwalten und Fehler erstellen"},
+	{ObjectType: "workspace_role", BuiltinKey: "tester", Field: "description", Locale: "de", Value: "Vorgänge ansehen, Tests ausführen, Testfälle verwalten und Fehler erstellen"},
 	{ObjectType: "workspace_role", BuiltinKey: "administrator", Field: "name", Locale: "de", Value: "Administrator"},
 	{ObjectType: "workspace_role", BuiltinKey: "administrator", Field: "description", Locale: "de", Value: "Den gesamten Arbeitsbereich einschließlich der Zugriffsrechte verwalten"},
 	{ObjectType: "theme", BuiltinKey: "default", Field: "name", Locale: "de", Value: "Standard"},

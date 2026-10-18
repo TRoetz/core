@@ -127,7 +127,7 @@ export default {
 
   screens: {
     title: 'Masken',
-    subtitle: 'Feldlayouts für Einträge und Projekte definieren',
+    subtitle: 'Feldlayouts für Vorgänge und Projekte definieren',
     screen: 'Maske',
     screens_one: '{count} Maske',
     screens_other: '{count} Masken',
