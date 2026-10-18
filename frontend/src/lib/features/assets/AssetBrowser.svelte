@@ -904,7 +904,7 @@
           </button>
         </div>
       </div>
-      <div class="flex-1 overflow-auto p-4">
+      <div class="flex-1 overflow-auto p-4" data-testid="asset-detail-scroll">
         <AssetDetailContent asset={selectedAsset} fieldDefinitions={displayTypeFields} />
       </div>
     </div>
@@ -915,6 +915,7 @@
 <!-- Asset Form Modal -->
 <Modal
   isOpen={showAssetForm}
+  dataTestid="asset-form-modal"
   preventClose={savingAsset}
   submitDisabled={savingAsset || (!editingAsset && !assetFormData.asset_type_id)}
   onclose={() => showAssetForm = false}
@@ -998,6 +999,7 @@
                 }}
                 value={assetFormData.custom_field_values[field.custom_field_id]}
                 readonly={false}
+                autoOpenPickers={false}
                 onChange={(val) => assetFormData.custom_field_values[field.custom_field_id] = val}
                 required={field.is_required}
               />

@@ -634,6 +634,31 @@
 >
   <!-- Panel Content -->
   <div class="flex-1 px-4 py-4 overflow-y-auto">
+    <!-- Shared custom-field editor. Date fields save on change; every other
+         free-form type defers to commit-on-blur. -->
+    {#snippet customFieldEditor(fieldDef, screenField, currentValue, fieldEditable, commitOnBlur)}
+      <CustomFieldRenderer
+        field={fieldDef}
+        value={currentValue}
+        readonly={!fieldEditable}
+        autoOpenPickers={true}
+        disabled={!canEdit || !fieldEditable}
+        {milestones}
+        {iterations}
+        itemId={item?.id}
+        required={screenField.is_required}
+        onChange={(val) => {
+          editCustomFieldValues[screenField.field_identifier] = val;
+          if (!DEFERRED_SAVE_CUSTOM_FIELD_TYPES.has(fieldDef.field_type)) {
+            onsaveField?.({ field: `custom_field_${screenField.field_identifier}` });
+          }
+        }}
+        onCommit={commitOnBlur
+          ? (val) => onsaveField?.({ field: `custom_field_${screenField.field_identifier}`, value: val })
+          : null}
+        onCancel={() => oncancelEdit?.({ field: `custom_field_${screenField.field_identifier}` })}
+      />
+    {/snippet}
     {#if item?.id}
       <ItemSLAPanel itemId={item.id} />
     {/if}
@@ -1232,22 +1257,7 @@
             {@const fieldEditable = isCustomFieldEditable(fieldDef.id)}
             <div class="mb-3" data-testid={`item-custom-field-${fieldDef.id}`}>
               {#if isEditing}
-                <CustomFieldRenderer
-                  field={fieldDef}
-                  value={currentValue}
-                  readonly={!fieldEditable}
-                  disabled={!canEdit || !fieldEditable}
-                  {milestones}
-                  {iterations}
-                  itemId={item?.id}
-                  required={screenField.is_required}
-                  onChange={(val) => {
-                    editCustomFieldValues[screenField.field_identifier] = val;
-                    onsaveField?.({ field: `custom_field_${screenField.field_identifier}` });
-                  }}
-                  onStartEdit={() => startEditingCustomField(screenField.field_identifier)}
-                  onCancel={() => oncancelEdit?.({ field: `custom_field_${screenField.field_identifier}` })}
-                />
+                {@render customFieldEditor(fieldDef, screenField, currentValue, fieldEditable, false)}
               {:else}
                 <button
                   onclick={() => startEditingCustomField(screenField.field_identifier)}
@@ -1306,28 +1316,7 @@
                     />
                   </div>
                 {:else if isEditing}
-                  <CustomFieldRenderer
-                    field={fieldDef}
-                    value={currentValue}
-                    readonly={!fieldEditable}
-                    disabled={!canEdit || !fieldEditable}
-                    {milestones}
-                    {iterations}
-                    itemId={item?.id}
-                    required={screenField.is_required}
-                    onChange={(val) => {
-                      editCustomFieldValues[screenField.field_identifier] = val;
-                      if (!DEFERRED_SAVE_CUSTOM_FIELD_TYPES.has(fieldDef.field_type)) {
-                        onsaveField?.({ field: `custom_field_${screenField.field_identifier}` });
-                      }
-                    }}
-                    onCommit={(val) => onsaveField?.({
-                      field: `custom_field_${screenField.field_identifier}`,
-                      value: val,
-                    })}
-                    onStartEdit={() => startEditingCustomField(screenField.field_identifier)}
-                    onCancel={() => oncancelEdit?.({ field: `custom_field_${screenField.field_identifier}` })}
-                  />
+                  {@render customFieldEditor(fieldDef, screenField, currentValue, fieldEditable, true)}
                 {:else}
                   {@const hasValue = currentValue !== null && currentValue !== undefined && currentValue !== ''}
                   {@const displayValue = hasValue ? formatCustomFieldValue(fieldDef, currentValue) : t('common.none')}
