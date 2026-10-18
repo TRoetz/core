@@ -691,7 +691,10 @@ func isEmptyCustomFieldValue(v any) bool {
 // action service is wired. Returns the freshly-loaded row.
 //
 // All required fields declared on the asset type must be present in
-// customFieldValues (EnforceRequired is on for creates).
+// customFieldValues (EnforceRequired is on for creates). String values are
+// coerced to the field's declared type first, matching updates and imports,
+// so automation literals and API clients can send "7" for a user or "true"
+// for a boolean.
 func (s *AssetService) CreateAsset(actor AuditActor, in repository.CreateAssetInput, customFieldValues map[string]any) (*models.Asset, error) {
 	return s.CreateAssetWithContext(actor, in, customFieldValues, AssetAutomationContext{})
 }
@@ -702,9 +705,11 @@ func (s *AssetService) CreateAssetWithContext(actor AuditActor, in repository.Cr
 	if err := s.validateAssetTaxonomy(in.SetID, in.AssetTypeID, in.CategoryID, in.StatusID); err != nil {
 		return nil, err
 	}
-	if err := s.ValidateCustomFieldsSchema(in.AssetTypeID, customFieldValues, CustomFieldsValidationOpts{EnforceRequired: true}); err != nil {
+	coerced, err := s.CoerceAndValidateCustomFieldValues(in.AssetTypeID, customFieldValues)
+	if err != nil {
 		return nil, err
 	}
+	customFieldValues = coerced
 	if err := reencodeCustomFieldValues(customFieldValues, &in.CustomFieldValuesJSON); err != nil {
 		return nil, err
 	}
@@ -720,7 +725,7 @@ func (s *AssetService) CreateAssetWithContext(actor AuditActor, in repository.Cr
 		return nil, &AssetValidationError{Msg: "title is required"}
 	}
 	var assetID int
-	err := database.WithTx(s.db, func(tx database.Tx) error {
+	err = database.WithTx(s.db, func(tx database.Tx) error {
 		var err error
 		assetID, err = s.repo.CreateAssetInTx(tx, in)
 		if err != nil {
