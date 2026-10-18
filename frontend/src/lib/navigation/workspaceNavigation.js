@@ -280,6 +280,23 @@ export const workspaceSettingsItems = [
   },
 ];
 
+/** Per-module settings page-header subtitle keys (id → i18n key). */
+export const workspaceSettingsSubtitleKeys = {
+  general: 'workspaceSettings.headers.general',
+  categories: 'workspaceSettings.headers.categories',
+  members: 'workspaceSettings.headers.members',
+  configuration: 'workspaceSettings.headers.configuration',
+  'source-control': 'workspaceSettings.headers.sourceControl',
+  'coding-agents': 'workspaceSettings.headers.codingAgents',
+  'issue-sync': 'workspaceSettings.headers.issueSync',
+  'action-credentials': 'workspaceSettings.headers.actionCredentials',
+  recurrence: 'workspaceSettings.headers.recurrence',
+  templates: 'workspaceSettings.headers.templates',
+  'canned-responses': 'workspaceSettings.headers.cannedResponses',
+  'service-levels': 'workspaceSettings.headers.serviceLevels',
+  danger: 'workspaceSettings.headers.danger',
+};
+
 /** All route view names that belong to the workspace admin area. */
 export const workspaceSettingsViews = [
   'workspace-settings',

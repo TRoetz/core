@@ -7,6 +7,7 @@
   import { permissionStore, workspacesStore, isSystemAdmin, currentWorkspace } from '../stores';
   import { moduleSettings } from '../stores/moduleSettings.js';
   import { timerStore } from '../stores/timerStore.svelte.js';
+  import { loadExtensions } from '../stores/extensions.svelte.js';
   import { t } from '../stores/i18n.svelte.js';
   import ModalBackdrop from '../components/ModalBackdrop.svelte';
 
@@ -19,6 +20,7 @@
   import {
     adminProvider,
     createProvider,
+    delegatedAdminProvider,
     globalNavigationProvider,
     makeExternalProvider,
     recentlyViewedProvider,
@@ -38,6 +40,9 @@
   let workspaces = $state([]);
   let workItems = $state([]);
   let searchTimeout;
+  // Plugin admin tabs are fetched once per session, on first palette open by a
+  // system admin; adminProvider reads them from the extensions store.
+  let extensionsRequested = false;
 
   // Sub-palette state. `mode` is 'commands' (the default command list) or
   // 'recent' (the recently-viewed work-item picker reached from the launcher
@@ -58,6 +63,11 @@
       ];
     } catch (err) {
       console.error('Failed to load data for command palette:', err);
+    }
+
+    if ($permissionStore.canAccessAdmin && !extensionsRequested) {
+      extensionsRequested = true;
+      void loadExtensions();
     }
   }
 
@@ -115,6 +125,7 @@
     workspacesProvider,
     createProvider,
     adminProvider,
+    delegatedAdminProvider,
     timeProvider,
     searchProvider,
     systemProvider,
