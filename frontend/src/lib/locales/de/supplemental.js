@@ -84,16 +84,16 @@ export default {
   },
   "users": {
     "labels": {
-      "tabLabel": "Etiketten",
-      "tabDescription": "Verwalten Sie Ihre persönlichen Etiketten.",
-      "searchPlaceholder": "Suchetiketten",
-      "new": "Neues Etikett",
-      "createTitle": "Etikett erstellen",
-      "editTitle": "Etikett bearbeiten",
+      "tabLabel": "Labels",
+      "tabDescription": "Verwalten Sie Ihre persönlichen Labels.",
+      "searchPlaceholder": "Labels suchen",
+      "new": "Neues Label",
+      "createTitle": "Label erstellen",
+      "editTitle": "Label bearbeiten",
       "namePlaceholder": "z.B. dringend",
-      "mine": "Meine Etiketten",
-      "empty": "Noch keine Etiketten",
-      "emptyHint": "Erstellen Sie Ihr erstes Etikett, um Artikel zu organisieren.",
+      "mine": "Meine Labels",
+      "empty": "Noch keine Labels",
+      "emptyHint": "Erstellen Sie Ihr erstes Label, um Artikel zu organisieren.",
       "created": "Label erstellt",
       "updated": "Label aktualisiert",
       "deleted": "Label gelöscht",
@@ -373,7 +373,7 @@ export default {
     "agentOffline": "Agent offline – sein Läuferpool hat keinen Live-Läufer; Zugewiesene Vorgänge werden in die Warteschlange gestellt",
     "agentLocal": "Agent wird auf diesem Server ausgeführt",
     "agentUnbound": "Keine Agentenbindung in diesem Arbeitsbereich – durch Zuweisen wird keine Ausführung gestartet",
-    "labelCommaNotAllowed": "Etikettennamen dürfen kein Komma enthalten",
+    "labelCommaNotAllowed": "Labelnamen dürfen kein Komma enthalten",
     "selectConditionSet": "Bedingungssatz auswählen",
     "selectApprovalSet": "Genehmigungssatz auswählen"
   },
@@ -693,8 +693,8 @@ export default {
     "page": "Seite",
     "linkedPages": "Seiten",
     "pagePickerPlaceholder": "Suchseiten…",
-    "labels": "Beschriftungen",
-    "addLabel": "+ Beschriftung hinzufügen"
+    "labels": "Labels",
+    "addLabel": "+ Label hinzufügen"
   },
   "comments": {
     "agentAuthored": "Verfasst von einem KI-Agenten",
