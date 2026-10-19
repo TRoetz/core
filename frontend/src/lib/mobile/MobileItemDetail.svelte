@@ -486,7 +486,7 @@
 
     {#if item.description}
       <div class="html-content desc" data-testid="detail-description">
-        <LazyMilkdownEditor content={item.description} readonly={true} showToolbar={false} />
+        <LazyMilkdownEditor content={item.description} readonly={true} showToolbar={false} workspaceId={item.workspace_id} />
       </div>
     {/if}
 
@@ -624,6 +624,9 @@
       <span class="opt">
         <Avatar src={user.avatar_url} name={userLabel(user)} size="xs" variant="teal" />
         <span class="assignee-option-label">{userLabel(user)}</span>
+        {#if user.username}
+          <span class="assignee-option-handle">@{user.username}</span>
+        {/if}
       </span>
     {/snippet}
   </MobileOptionSheet>
@@ -754,7 +757,8 @@
   .done-check.done { background-color: var(--ds-success, #4cb782); border-color: var(--ds-success, #4cb782); }
   .opt { display: inline-flex; align-items: center; gap: 0.5rem; min-width: 0; }
   .opt-dot { width: 8px; height: 8px; border-radius: var(--radius-full, 9999px); background-color: var(--ds-icon-subtle, var(--ds-text-subtle)); flex-shrink: 0; }
-  .assignee-option-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .assignee-option-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+  .assignee-option-handle { color: var(--ds-text-subtle); font-size: 0.8125rem; flex-shrink: 0; }
 
   .desc {
     padding: 0.5rem 0 1rem; border-bottom: 1px solid var(--ds-border); margin-bottom: 1rem;

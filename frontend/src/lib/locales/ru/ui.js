@@ -192,6 +192,7 @@ export default {
     numberedList: 'Нумерованный список',
     insertImage: 'Вставить изображение',
     userNotFound: 'Пользователь не найден',
+    multipleUsersMatch: 'Совпадает несколько пользователей',
     insertDiagram: 'Вставить диаграмму',
     insertPageLink: 'Вставить ссылку на страницу знаний',
     searchPagesToLink: 'Поиск страниц…',

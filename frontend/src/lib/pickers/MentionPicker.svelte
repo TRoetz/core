@@ -5,6 +5,7 @@
   import Avatar from '../components/Avatar.svelte';
   import Text from '../components/Text.svelte';
   import { t } from '../stores/i18n.svelte.js';
+  import { mentionTextFor } from '../editors/mentionResolver.js';
 
   // Generate unique IDs for ARIA attributes
   const listboxId = `mention-listbox-${Math.random().toString(36).slice(2, 9)}`;
@@ -133,7 +134,9 @@
   });
 
   function handleSelect(user) {
-    onSelect?.(user);
+    // The roster decides whether a display-name mention would be ambiguous, so
+    // the editor inserts a username instead when another user shares the name.
+    onSelect?.({ ...user, mentionText: mentionTextFor(user, users) });
   }
 
   // Keys the picker owns while it is open. While a mention is in progress,

@@ -236,6 +236,7 @@ export default {
     numberedList: 'Liste numérotée',
     insertImage: 'Insérer une image',
     userNotFound: 'Utilisateur introuvable',
+    multipleUsersMatch: 'Plusieurs utilisateurs correspondent',
     insertDiagram: 'Insérer un schéma',
     diagramEdit: 'Modifier le schéma',
     diagramOpen: 'Ouvrir le schéma',

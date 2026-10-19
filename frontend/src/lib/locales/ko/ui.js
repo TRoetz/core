@@ -257,6 +257,7 @@ export default {
     "numberedList": "번호 목록",
     "insertImage": "이미지 삽입",
     "userNotFound": "사용자를 찾을 수 없습니다",
+    "multipleUsersMatch": "여러 사용자가 일치합니다",
     "insertDiagram": "다이어그램 삽입",
     "diagramEdit": "다이어그램 편집",
     "diagramOpen": "다이어그램 열기",

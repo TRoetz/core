@@ -974,7 +974,10 @@
     {#snippet row(u)}
       <span class="opt">
         <Avatar src={u.avatar_url} name={userLabel(u)} size="xs" variant="teal" />
-        <span>{userLabel(u)}</span>
+        <span class="assignee-option-label">{userLabel(u)}</span>
+        {#if u.username}
+          <span class="assignee-option-handle">@{u.username}</span>
+        {/if}
       </span>
     {/snippet}
   </MobileOptionSheet>
@@ -1221,6 +1224,8 @@
   .chip-input:focus { outline: none; }
 
   .opt { display: inline-flex; align-items: center; gap: 0.5rem; min-width: 0; }
+  .assignee-option-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+  .assignee-option-handle { color: var(--ds-text-subtle); font-size: 0.8125rem; flex-shrink: 0; }
   .opt-dot { width: 8px; height: 8px; border-radius: var(--radius-full, 9999px); background-color: var(--ds-icon-subtle, var(--ds-text-subtle)); flex-shrink: 0; }
 
   .field-section { border-top: 1px solid var(--ds-border); padding-top: 0.85rem; display: flex; flex-direction: column; gap: 0.75rem; margin-top: 0.75rem; }

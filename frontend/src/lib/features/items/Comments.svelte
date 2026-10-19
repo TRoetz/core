@@ -646,7 +646,7 @@
 						{:else}
 							<!-- Read Mode -->
 							<div class="comment-content text-sm" style="color: var(--ds-text);">
-								<MilkdownEditor content={comment.content} readonly={true} showToolbar={false} compact={true} />
+								<MilkdownEditor content={comment.content} readonly={true} showToolbar={false} compact={true} {workspaceId} />
 							</div>
 						{/if}
 					</div>

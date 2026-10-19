@@ -241,6 +241,7 @@ export default {
     numberedList: 'Nummerierte Liste',
     insertImage: 'Bild einfügen',
     userNotFound: 'Benutzer nicht gefunden',
+    multipleUsersMatch: 'Mehrere Benutzer stimmen überein',
   },
   dialogs: {
     cancel: 'Abbrechen',
