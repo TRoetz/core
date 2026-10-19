@@ -1,13 +1,13 @@
 <script>
   import { onDestroy, onMount } from 'svelte';
   import { useEventListener } from 'runed';
-  import { Copy, Search } from '@lucide/svelte';
+  import { Copy, GitMerge, MoreHorizontal, Search } from '@lucide/svelte';
   import Spinner from '../../components/Spinner.svelte';
   import Lozenge from '../../components/Lozenge.svelte';
   import Text from '../../components/Text.svelte';
   import DescriptionText from '../../components/DescriptionText.svelte';
   import ItemKey from '../../components/ItemKey.svelte';
-  import Button from '../../components/Button.svelte';
+  import DropdownMenu from '../../layout/DropdownMenu.svelte';
   import { t } from '../../stores/i18n.svelte.js';
   import { api } from '../../api.js';
   import { aiStore } from '../../stores/aiStore.svelte.js';
@@ -58,6 +58,20 @@
     } finally {
       findingDuplicates = false;
     }
+  }
+
+  // The merge action lives in an overflow menu so a long label never competes
+  // with the status lozenge for the card's limited width.
+  function mergeMenuItems(id, prefix, onSelect) {
+    return [
+      {
+        id: `merge-${prefix}-${id}`,
+        icon: GitMerge,
+        title: t('items.mergeIntoThisTicket'),
+        testid: `requester-${prefix}-merge-${id}`,
+        onClick: onSelect
+      }
+    ];
   }
 
   // The merge dialog addresses a candidate by `id`; AI suggestions arrive with
@@ -155,14 +169,18 @@
               </div>
             </a>
             {#if canEdit && onrequestmerge}
-              <Button
-                variant="secondary"
-                size="small"
-                dataTestid={`requester-open-ticket-merge-${ticket.id}`}
-                onclick={() => onrequestmerge(ticket)}
-              >
-                {t('items.mergeIntoThisTicket')}
-              </Button>
+              <DropdownMenu
+                items={mergeMenuItems(ticket.id, 'open-ticket', () => onrequestmerge(ticket))}
+                placement="bottom-end"
+                maxWidth="max-w-xs"
+                triggerIcon={MoreHorizontal}
+                triggerClass="p-1 rounded hover:bg-[var(--ds-background-neutral-hovered)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-border-focused)]"
+                triggerStyle="color: var(--ds-text-subtle);"
+                iconOnly
+                showChevron={false}
+                triggerLabel={t('common.actions')}
+                triggerTestid={`requester-open-ticket-menu-${ticket.id}`}
+              />
             {/if}
           </div>
         </div>
@@ -198,14 +216,18 @@
               {/if}
             </a>
             {#if canEdit && onrequestmerge}
-              <Button
-                variant="secondary"
-                size="small"
-                dataTestid={`requester-ai-duplicate-merge-${entry.item_id}`}
-                onclick={() => mergeAIDuplicate(entry)}
-              >
-                {t('items.mergeIntoThisTicket')}
-              </Button>
+              <DropdownMenu
+                items={mergeMenuItems(entry.item_id, 'ai-duplicate', () => mergeAIDuplicate(entry))}
+                placement="bottom-end"
+                maxWidth="max-w-xs"
+                triggerIcon={MoreHorizontal}
+                triggerClass="p-1 rounded hover:bg-[var(--ds-background-neutral-hovered)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-border-focused)]"
+                triggerStyle="color: var(--ds-text-subtle);"
+                iconOnly
+                showChevron={false}
+                triggerLabel={t('common.actions')}
+                triggerTestid={`requester-ai-duplicate-menu-${entry.item_id}`}
+              />
             {/if}
           </div>
         </div>
