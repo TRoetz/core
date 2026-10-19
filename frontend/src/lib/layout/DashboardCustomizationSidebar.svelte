@@ -19,7 +19,6 @@
     getDashboardWidgetsByCategory,
   } from '../services/dashboardWidgetRegistry.js';
   import { t } from '../stores/i18n.svelte.js';
-  import { homepageStore } from '../stores';
   import WidgetCustomizationSidebar from './WidgetCustomizationSidebar.svelte';
   import DashboardBackgroundPanel from './DashboardBackgroundPanel.svelte';
 
@@ -91,7 +90,6 @@
   fallbackIcon={Sparkles}
   cardAttributes={{ 'data-dashboard-widget-card': '' }}
   fallbackTitle={t('dashboard.customization.widgets')}
-  featherEdge={homepageStore.hasCustomBackground}
   tipLabel={t('dashboard.customization.tipLabel')}
   tip={t('dashboard.customization.tip')}
   panelCategory="background"
