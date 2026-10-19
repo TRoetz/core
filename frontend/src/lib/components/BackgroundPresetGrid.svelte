@@ -6,6 +6,7 @@
     selectedCategory = 'abstract',
     onSelectImage = () => {},
     presetAspectRatio = '4 / 3',
+    columns = 4,
     testIdPrefix = 'background-preset',
   } = $props();
 
@@ -38,7 +39,10 @@
 </div>
 
 <!-- Preset images grid -->
-<div class="grid grid-cols-4 gap-3 mb-6">
+<div
+  class="grid gap-3 mb-6"
+  style={`grid-template-columns: repeat(${columns}, minmax(0, 1fr));`}
+>
   {#each getPresetsByCategory(localSelectedCategory) as preset}
     <button
       type="button"

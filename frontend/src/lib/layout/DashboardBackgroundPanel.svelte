@@ -24,31 +24,27 @@
     <Label class="mb-4">{t('lookAndFeel.backgroundImages')}</Label>
 
     {#if homepageStore.hasBackgroundImage}
-      <div
-        class="mb-4 p-3 rounded-lg border flex items-center gap-3"
-        style="border-color: var(--ds-border-focused); background-color: var(--ds-surface);"
-      >
-        <div class="w-16 h-10 rounded overflow-hidden flex-shrink-0">
-          <img
-            src={homepageStore.backgroundImageUrl}
-            alt={t('lookAndFeel.currentBackground')}
-            class="w-full h-full object-cover"
-          />
-        </div>
-        <div class="flex-1 min-w-0">
+      <div class="mb-4 rounded-lg border overflow-hidden" style="border-color: var(--ds-border-focused);">
+        <img
+          src={homepageStore.backgroundImageUrl}
+          alt={t('lookAndFeel.currentBackground')}
+          class="w-full object-cover"
+          style="aspect-ratio: 16 / 9;"
+        />
+        <div class="flex items-center justify-between gap-3 p-3" style="background-color: var(--ds-surface);">
           <div class="text-xs font-medium" style="color: var(--ds-text);">
             {t('lookAndFeel.currentBackground')}
           </div>
+          <Button
+            variant="default"
+            size="sm"
+            onclick={() => homepageStore.removeBackgroundImage()}
+            icon={Trash2}
+            dataTestid="dashboard-background-remove"
+          >
+            {t('workspaceSettings.remove')}
+          </Button>
         </div>
-        <Button
-          variant="default"
-          size="sm"
-          onclick={() => homepageStore.removeBackgroundImage()}
-          icon={Trash2}
-          dataTestid="dashboard-background-remove"
-        >
-          {t('workspaceSettings.remove')}
-        </Button>
       </div>
     {/if}
 
@@ -56,6 +52,7 @@
       currentImageUrl={homepageStore.backgroundImageUrl}
       onSelectImage={(url) => homepageStore.selectBackgroundImage(url)}
       presetAspectRatio="16 / 9"
+      columns={2}
       testIdPrefix="dashboard-background-preset"
     />
   </div>
