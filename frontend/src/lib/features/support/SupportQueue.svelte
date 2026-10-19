@@ -37,6 +37,7 @@
   import TableHeaderBar from '../../components/TableHeaderBar.svelte';
   import DropdownMenu from '../../layout/DropdownMenu.svelte';
   import LazyRender from '../../components/LazyRender.svelte';
+  import Pagination from '../../components/Pagination.svelte';
   import ListCellRenderer from '../collections/ListCellRenderer.svelte';
   import ColumnSelector from '../collections/ColumnSelector.svelte';
   import QlFilterBuilder from '../shared/QlFilterBuilder.svelte';
@@ -48,11 +49,16 @@
   let activeRef = $state('');
   let loadingQueues = $state(true);
 
-  // Ticket rows for the active queue.
+  // Ticket rows for the active queue. Paging uses the same page/page_size
+  // contract the /items endpoint returns, so the list's Pagination component
+  // drives the queue too.
+  const QUEUE_PAGE_SIZE = 100;
   let items = $state([]);
   let loadingItems = $state(false);
-  let itemsTruncated = $state(false);
+  let itemsPagination = $state(null);
   let itemsLoadId = 0;
+  let currentPage = $state(1);
+  let itemsPerPage = $state(QUEUE_PAGE_SIZE);
 
   // Bulk selection state.
   let selectedIds = $state(new Set());
@@ -142,15 +148,13 @@
       : base;
   }
 
-  const QUEUE_PAGE_SIZE = 100;
-
   function handleSearchInput() {
     if (searchTimer) clearTimeout(searchTimer);
     searchDebouncing = true;
     searchTimer = setTimeout(() => {
       searchTimer = null;
       searchDebouncing = false;
-      void loadItems();
+      void loadItems({ page: 1 });
     }, 250);
   }
 
@@ -275,40 +279,52 @@
     activeRef = refs.includes('unassigned') ? 'unassigned' : (refs[0] ?? '');
   }
 
-  async function loadItems(search = searchQuery.trim()) {
+  async function loadItems({ page = currentPage, limit = itemsPerPage, search = searchQuery.trim() } = {}) {
     if (!activeQueue?.ql) {
       items = [];
+      itemsPagination = null;
       return;
     }
     const loadId = ++itemsLoadId;
     loadingItems = true;
     try {
-      const query = new URLSearchParams({
-        workspace_id: String(workspaceId),
+      const response = await api.items.getAll({
+        workspace_id: workspaceId,
         ql: activeQueue.ql,
-        fields: 'summary',
-        page_size: String(QUEUE_PAGE_SIZE),
-        sort: '-updated_at',
+        page,
+        limit,
+        omit_descriptions: true,
+        order_by: 'updated_at',
+        sort_direction: 'desc',
+        ...(search ? { search } : {}),
       });
-      if (search) query.set('search', search);
-      const result = (await fetchV2Data(`/items?${query.toString()}`)) ?? [];
       if (loadId !== itemsLoadId) return;
-      items = result;
-      // A search result set is not the queue's full count; it is truncated when
-      // the page filled up and more matches may exist server-side.
-      itemsTruncated = search
-        ? result.length >= QUEUE_PAGE_SIZE
-        : activeQueueCount > items.length;
+      items = response?.data ?? [];
+      // The v2 document names the effective size page_size; the shared
+      // Pagination component reads limit.
+      const pagination = response?.pagination ?? null;
+      itemsPagination = pagination ? { ...pagination, limit: pagination.page_size } : null;
+      currentPage = pagination?.page ?? page;
+      itemsPerPage = pagination?.page_size ?? limit;
       selectedIds = new Set(
         [...selectedIds].filter((id) => items.some((item) => item.id === id))
       );
     } catch (error) {
       if (loadId !== itemsLoadId) return;
       items = [];
+      itemsPagination = null;
       errorToast(t('supportQueue.loadFailed'));
     } finally {
       if (loadId === itemsLoadId) loadingItems = false;
     }
+  }
+
+  function handlePageChange(event) {
+    void loadItems({ page: event.detail.page, limit: event.detail.itemsPerPage });
+  }
+
+  function handlePageSizeChange(event) {
+    void loadItems({ page: event.detail.page, limit: event.detail.itemsPerPage });
   }
 
   async function refreshQueuesAndItems() {
@@ -338,7 +354,7 @@
     const url = new URL(window.location.href);
     url.searchParams.set('queue', ref);
     window.history.replaceState(null, '', `${url.pathname}${url.search}`);
-    void loadItems();
+    void loadItems({ page: 1 });
   }
 
   function toggleItem(id) {
@@ -634,7 +650,7 @@
   onMount(() => {
     void loadCollection();
     void loadBoardConfiguration();
-    void loadQueues().then(() => loadItems());
+    void loadQueues().then(() => loadItems({ page: 1 }));
     void workspaceDataStore.initialize(workspaceId);
     api.teams
       .getAll()
@@ -914,10 +930,17 @@
           </div>
         </div>
 
-        {#if itemsTruncated}
-          <p class="mt-2 text-xs" style="color: var(--ctx-text-subtle, var(--ds-text-subtle));">
-            {t('supportQueue.showingFirst', { n: items.length })}
-          </p>
+        {#if itemsPagination && itemsPagination.total_items > 0 && items.length > 0}
+          <div class="mt-6">
+            <Pagination
+              currentPage={itemsPagination.page}
+              totalItems={itemsPagination.total_items}
+              itemsPerPage={itemsPagination.limit}
+              maxItems={10000}
+              onpageChange={handlePageChange}
+              onpageSizeChange={handlePageSizeChange}
+            />
+          </div>
         {/if}
       {/if}
     </div>
