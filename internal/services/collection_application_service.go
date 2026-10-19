@@ -371,6 +371,15 @@ func (s *CollectionApplicationService) UpdateSharing(actor AuditActor, id int, u
 	if err := s.requireWorkspaceAccess(actor.UserID, collection); err != nil {
 		return nil, err
 	}
+	// Private always overrides public sharing, so a private collection cannot be
+	// published. Reject the contradictory request instead of storing an is_public
+	// flag the public board will never honor, and clear any slug left behind.
+	if collection.IsPrivate {
+		if update.IsPublic {
+			return nil, collectionValidation("make the collection shared before publishing its board")
+		}
+		update.PublicSlug = nil
+	}
 	if update.PublicSlug != nil {
 		value := sanitize.ShortIdentifier.Sanitize(*update.PublicSlug)
 		update.PublicSlug = &value

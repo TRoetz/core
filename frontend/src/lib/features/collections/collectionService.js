@@ -25,6 +25,22 @@ export function buildCollectionAssociationUpdate({
 }
 
 /**
+ * Merge a privacy-toggle PATCH response into the current collection. Marking a
+ * collection private unpublishes its public board, and the API omits
+ * `public_slug` once it is cleared, so reset both public fields from the
+ * response instead of only flipping the local privacy flag.
+ */
+export function applyCollectionPrivacyToggle(collection, updated, isPrivate) {
+  return {
+    ...collection,
+    ...updated,
+    is_private: isPrivate,
+    is_public: updated?.is_public ?? false,
+    public_slug: updated?.public_slug ?? null,
+  };
+}
+
+/**
  * Collection-specific list-column configuration is owned by the collection
  * creator; workspace-default configuration is owned by workspace admins. The
  * API enforces the same split, so a collection owner without workspace.admin
