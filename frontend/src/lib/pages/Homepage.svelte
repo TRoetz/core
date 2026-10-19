@@ -297,6 +297,7 @@
 
 <div
   class="min-h-full w-full"
+  class:dashboard-has-background={homepageStore.hasCustomBackground}
   style="{homepageStore.backgroundStyle} background-attachment: fixed;"
   data-testid="homepage"
   data-ready={layoutLoaded}
@@ -568,3 +569,18 @@
   {/if}
   </div>
 </div>
+
+<style>
+  /* Feather the top of each widget card into the dashboard background so an
+     opaque card does not cut a hard edge against the image or gradient. */
+  :global(.dashboard-has-background .widget-container::before) {
+    content: '';
+    position: absolute;
+    top: -24px;
+    left: 0;
+    right: 0;
+    height: 24px;
+    pointer-events: none;
+    background: linear-gradient(to bottom, transparent, var(--ds-surface-raised));
+  }
+</style>
