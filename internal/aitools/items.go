@@ -309,7 +309,7 @@ func init() {
 		Group:       CapabilityIssueManagement,
 		Access:      AccessWrite,
 		Risk:        RiskMedium,
-		Description: "Create a new work item in a workspace.",
+		Description: "Create a new work item in a workspace. Optionally set custom fields with custom_field_values, keyed by numeric field ID from list_custom_fields.",
 		Scopes:      []string{auth.ScopeItemsWrite},
 		Run: func(_ context.Context, env *Env, args createItemArgs) (any, error) {
 			if strings.TrimSpace(args.Title) == "" {
@@ -344,19 +344,24 @@ func init() {
 			if !validationResult.Valid {
 				return map[string]string{"error": validationResult.Error}, nil
 			}
+			customFieldValuesJSON, err := services.EncodeCustomFieldValuesJSON(env.DB, args.CustomFieldValues)
+			if err != nil {
+				return map[string]string{"error": err.Error()}, nil //nolint:nilerr // surface as a tool error in JSON, not as a protocol error
+			}
 			itemID, err := services.CreateItem(env.DB, services.ItemCreationParams{
-				WorkspaceID:      args.WorkspaceID,
-				Title:            title,
-				Description:      desc,
-				StatusID:         args.StatusID,
-				PriorityID:       args.PriorityID,
-				AssigneeID:       args.AssigneeID,
-				ParentID:         args.ParentID,
-				ItemTypeID:       args.ItemTypeID,
-				CreatorID:        &env.UserID,
-				ValidatingUserID: env.UserID,
-				PermService:      env.PermService,
-				EventMetadata:    env.eventMetadata(),
+				WorkspaceID:           args.WorkspaceID,
+				Title:                 title,
+				Description:           desc,
+				StatusID:              args.StatusID,
+				PriorityID:            args.PriorityID,
+				AssigneeID:            args.AssigneeID,
+				ParentID:              args.ParentID,
+				ItemTypeID:            args.ItemTypeID,
+				CreatorID:             &env.UserID,
+				ValidatingUserID:      env.UserID,
+				CustomFieldValuesJSON: customFieldValuesJSON,
+				PermService:           env.PermService,
+				EventMetadata:         env.eventMetadata(),
 			})
 			if err != nil {
 				return map[string]string{"error": fmt.Sprintf("create failed: %s", err.Error())}, nil //nolint:nilerr // surface as a tool error in JSON, not as a protocol error
@@ -601,14 +606,15 @@ type searchItemsArgs struct {
 }
 
 type createItemArgs struct {
-	WorkspaceID int    `json:"workspace_id" jsonschema:"Workspace to create item in"`
-	Title       string `json:"title" jsonschema:"Item title"`
-	Description string `json:"description,omitempty" jsonschema:"Item description (TipTap JSON or plain text)"`
-	StatusID    *int   `json:"status_id,omitempty" jsonschema:"Status ID (uses workflow default if omitted)"`
-	PriorityID  *int   `json:"priority_id,omitempty" jsonschema:"Priority ID"`
-	AssigneeID  *int   `json:"assignee_id,omitempty" jsonschema:"Assignee user ID"`
-	ParentID    *int   `json:"parent_id,omitempty" jsonschema:"Parent item ID for sub-items"`
-	ItemTypeID  *int   `json:"item_type_id,omitempty" jsonschema:"Item type ID (uses workspace default if omitted)"`
+	WorkspaceID       int            `json:"workspace_id" jsonschema:"Workspace to create item in"`
+	Title             string         `json:"title" jsonschema:"Item title"`
+	Description       string         `json:"description,omitempty" jsonschema:"Item description (TipTap JSON or plain text)"`
+	StatusID          *int           `json:"status_id,omitempty" jsonschema:"Status ID (uses workflow default if omitted)"`
+	PriorityID        *int           `json:"priority_id,omitempty" jsonschema:"Priority ID"`
+	AssigneeID        *int           `json:"assignee_id,omitempty" jsonschema:"Assignee user ID"`
+	ParentID          *int           `json:"parent_id,omitempty" jsonschema:"Parent item ID for sub-items"`
+	ItemTypeID        *int           `json:"item_type_id,omitempty" jsonschema:"Item type ID (uses workspace default if omitted)"`
+	CustomFieldValues map[string]any `json:"custom_field_values,omitempty" jsonschema:"Custom field values keyed by numeric custom field ID (see list_custom_fields). Select/multiselect values use option IDs; dates use YYYY-MM-DD."`
 }
 
 type updateItemArgs struct {
