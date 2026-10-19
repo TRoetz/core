@@ -9,7 +9,7 @@
 	import Button from '../../components/Button.svelte';
 	import Avatar from '../../components/Avatar.svelte';
 	import Checkbox from '../../components/Checkbox.svelte';
-	import { formatRelativeTime } from '../../utils/dateFormatter.js';
+	import { formatHistoryTimestamp, formatRelativeTime, getUserTimezone } from '../../utils/dateFormatter.js';
 	import { getShortcut, matchesShortcut, getDisplayString } from '../../utils/keyboardShortcuts.js';
 	import { t } from '../../stores/i18n.svelte.js';
 	import { confirm } from '../../composables/useConfirm.js';
@@ -51,6 +51,9 @@
 	// comment.edit_others holders may moderate foreign comments (mirrors
 	// requireCommentEdit in the v2 API).
 	const canEditOthersComments = $derived(workspacePermissions.canEditOthersComments(workspaceId));
+
+	// Get user's timezone
+	let timezone = $derived(getUserTimezone(authStore.currentUser));
 
 	// Sort state
 	let sortOrder = $state('oldest'); // 'oldest' | 'newest'
@@ -564,9 +567,11 @@
 								<h4 class="text-sm font-medium" style="color: var(--ds-text);">
 									{comment.author_name || t('common.unknownUser')}
 								</h4>
-								<span class="text-xs" style="color: var(--ds-text-subtle);">
-									{formatRelativeTime(comment.created_at) || '-'}
-								</span>
+								<Tooltip content={formatHistoryTimestamp(comment.created_at, timezone)} placement="top">
+									<span data-testid="comment-time" class="text-xs" style="color: var(--ds-text-subtle);">
+										{formatRelativeTime(comment.created_at) || '-'}
+									</span>
+								</Tooltip>
 								{#if isEdited(comment)}
 									<span class="text-xs" style="color: var(--ds-text-subtlest);">({t('comments.edited')})</span>
 								{/if}
