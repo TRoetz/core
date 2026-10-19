@@ -82,6 +82,10 @@ export default {
         name: '导航',
         description: '快速访问工作区',
       },
+      background: {
+        name: '背景',
+        description: '用于仪表板的渐变和预设图片',
+      },
       tipLabel: '提示',
       tip: '将小部件从这里拖到面板中的任意分区。',
     },

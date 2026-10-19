@@ -82,6 +82,10 @@ export default {
         name: 'Navigation',
         description: 'Accès rapide aux espaces de travail',
       },
+      background: {
+        name: 'Arrière-plan',
+        description: 'Dégradés et images prédéfinies pour votre tableau de bord',
+      },
       tipLabel: 'Conseil',
       tip: 'Faites glisser des widgets d’ici vers n’importe quelle section de votre tableau de bord.',
     },

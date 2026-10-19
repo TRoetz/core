@@ -296,19 +296,20 @@
 />
 
 <div
-  class="max-w-7xl mx-auto px-6 pt-8 pb-6"
-  style="background-color: var(--ds-surface);"
+  class="min-h-full w-full"
+  style="{homepageStore.backgroundStyle} background-attachment: fixed;"
   data-testid="homepage"
   data-ready={layoutLoaded}
 >
+  <div class="max-w-7xl mx-auto px-6 pt-8 pb-6">
   <!-- Greeting + action buttons -->
   {#if !isOnboarding}
     <div class="mb-6 flex items-start justify-between gap-4">
       <div>
-        <Text as="h1" size="2xl" weight="semibold">
+        <Text as="h1" size="2xl" weight="semibold" style={homepageStore.backgroundTextStyle}>
           {personalizedGreeting}
         </Text>
-        <Text as="p" size="sm" variant="subtle">{currentDate}</Text>
+        <Text as="p" size="sm" variant="subtle" style={homepageStore.backgroundSubtleTextStyle}>{currentDate}</Text>
       </div>
       <div class="flex items-center gap-2 shrink-0">
         <Button
@@ -323,6 +324,7 @@
           variant={isCustomizeMode ? 'primary' : 'default'}
           icon={isCustomizeMode ? X : LayoutGrid}
           onclick={toggleCustomizeMode}
+          dataTestid="dashboard-customize-toggle"
         >
           {isCustomizeMode ? t('common.done') : t('dashboard.editor.customize')}
         </Button>
@@ -420,10 +422,10 @@
                   <h2
                     id={`dashboard-section-heading-${section.id}`}
                     class="text-lg font-semibold"
-                    style="color: var(--ds-text);"
+                    style={homepageStore.backgroundTextStyle}
                   >{sectionDisplay.title}</h2>
                   {#if sectionDisplay.subtitle}
-                    <p class="text-sm mt-0.5" style="color: var(--ds-text-subtle);">{sectionDisplay.subtitle}</p>
+                    <p class="text-sm mt-0.5" style={homepageStore.backgroundSubtleTextStyle}>{sectionDisplay.subtitle}</p>
                   {/if}
                 </div>
                 {#if isEditMode}
@@ -431,7 +433,7 @@
                     <button
                       type="button"
                       class="p-2 rounded transition-colors hover:bg-[var(--ds-background-neutral-hovered)] disabled:cursor-not-allowed disabled:opacity-30"
-                      style="color: var(--ds-text-subtle);"
+                      style={homepageStore.backgroundSubtleTextStyle}
                       onclick={() => homepageStore.moveSection(section.id, -1)}
                       disabled={sectionIndex === 0}
                       title={t('layout.moveUp')}
@@ -443,7 +445,7 @@
                     <button
                       type="button"
                       class="p-2 rounded transition-colors hover:bg-[var(--ds-background-neutral-hovered)] disabled:cursor-not-allowed disabled:opacity-30"
-                      style="color: var(--ds-text-subtle);"
+                      style={homepageStore.backgroundSubtleTextStyle}
                       onclick={() => homepageStore.moveSection(section.id, 1)}
                       disabled={sectionIndex === sections.length - 1}
                       title={t('layout.moveDown')}
@@ -455,7 +457,7 @@
                     <button
                       type="button"
                       class="p-2 rounded transition-colors hover:bg-[var(--ds-background-neutral-hovered)]"
-                      style="color: var(--ds-text-subtle);"
+                      style={homepageStore.backgroundSubtleTextStyle}
                       onclick={() => startEditingSection(section)}
                       title={t('dashboard.editor.renameSection')}
                       aria-label={t('dashboard.editor.renameSection')}
@@ -465,7 +467,7 @@
                     <button
                       type="button"
                       class="p-2 rounded transition-colors hover:bg-[var(--ds-background-neutral-hovered)]"
-                      style="color: var(--ds-text-subtle);"
+                      style={homepageStore.backgroundSubtleTextStyle}
                       onclick={() => handleDeleteSection(section.id)}
                       title={t('dashboard.editor.deleteSection')}
                       aria-label={t('dashboard.editor.deleteSection')}
@@ -537,7 +539,7 @@
                           onconfigchange={(changes) => updateWidgetConfig(widget.id, changes)}
                         />
                       {:else}
-                        <div class="text-center py-8 text-sm" style="color: var(--ds-text-subtle);">
+                        <div class="text-center py-8 text-sm" style={homepageStore.backgroundSubtleTextStyle}>
                           {t('dashboard.editor.unknownWidgetType', { type: widget.type })}
                         </div>
                       {/if}
@@ -545,7 +547,7 @@
                   {/each}
                 </div>
               {:else}
-                <div class="text-center py-8" style="color: var(--ds-text-subtle);">
+                <div class="text-center py-8" style={homepageStore.backgroundSubtleTextStyle}>
                   <p class="text-sm">{t('dashboard.editor.noWidgets')}</p>
                   <p class="text-xs mt-1">{t('dashboard.editor.addWidgetsHint')}</p>
                 </div>
@@ -555,7 +557,7 @@
         {/each}
 
         {#if sections.length === 0}
-          <div class="flex flex-col items-center justify-center py-16" style="color: var(--ds-text-subtle);">
+          <div class="flex flex-col items-center justify-center py-16" style={homepageStore.backgroundSubtleTextStyle}>
             <LayoutGrid class="h-16 w-16 mb-4 opacity-30" />
             <p class="text-lg font-medium">{t('dashboard.editor.noSections')}</p>
             <p class="text-sm mt-2">{t('dashboard.editor.addSectionsHint')}</p>
@@ -564,4 +566,5 @@
       </div>
     {/if}
   {/if}
+  </div>
 </div>

@@ -129,10 +129,7 @@
 </script>
 
 <Panel padding="spacious">
-  <SectionHeader
-    title={t('cannedResponses.title')}
-    subtitle={t('cannedResponses.subtitle')}
-  >
+  <SectionHeader>
     {#snippet actions()}
       <Button
         size="sm"

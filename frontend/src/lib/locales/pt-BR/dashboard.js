@@ -82,6 +82,10 @@ export default {
         name: 'Navegação',
         description: 'Acesso rápido aos espaços de trabalho',
       },
+      background: {
+        name: 'Fundo',
+        description: 'Gradientes e imagens predefinidas para o seu painel',
+      },
       tipLabel: 'Dica',
       tip: 'Arraste widgets daqui para qualquer seção do seu painel.',
     },

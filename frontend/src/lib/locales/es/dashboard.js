@@ -82,6 +82,10 @@ export default {
         name: 'Navegación',
         description: 'Acceso rápido a los espacios de trabajo',
       },
+      background: {
+        name: 'Fondo',
+        description: 'Degradados e imágenes predefinidas para tu panel',
+      },
       tipLabel: 'Consejo',
       tip: 'Arrastra widgets desde aquí a cualquier sección de tu panel.',
     },

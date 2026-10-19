@@ -14,9 +14,10 @@
   } from '../stores/workspaceGradient.svelte.js';
   import { gradients } from '../utils/gradients.js';
   import { workspaceIconMap } from '../utils/icons.js';
-  import { Palette, Camera, Trash2, X, Shield, Package } from '@lucide/svelte';
+  import { Palette, Camera, Trash2, Shield, Package } from '@lucide/svelte';
   import IconSelector from '../pickers/IconSelector.svelte';
   import BackgroundImageSelector from '../components/BackgroundImageSelector.svelte';
+  import GradientPicker from '../components/GradientPicker.svelte';
   import FileInput from '../components/FileInput.svelte';
   import Button from '../components/Button.svelte';
   import PageHeader from '../layout/PageHeader.svelte';
@@ -307,37 +308,11 @@
 
       <!-- Gradient Grid -->
       <div class="mb-6">
-        <Label class="mb-3">{t('lookAndFeel.gradients')}</Label>
-        <div class="grid grid-cols-10 gap-3">
-          {#each gradients as gradient, index}
-            <button
-              onclick={() => selectGradient(index)}
-              class="group relative w-[30px] h-[30px] rounded overflow-hidden transition-all hover:scale-110"
-              style={selectedGradient === index && !hasBackgroundImage ? 'box-shadow: 0 0 0 2px var(--ds-border-focused); outline-offset: 2px;' : ''}
-              title={gradient.name}
-              data-testid={`gradient-swatch-${index}`}
-              aria-pressed={selectedGradient === index && !hasBackgroundImage}
-            >
-              {#if index === 0}
-                <div class="w-full h-full flex items-center justify-center" style="background-color: var(--ds-background-neutral);">
-                  <X class="w-3 h-3" style="color: var(--ds-text-subtle);" />
-                </div>
-              {:else}
-                <div class="w-full h-full" style="background: {gradient.value};"></div>
-              {/if}
-
-              {#if selectedGradient === index && !hasBackgroundImage}
-                <div class="absolute inset-0 flex items-center justify-center bg-black/20">
-                  <div class="w-3 h-3 bg-white rounded-full flex items-center justify-center">
-                    <svg class="w-2 h-2" style="color: var(--ds-icon-accent-blue);" fill="currentColor" viewBox="0 0 20 20">
-                      <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
-                    </svg>
-                  </div>
-                </div>
-              {/if}
-            </button>
-          {/each}
-        </div>
+        <GradientPicker
+          selectedGradient={selectedGradient}
+          hasBackgroundImage={hasBackgroundImage}
+          onSelect={selectGradient}
+        />
       </div>
 
       <BackgroundImageSelector

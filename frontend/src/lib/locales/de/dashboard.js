@@ -82,6 +82,10 @@ export default {
         name: 'Navigation',
         description: 'Schnellzugriff auf Arbeitsbereiche',
       },
+      background: {
+        name: 'Hintergrund',
+        description: 'Verläufe und Vorschaubilder für dein Dashboard',
+      },
       tipLabel: 'Tipp',
       tip: 'Ziehen Sie Widgets von hier in einen beliebigen Bereich Ihres Dashboards.',
     },

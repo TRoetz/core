@@ -12,6 +12,7 @@
     Grip,
     ListChecks,
     Search,
+    Palette,
   } from '@lucide/svelte';
   import {
     dashboardWidgetCategories,
@@ -19,6 +20,7 @@
   } from '../services/dashboardWidgetRegistry.js';
   import { t } from '../stores/i18n.svelte.js';
   import WidgetCustomizationSidebar from './WidgetCustomizationSidebar.svelte';
+  import DashboardBackgroundPanel from './DashboardBackgroundPanel.svelte';
 
   let { isOpen = $bindable(false), activeCategory = $bindable('activity') } = $props();
 
@@ -62,6 +64,12 @@
       description: t('dashboard.customization.navigation.description'),
       icon: Compass,
     },
+    {
+      id: 'background',
+      name: t('dashboard.customization.background.name'),
+      description: t('dashboard.customization.background.description'),
+      icon: Palette,
+    },
   ]);
 
   const widgets = $derived(
@@ -84,4 +92,9 @@
   fallbackTitle={t('dashboard.customization.widgets')}
   tipLabel={t('dashboard.customization.tipLabel')}
   tip={t('dashboard.customization.tip')}
-/>
+  panelCategory="background"
+>
+  {#snippet panelContent()}
+    <DashboardBackgroundPanel />
+  {/snippet}
+</WidgetCustomizationSidebar>

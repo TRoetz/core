@@ -82,6 +82,10 @@ export default {
         name: 'Navigation',
         description: 'Quick access to workspaces',
       },
+      background: {
+        name: 'Background',
+        description: 'Gradients and preset images for your dashboard',
+      },
       tipLabel: 'Tip',
       tip: 'Drag widgets from here into any section on your dashboard.',
     },

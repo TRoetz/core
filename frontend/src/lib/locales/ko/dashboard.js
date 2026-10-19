@@ -83,6 +83,10 @@ export default {
         "name": "탐색",
         "description": "워크스페이스에 빠르게 접근"
       },
+      "background": {
+        "name": "배경",
+        "description": "대시보드용 그라데이션 및 사전 설정 이미지"
+      },
       "tipLabel": "도움말",
       "tip": "여기에서 대시보드의 원하는 섹션으로 위젯을 드래그하세요."
     },

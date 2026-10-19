@@ -34,6 +34,7 @@ func sanitizeDashboardLayout(layout *models.UserDashboardLayout) {
 			sanitize.Pair{Target: &widget.SectionID, Policy: sanitize.ShortIdentifier},
 		)
 	}
+	sanitize.Apply(&layout.BackgroundImageURL, sanitize.PlainTextField)
 }
 
 // validDashboardWidgetTypes lists widget types usable on the personal dashboard.
@@ -55,6 +56,11 @@ var validDashboardWidgetTypes = map[string]bool{
 const (
 	dashboardMaxSections = 20
 	dashboardMaxWidgets  = 100
+	// dashboardMaxGradient bounds the client-chosen background gradient index.
+	// The frontend owns the actual gradient list (frontend/src/lib/utils/gradients.js,
+	// currently ~20 entries); this cap only stops arbitrary integers from being
+	// persisted into the preferences blob.
+	dashboardMaxGradient = 64
 	// dashboardMaxWidgetConfigBytes bounds a single widget's free-form
 	// config map (serialized as JSON). Config is arbitrary user-supplied
 	// JSON stored verbatim into the preferences TEXT column, so this cap
@@ -97,6 +103,10 @@ func (h *UserPreferencesHandler) UpdateDashboardLayout(w http.ResponseWriter, r 
 	}
 	if len(layout.Widgets) > dashboardMaxWidgets {
 		respondValidationError(w, r, fmt.Sprintf("Too many widgets: %d (max %d)", len(layout.Widgets), dashboardMaxWidgets))
+		return
+	}
+	if layout.Gradient < 0 || layout.Gradient > dashboardMaxGradient {
+		respondValidationError(w, r, fmt.Sprintf("Invalid background gradient: %d (must be 0-%d)", layout.Gradient, dashboardMaxGradient))
 		return
 	}
 
