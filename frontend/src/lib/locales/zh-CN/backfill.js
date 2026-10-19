@@ -1017,6 +1017,7 @@ export default {
       "applyToOngoingTeamHint": "重新计算使用此日历的所有进行中周期，涵盖绑定到此团队的所有工作区。",
       "applyToOngoingImpact": "目前涉及 {workspaces} 个工作区中的 {cycles} 个进行中周期。",
       "applyToOngoingNoImpact": "当前没有已绑定的工作区引用此日历。",
+      "saveAndRecalculate": "保存并重新计算",
       "attempts": "尝试次数",
       "availableCalendars": "可用日历",
       "avgElapsed": "平均已用 / 目标",

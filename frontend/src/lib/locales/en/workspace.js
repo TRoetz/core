@@ -1127,6 +1127,7 @@ export default {
       applyToOngoingImpact:
         'Right now that is {cycles} ongoing cycle(s) across {workspaces} workspace(s).',
       applyToOngoingNoImpact: 'No bound workspace currently references this calendar.',
+      saveAndRecalculate: 'Save and recalculate',
       owner: 'Owner',
       sharedByTeam: 'Shared by team',
       ownedByWorkspace: 'This workspace',

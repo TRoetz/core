@@ -959,6 +959,7 @@ export default {
       "applyToOngoingTeamHint": "Berechnet jeden laufenden Zyklus neu, der diesen Kalender verwendet – in jedem mit diesem Team verbundenen Arbeitsbereich.",
       "applyToOngoingImpact": "Aktuell betrifft das {cycles} laufende Zyklen in {workspaces} Arbeitsbereichen.",
       "applyToOngoingNoImpact": "Derzeit verweist kein gebundener Arbeitsbereich auf diesen Kalender.",
+      "saveAndRecalculate": "Speichern und neu berechnen",
       "attempts": "Versuche",
       "availableCalendars": "Verfügbare Kalender",
       "avgElapsed": "Durchschn. verstrichen / Ziel",

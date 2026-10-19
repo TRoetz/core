@@ -7,12 +7,11 @@
   import Label from '../../components/Label.svelte';
   import Text from '../../components/Text.svelte';
   import TextField from '../../components/TextField.svelte';
-  import SelectField from '../../components/SelectField.svelte';
   import TextareaField from '../../components/TextareaField.svelte';
   import Toggle from '../../components/Toggle.svelte';
+  import TimezonePicker from '../../pickers/TimezonePicker.svelte';
   import { Plus, Trash2 } from '@lucide/svelte';
   import { t } from '../../stores/i18n.svelte.js';
-  import { listIanaTimezones } from '../../utils/timeUtils.js';
   import { api } from '../../api.js';
 
   let {
@@ -24,8 +23,6 @@
   } = $props();
 
   const weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
-
-  const baseTimezoneIds = listIanaTimezones();
 
   function blankIntervals() {
     return Object.fromEntries(weekdays.map((day) => [day, []]));
@@ -48,13 +45,6 @@
   let coverage = $state(null);
   let coverageLoading = $state(false);
   let ongoingImpact = $state(null);
-
-  const timezoneOptions = $derived.by(() => {
-    const zones = formData.timezone && !baseTimezoneIds.includes(formData.timezone)
-      ? [formData.timezone, ...baseTimezoneIds]
-      : baseTimezoneIds;
-    return zones.map((tz) => ({ value: tz, label: tz }));
-  });
 
   $effect(() => {
     if (!isOpen) return;
@@ -94,14 +84,17 @@
   // to every workspace bound to the team.
   $effect(() => {
     const id = calendar?.id;
-    if (!isOpen || !id || !workspaceId) {
+    if (!isOpen || !id) {
       ongoingImpact = null;
       return;
     }
     const teamId = calendar?.team_id;
-    const request = teamId
-      ? api.sla?.getTeamCalendarImpact?.(teamId, id)
-      : api.sla?.getCalendarImpact?.(workspaceId, id);
+    let request;
+    if (teamId) {
+      request = api.sla?.getTeamCalendarImpact?.(teamId, id);
+    } else if (workspaceId) {
+      request = api.sla?.getCalendarImpact?.(workspaceId, id);
+    }
     if (!request) {
       ongoingImpact = null;
       return;
@@ -273,14 +266,18 @@
         dataTestid="sla-calendar-description"
       />
 
-      <SelectField
-        class="mb-6"
-        label={t('workspaceSettings.serviceLevels.timezone')}
-        labelColor="default"
-        id="sla-calendar-timezone"
-        bind:value={formData.timezone}
-        options={timezoneOptions}
-      />
+      <div class="mb-6">
+        <Label for="sla-calendar-timezone" color="default" class="mb-2">
+          {t('workspaceSettings.serviceLevels.timezone')}
+        </Label>
+        <TimezonePicker
+          id="sla-calendar-timezone"
+          bind:value={formData.timezone}
+          inputTestid="sla-calendar-timezone"
+          menuTestid="sla-calendar-timezone-listbox"
+          optionTestid={() => 'sla-calendar-timezone-option'}
+        />
+      </div>
 
       <fieldset class="mb-6" data-testid="sla-calendar-weekly">
         <legend class="mb-3">

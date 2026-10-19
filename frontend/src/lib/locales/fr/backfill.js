@@ -1174,6 +1174,7 @@ export default {
       "applyToOngoingTeamHint": "Recalcule chaque cycle en cours qui utilise ce calendrier, dans chaque espace de travail lié à cette équipe.",
       "applyToOngoingImpact": "Actuellement, cela représente {cycles} cycles en cours dans {workspaces} espaces de travail.",
       "applyToOngoingNoImpact": "Aucun espace de travail lié ne référence actuellement ce calendrier.",
+      "saveAndRecalculate": "Enregistrer et recalculer",
       "attempts": "Tentatives",
       "availableCalendars": "Calendriers disponibles",
       "avgElapsed": "Moy. écoulé / objectif",
