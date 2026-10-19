@@ -17,6 +17,7 @@
     tip = '',
     panelCategory = '',
     panelContent = null,
+    featherEdge = false,
   } = $props();
 
   const currentCategory = $derived(categories.find((category) => category.id === activeCategory));
@@ -29,8 +30,11 @@
 </script>
 
 <div
-  class="fixed top-0 left-0 h-full flex shadow-2xl z-50 transform transition-transform duration-300 ease-in-out"
+  class="fixed top-0 left-0 h-full flex z-50 transform transition-transform duration-300 ease-in-out"
+  class:shadow-2xl={!featherEdge}
+  class:feathered={featherEdge}
   style="background-color: var(--ds-surface-card, #ffffff);"
+  data-testid="customization-sidebar"
   class:translate-x-0={isOpen}
   class:-translate-x-full={!isOpen}
 >
@@ -104,6 +108,19 @@
 </div>
 
 <style>
+  /* Fade the outer edge into the dashboard background so the opaque panel
+     does not cut a hard line against the image or gradient. */
+  .feathered::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 100%;
+    width: 32px;
+    pointer-events: none;
+    background: linear-gradient(to right, var(--ds-surface-raised), transparent);
+  }
+
   .widget-card {
     user-select: none;
     border-color: var(--ds-border);
