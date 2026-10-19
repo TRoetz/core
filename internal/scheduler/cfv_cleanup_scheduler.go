@@ -113,7 +113,7 @@ func (s *CFVCleanupScheduler) tick() {
 	start := time.Now()
 	totalItems := 0
 	var runErr error
-	defer recordSchedulerRun(s.runRepo, schedulerName, start, &totalItems, &runErr)
+	defer recordSchedulerRun(s.runRepo, schedulerName, start, &totalItems, &runErr, time.Now)
 
 	// First: rehabilitate stale 'running' rows so a crashed process doesn't
 	// strand jobs indefinitely.

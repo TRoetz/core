@@ -113,7 +113,7 @@ func (rs *RecurrenceScheduler) processRecurrenceRules() {
 	start := time.Now()
 	var generatedCount int
 	var runErr error
-	defer recordSchedulerRun(rs.runRepo, "recurrence", start, &generatedCount, &runErr)
+	defer recordSchedulerRun(rs.runRepo, "recurrence", start, &generatedCount, &runErr, time.Now)
 
 	slog.Debug("Processing recurrence rules...")
 

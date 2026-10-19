@@ -221,7 +221,7 @@ func (ns *NotificationScheduler) processPendingNotificationsContext(ctx context.
 	start := ns.now()
 	var batchesProcessed int
 	var runErr error
-	defer recordSchedulerRun(ns.runRepo, "notification", start, &batchesProcessed, &runErr)
+	defer recordSchedulerRun(ns.runRepo, "notification", start, &batchesProcessed, &runErr, ns.now)
 
 	// Check if SMTP is configured first
 	if !ns.smtpSender.IsSMTPConfigured() {

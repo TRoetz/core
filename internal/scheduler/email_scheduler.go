@@ -130,7 +130,7 @@ func (es *EmailScheduler) processEmailChannels() {
 	start := time.Now()
 	var channelsProcessed int
 	var runErr error
-	defer recordSchedulerRun(es.runRepo, "email", start, &channelsProcessed, &runErr)
+	defer recordSchedulerRun(es.runRepo, "email", start, &channelsProcessed, &runErr, time.Now)
 
 	ctx := context.Background()
 
