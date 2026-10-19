@@ -68,6 +68,11 @@ type Config struct {
 	ActivateDurableActions      bool
 	ActivateDurableAssetActions bool
 
+	// MetricsToken, when non-empty (WINDSHIFT_METRICS_TOKEN), makes GET /metrics
+	// require an "Authorization: Bearer <token>" header. Empty leaves the
+	// endpoint public, for operators who gate it at the reverse proxy.
+	MetricsToken string
+
 	// Wire-time values (not env/flag-driven)
 	FrontendFiles embed.FS
 	ShutdownChan  chan os.Signal

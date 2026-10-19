@@ -483,7 +483,7 @@ func (s *Server) initialize() error {
 	healthHandler := health.NewHandler(s.db.GetDB())
 	mux.HandleFunc("GET /healthz", healthHandler.Liveness)
 	mux.HandleFunc("GET /readyz", healthHandler.Readiness)
-	s.metrics = appmetrics.New(s.db)
+	s.metrics = appmetrics.New(s.db, s.config.MetricsToken)
 	mux.Handle("GET /metrics", s.metrics.Handler())
 
 	nmCfg := handlers.DefaultNotificationManagerConfig()

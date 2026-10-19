@@ -299,6 +299,8 @@ func Load(frontend embed.FS, shutdownChan chan os.Signal) Config {
 		ActivateDurableActions:      *activateDurableActions || parseBoolEnv("WINDSHIFT_ACTIVATE_DURABLE_ACTIONS"),
 		ActivateDurableAssetActions: *activateDurableAssetActions || parseBoolEnv("WINDSHIFT_ACTIVATE_DURABLE_ASSET_ACTIONS"),
 
+		MetricsToken: os.Getenv("WINDSHIFT_METRICS_TOKEN"),
+
 		FrontendFiles: frontend,
 		ShutdownChan:  shutdownChan,
 	}
