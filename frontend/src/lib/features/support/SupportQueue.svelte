@@ -11,6 +11,9 @@
   import Badge from '../../components/Badge.svelte';
   import Button from '../../components/Button.svelte';
   import Input from '../../components/Input.svelte';
+  import Select from '../../components/Select.svelte';
+  import TeamPicker from '../../pickers/TeamPicker.svelte';
+  import { objectDisplayName } from '../../utils/systemLabels.js';
   import Modal from '../../dialogs/Modal.svelte';
   import DialogFooter from '../../dialogs/DialogFooter.svelte';
   import { createDeleteItemHandler, createItemActionsBuilder } from '../../utils/workItemTableHelpers.js';
@@ -53,7 +56,8 @@
   // Bulk selection state.
   let selectedIds = $state(new Set());
   let bulkRunning = $state(false);
-  let bulkTeamId = $state('');
+  let bulkTeamId = $state(null);
+  let bulkStatusId = $state('');
   let teams = $state([]);
 
   // Server-side search, matching the board and list views (GH #328).
@@ -87,6 +91,9 @@
 
   let activeQueue = $derived(queues.find((entry) => queueRef(entry) === activeRef) ?? null);
   let activeQueueCount = $derived(activeQueue?.count ?? 0);
+  let statusOptions = $derived(
+    statuses.map((status) => ({ value: String(status.id), label: objectDisplayName(status, 'status') }))
+  );
   let allSelected = $derived(items.length > 0 && items.every((item) => selectedIds.has(item.id)));
   let currentUser = $derived(authStore.currentUser);
   let canEdit = $derived(workspacePermissions.canEdit(workspaceId));
@@ -355,7 +362,71 @@
 
   function bulkAssignToTeam() {
     if (!bulkTeamId) return;
-    void runBulkUpdate({ team_id: Number(bulkTeamId) });
+    void runBulkUpdate({ team_id: bulkTeamId });
+  }
+
+  // One request moves every selected item; the server enforces workflow rules
+  // per item and reports which ones could not move instead of the client
+  // fanning out one transition call per ticket.
+  async function bulkTransition() {
+    const ids = [...selectedIds];
+    if (ids.length === 0 || bulkRunning || !bulkStatusId) return;
+    bulkRunning = true;
+    try {
+      const result = await api.items.bulkTransition(ids, Number(bulkStatusId));
+      if (result.failed_count > 0) {
+        errorToast(
+          t('supportQueue.bulkPartial', {
+            updated: result.transitioned_count,
+            requested: result.requested_count,
+            failed: result.failed_count,
+          })
+        );
+      } else {
+        successToast(t('supportQueue.bulkTransitionSuccess', { n: result.transitioned_count }));
+      }
+      clearSelection();
+      await refreshQueuesAndItems();
+    } catch (error) {
+      errorToast(error?.message || t('supportQueue.loadFailed'));
+    } finally {
+      bulkRunning = false;
+    }
+  }
+
+  // One request deletes every selected item; the server keeps each item's
+  // single-delete history and audit record and reports any that were refused.
+  async function bulkDelete() {
+    const ids = [...selectedIds];
+    if (ids.length === 0 || bulkRunning) return;
+    const confirmed = await confirm({
+      title: t('supportQueue.bulkDelete'),
+      message: t('supportQueue.bulkDeleteConfirm', { n: ids.length }),
+      confirmText: t('common.delete'),
+      variant: 'danger',
+    });
+    if (!confirmed) return;
+    bulkRunning = true;
+    try {
+      const result = await api.items.bulkDelete(ids);
+      if (result.failed_count > 0) {
+        errorToast(
+          t('supportQueue.bulkPartial', {
+            updated: result.deleted_count,
+            requested: result.requested_count,
+            failed: result.failed_count,
+          })
+        );
+      } else {
+        successToast(t('supportQueue.bulkDeleteSuccess', { n: result.deleted_count }));
+      }
+      clearSelection();
+      await refreshQueuesAndItems();
+    } catch (error) {
+      errorToast(error?.message || t('supportQueue.loadFailed'));
+    } finally {
+      bulkRunning = false;
+    }
   }
 
   function viewItem(item) {
@@ -669,17 +740,16 @@
         >
           {t('supportQueue.bulkAssignMe')}
         </Button>
-        <select
-          class="px-2 py-1 rounded text-sm border transition-colors"
-          style="border-color: var(--ctx-border, var(--ds-border)); background-color: var(--ctx-surface-overlay, var(--ds-surface-overlay)); color: var(--ds-text); backdrop-filter: var(--ctx-backdrop, none);"
-          data-testid="support-queue-bulk-team-select"
-          bind:value={bulkTeamId}
-        >
-          <option value="">{t('supportQueue.bulkAssignTeam')}</option>
-          {#each teams as team (team.id)}
-            <option value={String(team.id)}>{team.name}</option>
-          {/each}
-        </select>
+        <div class="w-56" data-testid="support-queue-bulk-team-picker">
+          <TeamPicker
+            bind:value={bulkTeamId}
+            teams={teams}
+            placeholder={t('supportQueue.bulkAssignTeam')}
+            searchTestid="support-queue-bulk-team-search"
+            menuTestid="support-queue-bulk-team-menu"
+            disabled={bulkRunning}
+          />
+        </div>
         <Button
           variant="ghost"
           size="small"
@@ -689,6 +759,35 @@
           onclick={bulkAssignToTeam}
         >
           {t('supportQueue.bulkApplyTeam')}
+        </Button>
+        <div class="w-48" data-testid="support-queue-bulk-status-picker">
+          <Select
+            id="support-queue-bulk-status"
+            bind:value={bulkStatusId}
+            options={statusOptions}
+            placeholder={t('supportQueue.bulkTransition')}
+            ariaLabel={t('supportQueue.bulkTransition')}
+          />
+        </div>
+        <Button
+          variant="ghost"
+          size="small"
+          style="border-color: var(--ctx-border, var(--ds-border)); color: var(--ds-text);"
+          dataTestid="support-queue-bulk-status-apply"
+          disabled={bulkRunning || !bulkStatusId}
+          onclick={bulkTransition}
+        >
+          {t('supportQueue.bulkApplyStatus')}
+        </Button>
+        <Button
+          variant="ghost"
+          size="small"
+          style="color: var(--ds-text-danger);"
+          dataTestid="support-queue-bulk-delete"
+          disabled={bulkRunning}
+          onclick={bulkDelete}
+        >
+          {t('supportQueue.bulkDelete')}
         </Button>
         <Button
           variant="ghost"

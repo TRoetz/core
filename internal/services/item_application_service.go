@@ -945,6 +945,21 @@ func (s *ItemApplicationService) UpdateRank(ctx context.Context, actor AuditActo
 }
 
 func (s *ItemApplicationService) Transition(ctx context.Context, actor AuditActor, itemID, statusID int) (*ItemTransitionResult, error) {
+	result, err := s.transitionItem(ctx, actor, itemID, statusID)
+	if err != nil {
+		return nil, err
+	}
+	items := []models.Item{*result.Item}
+	if err := s.enrich(ctx, actor.UserID, items); err != nil {
+		return nil, err
+	}
+	result.Item = &items[0]
+	return result, nil
+}
+
+// transitionItem runs one workflow transition without enriching the returned
+// item, so bulk callers can reuse it without paying for N detail loads.
+func (s *ItemApplicationService) transitionItem(ctx context.Context, actor AuditActor, itemID, statusID int) (*ItemTransitionResult, error) {
 	item, err := s.items.FindByID(itemID)
 	if err != nil {
 		return nil, err
@@ -965,13 +980,141 @@ func (s *ItemApplicationService) Transition(ctx context.Context, actor AuditActo
 		s.events.EmitStatusChanged(result.Item, result.OldStatusID, result.NewStatusID, actor.UserID, actor.Username)
 	}
 	s.syncStatus(ctx, result.Item.ID, result.NewStatusID, result.NoOp)
-	items := []models.Item{*result.Item}
-	if err := s.enrich(ctx, actor.UserID, items); err != nil {
-		return nil, err
-	}
 	return &ItemTransitionResult{
-		Item: &items[0], OldStatusID: result.OldStatusID, NewStatusID: result.NewStatusID, NoOp: result.NoOp,
+		Item: result.Item, OldStatusID: result.OldStatusID, NewStatusID: result.NewStatusID, NoOp: result.NoOp,
 	}, nil
+}
+
+// ItemBulkTransitionFailure records one selected item a bulk transition could
+// not move. Rejections and permission denials are reported per item so the
+// rest of the batch can proceed; unexpected errors abort the whole request.
+type ItemBulkTransitionFailure struct {
+	ItemID  int    `json:"item_id"`
+	Code    string `json:"code"`
+	Message string `json:"message"`
+}
+
+type ItemBulkTransitionResult struct {
+	RequestedCount    int                         `json:"requested_count"`
+	TransitionedCount int                         `json:"transitioned_count"`
+	UnchangedCount    int                         `json:"unchanged_count"`
+	FailedCount       int                         `json:"failed_count"`
+	Failures          []ItemBulkTransitionFailure `json:"failures"`
+}
+
+// BulkTransition applies one target status to every requested item in a single
+// server-side request, so the client never fans out one transition call per
+// item. Workflow validity, conditions, and approvals are enforced per item,
+// matching the single-item endpoint. The operation is best-effort: items that
+// cannot transition are returned in Failures while the rest commit.
+func (s *ItemApplicationService) BulkTransition(ctx context.Context, actor AuditActor, itemIDs []int, toStatusID int) (ItemBulkTransitionResult, error) {
+	ids := uniquePositiveSortedIDs(itemIDs)
+	if len(ids) == 0 {
+		return ItemBulkTransitionResult{}, ErrBulkItemNotFound
+	}
+	if len(ids) > MaxBulkItemUpdates {
+		return ItemBulkTransitionResult{}, ErrBulkItemLimit
+	}
+	if toStatusID <= 0 {
+		return ItemBulkTransitionResult{}, &validation.ValidationError{Field: "to_status_id", Message: "to_status_id is required"}
+	}
+	result := ItemBulkTransitionResult{RequestedCount: len(ids), Failures: []ItemBulkTransitionFailure{}}
+	for _, id := range ids {
+		transition, err := s.transitionItem(ctx, actor, id, toStatusID)
+		if err != nil {
+			failure, expected := bulkTransitionFailure(id, err)
+			if !expected {
+				return ItemBulkTransitionResult{}, err
+			}
+			result.Failures = append(result.Failures, failure)
+			continue
+		}
+		if transition.NoOp {
+			result.UnchangedCount++
+		} else {
+			result.TransitionedCount++
+		}
+	}
+	result.FailedCount = len(result.Failures)
+	emitServiceAudit(s.db, actor, logger.ActionItemBulkTransition, logger.ResourceItem, nil, "", map[string]any{
+		"requested":    result.RequestedCount,
+		"transitioned": result.TransitionedCount,
+		"unchanged":    result.UnchangedCount,
+		"failed":       result.FailedCount,
+		"to_status_id": toStatusID,
+	})
+	return result, nil
+}
+
+func bulkTransitionFailure(itemID int, err error) (ItemBulkTransitionFailure, bool) {
+	var rejection *TransitionRejection
+	var validationErr *validation.ValidationError
+	switch {
+	case errors.As(err, &rejection):
+		return ItemBulkTransitionFailure{ItemID: itemID, Code: rejection.Code, Message: rejection.Message}, true
+	case errors.As(err, &validationErr):
+		return ItemBulkTransitionFailure{ItemID: itemID, Code: "validation_failed", Message: validationErr.Error()}, true
+	case errors.Is(err, ErrItemForbidden):
+		return ItemBulkTransitionFailure{ItemID: itemID, Code: "forbidden", Message: "item access forbidden"}, true
+	case errors.Is(err, repository.ErrNotFound):
+		return ItemBulkTransitionFailure{ItemID: itemID, Code: "not_found", Message: "item not found"}, true
+	default:
+		return ItemBulkTransitionFailure{}, false
+	}
+}
+
+// ItemBulkDeleteFailure records one selected item a bulk delete could not
+// remove.
+type ItemBulkDeleteFailure struct {
+	ItemID  int    `json:"item_id"`
+	Code    string `json:"code"`
+	Message string `json:"message"`
+}
+
+type ItemBulkDeleteResult struct {
+	RequestedCount int                     `json:"requested_count"`
+	DeletedCount   int                     `json:"deleted_count"`
+	FailedCount    int                     `json:"failed_count"`
+	Failures       []ItemBulkDeleteFailure `json:"failures"`
+}
+
+// BulkDelete deletes every requested item in one server-side request instead
+// of one DELETE per item from the client. Each deletion keeps the single-item
+// history, side effects, and audit record; items that cannot be deleted are
+// reported in Failures while the rest commit.
+func (s *ItemApplicationService) BulkDelete(actor AuditActor, itemIDs []int) (ItemBulkDeleteResult, error) {
+	ids := uniquePositiveSortedIDs(itemIDs)
+	if len(ids) == 0 {
+		return ItemBulkDeleteResult{}, ErrBulkItemNotFound
+	}
+	if len(ids) > MaxBulkItemUpdates {
+		return ItemBulkDeleteResult{}, ErrBulkItemLimit
+	}
+	result := ItemBulkDeleteResult{RequestedCount: len(ids), Failures: []ItemBulkDeleteFailure{}}
+	for _, id := range ids {
+		if err := s.Delete(actor, id); err != nil {
+			failure, expected := bulkDeleteFailure(id, err)
+			if !expected {
+				return ItemBulkDeleteResult{}, err
+			}
+			result.Failures = append(result.Failures, failure)
+			continue
+		}
+		result.DeletedCount++
+	}
+	result.FailedCount = len(result.Failures)
+	return result, nil
+}
+
+func bulkDeleteFailure(itemID int, err error) (ItemBulkDeleteFailure, bool) {
+	switch {
+	case errors.Is(err, ErrItemDeletionForbidden):
+		return ItemBulkDeleteFailure{ItemID: itemID, Code: "forbidden", Message: "item deletion forbidden"}, true
+	case errors.Is(err, repository.ErrNotFound):
+		return ItemBulkDeleteFailure{ItemID: itemID, Code: "not_found", Message: "item not found"}, true
+	default:
+		return ItemBulkDeleteFailure{}, false
+	}
 }
 
 func (s *ItemApplicationService) AvailableTransitions(ctx context.Context, userID, itemID int) (ItemTransitionSummary, error) {

@@ -72249,6 +72249,82 @@
         ],
         "type": "object"
       },
+      "PostItemsBulkDeletePayload": {
+        "additionalProperties": false,
+        "properties": {
+          "item_ids": {
+            "description": "The item ids value.",
+            "items": {
+              "type": "integer"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "item_ids"
+        ],
+        "type": "object"
+      },
+      "PostItemsBulkDeleteResult": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "additionalProperties": false,
+            "properties": {
+              "deleted_count": {
+                "description": "The deleted count value.",
+                "type": "integer"
+              },
+              "failed_count": {
+                "description": "The failed count value.",
+                "type": "integer"
+              },
+              "failures": {
+                "description": "The failures value.",
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "description": "The code value.",
+                      "type": "string"
+                    },
+                    "item_id": {
+                      "description": "The item id value.",
+                      "type": "integer"
+                    },
+                    "message": {
+                      "description": "The message value.",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "item_id",
+                    "message"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "requested_count": {
+                "description": "The requested count value.",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "deleted_count",
+              "failed_count",
+              "failures",
+              "requested_count"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
       "PostItemsBulkPatchPayload": {
         "additionalProperties": false,
         "properties": {
@@ -73346,6 +73422,92 @@
               "requested_count",
               "unchanged_count",
               "updated_count"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "PostItemsBulkTransitionPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "item_ids": {
+            "description": "The item ids value.",
+            "items": {
+              "type": "integer"
+            },
+            "type": "array"
+          },
+          "to_status_id": {
+            "description": "The to status id value.",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "item_ids",
+          "to_status_id"
+        ],
+        "type": "object"
+      },
+      "PostItemsBulkTransitionResult": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "additionalProperties": false,
+            "properties": {
+              "failed_count": {
+                "description": "The failed count value.",
+                "type": "integer"
+              },
+              "failures": {
+                "description": "The failures value.",
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "description": "The code value.",
+                      "type": "string"
+                    },
+                    "item_id": {
+                      "description": "The item id value.",
+                      "type": "integer"
+                    },
+                    "message": {
+                      "description": "The message value.",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "item_id",
+                    "message"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "requested_count": {
+                "description": "The requested count value.",
+                "type": "integer"
+              },
+              "transitioned_count": {
+                "description": "The transitioned count value.",
+                "type": "integer"
+              },
+              "unchanged_count": {
+                "description": "The unchanged count value.",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "failed_count",
+              "failures",
+              "requested_count",
+              "transitioned_count",
+              "unchanged_count"
             ],
             "type": "object"
           }
@@ -105885,6 +106047,68 @@
         ]
       }
     },
+    "/items/bulk-delete": {
+      "post": {
+        "description": "Bulk delete items. The server validates resource ownership and command preconditions before persisting changes. Unknown JSON fields are rejected when the operation accepts a body.",
+        "operationId": "postItemsBulkDelete",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostItemsBulkDeletePayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostItemsBulkDeleteResult"
+                }
+              }
+            },
+            "description": "Bulk delete items response."
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationError"
+          },
+          "403": {
+            "$ref": "#/components/responses/PermissionError"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLargeError"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaTypeError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Bulk delete items",
+        "tags": [
+          "Work items"
+        ],
+        "x-required-scopes": [
+          "items:delete"
+        ]
+      }
+    },
     "/items/bulk-patch": {
       "post": {
         "description": "Bulk patch items. The server validates resource ownership and command preconditions before persisting changes. Unknown JSON fields are rejected when the operation accepts a body.",
@@ -105939,6 +106163,68 @@
           }
         ],
         "summary": "Bulk patch items",
+        "tags": [
+          "Work items"
+        ],
+        "x-required-scopes": [
+          "items:write"
+        ]
+      }
+    },
+    "/items/bulk-transition": {
+      "post": {
+        "description": "Bulk transition items. The server validates resource ownership and command preconditions before persisting changes. Unknown JSON fields are rejected when the operation accepts a body.",
+        "operationId": "postItemsBulkTransition",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostItemsBulkTransitionPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostItemsBulkTransitionResult"
+                }
+              }
+            },
+            "description": "Bulk transition items response."
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationError"
+          },
+          "403": {
+            "$ref": "#/components/responses/PermissionError"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLargeError"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaTypeError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Bulk transition items",
         "tags": [
           "Work items"
         ],

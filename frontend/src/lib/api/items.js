@@ -213,6 +213,27 @@ export const items = {
       }),
     'update'
   ),
+  // Apply one target status to many items in a single server-side request.
+  // Returns per-item failures instead of fanning out one transition call per
+  // item from the client.
+  bulkTransition: withCrossTabNotice(
+    (itemIds, toStatusId) =>
+      fetchV2Data('/items/bulk-transition', {
+        method: 'POST',
+        body: JSON.stringify({ item_ids: itemIds, to_status_id: toStatusId }),
+      }),
+    'transition'
+  ),
+  // Delete many items in a single server-side request. Returns per-item
+  // failures; each deletion keeps its single-item history and audit record.
+  bulkDelete: withCrossTabNotice(
+    (itemIds) =>
+      fetchV2Data('/items/bulk-delete', {
+        method: 'POST',
+        body: JSON.stringify({ item_ids: itemIds }),
+      }),
+    'delete'
+  ),
   getRoadmapHierarchyDates: (rootIds) =>
     fetchV2Data('/items/roadmap-hierarchy-dates', {
       method: 'POST',

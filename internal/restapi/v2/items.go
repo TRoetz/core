@@ -114,6 +114,15 @@ type itemBulkPatchRequest struct {
 	} `json:"patches"`
 }
 
+type itemBulkTransitionRequest struct {
+	ItemIDs    []int `json:"item_ids"`
+	ToStatusID int   `json:"to_status_id"`
+}
+
+type itemBulkDeleteRequest struct {
+	ItemIDs []int `json:"item_ids"`
+}
+
 type roadmapHierarchyDatesRequest struct {
 	RootIDs []int `json:"root_ids"`
 }
@@ -440,6 +449,22 @@ func registerItemSetRoutes(builder *routeBuilder, app *services.ItemApplicationS
 			patches[i] = services.BulkItemPatch{ItemID: input.Patches[i].ItemID, Fields: input.Patches[i].Set}
 		}
 		result, err := app.BulkPatch(r.Context(), auditActor(r, user), patches)
+		return result, itemError(err)
+	})
+	builder.JSON(http.MethodPost, "/items/bulk-transition", http.StatusOK, false, AuthAuthenticated, []string{"items:write"}, func(r *http.Request, input itemBulkTransitionRequest) (services.ItemBulkTransitionResult, error) {
+		user, err := principal(r)
+		if err != nil {
+			return services.ItemBulkTransitionResult{}, err
+		}
+		result, err := app.BulkTransition(r.Context(), auditActor(r, user), input.ItemIDs, input.ToStatusID)
+		return result, itemError(err)
+	})
+	builder.JSON(http.MethodPost, "/items/bulk-delete", http.StatusOK, false, AuthAuthenticated, []string{"items:delete"}, func(r *http.Request, input itemBulkDeleteRequest) (services.ItemBulkDeleteResult, error) {
+		user, err := principal(r)
+		if err != nil {
+			return services.ItemBulkDeleteResult{}, err
+		}
+		result, err := app.BulkDelete(auditActor(r, user), input.ItemIDs)
 		return result, itemError(err)
 	})
 	builder.JSON(http.MethodPost, "/items/roadmap-hierarchy-dates", http.StatusOK, false, AuthAuthenticated, []string{"items:read"}, func(r *http.Request, input roadmapHierarchyDatesRequest) (services.RoadmapHierarchyDatesResult, error) {

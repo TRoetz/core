@@ -15,6 +15,7 @@
     teams = null,
     loading = false,
     searchTestid = 'team-picker-search',
+    menuTestid = undefined,
     onOpen = null,
     onSelect = () => {},
     onCancel = () => {}
@@ -45,6 +46,7 @@
   getValue={(team) => team?.id}
   getLabel={(team) => team?.name ?? ''}
   {searchTestid}
+  {menuTestid}
   optionTestid={(opt) => `team-picker-option-${opt.value}`}
   onOpen={() => onOpen?.()}
   onSelect={(team) => onSelect(team)}
