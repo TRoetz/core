@@ -442,7 +442,7 @@ export default {
     used: 'Used',
     public: 'Public',
     private: 'Private (internal note)',
-    privateSnippet: 'Private snippet (internal note, never sent to customers)',
+    privateSnippet: 'Private snippet (automations never send it to customers)',
     body: 'Body (Markdown)',
     bodyPlaceholder: 'Hello {{requester.name}},\n\nthanks for reaching out …',
     variablesHint: 'Variables: {{requester.name}}, {{ticket.key}}, {{ticket.title}}, {{agent.name}}',

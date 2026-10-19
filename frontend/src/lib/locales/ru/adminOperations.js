@@ -452,7 +452,7 @@ export default {
     used: 'Использован',
     public: 'Публичный',
     private: 'Приватный (внутренняя заметка)',
-    privateSnippet: 'Приватный фрагмент (внутренняя заметка, клиентам не отправляется)',
+    privateSnippet: 'Приватный фрагмент (автоматизации никогда не отправляют его клиентам)',
     body: 'Текст (Markdown)',
     bodyPlaceholder: 'Здравствуйте, {{requester.name}}!\n\nБлагодарим за обращение …',
     variablesHint: 'Переменные: {{requester.name}}, {{ticket.key}}, {{ticket.title}}, {{agent.name}}',

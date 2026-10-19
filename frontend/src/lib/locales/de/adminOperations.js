@@ -160,7 +160,7 @@ export default withEnglishAdminOperations({
     used: 'Verwendet',
     public: 'Öffentlich',
     private: 'Privat (interne Notiz)',
-    privateSnippet: 'Privater Baustein (interne Notiz, wird nie an Kunden gesendet)',
+    privateSnippet: 'Privater Baustein (Automatisierungen senden ihn nie an Kunden)',
     body: 'Inhalt (Markdown)',
     bodyPlaceholder: 'Hallo {{requester.name}},\n\nvielen Dank für Ihre Nachricht …',
     variablesHint: 'Variablen: {{requester.name}}, {{ticket.key}}, {{ticket.title}}, {{agent.name}}',

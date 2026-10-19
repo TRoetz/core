@@ -1,6 +1,6 @@
 <script>
   // Workspace canned responses (WI-1138): reusable agent reply snippets.
-  // Private snippets are internal notes and never reach portal customers.
+  // Private snippets are internal notes; automations never send them to customers.
 
   import { onMount } from 'svelte';
   import { MessageSquareText, Pencil, Plus, Trash2 } from '@lucide/svelte';

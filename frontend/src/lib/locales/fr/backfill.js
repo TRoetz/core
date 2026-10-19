@@ -78,7 +78,7 @@ export default {
     "new": "Nouvelle réponse préenregistrée",
     "noneMatching": "Aucune réponse préenregistrée correspondante",
     "private": "Privée (note interne)",
-    "privateSnippet": "Extrait privé (note interne, jamais envoyé aux clients)",
+    "privateSnippet": "Extrait privé (les automatisations ne l'envoient jamais aux clients)",
     "public": "Publique",
     "saveFailed": "Échec de l'enregistrement de la réponse préenregistrée",
     "searchPlaceholder": "Rechercher des réponses préenregistrées",
