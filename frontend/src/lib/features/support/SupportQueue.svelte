@@ -7,6 +7,7 @@
   import { authStore, collectionStore, workspaceDataStore } from '../../stores';
   import { navigate } from '../../router.js';
   import { confirm } from '../../composables/useConfirm.js';
+  import { useCollectionEventStream } from '../../composables/useCollectionEventStream.svelte.js';
   import { ArrowLeft, ArrowRight, EyeOff, MoreHorizontal, Pencil, Plus, Trash2 } from '@lucide/svelte';
   import Badge from '../../components/Badge.svelte';
   import Button from '../../components/Button.svelte';
@@ -130,6 +131,16 @@
   let gridMinWidth = $derived(`calc(${SELECT_TRACK} + ${listGridMinWidth(listColumns)})`);
 
   const styles = useGradientStyles();
+
+  // Queue tabs reuse the tree's glass button treatment so labels and counts
+  // stay legible over custom gradient backgrounds. The active tab keeps the
+  // design system's highlight as an overlay on top of the glass surface.
+  function queueTabStyle(isActive) {
+    const base = `${styles.glassStyle(12)} ${styles.glassTextStyle}`;
+    return isActive
+      ? `${base} font-weight: 500; background-image: linear-gradient(var(--ctx-active-bg, transparent), var(--ctx-active-bg, transparent));`
+      : base;
+  }
 
   const QUEUE_PAGE_SIZE = 100;
 
@@ -304,6 +315,15 @@
     await loadQueues();
     await loadItems();
   }
+
+  // Scoped SSE invalidations (WI-1624): a ticket deleted from the item detail
+  // modal emits no local event, so the queue reconciles through the same
+  // collection/workspace stream the board and list views use. Without this the
+  // row and tab counts kept showing deleted tickets.
+  useCollectionEventStream(
+    () => (collectionId ? { kind: 'collection', id: collectionId } : { kind: 'workspace', id: workspaceId }),
+    { onInvalidate: () => refreshQueuesAndItems() }
+  );
 
   function selectQueue(ref) {
     if (ref === activeRef) return;
@@ -651,9 +671,7 @@
         {#each queues as entry (queueRef(entry))}
           <div
             class="flex items-center rounded-md border transition-colors"
-            style={queueRef(entry) === activeRef
-              ? 'color: var(--ctx-active-text, var(--ds-interactive)); background-color: var(--ctx-active-bg, var(--ds-interactive-subtle)); border-color: var(--ctx-border, var(--ds-border)); backdrop-filter: var(--ctx-backdrop, none);'
-              : 'color: var(--ctx-text-subtle, var(--ds-text-subtle)); background-color: transparent; border-color: var(--ctx-border, var(--ds-border)); backdrop-filter: var(--ctx-backdrop, none);'}
+            style={queueTabStyle(queueRef(entry) === activeRef)}
           >
             <button
               type="button"
