@@ -143,10 +143,12 @@
     ) {
       return;
     }
-    collectionEditorOptions.prime(
-      id,
-      { statuses, users, milestones, iterations, projects },
-      workspaceDataStore.planningCompleteness
+    untrack(() =>
+      collectionEditorOptions.prime(
+        id,
+        { statuses, users, milestones, iterations, projects },
+        workspaceDataStore.planningCompleteness
+      )
     );
   });
 

@@ -1,4 +1,5 @@
 <script>
+  import { untrack } from 'svelte';
   import { useEventListener } from 'runed';
   import { t } from '../../stores/i18n.svelte.js';
   import { errorToast } from '../../stores/toasts.svelte.js';
@@ -99,16 +100,18 @@
       return;
     }
 
-    collectionEditorOptions.prime(
-      id,
-      {
-        statuses,
-        users,
-        milestones,
-        iterations,
-        projects,
-      },
-      workspaceDataStore.planningCompleteness
+    untrack(() =>
+      collectionEditorOptions.prime(
+        id,
+        {
+          statuses,
+          users,
+          milestones,
+          iterations,
+          projects,
+        },
+        workspaceDataStore.planningCompleteness
+      )
     );
   });
 

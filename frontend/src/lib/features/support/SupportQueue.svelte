@@ -1,5 +1,5 @@
 <script>
-  import { onDestroy, onMount } from 'svelte';
+  import { onDestroy, onMount, untrack } from 'svelte';
   import { t } from '../../stores/i18n.svelte.js';
   import { collections } from '../../api/collections.js';
   import { items as itemsApi } from '../../api/items.js';
@@ -191,16 +191,18 @@
       return;
     }
 
-    collectionEditorOptions.prime(
-      id,
-      {
-        statuses,
-        users,
-        milestones,
-        iterations,
-        projects,
-      },
-      workspaceDataStore.planningCompleteness
+    untrack(() =>
+      collectionEditorOptions.prime(
+        id,
+        {
+          statuses,
+          users,
+          milestones,
+          iterations,
+          projects,
+        },
+        workspaceDataStore.planningCompleteness
+      )
     );
   });
 

@@ -1,4 +1,5 @@
 <script>
+  import { untrack } from 'svelte';
   import { AlertCircle, ChevronDown, ChevronUp, MoreHorizontal, Briefcase, Globe, Building2, Repeat, Shield } from '@lucide/svelte';
   import { priorityIconMap } from '../../utils/icons.js';
   import { buildIterationPickerConfig } from '../iterations/iterationPickerUtils.js';
@@ -170,10 +171,12 @@
     const complete =
       isActiveWorkspace && workspaceDataStore.planningCompleteness?.milestones === true;
     const isPersonal = workspaceDataStore.workspace?.is_personal === true;
-    collectionEditorOptions.prime(
-      wsId,
-      { milestones: milestones.filter((milestone) => !isPersonal || !milestone.is_global) },
-      { milestones: complete }
+    untrack(() =>
+      collectionEditorOptions.prime(
+        wsId,
+        { milestones: milestones.filter((milestone) => !isPersonal || !milestone.is_global) },
+        { milestones: complete }
+      )
     );
   });
 

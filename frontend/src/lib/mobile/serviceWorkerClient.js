@@ -96,6 +96,44 @@ function monitorRegistration(registration) {
 }
 
 /**
+ * Drop service workers and their caches on a dev origin. A worker installed by
+ * an earlier production build on the same origin serves stale modules and
+ * defeats HMR, so the app shell clears it before the first import.
+ * @returns {Promise<number>} number of unregistered workers
+ */
+export async function clearDevelopmentServiceWorkerState() {
+  if (typeof navigator === 'undefined' || !navigator.serviceWorker?.getRegistrations) {
+    return 0;
+  }
+
+  /** @type {readonly ServiceWorkerRegistration[]} */
+  let registrations = [];
+  try {
+    registrations = await navigator.serviceWorker.getRegistrations();
+  } catch (error) {
+    console.warn('[mobile] could not list service workers:', error);
+    return 0;
+  }
+
+  await Promise.all(
+    registrations.map((registration) =>
+      Promise.resolve(registration.unregister()).catch(() => false)
+    )
+  );
+
+  if (typeof caches !== 'undefined') {
+    try {
+      const keys = await caches.keys();
+      await Promise.all(keys.map((key) => caches.delete(key)));
+    } catch (error) {
+      console.warn('[mobile] could not clear dev caches:', error);
+    }
+  }
+
+  return registrations.length;
+}
+
+/**
  * Register the mobile service worker. Idempotent — repeated calls return the
  * same in-flight/settled registration. Paths resolve against document.baseURI
  * so root and context-path deployments use the correct script and scope.

@@ -54,6 +54,21 @@ const OPTION_LOADERS = {
   personalLabels: () => personalLabels.getAll(null),
 };
 
+/**
+ * Compare primed rows by identity. Callers pass fresh slices of the workspace
+ * store's own rows, so ids match even though Svelte hands out a new proxy for
+ * every read. Field-level refreshes arrive through load().
+ */
+function sameArrayContents(left, right) {
+  if (left === right) return true;
+  if (!Array.isArray(left) || !Array.isArray(right) || left.length !== right.length) return false;
+  return left.every((value, index) => {
+    const leftKey = value?.id ?? value;
+    const rightKey = right[index]?.id ?? right[index];
+    return leftKey === rightKey;
+  });
+}
+
 function normalizeWorkspaceId(workspaceId) {
   const id = Number(workspaceId);
   return Number.isInteger(id) && id > 0 ? id : null;
@@ -100,19 +115,30 @@ export class CollectionEditorOptionsStore {
     let changed = false;
 
     for (const field of ['statuses', 'users', 'milestones', 'iterations', 'projects']) {
+      const incoming = values?.[field];
       // A fresh, complete entry is authoritative: a later partial priming pass
       // must not downgrade it back to an incomplete page.
       if (
-        !Array.isArray(values?.[field]) ||
+        !Array.isArray(incoming) ||
         (current.loaded[field] && this.#isFresh(current, field) && this.#isComplete(current, field))
       ) {
         continue;
       }
-      next[field] = values[field];
+
+      const complete = PLANNING_FIELDS.has(field) ? completeness?.[field] === true : true;
+      // Priming runs inside effects. Writing an identical entry would mark the
+      // effect dirty again and spin until Svelte aborts the update depth.
+      const unchanged =
+        current.loaded[field] === true &&
+        sameArrayContents(current[field], incoming) &&
+        this.#isComplete(current, field) === complete;
+      if (unchanged) continue;
+
+      next[field] = incoming;
       next.loaded[field] = true;
       next.fetchedAt[field] = Date.now();
       if (PLANNING_FIELDS.has(field)) {
-        next.complete[field] = completeness?.[field] === true;
+        next.complete[field] = complete;
       }
       changed = true;
     }
