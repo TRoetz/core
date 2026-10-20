@@ -481,7 +481,7 @@
             id="agent-llm"
             label="LLM connection"
             required
-            helper="The selected model is fixed for this profile."
+            helper="You can change the model later from the profile's Tools and access tab."
           >
             <Select
               id="agent-create-llm"

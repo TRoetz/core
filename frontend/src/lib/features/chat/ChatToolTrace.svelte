@@ -31,7 +31,24 @@
   // footer from competing with the answer for attention.
   let showMeter = $state(false);
 
-  const hitLimit = $derived(stopReason === 'max_iterations');
+  // Any non-clean ending deserves a warning, not just the iteration ceiling.
+  const stopWarning = $derived.by(() => {
+    switch (stopReason) {
+      case 'max_iterations':
+        return `Ran out of steps after ${iterations}/${maxIterations}`;
+      case 'max_tokens':
+        return 'The model hit its output limit — the answer is truncated';
+      case 'no_progress':
+        return 'Stopped: the model kept repeating the same steps';
+      case 'empty':
+        return 'The model returned an empty response';
+      case 'content_filter':
+        return 'The response was blocked by a content filter';
+      default:
+        return '';
+    }
+  });
+  const hitLimit = $derived(stopWarning !== '');
   // Nothing to report when metering never ran for the turn, or when the
   // fallback client served it and there is no model to name.
   const hasMeter = $derived(hasMeteredUsage(usage));
@@ -83,7 +100,7 @@
     <IconAlertTriangle size={13} stroke={1.5} class="icon-err" />
     <div class="review-body">
       <strong>Needs human review</strong>
-      <span>The model misused a tool and didn't recover — the answer may not be grounded.</span>
+      <span>The model may not have completed this request — check the answer before relying on it.</span>
       {#if reviewReasons.length > 0}
         <ul>
           {#each reviewReasons as reason}
@@ -112,7 +129,7 @@
         />
         {#if hitLimit}
           <IconAlertTriangle size={12} stroke={1.5} class="icon-warn" />
-          <span>Ran out of steps after {iterations}/{maxIterations} — {toolCalls.length} tool call{toolCalls.length === 1 ? '' : 's'}</span>
+          <span>{stopWarning} — {toolCalls.length} tool call{toolCalls.length === 1 ? '' : 's'}</span>
         {:else}
           <span>{toolCalls.length} tool call{toolCalls.length === 1 ? '' : 's'} · {iterations}/{maxIterations} steps</span>
         {/if}
