@@ -5,7 +5,7 @@
   import { draggable, dropTargetForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
   import { attachClosestEdge, extractClosestEdge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge';
   import { navigate } from '../router.js';
-  import { api } from '../api.js';
+  import { collections } from '../api/collections.js';
   import { t } from '../stores/i18n.svelte.js';
   import { errorToast } from '../stores/toasts.svelte.js';
   import { CARD_SELECTABLE_FIELDS } from '../stores/fieldConfig.js';
@@ -170,9 +170,7 @@
 
   async function loadData() {
     try {
-      const data = await loadBoardConfigurationPageData(
-        api,
-        workspaceDataStore,
+      const data = await loadBoardConfigurationPageData(workspaceDataStore,
         workspaceId,
         collectionId
       );
@@ -755,9 +753,9 @@
       }
 
       if (boardConfig && boardConfig.id) {
-        await api.collections.updateBoardConfiguration(collectionId, boardConfig.id, payload, workspaceId);
+        await collections.updateBoardConfiguration(collectionId, boardConfig.id, payload, workspaceId);
       } else {
-        const newConfig = await api.collections.createBoardConfiguration(collectionId, workspaceId, payload);
+        const newConfig = await collections.createBoardConfiguration(collectionId, workspaceId, payload);
         boardConfig = newConfig;
       }
       collectionStore.invalidateBoardConfiguration(workspaceId, collectionId);
@@ -791,7 +789,7 @@
 
     if (boardConfig) {
       try {
-        await api.collections.deleteBoardConfiguration(collectionId, boardConfig.id, workspaceId);
+        await collections.deleteBoardConfiguration(collectionId, boardConfig.id, workspaceId);
         boardConfig = null;
         columns = [];
         backlogStatusIDs = [];

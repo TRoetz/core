@@ -48,12 +48,12 @@ vi.mock('../stores/notifications.js', async () => {
 vi.mock('../stores/timerStore.svelte.js', () => ({
   timerStore: { hasActive: false, activeTimer: null },
 }));
-vi.mock('../api.js', () => ({
-  api: {
-    items: { getAll: vi.fn().mockResolvedValue({ data: [] }) },
-    homepage: { get: vi.fn().mockResolvedValue({ watched_items: [] }) },
-    search: { items: vi.fn().mockResolvedValue([]) },
-  },
+vi.mock('../api/items.js', () => ({
+  items: { getAll: vi.fn().mockResolvedValue({ data: [] }) },
+}));
+vi.mock('../api/misc.js', () => ({
+  homepage: { get: vi.fn().mockResolvedValue({ watched_items: [] }) },
+  search: { items: vi.fn().mockResolvedValue([]) },
 }));
 vi.mock('../commands/executor.js', () => ({ executeCommand: vi.fn().mockResolvedValue() }));
 vi.mock('../components/UserAvatar.svelte', () => ({ default: () => {} }));

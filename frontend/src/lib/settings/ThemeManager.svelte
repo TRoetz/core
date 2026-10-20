@@ -1,7 +1,8 @@
 <script>
   import { onMount } from 'svelte';
   import StateDisplay from '../components/StateDisplay.svelte';
-  import { api } from '../api.js';
+  import { themes as themesApi } from '../api/admin.js';
+  import { attachments } from '../api/misc.js';
   import { Plus, Edit, Trash2, Palette, Check, X } from '@lucide/svelte';
   import AlertBox from '../components/AlertBox.svelte';
   import Button from '../components/Button.svelte';
@@ -55,7 +56,7 @@
     try {
       loading = true;
       error = null;
-      themes = await api.themes.getAll();
+      themes = await themesApi.getAll();
     } catch (err) {
       error = t('settings.themeManager.failedToLoad');
       console.error('Error loading themes:', err);
@@ -66,7 +67,7 @@
 
   async function loadActiveTheme() {
     try {
-      activeTheme = await api.themes.getActive();
+      activeTheme = await themesApi.getActive();
     } catch (err) {
       console.error('Error loading active theme:', err);
     }
@@ -75,7 +76,7 @@
   async function createTheme() {
     try {
       error = null;
-      const created = await api.themes.create(newTheme);
+      const created = await themesApi.create(newTheme);
       themes = [...themes, created];
 
       // Reset form
@@ -111,7 +112,7 @@
       const formData = new FormData();
       formData.append('file', file);
       formData.append('entity_type', 'theme_logo');
-      const result = await api.attachments.upload(formData);
+      const result = await attachments.upload(formData);
       if (result?.success && result.logo_url) {
         target[field] = result.logo_url;
       }
@@ -126,7 +127,7 @@
   async function updateTheme(id, data) {
     try {
       error = null;
-      const updated = await api.themes.update(id, data);
+      const updated = await themesApi.update(id, data);
       themes = themes.map(t => t.id === id ? updated : t);
       // If this theme is active, update active theme
       if (updated.is_active) {
@@ -151,7 +152,7 @@
 
     try {
       error = null;
-      await api.themes.delete(id);
+      await themesApi.delete(id);
       themes = themes.filter(t => t.id !== id);
     } catch (err) {
       error = t('settings.themeManager.failedToDelete');
@@ -162,7 +163,7 @@
   async function activateTheme(id) {
     try {
       error = null;
-      await api.themes.activate(id);
+      await themesApi.activate(id);
       
       // Update local state
       themes = themes.map(t => ({ ...t, is_active: t.id === id }));

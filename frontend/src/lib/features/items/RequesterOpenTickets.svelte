@@ -9,7 +9,8 @@
   import ItemKey from '../../components/ItemKey.svelte';
   import DropdownMenu from '../../layout/DropdownMenu.svelte';
   import { t } from '../../stores/i18n.svelte.js';
-  import { api } from '../../api.js';
+  import { items } from '../../api/items.js';
+  import { ai } from '../../api/ai.js';
   import { aiStore } from '../../stores/aiStore.svelte.js';
 
   let { itemId, canEdit = false, onrequestmerge = null } = $props();
@@ -31,7 +32,7 @@
     loadController = new AbortController();
     loading = true;
     try {
-      const response = await api.items.requesterOpenTickets(itemId, {
+      const response = await items.requesterOpenTickets(itemId, {
         signal: loadController.signal
       });
       tickets = response ?? [];
@@ -47,7 +48,7 @@
     findingDuplicates = true;
     findError = '';
     try {
-      const result = await api.ai.findSimilar(itemId);
+      const result = await ai.findSimilar(itemId);
       const known = new Set(tickets.map((ticket) => String(ticket.id)));
       aiDuplicates = (result?.similar_items ?? []).filter(
         (entry) =>

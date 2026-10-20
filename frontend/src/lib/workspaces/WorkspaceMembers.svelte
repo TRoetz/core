@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { api } from '../api.js';
+  import { workspaceRoles } from '../api/workspaces.js';
   import { UserPlus, Trash2, Shield, Users } from '@lucide/svelte';
   import Button from '../components/Button.svelte';
   import Modal from '../dialogs/Modal.svelte';
@@ -84,9 +84,9 @@
     error = null;
     try {
       const [membersData, groupsData, rolesData] = await Promise.all([
-        api.workspaceRoles.getWorkspaceAssignments(workspaceIdNum),
-        api.workspaceRoles.getWorkspaceGroupAssignments(workspaceIdNum),
-        api.workspaceRoles.getAll()
+        workspaceRoles.getWorkspaceAssignments(workspaceIdNum),
+        workspaceRoles.getWorkspaceGroupAssignments(workspaceIdNum),
+        workspaceRoles.getAll()
       ]);
       members = membersData || [];
       groupAssignments = groupsData || [];
@@ -109,7 +109,7 @@
 
     try {
       adding = true;
-      await api.workspaceRoles.assignToUser({
+      await workspaceRoles.assignToUser({
         user_id: userId,
         workspace_id: workspaceIdNum,
         role_id: roleId
@@ -144,7 +144,7 @@
 
     try {
       const workspaceIdNum = Number(workspaceId);
-      await api.workspaceRoles.revokeFromUser(member.user_id, workspaceIdNum, role.role_id);
+      await workspaceRoles.revokeFromUser(member.user_id, workspaceIdNum, role.role_id);
 
       // Reload data
       await loadData();
@@ -164,7 +164,7 @@
 
     try {
       addingGroup = true;
-      await api.workspaceRoles.assignToGroup({
+      await workspaceRoles.assignToGroup({
         group_id: groupId,
         workspace_id: workspaceIdNum,
         role_id: roleId
@@ -196,7 +196,7 @@
 
     try {
       const workspaceIdNum = Number(workspaceId);
-      await api.workspaceRoles.revokeFromGroup(group.group_id, workspaceIdNum, role.role_id);
+      await workspaceRoles.revokeFromGroup(group.group_id, workspaceIdNum, role.role_id);
       await loadData();
     } catch (err) {
       console.error('Failed to remove group role:', err);

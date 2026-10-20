@@ -1,5 +1,5 @@
 <script>
-  import { api } from '../../api.js';
+  import { sla } from '../../api/sla.js';
   import PageHeader from '../../layout/PageHeader.svelte';
   import Button from '../../components/Button.svelte';
   import DataTable from '../../components/DataTable.svelte';
@@ -40,7 +40,7 @@
     try {
       loading = true;
       error = null;
-      jobs = (await api.sla.getRecalculations(workspaceId)) ?? [];
+      jobs = (await sla.getRecalculations(workspaceId)) ?? [];
     } catch (err) {
       error = err?.message || t('workspaceSettings.serviceLevels.loadRecalculationsFailed');
     } finally {
@@ -49,7 +49,7 @@
   }
 
   async function loadMetrics() {
-    metrics = (await api.sla.getMetrics(workspaceId).catch(() => [])) ?? [];
+    metrics = (await sla.getMetrics(workspaceId).catch(() => [])) ?? [];
   }
 
   let loadedWorkspaceId = null;
@@ -62,7 +62,7 @@
   async function trigger() {
     triggering = true;
     try {
-      const result = await api.sla.startRecalculation(workspaceId, targetMetricId);
+      const result = await sla.startRecalculation(workspaceId, targetMetricId);
       successToast(
         t('workspaceSettings.serviceLevels.recalculationStarted', {
           count: result?.enqueued ?? 0,

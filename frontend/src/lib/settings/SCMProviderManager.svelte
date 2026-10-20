@@ -1,7 +1,8 @@
 <script>
   import { onMount } from 'svelte';
   import StateDisplay from '../components/StateDisplay.svelte';
-  import { api } from '../api.js';
+  import { scmProviders } from '../api/scm.js';
+  import { post } from '../api/core.js';
   import { t } from '../stores/i18n.svelte.js';
   import {
     GitBranch, Plus, Edit, Trash2, RefreshCw,
@@ -128,7 +129,7 @@
     try {
       loading = true;
       error = null;
-      const response = await api.scmProviders.getAll();
+      const response = await scmProviders.getAll();
       providers = response || [];
     } catch (err) {
       console.error('Failed to load SCM providers:', err);
@@ -253,16 +254,16 @@
     saving = true;
     try {
       if (editingProvider) {
-        await api.scmProviders.update(editingProvider.id, formData);
+        await scmProviders.update(editingProvider.id, formData);
         // Update workspace allowlist if restriction mode is restricted
         if (formData.workspace_restriction_mode === 'restricted') {
-          await api.scmProviders.updateAllowedWorkspaces(editingProvider.id, allowedWorkspaceIds);
+          await scmProviders.updateAllowedWorkspaces(editingProvider.id, allowedWorkspaceIds);
         }
       } else {
-        const newProvider = await api.scmProviders.create(formData);
+        const newProvider = await scmProviders.create(formData);
         // Set workspace allowlist if restriction mode is restricted
         if (formData.workspace_restriction_mode === 'restricted' && allowedWorkspaceIds.length > 0) {
-          await api.scmProviders.updateAllowedWorkspaces(newProvider.id, allowedWorkspaceIds);
+          await scmProviders.updateAllowedWorkspaces(newProvider.id, allowedWorkspaceIds);
         }
       }
       await loadProviders();
@@ -281,7 +282,7 @@
       return;
     }
     try {
-      const response = await api.scmProviders.getAllowedWorkspaces(providerId);
+      const response = await scmProviders.getAllowedWorkspaces(providerId);
       allowedWorkspaceIds = (response || []).map(w => w.workspace_id);
     } catch (err) {
       console.error('Failed to load allowed workspaces:', err);
@@ -299,7 +300,7 @@
     if (!ok) return;
 
     try {
-      await api.scmProviders.delete(provider.id);
+      await scmProviders.delete(provider.id);
       await loadProviders();
     } catch (err) {
       console.error('Failed to delete provider:', err);
@@ -311,7 +312,7 @@
     testLoading = true;
     testResult = null;
     try {
-      const result = await api.scmProviders.test(providerId || editingProvider?.id);
+      const result = await scmProviders.test(providerId || editingProvider?.id);
       testResult = result;
       // If testing from list (not modal), show result as toast
       if (providerId && !showEditModal) {
@@ -342,7 +343,7 @@
     discoveredInstallations = [];
 
     try {
-      const result = await api.post('/admin/scm-providers/github-app/discover-installations', {
+      const result = await post('/admin/scm-providers/github-app/discover-installations', {
         app_id: formData.github_app_id,
         private_key: formData.github_app_private_key
       });

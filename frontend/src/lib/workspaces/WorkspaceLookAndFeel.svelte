@@ -1,7 +1,8 @@
 <script>
   import { onMount } from 'svelte';
   import { useDebounce } from 'runed';
-  import { api } from '../api.js';
+  import { workspaces } from '../api/workspaces.js';
+  import { attachments } from '../api/misc.js';
   import { navigate } from '../router.js';
   import { workspacePermissions } from '../stores/workspacePermissions.svelte.js';
   import { currentWorkspace, workspacesStore } from '../stores/workspaces.svelte.js';
@@ -116,12 +117,12 @@
       };
 
       await Promise.all([
-        api.workspaces.update(workspaceId, {
+        workspaces.update(workspaceId, {
           icon,
           color,
           avatar_url: avatarUrl
         }),
-        api.workspaces.updateHomepageLayout(workspaceId, layoutPayload)
+        workspaces.updateHomepageLayout(workspaceId, layoutPayload)
       ]);
 
       // Update currentWorkspace store immediately (no full reload)
@@ -171,7 +172,7 @@
       uploadFormData.append('entity_type', 'workspace_avatar');
       uploadFormData.append('category', 'workspace_avatar');
 
-      const uploadResult = await api.attachments.upload(uploadFormData);
+      const uploadResult = await attachments.upload(uploadFormData);
 
       if (uploadResult && uploadResult.success && uploadResult.avatar_url) {
         avatarUrl = uploadResult.avatar_url;
@@ -256,7 +257,7 @@
       uploadFormData.append('entity_type', 'workspace_background');
       uploadFormData.append('category', 'workspace_background');
 
-      const uploadResult = await api.attachments.upload(uploadFormData);
+      const uploadResult = await attachments.upload(uploadFormData);
       if (uploadResult?.success && uploadResult.background_url) {
         selectBackgroundImage(uploadResult.background_url);
         successToast(t('lookAndFeel.backgroundUploadedSuccess'));

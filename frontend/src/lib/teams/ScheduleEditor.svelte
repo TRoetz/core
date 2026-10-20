@@ -1,5 +1,5 @@
 <script>
-  import { api } from '../api.js';
+  import { onCallSchedules } from '../api/oncall.js';
   import { t } from '../stores/i18n.svelte.js';
   import { errorToast, successToast } from '../stores/toasts.svelte.js';
   import Modal from '../dialogs/Modal.svelte';
@@ -36,10 +36,10 @@
         is_active: formData.is_active,
       };
       if (schedule?.id) {
-        await api.onCallSchedules.update(schedule.id, payload);
+        await onCallSchedules.update(schedule.id, payload);
         successToast(t('teams.oncall.scheduleUpdated'));
       } else {
-        await api.onCallSchedules.createForTeam(teamId, payload);
+        await onCallSchedules.createForTeam(teamId, payload);
         successToast(t('teams.oncall.scheduleCreated'));
       }
       onSaved?.();

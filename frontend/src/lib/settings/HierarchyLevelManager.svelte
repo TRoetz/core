@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { api } from '../api.js';
+  import { hierarchyLevels as hierarchyLevelsApi } from '../api/configuration.js';
   import { t } from '../stores/i18n.svelte.js';
   import { Plus, Edit, Trash2, ChevronUp, ChevronDown, Circle, Network } from '@lucide/svelte';
   import AlertBox from '../components/AlertBox.svelte';
@@ -46,7 +46,7 @@
     try {
       isLoading = true;
       error = null;
-      const data = await api.hierarchyLevels.getAll();
+      const data = await hierarchyLevelsApi.getAll();
       hierarchyLevels = data.sort((a, b) => a.level - b.level);
     } catch (err) {
       error = t('settings.hierarchyLevels.failedToLoad');
@@ -94,10 +94,10 @@
 
       if (editingId) {
         translationEditor?.validate();
-        await api.hierarchyLevels.update(editingId, formData);
+        await hierarchyLevelsApi.update(editingId, formData);
         await translationEditor?.save();
       } else {
-        await api.hierarchyLevels.create(formData);
+        await hierarchyLevelsApi.create(formData);
       }
 
       await loadHierarchyLevels();
@@ -121,7 +121,7 @@
     if (!confirmed) return;
 
     try {
-      await api.hierarchyLevels.delete(id);
+      await hierarchyLevelsApi.delete(id);
       await loadHierarchyLevels();
     } catch (err) {
       errorToast(
@@ -153,7 +153,7 @@
     }
 
     try {
-      await api.hierarchyLevels.update(id, {
+      await hierarchyLevelsApi.update(id, {
         ...currentLevel,
         level: newLevel
       });

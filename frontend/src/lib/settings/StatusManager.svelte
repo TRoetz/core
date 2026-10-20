@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { api } from '../api.js';
+  import { statuses as statusesApi } from '../api/workflows.js';
   import { Plus, Edit, Trash2, Circle, GitBranch } from '@lucide/svelte';
   import Button from '../components/Button.svelte';
   import ColorDot from '../components/ColorDot.svelte';
@@ -53,7 +53,7 @@
     try {
       loading = true;
       loadingCategories = true;
-      const data = await loadStatusManagerData(api);
+      const data = await loadStatusManagerData();
       statusCategories = data.statusCategories;
       workflowTransitions = data.workflowTransitions;
       statuses = data.statuses;
@@ -119,14 +119,14 @@
 
       if (editingId) {
         translationEditor?.validate();
-        await api.statuses.update(editingId, formData);
+        await statusesApi.update(editingId, formData);
         await translationEditor?.save();
-        const reloaded = await loadStatusManagerData(api);
+        const reloaded = await loadStatusManagerData();
         statuses = reloaded.statuses;
         statusCategories = reloaded.statusCategories;
         workflowTransitions = reloaded.workflowTransitions;
       } else {
-        const created = await api.statuses.create(formData);
+        const created = await statusesApi.create(formData);
         statuses = [...statuses, { ...created, transitionCount: 0 }];
       }
       
@@ -166,7 +166,7 @@
     if (!confirmed) return;
 
     try {
-      await api.statuses.delete(status.id);
+      await statusesApi.delete(status.id);
       statuses = statuses.filter(s => s.id !== status.id);
       window.dispatchEvent(new CustomEvent('refresh-workspace-data'));
     } catch (error) {

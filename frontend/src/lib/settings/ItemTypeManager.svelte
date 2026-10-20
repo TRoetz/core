@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { api } from '../api.js';
+  import { hierarchyLevels as hierarchyLevelsApi, itemTypes as itemTypesApi } from '../api/configuration.js';
   import { t } from '../stores/i18n.svelte.js';
   import { errorToast } from '../stores/toasts.svelte.js';
   import { confirm } from '../composables/useConfirm.js';
@@ -75,7 +75,7 @@
     try {
       isLoading = true;
       error = null;
-      itemTypes = await api.itemTypes.getAll();
+      itemTypes = await itemTypesApi.getAll();
       // Group by hierarchy level for better display
       itemTypes = sortItemTypesByHierarchy(itemTypes);
     } catch (err) {
@@ -87,7 +87,7 @@
 
   async function loadHierarchyLevels() {
     try {
-      hierarchyLevels = await api.hierarchyLevels.getAll();
+      hierarchyLevels = await hierarchyLevelsApi.getAll();
       hierarchyLevels.sort((a, b) => a.level - b.level);
     } catch (err) {
     }
@@ -167,10 +167,10 @@
 
       if (editingId) {
         translationEditor?.validate();
-        await api.itemTypes.update(editingId, formData);
+        await itemTypesApi.update(editingId, formData);
         await translationEditor?.save();
       } else {
-        await api.itemTypes.create(formData);
+        await itemTypesApi.create(formData);
       }
 
       await loadItemTypes();
@@ -193,7 +193,7 @@
     if (!confirmed) return;
 
     try {
-      await api.itemTypes.delete(id);
+      await itemTypesApi.delete(id);
       await loadItemTypes();
       error = null;
       window.dispatchEvent(new CustomEvent('refresh-workspace-data'));

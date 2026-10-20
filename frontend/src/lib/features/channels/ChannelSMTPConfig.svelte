@@ -1,6 +1,6 @@
 <script>
   import { t } from '../../stores/i18n.svelte.js';
-  import { api } from '../../api.js';
+  import { channels } from '../../api/channels.js';
   import AlertBox from '../../components/AlertBox.svelte';
   import Button from '../../components/Button.svelte';
   import Spinner from '../../components/Spinner.svelte';
@@ -49,10 +49,10 @@
     try {
       // Save config first
       const configData = getConfig();
-      await api.channels.updateConfig(channelId, configData);
+      await channels.updateConfig(channelId, configData);
 
       // Test the channel with test email
-      const result = await api.channels.testWithEmail(channelId, testEmail);
+      const result = await channels.testWithEmail(channelId, testEmail);
       if (result.success) {
         testResult = {
           success: true,

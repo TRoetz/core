@@ -4,7 +4,7 @@
   import { attachClosestEdge, extractClosestEdge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge';
   import { createPopover, melt } from '@melt-ui/svelte';
   import { tick } from 'svelte';
-  import { api } from '../api.js';
+  import { requestTypes } from '../api/channels.js';
   import { Plus, Trash2, Pencil, Type, AlignLeft, ListChecks, ToggleLeft, AlertTriangle, Search, X } from '@lucide/svelte';
   import Button from '../components/Button.svelte';
   import Input from '../components/Input.svelte';
@@ -44,9 +44,9 @@
   // the legacy request-type behavior while allowing reuse for asset reports.
   // The default updateFields closes over channelId since the route requires it.
   const handlers = $derived(apiHandlers || {
-    getFields: (id) => api.requestTypes.getFields(id),
-    getAvailableFields: (id) => api.requestTypes.getAvailableFields(id),
-    updateFields: (id, fields) => api.requestTypes.updateFields(channelId, id, fields)
+    getFields: (id) => requestTypes.getFields(id),
+    getAvailableFields: (id) => requestTypes.getAvailableFields(id),
+    updateFields: (id, fields) => requestTypes.updateFields(channelId, id, fields)
   });
   const activeResourceId = $derived(resourceId ?? requestTypeId);
   const activeResourceName = $derived(resourceName || requestTypeName);
@@ -194,7 +194,7 @@
 
   async function loadRequestType() {
     try {
-      requestTypeRow = await api.requestTypes.get(requestTypeId);
+      requestTypeRow = await requestTypes.get(requestTypeId);
       titleTemplate = requestTypeRow?.title_template || '';
     } catch (err) {
       console.error('Failed to load request type:', err);
@@ -213,7 +213,7 @@
       titleTemplateError = null;
       // Omitted fields keep their stored values; only the title template
       // changes here.
-      await api.requestTypes.update(channelId, requestTypeId, {
+      await requestTypes.update(channelId, requestTypeId, {
         name: requestTypeRow.name,
         description: requestTypeRow.description || '',
         icon: requestTypeRow.icon,

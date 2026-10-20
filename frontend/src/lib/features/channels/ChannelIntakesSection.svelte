@@ -1,7 +1,8 @@
 <script>
   import { onMount } from 'svelte';
   import { IconPlus, IconTrash, IconPencil } from '@tabler/icons-svelte-runes';
-  import { api } from '../../api.js';
+  import { workspaces as workspacesApi } from '../../api/workspaces.js';
+  import { channelIntakes } from '../../api/channels.js';
   import { t } from '../../stores/i18n.svelte.js';
   import { errorToast, successToast } from '../../stores/toasts.svelte.js';
   import Button from '../../components/Button.svelte';
@@ -29,7 +30,7 @@
       return;
     }
     try {
-      const loaded = await api.workspaces.getItemTypes(workspaceId);
+      const loaded = await workspacesApi.getItemTypes(workspaceId);
       if (requestSequence === itemTypeLoadSequence) {
         itemTypes = loaded;
       }
@@ -71,7 +72,7 @@
     if (!channelId) return;
     loading = true;
     try {
-      intakes = (await api.channelIntakes.list(channelId)) ?? [];
+      intakes = (await channelIntakes.list(channelId)) ?? [];
     } catch (err) {
       console.error('Failed to load intakes:', err);
       errorToast(t('channel.intakeLoadFailed'));
@@ -145,9 +146,9 @@
     };
     try {
       if (editing.id) {
-        await api.channelIntakes.update(channelId, editing.id, payload);
+        await channelIntakes.update(channelId, editing.id, payload);
       } else {
-        await api.channelIntakes.create(channelId, payload);
+        await channelIntakes.create(channelId, payload);
       }
       editing = null;
       await load();
@@ -159,7 +160,7 @@
 
   async function remove(intake) {
     try {
-      await api.channelIntakes.delete(channelId, intake.id);
+      await channelIntakes.delete(channelId, intake.id);
       await load();
       successToast(t('channel.intakeDeleted'));
     } catch (err) {

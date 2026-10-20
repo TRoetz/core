@@ -7,7 +7,7 @@
   import { draggable, dropTargetForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
   import { attachClosestEdge, extractClosestEdge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge';
   import DropIndicator from '../../layout/DropIndicator.svelte';
-  import { api } from '../../api.js';
+  import { items } from '../../api/items.js';
   import { t } from '../../stores/i18n.svelte.js';
   import ItemKey from '../../components/ItemKey.svelte';
   import StatusBadge from '../../components/StatusBadge.svelte';
@@ -101,7 +101,7 @@
     if (pendingStatusItemIds.has(rowItemId)) return;
     pendingStatusItemIds = new Set(pendingStatusItemIds).add(rowItemId);
     try {
-      await api.items.transition(rowItemId, statusId);
+      await items.transition(rowItemId, statusId);
       await onstatuschanged?.({ itemId: rowItemId, kind });
     } catch (error) {
       errorToast(t('dialogs.alerts.failedToUpdate', { error: `status: ${error.message || error}` }));
@@ -250,7 +250,7 @@
         }
       }
 
-      await api.items.updateFracIndex(draggedItem.id, {
+      await items.updateFracIndex(draggedItem.id, {
         previous_item_id: prevItemId,
         next_item_id: nextItemId
       });

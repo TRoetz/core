@@ -1,6 +1,6 @@
 <script>
   import { useEventListener } from 'runed';
-  import { api } from '../../api.js';
+  import { sla } from '../../api/sla.js';
   import Lozenge from '../../components/Lozenge.svelte';
   import Tooltip from '../../components/Tooltip.svelte';
   import { Gauge, Clock } from '@lucide/svelte';
@@ -24,7 +24,7 @@
     const requestedItemId = itemId;
     loading = true;
     try {
-      const result = (await api.sla.getItemSLA(requestedItemId)) ?? [];
+      const result = (await sla.getItemSLA(requestedItemId)) ?? [];
       // A newer request or an item switch supersedes this response.
       if (token !== requestToken) return;
       states = result;

@@ -1,7 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import { t } from '../stores/i18n.svelte.js';
-  import { api } from '../api.js';
+  import { recurrence } from '../api/recurrence.js';
   import { confirm } from '../composables/useConfirm.js';
   import { addToast, errorToast } from '../stores/toasts.svelte.js';
   import { rruleToText } from '../editors/rruleUtils.js';
@@ -50,7 +50,7 @@
   async function loadRule() {
     loading = true;
     try {
-      const rules = await api.recurrence.listByWorkspace(workspaceId);
+      const rules = await recurrence.listByWorkspace(workspaceId);
       const found = rules?.find(r => String(r.id) === String(ruleId));
       if (found) {
         rule = found;
@@ -66,7 +66,7 @@
     if (!rule) return;
     loadingInstances = true;
     try {
-      const result = await api.recurrence.getInstances(rule.template_item_id, {
+      const result = await recurrence.getInstances(rule.template_item_id, {
         page: instancesPage,
         page_size: instancesPagination.page_size,
       });
@@ -84,7 +84,7 @@
     if (!rule) return;
     generating = true;
     try {
-      const result = await api.recurrence.forceGenerate(rule.template_item_id);
+      const result = await recurrence.forceGenerate(rule.template_item_id);
       addToast({
         message: t('recurrence.generated', { count: result.generated_count }),
         variant: 'success',
@@ -113,7 +113,7 @@
     if (!confirmed) return;
 
     try {
-      await api.recurrence.delete(rule.template_item_id);
+      await recurrence.delete(rule.template_item_id);
       goBack();
     } catch (err) {
       errorToast(err.message || t('errors.UNKNOWN'));

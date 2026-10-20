@@ -15,7 +15,7 @@
   import { onMount } from 'svelte';
   import StateDisplay from '../components/StateDisplay.svelte';
   import { Plus, Edit, Trash2, KeyRound } from '@lucide/svelte';
-  import { api } from '../api.js';
+  import { actionCredentials } from '../api/ai.js';
   import { workspacesStore } from '../stores/workspaces.svelte.js';
   import Button from '../components/Button.svelte';
   import Checkbox from '../components/Checkbox.svelte';
@@ -91,7 +91,7 @@
 
   async function loadCredentials() {
     try {
-      credentials = (await api.actionCredentials.getAllGlobal()) || [];
+      credentials = (await actionCredentials.getAllGlobal()) || [];
     } catch (err) {
       console.error('Failed to load action credentials:', err);
       errorToast(err.message || t('settings.adminOperations.actionCredentials.loadFailed'));
@@ -160,7 +160,7 @@
     }
     saving = true;
     try {
-      const created = await api.actionCredentials.createGlobal({
+      const created = await actionCredentials.createGlobal({
         name: form.name,
         credential_type: form.credential_type,
         secret: form.secret,
@@ -187,7 +187,7 @@
     }
     saving = true;
     try {
-      await api.actionCredentials.updateGlobal(editing.id, {
+      await actionCredentials.updateGlobal(editing.id, {
         name: form.name,
         is_enabled: form.is_enabled,
         secret_metadata: form.secret_metadata,
@@ -208,7 +208,7 @@
     if (!rotating || !form.secret) return;
     saving = true;
     try {
-      const updated = await api.actionCredentials.rotateGlobal(rotating.id, form.secret);
+      const updated = await actionCredentials.rotateGlobal(rotating.id, form.secret);
       successToast(t('settings.adminOperations.actionCredentials.rotated', { prefix: updated.secret_prefix || t('settings.adminOperations.actionCredentials.masked') }));
       closeAndClearSecret();
       await loadCredentials();
@@ -228,7 +228,7 @@
     });
     if (!ok) return;
     try {
-      await api.actionCredentials.deleteGlobal(cred.id);
+      await actionCredentials.deleteGlobal(cred.id);
       successToast(t('settings.adminOperations.actionCredentials.deleted'));
       await loadCredentials();
     } catch (err) {

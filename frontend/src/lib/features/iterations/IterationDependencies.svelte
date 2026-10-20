@@ -1,6 +1,7 @@
 <script>
   import { onMount } from 'svelte';
-  import { api } from '../../api.js';
+  import { ai, llmProviders } from '../../api/ai.js';
+  import { iterations } from '../../api/milestones.js';
   import { IconSparkles, IconRotate, IconCircleCheck, IconAlertCircle, IconSquareCheck, IconSquare, IconArrowRight, IconCalendar, IconWorld, IconBuilding } from '@tabler/icons-svelte-runes';
   import { navigate } from '../../router.js';
   import PageHeader from '../../layout/PageHeader.svelte';
@@ -33,9 +34,9 @@
   onMount(async () => {
     try {
       const [conns, iter, iters] = await Promise.all([
-        api.llmProviders.getEnabled(),
-        api.iterations.get(iterationId),
-        api.iterations.getAll()
+        llmProviders.getEnabled(),
+        iterations.get(iterationId),
+        iterations.getAll()
       ]);
       connections = conns;
       iteration = iter;
@@ -63,7 +64,7 @@
     selected = new Set();
 
     try {
-      result = await api.ai.analyzeDependencies(
+      result = await ai.analyzeDependencies(
         iterationId,
         compareIterationIds.length > 0 ? { compare_iteration_ids: compareIterationIds } : {},
         selectedConnectionId
@@ -89,7 +90,7 @@
       }));
 
     try {
-      acceptResult = await api.ai.acceptDependencies(iterationId, payload);
+      acceptResult = await ai.acceptDependencies(iterationId, payload);
       accepted = true;
       successToast(`Created ${acceptResult.created} dependency link${acceptResult.created !== 1 ? 's' : ''}`);
     } catch (err) {

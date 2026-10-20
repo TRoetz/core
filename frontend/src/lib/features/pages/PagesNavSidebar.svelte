@@ -3,7 +3,7 @@
   import { draggable, dropTargetForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
   import { attachInstruction, extractInstruction } from '@atlaskit/pragmatic-drag-and-drop-hitbox/tree-item';
   import { isSelfOrDescendant, orderPagesDepthFirst } from './pageHierarchy.js';
-  import { api } from '../../api.js';
+  import { pages as pagesApi } from '../../api/pages.js';
   import { navigate, currentRoute } from '../../router.js';
   import { t } from '../../stores/i18n.svelte.js';
   import { confirm } from '../../composables/useConfirm.js';
@@ -368,8 +368,8 @@
     loading = true;
     try {
       const [tree, levels] = await Promise.all([
-        api.pages.getAll(workspaceId),
-        api.pages.getEffectiveLevels(workspaceId).catch(() => null),
+        pagesApi.getAll(workspaceId),
+        pagesApi.getEffectiveLevels(workspaceId).catch(() => null),
       ]);
       pages = orderPagesDepthFirst(tree || []);
       // A failed levels lookup degrades to hiding management actions for
@@ -415,7 +415,7 @@
     if (creating) return;
     creating = true;
     try {
-      const page = await api.pages.createPage(workspaceId, {
+      const page = await pagesApi.createPage(workspaceId, {
         title: t('pages.untitled'),
         content: '',
         parentId: parentId ?? null,
@@ -448,7 +448,7 @@
     });
     if (!ok) return;
     try {
-      await api.pages.archivePage(workspaceId, page.id);
+      await pagesApi.archivePage(workspaceId, page.id);
       if (activePageId === page.id) {
         navigate(`/workspaces/${workspaceId}/pages`);
       }
@@ -650,7 +650,7 @@
     }
 
     try {
-      await api.pages.movePage(workspaceId, draggedId, newParentId, {
+      await pagesApi.movePage(workspaceId, draggedId, newParentId, {
         prevSiblingId,
         nextSiblingId,
       });

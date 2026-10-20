@@ -1,5 +1,5 @@
 <script>
-  import { api } from '../api.js';
+  import { workspaces } from '../api/workspaces.js';
   import { navigate } from '../router.js';
   import { Command as CommandIcon } from '@lucide/svelte';
   import TodoList from '../features/items/TodoList.svelte';
@@ -20,7 +20,7 @@
   async function loadWorkspace() {
     loadFailed = false;
     try {
-      const ws = await api.workspaces.getOrCreatePersonal();
+      const ws = await workspaces.getOrCreatePersonal();
       personalWorkspaceId = ws?.id ?? null;
       loadFailed = !personalWorkspaceId;
     } catch (err) {

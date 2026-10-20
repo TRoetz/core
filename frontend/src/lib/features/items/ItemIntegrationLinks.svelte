@@ -1,7 +1,7 @@
 <script>
   import { onDestroy, onMount } from 'svelte';
   import Spinner from '../../components/Spinner.svelte';
-  import { api } from '../../api.js';
+  import { itemIntegrationLinks, userIntegrations } from '../../api/integrations.js';
   import { ExternalLink, Plus, RefreshCw, Trash2, ChevronDown, ChevronRight, Link2 } from '@lucide/svelte';
   import Button from '../../components/Button.svelte';
   import Text from '../../components/Text.svelte';
@@ -36,13 +36,13 @@
 
   async function checkStatus(signal) {
     try {
-      const available = await api.userIntegrations.getAvailableProviders({ signal }) || [];
+      const available = await userIntegrations.getAvailableProviders({ signal }) || [];
       const linkableProviders = available.filter((provider) =>
         LINKABLE_PROVIDER_TYPES.has(provider.provider_type?.toLowerCase())
       );
       hasProviders = linkableProviders.length > 0;
       if (hasProviders) {
-        const connections = await api.userIntegrations.getConnections({ signal }) || [];
+        const connections = await userIntegrations.getConnections({ signal }) || [];
         const connectedProviderIds = new Set(
           connections.map((connection) => connection.integration_provider_id)
         );
@@ -64,7 +64,7 @@
     error = null;
 
     try {
-      links = await api.itemIntegrationLinks.get(itemId, signal ? { signal } : undefined) || [];
+      links = await itemIntegrationLinks.get(itemId, signal ? { signal } : undefined) || [];
     } catch (err) {
       if (signal?.aborted || err?.name === 'AbortError' || err?.status === 404) return;
       console.error('Failed to load integration links:', err);
@@ -78,7 +78,7 @@
   async function refreshLink(linkId) {
     refreshingId = linkId;
     try {
-      const updated = await api.itemIntegrationLinks.refresh(linkId);
+      const updated = await itemIntegrationLinks.refresh(linkId);
       links = links.map(l => l.id === linkId ? updated : l);
       successToast(t('integrations.refreshed'));
     } catch (err) {
@@ -100,7 +100,7 @@
     if (!confirmed) return;
 
     try {
-      await api.itemIntegrationLinks.delete(linkId);
+      await itemIntegrationLinks.delete(linkId);
       links = links.filter(l => l.id !== linkId);
       successToast(t('integrations.removed'));
     } catch (err) {

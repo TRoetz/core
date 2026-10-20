@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { api } from '../api.js';
+  import { statusCategories as statusCategoriesApi, statuses as statusesApi } from '../api/workflows.js';
   import { t } from '../stores/i18n.svelte.js';
   import { errorToast } from '../stores/toasts.svelte.js';
   import { confirm } from '../composables/useConfirm.js';
@@ -42,8 +42,8 @@
     try {
       loading = true;
       const [categories, statuses] = await Promise.all([
-        api.statusCategories.getAll() || [],
-        api.statuses.getAll() || []
+        statusCategoriesApi.getAll() || [],
+        statusesApi.getAll() || []
       ]);
 
       // Add status count to each category
@@ -107,11 +107,11 @@
 
       if (editingId) {
         translationEditor?.validate();
-        await api.statusCategories.update(editingId, formData);
+        await statusCategoriesApi.update(editingId, formData);
         await translationEditor?.save();
         await loadStatusCategories();
       } else {
-        const created = await api.statusCategories.create(formData);
+        const created = await statusCategoriesApi.create(formData);
         statusCategories = [...statusCategories, { ...created, statusCount: 0 }];
       }
       
@@ -135,7 +135,7 @@
     if (!confirmed) return;
 
     try {
-      await api.statusCategories.delete(category.id);
+      await statusCategoriesApi.delete(category.id);
       statusCategories = statusCategories.filter(cat => cat.id !== category.id);
       window.dispatchEvent(new CustomEvent('refresh-workspace-data'));
     } catch (error) {

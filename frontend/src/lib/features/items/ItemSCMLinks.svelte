@@ -3,7 +3,7 @@
   import Spinner from '../../components/Spinner.svelte';
   import { setOAuthReturnURL } from '../../utils/oauthReturn.js';
   import { useEventListener } from 'runed';
-  import { api } from '../../api.js';
+  import { itemSCMLinks, scmProviders } from '../../api/scm.js';
   import { GitMerge, GitBranch, GitCommit, ExternalLink, Plus, RefreshCw, Trash2, ChevronDown, ChevronRight, GitBranchPlus, Link2 } from '@lucide/svelte';
   import Button from '../../components/Button.svelte';
   import Text from '../../components/Text.svelte';
@@ -69,7 +69,7 @@
     }
 
     try {
-      connectionStatus = await api.itemSCMLinks.getConnectionStatus(itemId, { signal });
+      connectionStatus = await itemSCMLinks.getConnectionStatus(itemId, { signal });
     } catch (err) {
       if (signal?.aborted || err?.name === 'AbortError' || err?.status === 404) return;
       console.error('Failed to check SCM connection status:', err);
@@ -87,7 +87,7 @@
     setOAuthReturnURL();
 
     // Start OAuth flow
-    api.scmProviders.startOAuth(connectionStatus.provider_slug).then(result => {
+    scmProviders.startOAuth(connectionStatus.provider_slug).then(result => {
       if (result?.auth_url) {
         window.location.href = result.auth_url;
       }
@@ -103,12 +103,12 @@
     error = null;
 
     try {
-      links = await api.itemSCMLinks.get(itemId, signal ? { signal } : undefined) || [];
+      links = await itemSCMLinks.get(itemId, signal ? { signal } : undefined) || [];
       // Re-fetch after short delay to pick up background OAuth refresh
       if (links.some(l => l.link_type === 'pull_request' && l.state !== 'merged')) {
         delayedRefresh = setTimeout(async () => {
           try {
-            const updated = await api.itemSCMLinks.get(itemId, { signal: loadController.signal }) || [];
+            const updated = await itemSCMLinks.get(itemId, { signal: loadController.signal }) || [];
             if (JSON.stringify(updated) !== JSON.stringify(links)) {
               links = updated;
             }
@@ -128,7 +128,7 @@
   async function refreshLink(linkId) {
     refreshing = true;
     try {
-      const updatedLink = await api.itemSCMLinks.refresh(linkId);
+      const updatedLink = await itemSCMLinks.refresh(linkId);
       // Update the link in our list
       links = links.map(l => l.id === linkId ? updatedLink : l);
     } catch (err) {
@@ -149,7 +149,7 @@
     if (!confirmed) return;
 
     try {
-      await api.itemSCMLinks.delete(linkId);
+      await itemSCMLinks.delete(linkId);
       links = links.filter(l => l.id !== linkId);
     } catch (err) {
       console.error('Failed to delete link:', err);

@@ -1,5 +1,5 @@
 <script>
-  import { api } from '../api.js';
+  import { items } from '../api/items.js';
   import { currentRoute, navigate, setNavigationInterceptor } from '../router.js';
   import { errorToast, successToast } from '../stores/toasts.svelte.js';
   import { formatItemKey } from '../utils/itemKey.js';
@@ -93,7 +93,7 @@
     let cancelled = false;
     loading = true;
     loadErrored = false;
-    api.items
+    items
       .get(id)
       .then((fresh) => {
         if (cancelled) return;
@@ -119,7 +119,7 @@
     saving = true;
     error = '';
     try {
-      await api.items.update(itemId, {
+      await items.update(itemId, {
         title: title.trim(),
         description: description.trim(),
       });

@@ -1,5 +1,5 @@
+import { links } from '../api/configuration.js';
 import { BACKGROUND_READ } from '../api/readScheduler.js';
-import { api } from '../api.js';
 import { BaseCacheStore } from './BaseCacheStore.svelte.js';
 
 const TTL_MS = 10 * 60 * 1000; // 10 minutes
@@ -62,7 +62,7 @@ class ItemTestCaseLinksStore extends BaseCacheStore {
     const scopedWorkspaceId = this.workspaceId;
     const promise = (async () => {
       try {
-        const groups = await api.links.getForItems(chunk, BACKGROUND_READ);
+        const groups = await links.getForItems(chunk, BACKGROUND_READ);
         if (generation !== this._generation || scopedWorkspaceId !== this.workspaceId) return;
         const now = Date.now();
         for (const itemId of chunk) {

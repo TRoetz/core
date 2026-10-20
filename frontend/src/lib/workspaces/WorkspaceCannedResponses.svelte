@@ -4,7 +4,7 @@
 
   import { onMount } from 'svelte';
   import { MessageSquareText, Pencil, Plus, Trash2 } from '@lucide/svelte';
-  import { api } from '../api.js';
+  import { cannedResponses } from '../api/configuration.js';
   import Panel from '../components/Panel.svelte';
   import Button from '../components/Button.svelte';
   import Checkbox from '../components/Checkbox.svelte';
@@ -41,7 +41,7 @@
   async function load() {
     loading = true;
     try {
-      responses = (await api.cannedResponses.getAll(workspaceId, true)) ?? [];
+      responses = (await cannedResponses.getAll(workspaceId, true)) ?? [];
     } catch (err) {
       console.error('Failed to load canned responses:', err);
       errorToast(err?.message || t('cannedResponses.loadFailed'));
@@ -81,10 +81,10 @@
     saving = true;
     try {
       if (editingId === null) {
-        await api.cannedResponses.create(workspaceId, { name: formName.trim(), body: formBody, is_private: formIsPrivate });
+        await cannedResponses.create(workspaceId, { name: formName.trim(), body: formBody, is_private: formIsPrivate });
         successToast(t('cannedResponses.created'));
       } else {
-        await api.cannedResponses.update(workspaceId, editingId, {
+        await cannedResponses.update(workspaceId, editingId, {
           name: formName.trim(),
           body: formBody,
           is_private: formIsPrivate,
@@ -113,7 +113,7 @@
     pendingDelete = null;
     if (!target) return;
     try {
-      await api.cannedResponses.delete(workspaceId, target.id);
+      await cannedResponses.delete(workspaceId, target.id);
       successToast(t('cannedResponses.deleted'));
       await load();
     } catch (err) {

@@ -1,6 +1,8 @@
 <script>
   import { onMount } from 'svelte';
-  import { api } from '../../api.js';
+  import { collections as collectionsApi } from '../../api/collections.js';
+  import { itemTypes as itemTypesApi } from '../../api/configuration.js';
+  import { tests } from '../../api/tests/index.js';
   import Button from '../../components/Button.svelte';
   import Select from '../../components/Select.svelte';
   import DataTable from '../../components/DataTable.svelte';
@@ -145,8 +147,8 @@
       loading = true;
       // Load collections and item types in parallel
       const [collectionsRes, itemTypesRes] = await Promise.all([
-        api.collections.getAll(),
-        api.itemTypes.getAll()
+        collectionsApi.getAll(),
+        itemTypesApi.getAll()
       ]);
       collections = collectionsRes || [];
       itemTypes = itemTypesRes || [];
@@ -166,7 +168,7 @@
 
       // Load config first
       try {
-        config = await api.tests.coverage.getConfig(id, workspaceId);
+        config = await tests.coverage.getConfig(id, workspaceId);
         selectedTypeIds = config?.requirement_item_type_ids || [];
       } catch (e) {
         // No config exists yet
@@ -176,8 +178,8 @@
 
       // Load summary and requirements
       const [summary, requirements] = await Promise.all([
-        api.tests.coverage.getSummary(id, workspaceId),
-        api.tests.coverage.getRequirements(id, workspaceId, {
+        tests.coverage.getSummary(id, workspaceId),
+        tests.coverage.getRequirements(id, workspaceId, {
           page: currentPage,
           limit: pageSize,
           covered: filterCovered === 'all' ? undefined : filterCovered
@@ -242,7 +244,7 @@
 
       if (config?.id) {
         // Update existing config
-        await api.tests.coverage.updateConfig(
+        await tests.coverage.updateConfig(
           selectedCollectionId || 'default',
 		  config.id,
 		  configData,
@@ -250,7 +252,7 @@
         );
       } else {
         // Create new config
-        await api.tests.coverage.createConfig(id, configData, workspaceId);
+        await tests.coverage.createConfig(id, configData, workspaceId);
       }
 
       showConfigModal = false;

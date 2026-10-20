@@ -4,7 +4,7 @@
   import { setOAuthReturnURL } from '../utils/oauthReturn.js';
   import StateDisplay from '../components/StateDisplay.svelte';
   import { useDebounce } from 'runed';
-  import { api } from '../api.js';
+  import { workspaceSCM } from '../api/scm.js';
   import Button from '../components/Button.svelte';
   import Input from '../components/Input.svelte';
   import EmptyState from '../components/EmptyState.svelte';
@@ -48,7 +48,7 @@
       const params = { page, per_page: perPage };
       const query = searchQuery.trim();
       if (query) params.search = query;
-      const result = await api.workspaceSCM.getAvailableRepos(workspaceId, connection.id, params);
+      const result = await workspaceSCM.getAvailableRepos(workspaceId, connection.id, params);
 
       if (result.error) {
         error = result.error;
@@ -104,7 +104,7 @@
       for (const repoId of selectedRepos) {
         const repo = repositories.find(r => r.id === repoId);
         if (repo) {
-          await api.workspaceSCM.linkRepo(workspaceId, connection.id, {
+          await workspaceSCM.linkRepo(workspaceId, connection.id, {
             repository_external_id: repo.id,
             repository_name: repo.full_name,
             repository_url: repo.url,
@@ -125,7 +125,7 @@
 
   function startOAuthConnect() {
     setOAuthReturnURL();
-    api.workspaceSCM.startOAuth(workspaceId, connection.id).then(result => {
+    workspaceSCM.startOAuth(workspaceId, connection.id).then(result => {
       if (result?.auth_url) {
         window.location.href = result.auth_url;
       }

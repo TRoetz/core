@@ -5,7 +5,7 @@
   import Modal from '../../dialogs/Modal.svelte';
   import Button from '../../components/Button.svelte';
   import Input from '../../components/Input.svelte';
-  import { api } from '../../api.js';
+  import { queryLanguage } from '../../api/queryLanguage.js';
   import { findQlCompletionField } from '../../utils/qlCompletion.js';
   import { parseFieldOptions } from '../../utils/optionUtils.js';
   import { booleanOptions, operatorsByType, isMultiValueOperator, isNullOperator } from '../shared/filterOperators.js';
@@ -104,7 +104,7 @@
     try {
       let completion = findQlCompletionField(null, field);
       if (!completion) {
-        const catalog = await api.queryLanguage.getCatalog();
+        const catalog = await queryLanguage.getCatalog();
         completion = findQlCompletionField(catalog, field);
       }
       if (token !== valueLoadToken) return;
@@ -112,7 +112,7 @@
       if (completion?.value_help) {
         serverValueHelp = completion.value_help;
         hasValuePicker = true;
-        const rows = await api.queryLanguage.getValues(completion.value_help, query);
+        const rows = await queryLanguage.getValues(completion.value_help, query);
         if (token !== valueLoadToken) return;
         valueOptions = (rows || []).map((row) => ({ value: row.value, label: row.label, description: row.description }));
       } else if (completion?.values?.length) {

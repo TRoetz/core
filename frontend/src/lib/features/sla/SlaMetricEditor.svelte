@@ -13,7 +13,7 @@
   import AlertBox from '../../components/AlertBox.svelte';
   import CategoryMultiSelect from '../../pickers/CategoryMultiSelect.svelte';
   import QlQueryBar from '../shared/QlQueryBar.svelte';
-  import { api } from '../../api.js';
+  import { sla } from '../../api/sla.js';
   import { Plus, Trash2, ArrowUp, ArrowDown } from '@lucide/svelte';
   import { t } from '../../stores/i18n.svelte.js';
 
@@ -219,7 +219,7 @@
     // A blank query matches every item; only non-blank queries need parsing.
     for (const goal of formData.goals) {
       if (!goal.ql_query.trim()) continue;
-      const queryError = await api.sla.validateGoalQuery(workspaceId, goal.ql_query);
+      const queryError = await sla.validateGoalQuery(workspaceId, goal.ql_query);
       if (queryError) {
         goal.error = queryError;
         return t('workspaceSettings.serviceLevels.goalQueryInvalid');

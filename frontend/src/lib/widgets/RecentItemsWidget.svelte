@@ -1,6 +1,6 @@
 <script>
   import { Clock } from '@lucide/svelte';
-  import { api } from '../api.js';
+  import { items as itemsApi } from '../api/items.js';
   import { homepageStore } from '../stores/homepageStore.svelte.js';
   import { formatRelativeCompact } from '../utils/dateFormatter.js';
   import WidgetState from './WidgetState.svelte';
@@ -39,7 +39,7 @@
         parts.push(`workspace_id = ${workspaceId}`);
         const ql = parts.join(' AND ');
 
-        const response = await api.items.getAll({
+        const response = await itemsApi.getAll({
           ql,
           limit: maxItems,
           order_by: 'updated_at'

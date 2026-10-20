@@ -10,7 +10,8 @@
   import Text from '../../components/Text.svelte';
   import ItemKey from '../../components/ItemKey.svelte';
   import { t } from '../../stores/i18n.svelte.js';
-  import { api } from '../../api.js';
+  import { customerOrganisations } from '../../api/portal.js';
+  import { itemLinkedAssets } from '../../api/assets.js';
   import { itemUrl } from '../../utils/urls.js';
 
   let { item } = $props();
@@ -39,11 +40,11 @@
     // still shows the requester and any linked assets.
     const [orgResult, assetResult] = await Promise.all([
       organisationId
-        ? api.customerOrganisations
+        ? customerOrganisations
             .getTickets(organisationId, { signal: controller.signal })
             .catch(() => [])
         : Promise.resolve([]),
-      api.itemLinkedAssets
+      itemLinkedAssets
         .get(item.id, { signal: controller.signal })
         .catch(() => []),
     ]);

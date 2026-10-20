@@ -1,6 +1,8 @@
 <script>
   import { onMount } from 'svelte';
-  import { api } from '../../api.js';
+  import { ai } from '../../api/ai.js';
+  import { tests } from '../../api/tests/index.js';
+  import { milestones as milestonesApi } from '../../api/milestones.js';
   import { writable } from 'svelte/store';
   import { confirm } from '../../composables/useConfirm.js';
   import { IconX, IconPackage, IconFileText, IconPlayerPlay } from '@tabler/icons-svelte-runes';
@@ -68,7 +70,7 @@
     if (!(await confirmOverwriteIfNeeded(formData.description))) return;
     generating = true;
     try {
-      const { description } = await api.ai.summarizeTestPlanDescription(editingSet.id);
+      const { description } = await ai.summarizeTestPlanDescription(editingSet.id);
       formData.description = description ?? '';
     } catch (err) {
       errorToast(err?.message || t('testing.generateFailed'));
@@ -83,9 +85,9 @@
     if (!(await confirmOverwriteIfNeeded(set.description))) return;
     generating = true;
     try {
-      const { description } = await api.ai.summarizeTestPlanDescription(set.id);
+      const { description } = await ai.summarizeTestPlanDescription(set.id);
       const next = description ?? '';
-      await api.tests.testPlans.update(workspaceId, set.id, {
+      await tests.testPlans.update(workspaceId, set.id, {
         name: set.name,
         description: next,
         milestone_id: set.milestone_id,
@@ -116,8 +118,8 @@
   async function loadData() {
     try {
       const [sets, milestonesData] = await Promise.all([
-        api.tests.testPlans.getAll(workspaceId, { page_size: 200 }),
-        api.milestones.getAll({ workspace_id: workspaceId })
+        tests.testPlans.getAll(workspaceId, { page_size: 200 }),
+        milestonesApi.getAll({ workspace_id: workspaceId })
       ]);
       testSets.set(sets || []);
       milestones.set(milestonesData || []);
@@ -157,9 +159,9 @@
       const data = { ...formData };
 
       if (editingSet) {
-        await api.tests.testPlans.update(workspaceId, editingSet.id, data);
+        await tests.testPlans.update(workspaceId, editingSet.id, data);
       } else {
-        await api.tests.testPlans.create(workspaceId, data);
+        await tests.testPlans.create(workspaceId, data);
       }
       await loadData();
       showForm = false;
@@ -174,7 +176,7 @@
     try {
       // Create a test run for this plan
       const runName = `${$selectedSet.name} - ${formatDateSimple(new Date())}`;
-      const newRun = await api.tests.testRuns.create(workspaceId, {
+      const newRun = await tests.testRuns.create(workspaceId, {
         plan_id: $selectedSet.id,
         name: runName
       });
@@ -197,7 +199,7 @@
     });
     if (!ok) return;
     try {
-      await api.tests.testPlans.delete(workspaceId, id);
+      await tests.testPlans.delete(workspaceId, id);
       await loadData();
     } catch (error) {
       console.error('Failed to delete test plan:', error);
@@ -212,7 +214,7 @@
 
   async function loadSetTestCases(setId) {
     try {
-      const cases = await api.tests.testPlans.getTestCases(workspaceId, setId);
+      const cases = await tests.testPlans.getTestCases(workspaceId, setId);
       setTestCases = cases || [];
     } catch (error) {
       console.error('Failed to load set test cases:', error);
@@ -223,7 +225,7 @@
     if (!testCase || !testCase.id) return;
 
     try {
-      await api.tests.testPlans.addTestCase(workspaceId, $selectedSet.id, testCase.id);
+      await tests.testPlans.addTestCase(workspaceId, $selectedSet.id, testCase.id);
       await loadSetTestCases($selectedSet.id);
     } catch (error) {
       console.error('Failed to add test case to set:', error);
@@ -233,7 +235,7 @@
 
   async function removeTestCaseFromSet(testCaseId) {
     try {
-      await api.tests.testPlans.removeTestCase(workspaceId, $selectedSet.id, testCaseId);
+      await tests.testPlans.removeTestCase(workspaceId, $selectedSet.id, testCaseId);
       await loadSetTestCases($selectedSet.id);
     } catch (error) {
       console.error('Failed to remove test case from set:', error);

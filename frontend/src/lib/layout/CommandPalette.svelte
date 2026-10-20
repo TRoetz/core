@@ -1,6 +1,6 @@
 <script>
   import { createCombobox, melt } from '@melt-ui/svelte';
-  import { api } from '../api.js';
+  import { homepage, search } from '../api/misc.js';
   import { contextCommands } from '../utils/contextCommands.js';
   import { currentRoute } from '../router.js';
   import { toExternal } from '../runtime/contextPath.js';
@@ -78,7 +78,7 @@
       return;
     }
     try {
-      const results = await api.search.items({ query: query.trim(), limit: 6 });
+      const results = await search.items({ query: query.trim(), limit: 6 });
       workItems = results || [];
     } catch (err) {
       console.error('Failed to search work items:', err);
@@ -197,7 +197,7 @@
   async function loadRecentItems() {
     recentLoading = true;
     try {
-      const data = await api.homepage.get();
+      const data = await homepage.get();
       const list = (data?.recently_viewed ?? [])
         .filter((a) => a && a.item_id)
         .map((a) => ({ ...a, lastActivityDate: a.last_activity ? new Date(a.last_activity) : null }));

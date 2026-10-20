@@ -2,7 +2,9 @@
   import { onMount } from 'svelte';
   import { useEventListener } from 'runed';
   import { ChevronLeft, ChevronRight, Calendar, CheckSquare, X, Download, MoreHorizontal } from '@lucide/svelte';
-  import { api, fetchAPI } from '../../api.js';
+  import { items } from '../../api/items.js';
+  import { statuses } from '../../api/workflows.js';
+  import { fetchAPI } from '../../api/core.js';
   import PageHeader from '../../layout/PageHeader.svelte';
   import PersonalTaskDetail from '../personal/PersonalTaskDetail.svelte';
   import DropdownMenu from '../../layout/DropdownMenu.svelte';
@@ -137,7 +139,7 @@
 
       // Load items from TWO sources:
       // 1. Items assigned to user (from any workspace)
-      const assignedResponse = await api.items.getAll({
+      const assignedResponse = await items.getAll({
         assignee_id: user.id,
         limit: 50
       });
@@ -146,7 +148,7 @@
       // 2. Items from personal workspace (regardless of assignee)
       let personalItems = [];
       if (workspace && workspace.id) {
-        const personalResponse = await api.items.getAll({
+        const personalResponse = await items.getAll({
           workspace_id: workspace.id,
           limit: 50
         });
@@ -161,7 +163,7 @@
       assignedWorkItems = Array.from(itemMap.values());
 
       // Load available statuses
-      const statusResponse = await api.statuses.getAll();
+      const statusResponse = await statuses.getAll();
       availableStatuses = statusResponse || [];
     } catch (error) {
       console.error('Failed to load work items:', error);
@@ -222,7 +224,7 @@
   // Update work item status
   async function updateWorkItemStatus(item, newStatusId) {
     try {
-      await api.items.transition(item.id, newStatusId);
+      await items.transition(item.id, newStatusId);
 
       // Update local state
       const index = assignedWorkItems.findIndex(i => i.id === item.id);
@@ -369,7 +371,7 @@
         assignee_id: user.id
       };
 
-      const newItem = await api.items.create(itemData);
+      const newItem = await items.create(itemData);
 
       // Schedule it for the selected date with time
       await scheduleItemToCalendar(newItem, dateKey, scheduledTime, DEFAULT_DURATION);

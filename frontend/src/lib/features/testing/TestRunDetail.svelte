@@ -1,7 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import { currentRoute, navigate } from '../../router.js';
-  import { api } from '../../api.js';
+  import { tests } from '../../api/tests/index.js';
   import { IconPlayerPlay, IconAlertTriangle, IconFileText, IconTrash } from '@tabler/icons-svelte-runes';
   import Button from '../../components/Button.svelte';
   import BackButton from '../../components/BackButton.svelte';
@@ -45,7 +45,7 @@
   async function loadTestRun(runId) {
     try {
       loading = true;
-      const detail = await loadTestRunDetail(api, workspaceId, runId);
+      const detail = await loadTestRunDetail(workspaceId, runId);
       testRun = detail.run;
       bddSnapshots = detail.bddSnapshots;
       const groupedExampleResults = {};
@@ -116,7 +116,7 @@
   async function executeRun() {
     try {
       // Get existing runs for this test plan to generate sequential numbering
-      const setRuns = await api.tests.testPlans.getRuns(workspaceId, testRun.plan_id);
+      const setRuns = await tests.testPlans.getRuns(workspaceId, testRun.plan_id);
       const executionCount = setRuns.length;
       
       const newRunName = prompt(
@@ -129,7 +129,7 @@
       }
       
       // Create a new test run instance for this execution
-      const newRun = await api.tests.testRuns.create(workspaceId, {
+      const newRun = await tests.testRuns.create(workspaceId, {
         plan_id: testRun.plan_id,
         name: newRunName
       });
@@ -203,7 +203,7 @@
     if (!ok) return;
 
     try {
-      await api.tests.testRuns.delete(workspaceId, testRun.id);
+      await tests.testRuns.delete(workspaceId, testRun.id);
       if (fromPage === 'reports') {
         navigate(testPath('/reports'));
       } else {

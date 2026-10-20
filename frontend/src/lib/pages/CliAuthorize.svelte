@@ -7,7 +7,7 @@
 
 	import { onMount } from 'svelte';
 	import { Terminal, Shield, AlertTriangle } from '@lucide/svelte';
-	import { api } from '../api.js';
+	import { cliAuth } from '../api/users.js';
 	import { authStore } from '../stores/auth.svelte.js';
 	import { currentRoute } from '../router.js';
 	import ConsentCard from '../components/ConsentCard.svelte';
@@ -46,7 +46,7 @@
 	onMount(async () => {
 		scopeCatalogStore.load();
 		try {
-			caps = await api.cliAuth.capabilities();
+			caps = await cliAuth.capabilities();
 		} catch (err) {
 			console.error('Failed to load CLI capabilities', err);
 			error = 'Unable to reach the server. Please try again.';
@@ -76,7 +76,7 @@
 		working = true;
 		error = '';
 		try {
-			const resp = await api.cliAuth.approve({
+			const resp = await cliAuth.approve({
 				callback_url: callbackURL,
 				state: routeState,
 				hostname: params.hostname || '',
@@ -109,7 +109,7 @@
 		working = true;
 		error = '';
 		try {
-			await api.cliAuth.deny({
+			await cliAuth.deny({
 				hostname: params.hostname || '',
 				agent_name: agentName,
 			});

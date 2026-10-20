@@ -10,7 +10,11 @@
   import Spinner from '../components/Spinner.svelte';
   import StateDisplay from '../components/StateDisplay.svelte';
   import { ChevronDown, FlaskConical, Orbit, Pencil, Plus, Trash2 } from '@lucide/svelte';
-  import { agentBindings, agentRuns, agentSkills, api } from '../api.js';
+  import { workspaceSCM } from '../api/scm.js';
+  import { actionCapabilities, llmProviders } from '../api/ai.js';
+  import { agentBindings } from '../api/agentBindings.js';
+  import { agentRuns } from '../api/agentRuns.js';
+  import { agentSkills } from '../api/agentSkills.js';
   import Panel from '../components/Panel.svelte';
   import Button from '../components/Button.svelte';
   import { BasePicker } from '../pickers';
@@ -219,13 +223,13 @@
       const [list, cands, conns, llmConns, pools, skills] = await Promise.all([
         agentBindings.listForWorkspace(workspaceId),
         agentBindings.getCandidates(workspaceId),
-        api.workspaceSCM.getConnections(workspaceId).catch(() => []),
+        workspaceSCM.getConnections(workspaceId).catch(() => []),
         // Global enabled LLM connections — any authenticated user may list the
         // slim public view. Fall back to an empty list rather than breaking
         // the whole form if it fails.
-        api.llmProviders.getEnabled().catch(() => []),
+        llmProviders.getEnabled().catch(() => []),
         // Runner pools this workspace can target (empty if none / not allowed).
-        api.actionCapabilities.getForWorkspace(workspaceId, 'runner_pool').catch(() => []),
+        actionCapabilities.getForWorkspace(workspaceId, 'runner_pool').catch(() => []),
         // Skills library for the attach pickers (WI-258).
         agentSkills.listForWorkspace(workspaceId).catch(() => []),
       ]);
@@ -319,7 +323,7 @@
     if (!connId || linkedReposByConn[connId] || loadingReposByConn[connId]) return;
     loadingReposByConn = { ...loadingReposByConn, [connId]: true };
     try {
-      const repos = await api.workspaceSCM.getLinkedRepos(workspaceId, connId);
+      const repos = await workspaceSCM.getLinkedRepos(workspaceId, connId);
       linkedReposByConn = { ...linkedReposByConn, [connId]: repos ?? [] };
     } catch (err) {
       console.error('Failed to load repositories for connection:', err);

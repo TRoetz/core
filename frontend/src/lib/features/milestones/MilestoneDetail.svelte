@@ -5,7 +5,7 @@
   import { confirm } from '../../composables/useConfirm.js';
   import { errorToast } from '../../stores/toasts.svelte.js';
   import { IconCalendar as Calendar, IconFlag as Flag, IconEdit as Edit, IconTrash as Trash2, IconDots as MoreHorizontal, IconTag as Tag, IconExternalLink as ExternalLink } from '@tabler/icons-svelte-runes';
-  import { api } from '../../api.js';
+  import { milestones } from '../../api/milestones.js';
   import { navigate } from '../../router.js';
   import Button from '../../components/Button.svelte';
   import BackButton from '../../components/BackButton.svelte';
@@ -75,8 +75,8 @@
     error = null;
     try {
       [progress, milestone] = await Promise.all([
-        api.milestones.getProgress(milestoneId),
-        api.milestones.get(milestoneId)
+        milestones.getProgress(milestoneId),
+        milestones.get(milestoneId)
       ]);
       // Expand all categories by default
       if (progress?.status_breakdown) {

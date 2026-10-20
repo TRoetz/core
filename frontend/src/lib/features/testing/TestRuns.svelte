@@ -1,6 +1,8 @@
 <script>
   import { onMount } from 'svelte';
-  import { api } from '../../api.js';
+  import { tests } from '../../api/tests/index.js';
+  import { milestones as milestonesApi } from '../../api/milestones.js';
+  import { getAssignableUsers } from '../../api/users.js';
   import { writable } from 'svelte/store';
   import { navigate } from '../../router.js';
   import { IconTrash, IconPlayerPlay, IconEye } from '@tabler/icons-svelte-runes';
@@ -57,10 +59,10 @@
       }
 
       const [sets, runs, milestonesData, usersData] = await Promise.all([
-        api.tests.testPlans.getAll(workspaceId, { page_size: 200 }),
-        api.tests.testRuns.getAll(workspaceId, { ...params, page_size: 200 }),
-        api.milestones.getAll({ workspace_id: workspaceId }),
-        api.getAssignableUsers(workspaceId)
+        tests.testPlans.getAll(workspaceId, { page_size: 200 }),
+        tests.testRuns.getAll(workspaceId, { ...params, page_size: 200 }),
+        milestonesApi.getAll({ workspace_id: workspaceId }),
+        getAssignableUsers(workspaceId)
       ]);
       const safeSets = sets || [];
       const safeRuns = runs || [];
@@ -94,7 +96,7 @@
     }
 
     try {
-      await api.tests.testRuns.create(workspaceId, {
+      await tests.testRuns.create(workspaceId, {
         plan_id: parseInt(selectedSetId),
         name: runName,
         assignee_id: selectedAssigneeId || null
@@ -195,7 +197,7 @@
     });
     if (!ok) return;
     try {
-      await api.tests.testRuns.delete(workspaceId, run.id);
+      await tests.testRuns.delete(workspaceId, run.id);
       await loadData();
     } catch (error) {
       console.error('Failed to delete test run:', error);

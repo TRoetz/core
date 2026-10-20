@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import StateDisplay from '../../components/StateDisplay.svelte';
   import { Tag, Plus, Pencil, Trash2, Check, X } from '@lucide/svelte';
-  import { api } from '../../api.js';
+  import { personalLabels } from '../../api/misc.js';
   import { authStore } from '../../stores/auth.svelte.js';
   import { t } from '../../stores/i18n.svelte.js';
   import { errorToast, successToast } from '../../stores/toasts.svelte.js';
@@ -42,7 +42,7 @@
   async function load() {
     loading = true;
     try {
-      const response = await api.personalLabels.getAll();
+      const response = await personalLabels.getAll();
       labels = response || [];
     } catch (err) {
       console.error('Failed to load personal labels:', err);
@@ -90,10 +90,10 @@
     saving = true;
     try {
       if (editingId == null) {
-        await api.personalLabels.create(payload);
+        await personalLabels.create(payload);
         successToast(t('users.labels.created') || 'Label created');
       } else {
-        await api.personalLabels.update(editingId, payload);
+        await personalLabels.update(editingId, payload);
         successToast(t('users.labels.updated') || 'Label updated');
       }
       closeForm();
@@ -117,7 +117,7 @@
     });
     if (!ok) return;
     try {
-      await api.personalLabels.delete(label.id);
+      await personalLabels.delete(label.id);
       successToast(t('users.labels.deleted') || 'Label deleted');
       await load();
     } catch (err) {

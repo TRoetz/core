@@ -2,7 +2,7 @@
   import BasePicker from './BasePicker.svelte';
   import { User } from '@lucide/svelte';
   import { createAsyncLoader } from '../composables';
-  import { api } from '../api.js';
+  import { portalCustomers } from '../api/portal.js';
   import { onDestroy, onMount } from 'svelte';
 
   let {
@@ -23,7 +23,7 @@
     onCancel = () => {}
   } = $props();
 
-  const customers = createAsyncLoader(() => api.portalCustomers.getAll());
+  const customers = createAsyncLoader(() => portalCustomers.getAll());
   onMount(() => { if (providedCustomers === null) customers.load(); });
   onDestroy(() => customers.dispose());
   const customerOptions = $derived(providedCustomers ?? customers.data ?? []);

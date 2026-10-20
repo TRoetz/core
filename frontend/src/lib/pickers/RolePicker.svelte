@@ -1,7 +1,7 @@
 <script>
   import { BasePicker } from '.';
   import { createAsyncLoader } from '../composables';
-  import { api } from '../api.js';
+  import { get } from '../api/core.js';
   import { onDestroy, onMount } from 'svelte';
   import { Shield } from '@lucide/svelte';
   import { t } from '../stores/i18n.svelte.js';
@@ -21,7 +21,7 @@
 
   const resolvedPlaceholder = $derived(placeholder || t('pickers.selectRole'));
 
-  const roles = createAsyncLoader(() => api.get('/workspace-roles'));
+  const roles = createAsyncLoader(() => get('/workspace-roles'));
 
   onMount(() => roles.load());
   onDestroy(() => roles.dispose());

@@ -12,7 +12,9 @@
     IconTestPipe as QAIcon,
     IconUserStar as AgentIcon,
   } from '@tabler/icons-svelte-runes';
-  import { agentBindings, api } from '../../api.js';
+  import { actionCapabilities, llmProviders, runnerPools as runnerPoolsApi } from '../../api/ai.js';
+  import { workspaceSCM } from '../../api/scm.js';
+  import { agentBindings } from '../../api/agentBindings.js';
   import { navigate } from '../../router.js';
   import PageHeader from '../../layout/PageHeader.svelte';
   import AlertBox from '../../components/AlertBox.svelte';
@@ -144,13 +146,13 @@
         pools,
       ] = await Promise.all([
         agentBindings.listTemplates(workspaceId),
-        api.llmProviders.getEnabled(),
+        llmProviders.getEnabled(),
         agentBindings.getCandidates(workspaceId).catch(() => []),
         agentBindings.listToolCapabilities(workspaceId).catch(() => []),
-        api.workspaceSCM
+        workspaceSCM
           .getConnectionsOverview(workspaceId, { includeRepositories: true })
           .catch(() => []),
-        api.actionCapabilities.getForWorkspace(workspaceId, 'runner_pool').catch(() => []),
+        actionCapabilities.getForWorkspace(workspaceId, 'runner_pool').catch(() => []),
       ]);
       templates = templateResult || [];
       llmConnections = connectionResult || [];
@@ -260,7 +262,7 @@
 
   async function cancelPendingRunnerSetup() {
     if (pendingRunnerTokenId && pendingRunnerTokenPoolId) {
-      await api.runnerPools
+      await runnerPoolsApi
         .revokeWorkspaceToken(
           workspaceId,
           pendingRunnerTokenPoolId,

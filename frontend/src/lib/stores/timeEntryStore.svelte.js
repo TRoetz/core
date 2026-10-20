@@ -1,4 +1,6 @@
-import { api } from '../api.js';
+import { items } from '../api/items.js';
+import { customerOrganisations } from '../api/portal.js';
+import { time } from '../api/time.js';
 import { realCustomers } from '../utils/customerLabel.js';
 import { getUserTimezone } from '../utils/dateFormatter.js';
 import { formatClockInZone, monthBoundsInZone } from '../utils/worklogTimezone.js';
@@ -84,7 +86,7 @@ class TimeEntryStore {
   async loadWorklogs() {
     try {
       this.worklogsLoading = true;
-      this.worklogs = (await api.time.worklogs.getAll(this.dateFilters())) || [];
+      this.worklogs = (await time.worklogs.getAll(this.dateFilters())) || [];
     } catch (err) {
       console.error('Failed to load worklogs:', err);
       this.worklogs = [];
@@ -105,7 +107,7 @@ class TimeEntryStore {
 
   async loadCustomers() {
     try {
-      this.customers = (await api.customerOrganisations.getAll()) || [];
+      this.customers = (await customerOrganisations.getAll()) || [];
     } catch (err) {
       console.error('Failed to load customers:', err);
       this.customers = [];
@@ -114,7 +116,7 @@ class TimeEntryStore {
 
   async loadProjects() {
     try {
-      this.projects = (await api.time.projects.getAll()) || [];
+      this.projects = (await time.projects.getAll()) || [];
     } catch (err) {
       console.error('Failed to load projects:', err);
       this.projects = [];
@@ -123,7 +125,7 @@ class TimeEntryStore {
 
   async loadWorkItems() {
     try {
-      const result = await api.items.getAll({ limit: 100 });
+      const result = await items.getAll({ limit: 100 });
       this.workItems = result.data ?? [];
     } catch (err) {
       console.error('Failed to load work items:', err);
@@ -164,7 +166,7 @@ class TimeEntryStore {
 
   async createWorklog(data) {
     try {
-      await api.time.worklogs.create(data);
+      await time.worklogs.create(data);
       await this.loadWorklogs();
     } catch (err) {
       console.error('Failed to create worklog:', err);
@@ -174,7 +176,7 @@ class TimeEntryStore {
 
   async updateWorklog(id, data) {
     try {
-      await api.time.worklogs.update(id, data);
+      await time.worklogs.update(id, data);
       await this.loadWorklogs();
     } catch (err) {
       console.error('Failed to update worklog:', err);
@@ -184,7 +186,7 @@ class TimeEntryStore {
 
   async deleteWorklog(worklog) {
     try {
-      await api.time.worklogs.delete(worklog.id);
+      await time.worklogs.delete(worklog.id);
       await this.loadWorklogs();
     } catch (err) {
       console.error('Failed to delete worklog:', err);

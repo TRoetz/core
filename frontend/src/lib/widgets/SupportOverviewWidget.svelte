@@ -1,6 +1,6 @@
 <script>
   import { Download, LifeBuoy } from '@lucide/svelte';
-  import { api } from '../api.js';
+  import { support } from '../api/support.js';
   import { t } from '../stores/i18n.svelte.js';
   import { workspacesStore } from '../stores/workspaces.svelte.js';
   import { downloadSupportMetricsCSV } from '../features/support/metricColumns.js';
@@ -80,7 +80,7 @@
       const to = new Date();
       const from = new Date(to);
       from.setDate(from.getDate() - (windowDays - 1));
-      const response = await api.support.getMetricsAggregate({
+      const response = await support.getMetricsAggregate({
         workspace_ids: configuredIds,
         from: toISOStringDate(from),
         to: toISOStringDate(to),

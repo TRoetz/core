@@ -1,6 +1,6 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
-  import { api } from '../../api.js';
+  import { collections } from '../../api/collections.js';
   import { navigate } from '../../router.js';
   import { t } from '../../stores/i18n.svelte.js';
   import { errorToast, warningToast } from '../../stores/toasts.svelte.js';
@@ -136,7 +136,7 @@
 
   async function loadCollectionById(id, restoreURLQuery = false) {
     try {
-      const collection = await api.collections.get(id);
+      const collection = await collections.get(id);
       if (!collection) return;
       currentCollection = collection;
       slugSaved = !!(collection.is_public && collection.public_slug);
@@ -158,7 +158,7 @@
 
   async function loadBoardConfiguration(id) {
     try {
-      const bootstrap = await api.collections.getBoardConfigurationBootstrap(id);
+      const bootstrap = await collections.getBoardConfigurationBootstrap(id);
       const config = bootstrap?.board_configuration ?? null;
       boardConfig = config;
       listColumns = listColumnsFromConfig(config);
@@ -177,12 +177,12 @@
     try {
       const configData = buildListColumnConfiguration(boardConfig, newColumns);
       const savedConfig = boardConfig?.id
-        ? await api.collections.updateBoardConfiguration(
+        ? await collections.updateBoardConfiguration(
             currentCollection.id,
             boardConfig.id,
             configData,
           )
-        : await api.collections.createBoardConfiguration(
+        : await collections.createBoardConfiguration(
             currentCollection.id,
             null,
             configData,
@@ -303,7 +303,7 @@
     if (!currentCollection) return;
     const next = !currentCollection.is_private;
     try {
-      const updated = await api.collections.update(
+      const updated = await collections.update(
         currentCollection.id,
         buildCollectionUpdate({ is_private: next })
       );
@@ -324,7 +324,7 @@
         is_public: isPublic,
         public_slug: publicSlug,
       });
-      await api.collections.update(currentCollection.id, update);
+      await collections.update(currentCollection.id, update);
       currentCollection = {
         ...currentCollection,
         ql_query: update.ql_query,
@@ -352,7 +352,7 @@
       return;
     }
     try {
-      await api.collections.update(currentCollection.id, buildCollectionUpdate());
+      await collections.update(currentCollection.id, buildCollectionUpdate());
       navigate(returnPath || '/collections');
     } catch (error) {
       console.error('Failed to update collection:', error);
@@ -382,7 +382,7 @@
     try {
       // Association is not a publishing operation: omit public-sharing fields so
       // an ordinary owner without public_board.manage can move the collection.
-      await api.collections.update(
+      await collections.update(
         currentCollection.id,
         buildCollectionAssociationUpdate({
           collection: currentCollection,

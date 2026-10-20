@@ -1,7 +1,7 @@
 <script>
 	import { onMount } from 'svelte';
   import StateDisplay from '../../components/StateDisplay.svelte';
-	import { api } from '../../api.js';
+
 	import { authStore } from '../../stores/auth.svelte.js';
 	import { formatHistoryTimestamp, formatRelativeTime, getUserTimezone } from '../../utils/dateFormatter.js';
 	import { Clock, User, Bot } from '@lucide/svelte';
@@ -41,7 +41,7 @@
 		loading = true;
 		error = '';
 		try {
-			history = await loadAttributedItemHistory(api, itemId);
+			history = await loadAttributedItemHistory(itemId);
 		} catch (err) {
 			error = err.message || 'Failed to load item history';
 			console.error('Error loading item history:', err);

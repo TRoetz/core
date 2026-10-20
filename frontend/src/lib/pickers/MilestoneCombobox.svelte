@@ -1,6 +1,6 @@
 <script>
   import ItemPicker from './ItemPicker.svelte';
-  import { api } from '../api.js';
+  import { milestones as milestonesApi } from '../api/milestones.js';
   import { t } from '../stores/i18n.svelte.js';
   import { errorToast } from '../stores/toasts.svelte.js';
   import { milestonesStore } from '../stores/milestones.js';
@@ -117,7 +117,7 @@
         filters.include_global = true;
       }
 
-      const response = await api.milestones.getAll(filters, requestOptions);
+      const response = await milestonesApi.getAll(filters, requestOptions);
       if (token !== loadToken) return;
       loadedMilestones = response || [];
       createdMilestones = [];

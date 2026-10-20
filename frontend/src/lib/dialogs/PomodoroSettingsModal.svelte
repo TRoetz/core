@@ -6,7 +6,7 @@
   import ModalBackdrop from '../components/ModalBackdrop.svelte';
   import Select from '../components/Select.svelte';
   import Toggle from '../components/Toggle.svelte';
-  import { api } from '../api.js';
+  import { time } from '../api/time.js';
   import { t } from '../stores/i18n.svelte.js';
   import { getShortcut, matchesShortcut } from '../utils/keyboardShortcuts.js';
 
@@ -120,7 +120,7 @@
   async function loadProjects() {
     projectsLoaded = true;
     try {
-      projects = (await api.time.projects.getAll()) || [];
+      projects = (await time.projects.getAll()) || [];
     } catch (err) {
       console.warn('[pomodoro-settings] failed to load projects:', err);
       projects = [];

@@ -1,4 +1,9 @@
-import { api } from '../api.js';
+import { actions } from '../api/actions.js';
+import { hierarchyLevels as hierarchyLevelsApi, links as linksApi } from '../api/configuration.js';
+import { items } from '../api/items.js';
+import { getDiagrams } from '../api/misc.js';
+import { customerOrganisations } from '../api/portal.js';
+import { time } from '../api/time.js';
 import { childItemTypesForParent } from '../utils/hierarchy.js';
 import { buildDetailScreenFieldConfig } from '../utils/screenFields.js';
 import { authStore } from './auth.svelte.js';
@@ -301,12 +306,8 @@ class ItemDetailStore {
           ? workspaceDataStore.initialize(effectiveWorkspaceId)
           : null;
       const summary = lookupWorkspaceKey
-        ? await api.items.getDetailSummaryByKey(
-            lookupWorkspaceKey,
-            lookupItemNumber,
-            requestOptions
-          )
-        : await api.items.getDetailSummary(effectiveItemId, requestOptions);
+        ? await items.getDetailSummaryByKey(lookupWorkspaceKey, lookupItemNumber, requestOptions)
+        : await items.getDetailSummary(effectiveItemId, requestOptions);
       if (token !== this.#loadToken) return LOAD_SUPERSEDED;
 
       const itemData = summary?.item;
@@ -440,7 +441,7 @@ class ItemDetailStore {
       // An SSE refresh must not share a pre-mutation GET that happens to still
       // be in flight. Otherwise the event can be consumed while the UI is
       // reconciled with the response captured before that mutation.
-      const nextItem = await api.items.get(itemId, {
+      const nextItem = await items.get(itemId, {
         cache: 'no-store',
         signal: controller.signal,
       });
@@ -531,7 +532,7 @@ class ItemDetailStore {
     this.#worklogsPromiseItemId = itemId;
     this.timeWorklogsLoading = true;
 
-    const promise = api.time.worklogs
+    const promise = time.worklogs
       .getByItem(itemId, { signal: controller.signal })
       .then((worklogs) => {
         if (this.itemId === itemId) {
@@ -574,8 +575,8 @@ class ItemDetailStore {
       });
 
     const promise = Promise.all([
-      fallback(api.customerOrganisations.getAll({}, requestOptions), 'customers'),
-      fallback(api.items.getAll({ limit: 100 }, requestOptions), 'work items'),
+      fallback(customerOrganisations.getAll({}, requestOptions), 'customers'),
+      fallback(items.getAll({ limit: 100 }, requestOptions), 'work items'),
       fallback(workspacesStore.load(), 'workspaces'),
     ])
       .then(([customers, workItems, workspaces]) => {
@@ -610,7 +611,7 @@ class ItemDetailStore {
     if (this.timeRollup && !force) return;
     this.timeRollupLoading = true;
     try {
-      this.timeRollup = await api.items.getTimeRollup(this.itemId);
+      this.timeRollup = await items.getTimeRollup(this.itemId);
     } catch (err) {
       console.error('Failed to load time rollup:', err);
       this.timeRollup = null;
@@ -623,7 +624,7 @@ class ItemDetailStore {
     if (!this.itemId) return;
     try {
       this.loadingChildItems = true;
-      const response = await api.items.getChildren(this.itemId, requestOptions);
+      const response = await items.getChildren(this.itemId, requestOptions);
       let nextChildItems = [];
       if (Array.isArray(response)) {
         nextChildItems = response;
@@ -654,7 +655,7 @@ class ItemDetailStore {
     const itemId = this.itemId;
     try {
       this.loadingLinks = true;
-      const links = await api.links.getForItem('items', itemId, {
+      const links = await linksApi.getForItem('items', itemId, {
         signal: controller.signal,
       });
       if (this.itemId !== itemId) return;
@@ -684,8 +685,7 @@ class ItemDetailStore {
     this.#diagramsPromiseItemId = itemId;
     this.loadingDiagrams = true;
 
-    const promise = api
-      .getDiagrams(itemId, { signal: controller.signal })
+    const promise = getDiagrams(itemId, { signal: controller.signal })
       .then((diagrams) => {
         if (this.item?.id === itemId) {
           this.diagrams = diagrams || [];
@@ -733,7 +733,7 @@ class ItemDetailStore {
     const itemId = this.item.id;
     try {
       this.loadingStatusTransitions = true;
-      const result = await api.items.getAvailableStatusTransitions(itemId, requestOptions);
+      const result = await items.getAvailableStatusTransitions(itemId, requestOptions);
       if (this.item?.id !== itemId) return;
       this.availableStatusTransitions = result.available_transitions || [];
       this.pendingApproval = result.pending_approval || null;
@@ -755,7 +755,7 @@ class ItemDetailStore {
 
   async #loadParentHierarchy(requestOptions = {}) {
     try {
-      const ancestors = await api.items.getAncestors(this.item.id, requestOptions);
+      const ancestors = await items.getAncestors(this.item.id, requestOptions);
       try {
         // The type list came with the workspace reference snapshot.
         this.parentHierarchy = ancestors.map((ancestor) => {
@@ -781,7 +781,7 @@ class ItemDetailStore {
     try {
       // The type list already came with the workspace reference snapshot; only
       // the hierarchy-level catalog needs its own read here.
-      const hierarchyLevels = await api.hierarchyLevels.getAll({}, requestOptions);
+      const hierarchyLevels = await hierarchyLevelsApi.getAll({}, requestOptions);
 
       if (this.item.item_type_id) {
         this.currentItemType = this.itemTypes.find((type) => type.id === this.item.item_type_id);
@@ -923,7 +923,7 @@ class ItemDetailStore {
           return;
         }
         // Status changes must use the transition endpoint for workflow validation.
-        const updatedItem = await api.items.transition(this.item.id, newStatusId);
+        const updatedItem = await items.transition(this.item.id, newStatusId);
         this.item = { ...this.item, ...updatedItem };
         this.cancelEditing('status');
         await this.refreshAvailableTransitions();
@@ -1078,7 +1078,7 @@ class ItemDetailStore {
       }
 
       // Update via API
-      const updatedItem = await api.items.update(this.item.id, updateData);
+      const updatedItem = await items.update(this.item.id, updateData);
       this.item = { ...this.item, ...updatedItem };
 
       // Update assignee/iteration names if provided
@@ -1225,8 +1225,8 @@ class ItemDetailStore {
     const itemId = this.item.id;
     try {
       const status = this.isWatching
-        ? await api.items.removeWatch(itemId)
-        : await api.items.addWatch(itemId);
+        ? await items.removeWatch(itemId)
+        : await items.addWatch(itemId);
       if (this.item?.id !== itemId) return;
       this.isWatching = status?.watching ?? !this.isWatching;
       if (typeof status?.watcher_count === 'number') this.watcherCount = status.watcher_count;
@@ -1240,21 +1240,21 @@ class ItemDetailStore {
   async loadWatchers() {
     if (!this.item?.id) return;
     const itemId = this.item.id;
-    const watchers = (await api.items.listWatchers(itemId)) ?? [];
+    const watchers = (await items.listWatchers(itemId)) ?? [];
     if (this.item?.id === itemId) this.#applyWatchers(watchers);
   }
 
   async addWatcher(userId) {
     if (!this.item?.id) return;
     const itemId = this.item.id;
-    const watchers = (await api.items.addWatcher(itemId, userId)) ?? [];
+    const watchers = (await items.addWatcher(itemId, userId)) ?? [];
     if (this.item?.id === itemId) this.#applyWatchers(watchers);
   }
 
   async removeWatcher(userId) {
     if (!this.item?.id) return;
     const itemId = this.item.id;
-    const watchers = (await api.items.removeWatcher(itemId, userId)) ?? [];
+    const watchers = (await items.removeWatcher(itemId, userId)) ?? [];
     if (this.item?.id === itemId) this.#applyWatchers(watchers);
   }
 
@@ -1273,7 +1273,7 @@ class ItemDetailStore {
 
   async createLink(linkTypeId, targetId, targetType = 'item') {
     try {
-      await api.links.create({
+      await linksApi.create({
         source_type: 'item',
         source_id: parseInt(this.itemId, 10),
         target_type: targetType,
@@ -1289,7 +1289,7 @@ class ItemDetailStore {
 
   async removeLink(linkId) {
     try {
-      await api.links.delete(linkId);
+      await linksApi.delete(linkId);
       await this.loadLinks();
     } catch (err) {
       console.error('Error removing link:', err);
@@ -1301,7 +1301,7 @@ class ItemDetailStore {
 
   async copyItem() {
     try {
-      const copiedItem = await api.items.copy(this.item.id);
+      const copiedItem = await items.copy(this.item.id);
       return copiedItem;
     } catch (err) {
       console.error('Failed to copy item:', err);
@@ -1313,7 +1313,7 @@ class ItemDetailStore {
 
   async executeAction(actionId) {
     try {
-      await api.actions.execute(this.workspaceId, actionId, this.item.id);
+      await actions.execute(this.workspaceId, actionId, this.item.id);
     } catch (err) {
       console.error('Failed to execute action:', err);
       throw err;

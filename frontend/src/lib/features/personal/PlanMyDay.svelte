@@ -1,7 +1,8 @@
 <script>
   import { onMount } from 'svelte';
   import ColorDot from '../../components/ColorDot.svelte';
-  import { api, fetchAPI } from '../../api.js';
+  import { ai, llmProviders } from '../../api/ai.js';
+  import { fetchAPI } from '../../api/core.js';
   import { Sparkles, CalendarPlus, RotateCcw, CheckCircle, AlertCircle } from '@lucide/svelte';
   import { authStore } from '../../stores/auth.svelte.js';
   import { navigate } from '../../router.js';
@@ -23,7 +24,7 @@
 
   onMount(async () => {
     try {
-      const enabledConnections = await api.llmProviders.getEnabled();
+      const enabledConnections = await llmProviders.getEnabled();
       connections = Array.isArray(enabledConnections) ? enabledConnections : [];
       const def = connections.find(c => c.is_default);
       if (def) selectedConnectionId = def.id;
@@ -38,7 +39,7 @@
     scheduleErrors = [];
 
     try {
-      plan = await api.ai.planMyDay(selectedConnectionId);
+      plan = await ai.planMyDay(selectedConnectionId);
     } catch (err) {
       console.error('Plan My Day failed:', err);
       error = err.message || 'Failed to generate plan. Is the LLM service running?';

@@ -5,7 +5,9 @@
   import ItemTypeIcon from '../../components/ItemTypeIcon.svelte';
   import ItemDetailBreadcrumbLevel from './ItemDetailBreadcrumbLevel.svelte';
   import ItemKey from '../../components/ItemKey.svelte';
-  import { api } from '../../api.js';
+  import { itemTypes as itemTypesApi } from '../../api/configuration.js';
+  import { search } from '../../api/misc.js';
+  import { items } from '../../api/items.js';
   import { t } from '../../stores/i18n.svelte.js';
   import { errorToast } from '../../stores/toasts.svelte.js';
   import {
@@ -83,7 +85,7 @@
     showItemTypeSelector = true;
     if (effectiveItemTypes.length > 0) return;
     try {
-      itemTypes = await api.itemTypes.getAll();
+      itemTypes = await itemTypesApi.getAll();
     } catch (error) {
       console.error('Failed to load item types:', error);
     }
@@ -115,7 +117,7 @@
     
     // Load item types and calculate valid parent hierarchy level
     try {
-      itemTypes = await api.itemTypes.getAll();
+      itemTypes = await itemTypesApi.getAll();
       
       // Calculate the valid parent hierarchy level (current level - 1)
       if (
@@ -145,7 +147,7 @@
     searchTimeout = setTimeout(async () => {
       try {
         searching = true;
-        const results = await api.search.items({
+        const results = await search.items({
           query: searchQuery,
           // Don't restrict to current workspace - allow cross-workspace parents
           limit: 20 // Get more results since we'll filter them
@@ -196,7 +198,7 @@
     
     try {
       saving = true;
-      await api.items.update(item.id, {
+      await items.update(item.id, {
         parent_id: selectedItem.id
       });
       
@@ -216,7 +218,7 @@
 
     try {
       saving = true;
-      await api.items.update(item.id, {
+      await items.update(item.id, {
         parent_id: null
       });
 

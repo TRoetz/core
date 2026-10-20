@@ -2,7 +2,14 @@
   import { onMount } from 'svelte';
   import { Pencil, RefreshCw, MessageSquare, Bell, HelpCircle, Database, PlusSquare, Box, Globe, Sparkles, Bot, Milestone, UsersRound, Send, FileText, Tag, X } from '@lucide/svelte';
   import { toHotkeyString, getShortcutDisplay } from '../../utils/keyboardShortcuts.js';
-  import { api } from '../../api.js';
+  import { actionCapabilities } from '../../api/ai.js';
+  import { actions } from '../../api/actions.js';
+  import { milestones as milestonesApi } from '../../api/milestones.js';
+  import { teams as teamsApi } from '../../api/teams.js';
+  import { cannedResponses as cannedResponsesApi, itemTypes as itemTypesApi, linkTypes as linkTypesApi } from '../../api/configuration.js';
+  import { statusCategories as statusCategoriesApi } from '../../api/workflows.js';
+  import { getAssignableUsers } from '../../api/users.js';
+  import { labels } from '../../api/misc.js';
   import FieldSelector from '../../pickers/FieldSelector.svelte';
   import MilestoneCombobox from '../../pickers/MilestoneCombobox.svelte';
   import TriggerNode from './nodes/TriggerNode.svelte';
@@ -241,7 +248,7 @@
   async function loadCapabilities(type) {
     if (!action?.workspace_id) return;
     try {
-      const list = await api.actionCapabilities.getForWorkspace(action.workspace_id, type);
+      const list = await actionCapabilities.getForWorkspace(action.workspace_id, type);
       capabilitiesByType[type] = list || [];
     } catch (err) {
       console.error(`Failed to load ${type} capabilities for workspace`, err);
@@ -251,7 +258,7 @@
   async function loadCatalog() {
     if (!action?.workspace_id) return;
     try {
-      const catalog = await api.actions.getCatalog(action.workspace_id);
+      const catalog = await actions.getCatalog(action.workspace_id);
       buildPaletteFromCatalog(catalog);
     } catch (err) {
       console.error('Failed to load action catalog; palette will be empty', err);
@@ -261,7 +268,7 @@
   async function loadMilestones() {
     if (!action?.workspace_id) return;
     try {
-      milestones = await api.milestones.getAll({ workspace_id: action.workspace_id, include_global: true }) || [];
+      milestones = await milestonesApi.getAll({ workspace_id: action.workspace_id, include_global: true }) || [];
     } catch (err) {
       console.error('Failed to load milestones for action editor', err);
       milestones = [];
@@ -270,7 +277,7 @@
 
   async function loadTeams() {
     try {
-      teams = await api.teams.getAll() || [];
+      teams = await teamsApi.getAll() || [];
     } catch (err) {
       console.error('Failed to load teams for action editor', err);
       teams = [];
@@ -279,7 +286,7 @@
 
   async function loadLinkTypes() {
     try {
-      linkTypes = await api.linkTypes.getAll() || [];
+      linkTypes = await linkTypesApi.getAll() || [];
     } catch (err) {
       console.error('Failed to load link types for action editor', err);
       linkTypes = [];
@@ -289,7 +296,7 @@
   async function loadItemTypes() {
     if (!action?.workspace_id) return;
     try {
-      itemTypes = await api.itemTypes.getAll({ workspace_id: action.workspace_id }) || [];
+      itemTypes = await itemTypesApi.getAll({ workspace_id: action.workspace_id }) || [];
     } catch (err) {
       console.error('Failed to load item types for action editor', err);
       itemTypes = [];
@@ -298,7 +305,7 @@
 
   async function loadStatusCategories() {
     try {
-      statusCategories = await api.statusCategories.getAll() || [];
+      statusCategories = await statusCategoriesApi.getAll() || [];
     } catch (err) {
       console.error('Failed to load status categories for action editor', err);
       statusCategories = [];
@@ -308,7 +315,7 @@
   async function loadAssignableUsers() {
     if (!action?.workspace_id) return;
     try {
-      assignableUsers = await api.getAssignableUsers(action.workspace_id) || [];
+      assignableUsers = await getAssignableUsers(action.workspace_id) || [];
     } catch (err) {
       console.error('Failed to load users for action editor', err);
       assignableUsers = [];
@@ -318,7 +325,7 @@
   async function loadCannedResponses() {
     if (!action?.workspace_id) return;
     try {
-      const list = await api.cannedResponses.getAll(action.workspace_id, true) || [];
+      const list = await cannedResponsesApi.getAll(action.workspace_id, true) || [];
       cannedResponses = list.filter((response) => response.is_active !== false);
     } catch (err) {
       console.error('Failed to load canned responses for action editor', err);
@@ -329,7 +336,7 @@
   async function loadWorkspaceLabels() {
     if (!action?.workspace_id) return;
     try {
-      workspaceLabels = await api.labels.getAll(action.workspace_id) || [];
+      workspaceLabels = await labels.getAll(action.workspace_id) || [];
     } catch (err) {
       console.error('Failed to load labels for action editor', err);
       workspaceLabels = [];
@@ -358,7 +365,7 @@
     const unsub = agentRuns.subscribe(async () => {
       if (!action?.id) return;
       try {
-        const fresh = await api.actions.get(action.workspace_id, action.id);
+        const fresh = await actions.get(action.workspace_id, action.id);
         actionFlowStore.init(fresh, statuses);
         infoToast(t('actions.aiUpdated', 'Action updated by AI'));
       } catch (err) {

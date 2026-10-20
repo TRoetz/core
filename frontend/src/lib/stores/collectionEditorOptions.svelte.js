@@ -1,4 +1,11 @@
-import { api } from '../api.js';
+import { assets } from '../api/assets.js';
+import { priorities } from '../api/configuration.js';
+import { iterations, milestones } from '../api/milestones.js';
+import { personalLabels } from '../api/misc.js';
+import { customerOrganisations, portalCustomers } from '../api/portal.js';
+import { teams } from '../api/teams.js';
+import { getAssignableUsers } from '../api/users.js';
+import { workspaces } from '../api/workspaces.js';
 import { realCustomers } from '../utils/customerLabel.js';
 
 const EMPTY_OPTIONS = Object.freeze({
@@ -25,26 +32,26 @@ const PLANNING_FIELDS = new Set(['milestones', 'iterations']);
 const MAX_ASSET_CACHE_ENTRIES = 200;
 
 const OPTION_LOADERS = {
-  statuses: (workspaceId) => api.workspaces.getStatuses(workspaceId),
-  users: (workspaceId) => api.getAssignableUsers(workspaceId),
-  teams: () => api.teams.getAll(),
+  statuses: (workspaceId) => workspaces.getStatuses(workspaceId),
+  users: (workspaceId) => getAssignableUsers(workspaceId),
+  teams: () => teams.getAll(),
   milestones: (workspaceId) =>
-    api.milestones.getAll({ workspace_id: workspaceId, include_global: true }),
-  iterations: (workspaceId) => api.iterations.getAll({ workspace_id: workspaceId }),
+    milestones.getAll({ workspace_id: workspaceId, include_global: true }),
+  iterations: (workspaceId) => iterations.getAll({ workspace_id: workspaceId }),
   priorities: async (workspaceId) => {
-    const workspace = await api.workspaces.get(workspaceId);
+    const workspace = await workspaces.get(workspaceId);
     const configurationSetId = workspace?.configuration_set_id;
-    if (!configurationSetId) return api.priorities.getAll();
+    if (!configurationSetId) return priorities.getAll();
 
-    const configuredPriorities = await api.priorities.getAll({
+    const configuredPriorities = await priorities.getAll({
       configuration_set_id: configurationSetId,
     });
-    return configuredPriorities.length > 0 ? configuredPriorities : api.priorities.getAll();
+    return configuredPriorities.length > 0 ? configuredPriorities : priorities.getAll();
   },
-  projects: (workspaceId) => api.workspaces.getProjects(workspaceId),
-  portalCustomers: () => api.portalCustomers.getAll(),
-  customerOrganisations: async () => realCustomers(await api.customerOrganisations.getAll()),
-  personalLabels: () => api.personalLabels.getAll(null),
+  projects: (workspaceId) => workspaces.getProjects(workspaceId),
+  portalCustomers: () => portalCustomers.getAll(),
+  customerOrganisations: async () => realCustomers(await customerOrganisations.getAll()),
+  personalLabels: () => personalLabels.getAll(null),
 };
 
 function normalizeWorkspaceId(workspaceId) {
@@ -192,7 +199,7 @@ export class CollectionEditorOptionsStore {
 
     const filters = { cql: cqlQuery || undefined, search: search || undefined };
     const generation = this.#generation;
-    const promise = Promise.resolve(api.assets.getAll(setId, filters))
+    const promise = Promise.resolve(assets.getAll(setId, filters))
       .then((result) => {
         if (generation !== this.#generation) return { assets: [], total: 0 };
         const normalized = {

@@ -1,6 +1,6 @@
 <script>
   import { untrack } from 'svelte';
-  import { api } from '../api.js';
+  import { getAssignableUsers, getUsers } from '../api/users.js';
   import { useEventListener } from 'runed';
   import Avatar from '../components/Avatar.svelte';
   import Text from '../components/Text.svelte';
@@ -95,8 +95,8 @@
     try {
       loading = true;
       const roster = scopedWorkspaceId
-        ? await api.getAssignableUsers(scopedWorkspaceId)
-        : await api.getUsers();
+        ? await getAssignableUsers(scopedWorkspaceId)
+        : await getUsers();
       if (request !== loadRequest) return;
 
       // The backend roster is shared with assignment and already enforces

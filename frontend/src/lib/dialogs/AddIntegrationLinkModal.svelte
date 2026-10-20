@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import Spinner from '../components/Spinner.svelte';
   import StateDisplay from '../components/StateDisplay.svelte';
-  import { api } from '../api.js';
+  import { itemIntegrationLinks, userIntegrations } from '../api/integrations.js';
   import Button from '../components/Button.svelte';
   import Input from '../components/Input.svelte';
   import Label from '../components/Label.svelte';
@@ -47,8 +47,8 @@
     loading = true;
     try {
       const [avail, conns] = await Promise.all([
-        api.userIntegrations.getAvailableProviders(),
-        api.userIntegrations.getConnections(),
+        userIntegrations.getAvailableProviders(),
+        userIntegrations.getConnections(),
       ]);
       providers = avail || [];
       connections = conns || [];
@@ -88,7 +88,7 @@
     error = null;
 
     try {
-      searchResults = await api.itemIntegrationLinks.search(itemId, searchQuery, selectedProviderId) || [];
+      searchResults = await itemIntegrationLinks.search(itemId, searchQuery, selectedProviderId) || [];
     } catch (err) {
       console.error('Failed to search:', err);
       error = t('integrations.failedToSearch');
@@ -103,7 +103,7 @@
     error = null;
 
     try {
-      await api.itemIntegrationLinks.create(itemId, {
+      await itemIntegrationLinks.create(itemId, {
         provider_id: selectedProviderId,
         external_id: result.external_id,
         external_url: result.external_url,

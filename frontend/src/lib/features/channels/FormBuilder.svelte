@@ -8,7 +8,11 @@
     IconPencil, IconEye, IconExternalLink
   } from '@tabler/icons-svelte-runes';
   import { t } from '../../stores/i18n.svelte.js';
-  import { api } from '../../api.js';
+  import {
+    configurationSets,
+    customFields as customFieldsApi,
+    itemTypes as itemTypesApi,
+  } from '../../api/configuration.js';
   import { workspacesStore } from '../../stores/workspaces.svelte.js';
   import { formBuilderStore } from '../../stores/formBuilderStore.svelte.js';
   import { errorToast, successToast } from '../../stores/toasts.svelte.js';
@@ -71,8 +75,8 @@
     await formBuilderStore.loadForms(channelId);
     try {
       const [allConfigSets, customFields] = await Promise.all([
-        api.configurationSets.getAll(),
-        api.customFields.getAll(),
+        configurationSets.getAll(),
+        customFieldsApi.getAll(),
       ]);
       const allWorkspaces = await workspacesStore.load();
       configSets = allConfigSets?.configuration_sets || [];
@@ -113,7 +117,7 @@
     }
     const filters = configSetId ? { configuration_set_id: configSetId } : {};
     const requestedWsId = wsId;
-    api.itemTypes.getAll(filters).then(types => {
+    itemTypesApi.getAll(filters).then(types => {
       if (formBuilderStore.routingMeta.workspace_id !== requestedWsId) return;
       routingItemTypes = types;
       const current = formBuilderStore.routingMeta.item_type_id;

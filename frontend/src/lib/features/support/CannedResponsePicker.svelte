@@ -7,7 +7,7 @@
   import DropdownMenu from '../../layout/DropdownMenu.svelte';
   import { MessageSquareText } from '@lucide/svelte';
   import { onMount } from 'svelte';
-  import { api } from '../../api.js';
+  import { cannedResponses } from '../../api/configuration.js';
   import { t } from '../../stores/i18n.svelte.js';
   import { errorToast } from '../../stores/toasts.svelte.js';
 
@@ -20,7 +20,7 @@
   async function load() {
     if (!workspaceId) return;
     try {
-      responses = (await api.cannedResponses.getAll(workspaceId)) ?? [];
+      responses = (await cannedResponses.getAll(workspaceId)) ?? [];
       loadedOnce = true;
       query = '';
     } catch (err) {

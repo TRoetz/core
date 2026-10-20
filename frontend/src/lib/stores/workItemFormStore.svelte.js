@@ -1,7 +1,18 @@
 // Centralized reactive state for the work-item create form.
 
+import {
+  customFields,
+  hierarchyLevels,
+  itemTemplates,
+  itemTypes,
+  screens,
+} from '../api/configuration.js';
+import { iterations, milestones } from '../api/milestones.js';
 import { FOREGROUND_READ } from '../api/readScheduler.js';
-import { api } from '../api.js';
+import { teams } from '../api/teams.js';
+import { time } from '../api/time.js';
+import { getAssignableUsers, getUsers } from '../api/users.js';
+import { workspaces } from '../api/workspaces.js';
 import {
   defaultCustomFieldValue,
   isBooleanCustomFieldType,
@@ -263,7 +274,7 @@ class WorkItemFormStore {
   async loadTeams() {
     if (this.teamsLoaded) return;
     try {
-      this.teams = (await api.teams.getAll()) || [];
+      this.teams = (await teams.getAll()) || [];
     } catch (error) {
       if (error?.name === 'AbortError') return;
       console.error('Failed to load teams:', error);
@@ -276,7 +287,7 @@ class WorkItemFormStore {
   async loadUsers(workspaceId = null) {
     if (this.usersLoaded) return;
     try {
-      const result = workspaceId ? await api.getAssignableUsers(workspaceId) : await api.getUsers();
+      const result = workspaceId ? await getAssignableUsers(workspaceId) : await getUsers();
       this.users = result || [];
       this.usersLoaded = true;
     } catch (error) {
@@ -293,7 +304,7 @@ class WorkItemFormStore {
   async loadCustomFields() {
     if (this.customFieldsLoaded) return;
     try {
-      this.allCustomFields = await api.customFields.getAll();
+      this.allCustomFields = await customFields.getAll();
       this.customFieldsLoaded = true;
     } catch (error) {
       console.error('Failed to load custom fields:', error);
@@ -317,7 +328,7 @@ class WorkItemFormStore {
       const filters = numericWorkspaceId
         ? { workspace_id: numericWorkspaceId, include_global: true }
         : {};
-      const result = await api.milestones.getAll(filters);
+      const result = await milestones.getAll(filters);
       if (token !== this.#milestonesLoadToken) return;
 
       this.allMilestones = result || [];
@@ -352,7 +363,7 @@ class WorkItemFormStore {
       const filters = numericWorkspaceId
         ? { workspace_id: numericWorkspaceId, include_global: true }
         : {};
-      const result = await api.iterations.getAll(filters);
+      const result = await iterations.getAll(filters);
       if (token !== this.#iterationsLoadToken) return;
 
       this.iterations = result || [];
@@ -389,7 +400,7 @@ class WorkItemFormStore {
     const token = ++this.#timeProjectsLoadToken;
     try {
       this.timeProjectsLoading = true;
-      const result = await api.time.projects.getByWorkspace(numericWorkspaceId);
+      const result = await time.projects.getByWorkspace(numericWorkspaceId);
       if (token !== this.#timeProjectsLoadToken) return;
 
       this.timeProjects = result || [];
@@ -435,7 +446,7 @@ class WorkItemFormStore {
       return;
     }
     try {
-      this.workspaceDetails = await api.workspaces.get(workspaceId);
+      this.workspaceDetails = await workspaces.get(workspaceId);
       await Promise.all([
         this.loadMilestones(workspaceId),
         this.loadIterations(workspaceId),
@@ -455,8 +466,8 @@ class WorkItemFormStore {
     if (this.itemTypesLoaded && !forceReload) return;
     try {
       const [itemTypesResult, hierarchyLevelsResult] = await Promise.all([
-        api.itemTypes.getAll(),
-        api.hierarchyLevels.getAll(),
+        itemTypes.getAll(),
+        hierarchyLevels.getAll(),
       ]);
       this.itemTypes = itemTypesResult || [];
       this.hierarchyLevels = hierarchyLevelsResult || [];
@@ -519,7 +530,7 @@ class WorkItemFormStore {
     if (Number(workspaceDataStore.workspaceId) === Number(workspaceId)) {
       return workspaceDataStore.screenConfig(itemTypeId);
     }
-    return api.workspaces.getEffectiveConfig(workspaceId, itemTypeId, FOREGROUND_READ);
+    return workspaces.getEffectiveConfig(workspaceId, itemTypeId, FOREGROUND_READ);
   }
 
   /**
@@ -565,7 +576,7 @@ class WorkItemFormStore {
     try {
       this.loadingScreenFields = true;
       const createScreenId = await this.#resolveCreateScreenId(workspaceId, itemTypeId);
-      const fields = createScreenId ? await api.screens.getFields(createScreenId) : [];
+      const fields = createScreenId ? await screens.getFields(createScreenId) : [];
       this.screenFields = fields || [];
 
       this.screenSystemFields = this.screenFields
@@ -688,8 +699,7 @@ class WorkItemFormStore {
 
     this.templatesLoading = true;
     try {
-      const list =
-        (await api.itemTemplates.getAll(workspaceId, { item_type_id: itemTypeId })) ?? [];
+      const list = (await itemTemplates.getAll(workspaceId, { item_type_id: itemTypeId })) ?? [];
       // Guard against an out-of-order response after another type change.
       if (`${this.formData.workspace_id}:${this.formData.item_type_id}` !== key) return;
 

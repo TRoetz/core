@@ -1,7 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import { IconPlus, IconEdit, IconTrash, IconCircle } from '@tabler/icons-svelte-runes';
-  import { api } from '../api.js';
+  import { leave } from '../api/leave.js';
   import { authStore } from '../stores/auth.svelte.js';
   import { t } from '../stores/i18n.svelte.js';
   import { confirm } from '../composables/useConfirm.js';
@@ -46,7 +46,7 @@
     if (!userId) return;
     loading = true;
     try {
-      leavePeriods = (await api.leave.list(userId)) || [];
+      leavePeriods = (await leave.list(userId)) || [];
       error = '';
     } catch (err) {
       error = err.message || t('profile.leave.failedToLoad');
@@ -118,10 +118,10 @@
         substitute_user_id: formData.substitute_user_id,
       };
       if (editing) {
-        await api.leave.update(userId, editing.id, payload);
+        await leave.update(userId, editing.id, payload);
         successToast(t('profile.leave.updated'));
       } else {
-        await api.leave.create(userId, payload);
+        await leave.create(userId, payload);
         successToast(t('profile.leave.created'));
       }
       closeModal();
@@ -143,7 +143,7 @@
     });
     if (!confirmed) return;
     try {
-      await api.leave.delete(userId, period.id);
+      await leave.delete(userId, period.id);
       successToast(t('profile.leave.deleted'));
       await load();
     } catch (err) {

@@ -1,7 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import { currentRoute, navigate } from '../router.js';
-  import { api } from '../api.js';
+
   import { t } from '../stores/i18n.svelte.js';
   import { errorToast, successToast } from '../stores/toasts.svelte.js';
   import Button from '../components/Button.svelte';

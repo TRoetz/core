@@ -1,6 +1,7 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
-  import { api } from '../../api.js';
+  import { linkTypes, links } from '../../api/configuration.js';
+  import { pageLabels, pages } from '../../api/pages.js';
   import { navigate } from '../../router.js';
   import LazyMilkdownEditor from '../../editors/LazyMilkdownEditor.svelte';
   import PagePermissionsDialog from './PagePermissionsDialog.svelte';
@@ -119,7 +120,7 @@
     const requestSeq = ++loadPageLinksRequestSeq;
     loadingPageLinks = true;
     try {
-      const resp = await api.links.getForPage(id);
+      const resp = await links.getForPage(id);
       if (requestSeq !== loadPageLinksRequestSeq || selectedPage?.id !== id) return;
       const outgoing = Array.isArray(resp?.outgoing) ? resp.outgoing : [];
       const incoming = Array.isArray(resp?.incoming) ? resp.incoming : [];
@@ -146,7 +147,7 @@
   async function ensureLinkTypesLoaded() {
     if (linkTypesCache.length > 0) return;
     try {
-      const resp = await api.linkTypes.getAll();
+      const resp = await linkTypes.getAll();
       linkTypesCache = Array.isArray(resp) ? resp : (resp?.data ?? []);
     } catch (err) {
       console.error('failed to load link types', err);
@@ -241,7 +242,7 @@
     loadingPage = true;
     error = '';
     try {
-      const page = await api.pages.getPage(workspaceId, id);
+      const page = await pages.getPage(workspaceId, id);
       if (requestSeq !== loadPageRequestSeq) return;
       selectedPage = page;
       contentHashByPageId.set(page.id, page.content_hash);
@@ -279,7 +280,7 @@
   async function loadPagePublication(id) {
     const requestSeq = ++pagePublicationRequestSeq;
     try {
-      const publication = await api.pages.getPublication(workspaceId, id);
+      const publication = await pages.getPublication(workspaceId, id);
       if (requestSeq !== pagePublicationRequestSeq || selectedPage?.id !== id) return;
       pagePublication = publication;
     } catch (err) {
@@ -290,7 +291,7 @@
 
   async function ensurePageEffectiveLevel(id) {
     try {
-      const perms = await api.pages.getPermissions(workspaceId, id);
+      const perms = await pages.getPermissions(workspaceId, id);
       if (selectedPage?.id === id) {
         pageEffectiveLevel = perms?.effective_level || '';
         if (pageEffectiveLevel !== 'edit' && pageEffectiveLevel !== 'admin') {
@@ -319,12 +320,12 @@
     try {
       if (isAttached) {
         selectedPage.labels = previous.filter((l) => l.id !== label.id);
-        await api.pageLabels.removeFromPage(workspaceId, selectedPage.id, label.id);
+        await pageLabels.removeFromPage(workspaceId, selectedPage.id, label.id);
       } else {
         selectedPage.labels = [...previous, label].sort((a, b) =>
           a.name.localeCompare(b.name)
         );
-        await api.pageLabels.addToPage(workspaceId, selectedPage.id, label.id);
+        await pageLabels.addToPage(workspaceId, selectedPage.id, label.id);
       }
       pagesTreeRefresh.bump();
     } catch (err) {
@@ -382,7 +383,7 @@
     }
     saveInFlight = true;
     try {
-      const updated = await api.pages.updatePage(targetWorkspaceId, targetId, {
+      const updated = await pages.updatePage(targetWorkspaceId, targetId, {
         title: snapshot.title,
         content: snapshot.content,
         expectedContentHash:
@@ -440,7 +441,7 @@
     });
     if (!ok) return;
     try {
-      await api.pages.archivePage(workspaceId, selectedPage.id);
+      await pages.archivePage(workspaceId, selectedPage.id);
       // Drop any pending autosave for a page that no longer exists.
       if (saveTimer) {
         clearTimeout(saveTimer);
@@ -513,7 +514,7 @@
       selectedPage.metadata = metadata;
       selectedPage = selectedPage;
 
-      const updated = await api.pages.updatePage(targetWorkspaceId, targetPageId, {
+      const updated = await pages.updatePage(targetWorkspaceId, targetPageId, {
         title: draftTitle,
         content: draftContent,
         metadata,

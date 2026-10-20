@@ -9,7 +9,7 @@
   import { onMount } from 'svelte';
   import StateDisplay from '../components/StateDisplay.svelte';
 import { AlertTriangle, BookOpen, FileText, Pencil, Plus, Trash2, X } from '@lucide/svelte';
-  import { agentSkills } from '../api.js';
+  import { agentSkills } from '../api/agentSkills.js';
   import Panel from '../components/Panel.svelte';
   import Button from '../components/Button.svelte';
   import Checkbox from '../components/Checkbox.svelte';

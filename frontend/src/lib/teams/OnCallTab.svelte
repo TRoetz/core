@@ -1,7 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import { IconPlus, IconBellRinging, IconCircle, IconEdit, IconTrash, IconArrowRight } from '@tabler/icons-svelte-runes';
-  import { api } from '../api.js';
+  import { onCallSchedules } from '../api/oncall.js';
   import { t } from '../stores/i18n.svelte.js';
   import { confirm } from '../composables/useConfirm.js';
   import { errorToast, successToast } from '../stores/toasts.svelte.js';
@@ -33,7 +33,7 @@
   async function loadSchedules() {
     loading = true;
     try {
-      const overview = await loadTeamOnCallOverview(api, team.id);
+      const overview = await loadTeamOnCallOverview(team.id);
       schedules = overview.schedules;
       currentByScheduleId = overview.currentByScheduleId;
       error = '';
@@ -64,7 +64,7 @@
     });
     if (!confirmed) return;
     try {
-      await api.onCallSchedules.delete(schedule.id);
+      await onCallSchedules.delete(schedule.id);
       successToast(t('teams.oncall.scheduleDeleted'));
       await loadSchedules();
     } catch (err) {
@@ -92,7 +92,7 @@
     });
     if (!confirmed) return;
     try {
-      await api.onCallSchedules.deleteOverride(scheduleId, override.id);
+      await onCallSchedules.deleteOverride(scheduleId, override.id);
       successToast(t('teams.oncall.overrideDeleted'));
       await loadSchedules();
     } catch (err) {

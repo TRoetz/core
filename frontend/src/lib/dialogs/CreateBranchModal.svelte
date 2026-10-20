@@ -1,5 +1,5 @@
 <script>
-  import { api } from '../api.js';
+  import { itemSCMLinks } from '../api/scm.js';
   import Input from '../components/Input.svelte';
   import Label from '../components/Label.svelte';
   import TextField from '../components/TextField.svelte';
@@ -61,7 +61,7 @@
         base_branch: baseBranch.trim() || undefined,
       };
 
-      const result = await api.itemSCMLinks.createBranch(itemId, data);
+      const result = await itemSCMLinks.createBranch(itemId, data);
       successToast(t('scm.branchCreatedSuccess'));
       oncreated?.(result);
     } catch (err) {

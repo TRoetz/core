@@ -1,5 +1,5 @@
+import { links } from '../../api/configuration.js';
 import { BACKGROUND_READ } from '../../api/readScheduler.js';
-import { api } from '../../api.js';
 
 // Board/roadmap dependency links load in 100-anchor batches. At most two
 // batches are submitted at once; the shared read scheduler bounds their
@@ -36,7 +36,7 @@ export function createDependencyLoader(options = {}) {
   const now = options.now ?? (() => Date.now());
   const fetchGroups =
     options.fetchGroups ??
-    ((ids) => api.links.getForItems(ids, { includeCustomFields, ...BACKGROUND_READ }));
+    ((ids) => links.getForItems(ids, { includeCustomFields, ...BACKGROUND_READ }));
 
   let entries = $state(/** @type {Record<number, DependencyEntry>} */ ({}));
   let scopeGeneration = 0;

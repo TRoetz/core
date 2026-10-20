@@ -1,6 +1,6 @@
 <script>
   import { Mail, RefreshCw, X } from '@lucide/svelte';
-  import { api } from '../../api.js';
+  import { auth } from '../../api/auth.js';
   import { t } from '../../stores/i18n.svelte.js';
 
   let { show = false, ondismiss } = $props();
@@ -14,7 +14,7 @@
       resending = true;
       resendError = null;
       resendSuccess = false;
-      await api.auth.resendVerification();
+      await auth.resendVerification();
       resendSuccess = true;
       // Clear success message after 5 seconds
       setTimeout(() => {

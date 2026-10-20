@@ -7,7 +7,7 @@
   import Button from '../components/Button.svelte';
   import TabStrip from '../components/TabStrip.svelte';
   import ActionButton from '../layout/ActionButton.svelte';
-  import { api } from '../api.js';
+  import { time } from '../api/time.js';
   import { t } from '../stores/i18n.svelte.js';
   import { errorToast } from '../stores/toasts.svelte.js';
   import { formatAuthenticatedDateTime as formatDateTimeLocale } from '../utils/authenticatedDateFormatter.js';
@@ -43,8 +43,8 @@
     try {
       loading = true;
       const [managersResult, membersResult] = await Promise.all([
-        api.time.projects.getManagers(project.id),
-        api.time.projects.getMembers(project.id)
+        time.projects.getManagers(project.id),
+        time.projects.getMembers(project.id)
       ]);
       managers = managersResult || [];
       members = membersResult || [];
@@ -76,9 +76,9 @@
       const id = addType === 'user' ? selectedUserId : selectedGroupId;
 
       if (activeTab === 'managers') {
-        await api.time.projects.addManager(project.id, addType, id);
+        await time.projects.addManager(project.id, addType, id);
       } else {
-        await api.time.projects.addMember(project.id, addType, id);
+        await time.projects.addMember(project.id, addType, id);
       }
 
       await loadData();
@@ -101,9 +101,9 @@
     if (!ok) return;
     try {
       if (type === 'manager') {
-        await api.time.projects.removeManager(project.id, item.id);
+        await time.projects.removeManager(project.id, item.id);
       } else {
-        await api.time.projects.removeMember(project.id, item.id);
+        await time.projects.removeMember(project.id, item.id);
       }
       await loadData();
     } catch (err) {

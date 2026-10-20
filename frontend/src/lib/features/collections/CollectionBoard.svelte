@@ -2,7 +2,9 @@
   import { onMount, untrack } from 'svelte';
   import { useEventListener } from 'runed';
   import { t } from '../../stores/i18n.svelte.js';
-  import { api } from '../../api.js';
+  import { items as itemsApi } from '../../api/items.js';
+  import { workspaces as workspacesApi } from '../../api/workspaces.js';
+  import { iterations as iterationsApi } from '../../api/milestones.js';
   import { navigate } from '../../router.js';
   import {
     collectionStore,
@@ -195,7 +197,7 @@
   async function handleRefreshWorkItems(event) {
     if (!event.detail?.itemId) return;
     try {
-      const newItem = event.detail.item ?? (await api.items.get(event.detail.itemId));
+      const newItem = event.detail.item ?? (await itemsApi.get(event.detail.itemId));
       const membership = await resolveCreatedItemMembership(newItem, createdItemScope());
       if (membership === 'member') {
         // A create event can arrive more than once (modal event plus a delta or
@@ -255,7 +257,7 @@
         if (currentWorkspaceId === numericWorkspaceId && storeWorkspaceId === numericWorkspaceId) {
           workspaceItemTypes = itemTypes || [];
         } else {
-          workspaceItemTypes = await api.workspaces.getItemTypes(numericWorkspaceId);
+          workspaceItemTypes = await workspacesApi.getItemTypes(numericWorkspaceId);
         }
         quickAddItemTypesByWorkspace.set(numericWorkspaceId, workspaceItemTypes || []);
       }
@@ -362,7 +364,7 @@
         payload.parent_id = state.parentId;
       }
 
-      const newItem = await api.items.create(payload);
+      const newItem = await itemsApi.create(payload);
 
       // A collection can span several allowed workspaces while applying other
       // filters. Only add the new item locally when it matches the full view.
@@ -432,7 +434,7 @@
           (iteration) => !isPersonal || !iteration.is_global
         );
       } else {
-        iters = await api.iterations.getAll({
+        iters = await iterationsApi.getAll({
           workspace_id: requestedWorkspaceId,
           include_global: !isPersonal,
         });
@@ -665,7 +667,7 @@
     if (currentParentId === targetParentId) return item;
 
     try {
-      const updatedItem = await api.items.update(item.id, { parent_id: targetParentId });
+      const updatedItem = await itemsApi.update(item.id, { parent_id: targetParentId });
       collectionStore.patchItem(item.id, { ...updatedItem, parent_id: targetParentId });
       return { ...item, ...updatedItem, parent_id: targetParentId };
     } catch (error) {
@@ -1099,7 +1101,7 @@
     const previousStatusId = item.status_id;
     updateLocalItemStatus(item.id, targetStatusId);
     try {
-      const transitionedItem = await api.items.transition(item.id, targetStatusId);
+      const transitionedItem = await itemsApi.transition(item.id, targetStatusId);
       mergeLocalItem(item.id, transitionedItem);
       boardAnnouncement = `Moved ${item.title} to ${targetName}`;
       successToast(boardAnnouncement);
@@ -1260,7 +1262,7 @@
         try {
           let droppedItem = data.item;
           if (!isSameStatus) {
-            droppedItem = await api.items.transition(data.item.id, transitionStatusId);
+            droppedItem = await itemsApi.transition(data.item.id, transitionStatusId);
             mergeLocalItem(data.item.id, droppedItem);
           }
           await updateItemParentForLane(droppedItem, targetLaneParentId);
@@ -1353,7 +1355,7 @@
       if (!isSameStatus) {
         updateLocalItemStatus(draggedItem.id, targetStatusId);
         try {
-          const transitionedItem = await api.items.transition(draggedItem.id, targetStatusId);
+          const transitionedItem = await itemsApi.transition(draggedItem.id, targetStatusId);
           draggedItem = { ...draggedItem, ...transitionedItem, status_id: targetStatusId };
           mergeLocalItem(draggedItem.id, draggedItem);
         } catch (err) {
@@ -1429,7 +1431,7 @@
         previous_item_id: prevItemId,
         next_item_id: nextItemId
       };
-      const updatedItem = await api.items.updateFracIndex(draggedItem.id, indexData);
+      const updatedItem = await itemsApi.updateFracIndex(draggedItem.id, indexData);
 
       // Reload data from central store to get the correct ordering
       reloadCollection();

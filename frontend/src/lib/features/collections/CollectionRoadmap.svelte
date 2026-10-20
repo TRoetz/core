@@ -2,7 +2,9 @@
   import { onMount } from 'svelte';
   import { untrack } from 'svelte';
   import { t } from '../../stores/i18n.svelte.js';
-  import { api } from '../../api.js';
+  import { items as itemsApi } from '../../api/items.js';
+  import { collections } from '../../api/collections.js';
+  import { customFields as customFieldsApi, linkTypes as linkTypesApi, screens } from '../../api/configuration.js';
   import { createDependencyLoader } from './dependencyLoader.svelte.js';
   import { navigate } from '../../router.js';
   import {
@@ -125,7 +127,7 @@
     hierarchyDatesLoaded = false;
     hierarchyDatesError = '';
     try {
-      const result = await api.items.getRoadmapHierarchyDates(rootIds);
+      const result = await itemsApi.getRoadmapHierarchyDates(rootIds);
       if (generation !== hierarchyLoadGeneration) return;
       if (result?.truncated) {
         hierarchyDateItems = [];
@@ -494,7 +496,7 @@
     }
     ancestorsRequestInFlight = true;
     try {
-      const entries = await api.items.getManyAncestors(orphanIds);
+      const entries = await itemsApi.getManyAncestors(orphanIds);
       for (const { item_id: orphanId, ancestors } of entries) {
         // The gap may have closed while the request was in flight.
         const parentId = parentByOrphanId.get(orphanId);
@@ -760,7 +762,7 @@
   // Load config data
   async function loadConfig() {
     try {
-      const config = await api.collections.getBoardConfiguration(collectionId, workspaceId);
+      const config = await collections.getBoardConfiguration(collectionId, workspaceId);
       boardConfig = config;
       boardConfigId = config.id;
       if (config.roadmap_config) {
@@ -778,8 +780,8 @@
   async function loadReferenceData() {
     try {
       const [lt, cf] = await Promise.all([
-        api.linkTypes.getAll(),
-        api.customFields.getAll(),
+        linkTypesApi.getAll(),
+        customFieldsApi.getAll(),
       ]);
       linkTypes = lt || [];
       customFields = cf?.data || cf || [];
@@ -789,7 +791,7 @@
       // effective edit screen through the workspace's shared config cache.
       const config = await workspaceDataStore.screenConfig(null);
       const screenId = config?.edit_screen?.id ?? 1;
-      const screen = await api.screens.get(screenId);
+      const screen = await screens.get(screenId);
       screenFields = screen?.fields || [];
     } catch (e) {
       console.error('Failed to load reference data:', e);
@@ -814,9 +816,9 @@
 
     try {
       if (boardConfigId) {
-        await api.collections.updateBoardConfiguration(collectionId, boardConfigId, payload, workspaceId);
+        await collections.updateBoardConfiguration(collectionId, boardConfigId, payload, workspaceId);
       } else {
-        const result = await api.collections.createBoardConfiguration(collectionId, workspaceId, payload);
+        const result = await collections.createBoardConfiguration(collectionId, workspaceId, payload);
         boardConfigId = result.id;
       }
     } catch (e) {
@@ -976,12 +978,12 @@
         fields,
         mode: hierarchyMode,
       });
-      await api.items.bulkPatch(patches);
+      await itemsApi.bulkPatch(patches);
       reloadCollection();
       await loadHierarchyDates(allItemsSorted.map((item) => item.id));
       return;
     }
-    await api.items.update(itemId, updateData);
+    await itemsApi.update(itemId, updateData);
     reloadCollection();
   }
 

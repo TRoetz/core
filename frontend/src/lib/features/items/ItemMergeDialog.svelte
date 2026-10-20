@@ -5,7 +5,8 @@
   import Label from '../../components/Label.svelte';
   import DescriptionText from '../../components/DescriptionText.svelte';
   import ItemPicker from '../../pickers/ItemPicker.svelte';
-  import { api } from '../../api.js';
+  import { links } from '../../api/configuration.js';
+  import { items } from '../../api/items.js';
   import { t } from '../../stores/i18n.svelte.js';
 
   let { isOpen = $bindable(false), item = null, preselected = null, onMerged = null } = $props();
@@ -67,7 +68,7 @@
 
     searchLoading = true;
     try {
-      const results = await api.links.search(trimmed, 'item', 20);
+      const results = await links.search(trimmed, 'item', 20);
       if (version !== searchVersion) return;
       const list = (Array.isArray(results) ? results : []).filter(
         (entry) => Number(entry.id) !== Number(item?.id)
@@ -117,7 +118,7 @@
     try {
       merging = true;
       error = '';
-      const result = await api.items.mergeInto(item.id, [duplicateId]);
+      const result = await items.mergeInto(item.id, [duplicateId]);
       close();
       onMerged?.(result);
     } catch (err) {

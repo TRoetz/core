@@ -1,7 +1,7 @@
 <script>
   import { onDestroy } from 'svelte';
   import { Globe } from '@lucide/svelte';
-  import { api } from '../api.js';
+  import { updateUserRegionalSettings } from '../api/users.js';
   import AlertBox from '../components/AlertBox.svelte';
   import Button from '../components/Button.svelte';
   import FormField from '../components/FormField.svelte';
@@ -40,7 +40,7 @@
     saved = false;
     error = '';
     try {
-      const updatedUser = await api.updateUserRegionalSettings(userId, {
+      const updatedUser = await updateUserRegionalSettings(userId, {
         timezone: selectedTimezone,
         language: selectedLanguage,
       });

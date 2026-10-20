@@ -1,5 +1,6 @@
 <script>
-  import { api } from '../api.js';
+  import { configurationSets } from '../api/configuration.js';
+  import { workflows } from '../api/workflows.js';
   import StateDisplay from '../components/StateDisplay.svelte';
   import Button from '../components/Button.svelte';
   import BasePicker from '../pickers/BasePicker.svelte';
@@ -126,12 +127,12 @@
     try {
       let response;
       if (comprehensive) {
-        response = await api.configurationSets.analyzeComprehensiveMigration(
+        response = await configurationSets.analyzeComprehensiveMigration(
           targetConfigurationSet.id,
           workspaceId
         );
       } else {
-        response = await api.configurationSets.analyzeMigration(configurationSet.id, workspaceId);
+        response = await configurationSets.analyzeMigration(configurationSet.id, workspaceId);
       }
       migrationAnalysis = response;
 
@@ -291,7 +292,7 @@
             }))
         };
 
-        await api.configurationSets.executeComprehensiveMigration(migrationRequest);
+        await configurationSets.executeComprehensiveMigration(migrationRequest);
       } else {
         const migrationRequest = {
           configuration_set_id: configurationSet.id,
@@ -307,7 +308,7 @@
             }))
         };
 
-        await api.configurationSets.executeMigration(migrationRequest);
+        await configurationSets.executeMigration(migrationRequest);
       }
 
       migrationSuccess = true;
@@ -389,7 +390,7 @@
 
   async function loadWorkflowStatuses() {
     try {
-      const workflow = await api.workflows.get(migrationAnalysis.new_workflow_id);
+      const workflow = await workflows.get(migrationAnalysis.new_workflow_id);
       // Extract unique statuses from workflow transitions
       const statusSet = new Set();
       workflow.transitions.forEach(transition => {

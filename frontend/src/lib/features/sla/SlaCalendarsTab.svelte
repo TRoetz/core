@@ -1,5 +1,5 @@
 <script>
-  import { api } from '../../api.js';
+  import { sla } from '../../api/sla.js';
   import PageHeader from '../../layout/PageHeader.svelte';
   import Button from '../../components/Button.svelte';
   import DataTable from '../../components/DataTable.svelte';
@@ -23,7 +23,7 @@
     try {
       loading = true;
       error = null;
-      calendars = await api.sla.getAvailableCalendars(workspaceId);
+      calendars = await sla.getAvailableCalendars(workspaceId);
     } catch (err) {
       error = err?.message || t('workspaceSettings.serviceLevels.loadFailed');
     } finally {
@@ -52,10 +52,10 @@
 
   async function save(payload) {
     if (editing) {
-      await api.sla.updateCalendar(workspaceId, editing.id, payload);
+      await sla.updateCalendar(workspaceId, editing.id, payload);
       successToast(t('workspaceSettings.serviceLevels.calendarUpdated'));
     } else {
-      await api.sla.createCalendar(workspaceId, payload);
+      await sla.createCalendar(workspaceId, payload);
       successToast(t('workspaceSettings.serviceLevels.calendarCreated'));
     }
     await loadCalendars();
@@ -70,7 +70,7 @@
     });
     if (!ok) return;
     try {
-      await api.sla.deleteCalendar(workspaceId, calendar.id);
+      await sla.deleteCalendar(workspaceId, calendar.id);
       successToast(t('workspaceSettings.serviceLevels.calendarDeleted'));
       await loadCalendars();
     } catch (err) {

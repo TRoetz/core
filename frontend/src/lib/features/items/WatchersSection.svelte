@@ -4,7 +4,7 @@
   import Text from '../../components/Text.svelte';
   import Avatar from '../../components/Avatar.svelte';
   import UserPicker from '../../pickers/UserPicker.svelte';
-  import { api } from '../../api.js';
+  import { getAssignableUsers } from '../../api/users.js';
   import { authStore } from '../../stores/auth.svelte.js';
   import { itemDetailStore } from '../../stores/itemDetailStore.svelte.js';
   import { t } from '../../stores/i18n.svelte.js';
@@ -65,7 +65,7 @@
     showAddForm = true;
     if (candidates !== null || !workspaceId) return;
     try {
-      candidates = (await api.getAssignableUsers(workspaceId)) ?? [];
+      candidates = (await getAssignableUsers(workspaceId)) ?? [];
     } catch (error) {
       candidates = [];
       errorToast(error?.message || t('items.watchersAddFailed'));

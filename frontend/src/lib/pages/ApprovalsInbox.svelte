@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { api } from '../api.js';
+  import { approvals } from '../api/approvals.js';
   import { errorToast } from '../stores/toasts.svelte.js';
   import { navigate } from '../router.js';
   import { IconRubberStamp } from '@tabler/icons-svelte-runes';
@@ -22,7 +22,7 @@
   async function load(status) {
     try {
       loading = true;
-      requests = (await api.approvals.mine(status)) || [];
+      requests = (await approvals.mine(status)) || [];
     } catch (err) {
       console.error(err);
       errorToast(err.message || JSON.stringify(err));

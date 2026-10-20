@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { api } from '../api.js';
+  import { links as linksApi } from '../api/configuration.js';
   import { X, Plus, Search, Link2 } from '@lucide/svelte';
   import { errorToast } from '../stores/toasts.svelte.js';
   import Input from '../components/Input.svelte';
@@ -41,7 +41,7 @@
     if (!itemId || !fieldId) return;
     loading = true;
     try {
-      const result = await api.links.getFieldLinks(itemId, fieldId);
+      const result = await linksApi.getFieldLinks(itemId, fieldId);
       loadedLinks = result || [];
     } catch (e) {
       console.error('Failed to load field links:', e);
@@ -68,7 +68,7 @@
       try {
         const entityType = opts.allowed_entity_types?.[0] || 'item';
         const itemTypeIds = opts.allowed_item_type_ids || [];
-        const results = await api.links.search(searchQuery, entityType, 20, itemTypeIds) || [];
+        const results = await linksApi.search(searchQuery, entityType, 20, itemTypeIds) || [];
         // A newer keystroke superseded this request; drop the stale response.
         if (seq !== searchSeq) return;
         // Filter out already linked items
@@ -101,7 +101,7 @@
         custom_field_id: fieldId
       };
 
-      await api.links.create(linkRequest);
+      await linksApi.create(linkRequest);
 
       searchQuery = '';
       searchResults = [];
@@ -119,7 +119,7 @@
   async function removeLink(linkId) {
     try {
       const removedLink = links.find(link => Number(link.id) === Number(linkId));
-      await api.links.delete(linkId);
+      await linksApi.delete(linkId);
       if (onChanged) await onChanged({ itemIds: affectedItemIds(removedLink) });
       else await loadLinks();
     } catch (e) {

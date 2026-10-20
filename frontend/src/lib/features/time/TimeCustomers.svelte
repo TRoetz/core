@@ -1,6 +1,7 @@
 <script>
   import { onMount } from 'svelte';
-  import { api } from '../../api.js';
+  import { customFields as customFieldsApi } from '../../api/configuration.js';
+  import { customerOrganisations } from '../../api/portal.js';
   import { attachmentStatus } from '../../stores/attachmentStatus.svelte.js';
   import Button from '../../components/Button.svelte';
   import DataTable from '../../components/DataTable.svelte';
@@ -39,7 +40,7 @@
 
   async function loadCustomFields() {
     try {
-      customFields = await api.customFields.getAll();
+      customFields = await customFieldsApi.getAll();
       // Filter fields that apply to customer organisations
       customerOrgFields = customFields.filter(f => f.applies_to_customer_organisations);
     } catch (err) {
@@ -49,7 +50,7 @@
 
   async function loadCustomers() {
     try {
-      const result = await api.customerOrganisations.getAll();
+      const result = await customerOrganisations.getAll();
       customers = realCustomers(result);
     } catch (error) {
       console.error('Failed to load customers:', error);
@@ -96,9 +97,9 @@
   async function saveCustomer() {
     try {
       if (editingCustomer) {
-        await api.customerOrganisations.update(editingCustomer.id, formData);
+        await customerOrganisations.update(editingCustomer.id, formData);
       } else {
-        await api.customerOrganisations.create(formData);
+        await customerOrganisations.create(formData);
       }
       await loadCustomers();
       cancelForm();
@@ -119,7 +120,7 @@
 
     if (confirmed) {
       try {
-        await api.customerOrganisations.delete(customer.id);
+        await customerOrganisations.delete(customer.id);
         await loadCustomers();
       } catch (error) {
         console.error('Failed to delete customer:', error);

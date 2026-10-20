@@ -2,7 +2,7 @@
   import { t } from '../../stores/i18n.svelte.js';
   import { collectionEditorOptions } from '../../stores/collectionEditorOptions.svelte.js';
   import { collectionFieldLinks } from '../../stores/collectionFieldLinks.svelte.js';
-  import { api } from '../../api.js';
+  import { items } from '../../api/items.js';
   import { updateCustomFieldValue } from '../../utils/customFieldValueUpdates.js';
   import InlineFieldEditor from '../../editors/InlineFieldEditor.svelte';
   import ItemPicker from '../../pickers/ItemPicker.svelte';
@@ -74,8 +74,8 @@
   async function handleItemUpdate(field, value) {
     try {
       const updatedItem = field === 'status_id'
-        ? await api.items.transition(item.id, value)
-        : await api.items.update(item.id, { [field]: value });
+        ? await items.transition(item.id, value)
+        : await items.update(item.id, { [field]: value });
       onitemUpdated?.({ item: updatedItem, field, value });
     } catch (error) {
       onupdateError?.({ error: error.message, field, value });
@@ -86,7 +86,7 @@
   // is sent.
   async function handleCustomFieldUpdate(fieldIdentifier, value) {
     try {
-      const updatedItem = await updateCustomFieldValue(api, item.id, fieldIdentifier, value);
+      const updatedItem = await updateCustomFieldValue(item.id, fieldIdentifier, value);
       onitemUpdated?.({ item: updatedItem, field: fieldIdentifier, value });
     } catch (error) {
       onupdateError?.({ error: error.message, field: fieldIdentifier, value });
@@ -100,7 +100,7 @@
     const PERSONAL_STATUS_OPEN = 1;
     const PERSONAL_STATUS_DONE = 3;
     try {
-      const updatedItem = await api.items.transition(item.id, isCompleted ? PERSONAL_STATUS_DONE : PERSONAL_STATUS_OPEN);
+      const updatedItem = await items.transition(item.id, isCompleted ? PERSONAL_STATUS_DONE : PERSONAL_STATUS_OPEN);
       item = { ...item, status_id: updatedItem.status_id, status_name: updatedItem.status_name };
       onitemUpdated?.({ item, field: 'status', value: updatedItem.status_id });
     } catch (error) {

@@ -2,7 +2,7 @@
   import { untrack } from 'svelte';
   import StateDisplay from '../../components/StateDisplay.svelte';
   import { ExternalLink, FileText, LogIn, Paperclip, RotateCcw } from '@lucide/svelte';
-  import { api } from '../../api.js';
+  import { forms } from '../../api/forms.js';
   import { t } from '../../stores/i18n.svelte.js';
   import { authStore } from '../../stores/auth.svelte.js';
   import Label from '../../components/Label.svelte';
@@ -308,7 +308,7 @@
 
       const result = submitForm
         ? await submitForm(submissionData, attachments)
-        : await api.forms.submit(formSlug, submissionData, attachments);
+        : await forms.submit(formSlug, submissionData, attachments);
 
       draftReady = false;
       const { storage: draftStorage, userId: draftUserId } = resolveDraftStore();

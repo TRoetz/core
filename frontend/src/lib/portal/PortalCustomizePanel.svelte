@@ -23,7 +23,8 @@
   } from '../stores/portal.svelte.js';
   import { gradients, iconMap } from '../stores/portalPresentation.js';
   import ModalBackdrop from '../components/ModalBackdrop.svelte';
-  import { api } from '../api.js';
+  import { pages } from '../api/pages.js';
+  import { assetReports, requestTypes } from '../api/channels.js';
   import { workspacesStore } from '../stores/workspaces.svelte.js';
   import { portalAuthStore } from '../stores/portalAuth.svelte.js';
   import { authStore } from '../stores/auth.svelte.js';
@@ -125,7 +126,7 @@
       .filter((id) => kbPageTitles[`ws:${id}`] !== true);
     if (workspaceIds.length === 0) return;
     try {
-      const rows = await api.pages.getTitles(workspaceIds);
+      const rows = await pages.getTitles(workspaceIds);
       const titles = { ...kbPageTitles };
       for (const row of Array.isArray(rows) ? rows : []) {
         titles[row.page_id] = row.title;
@@ -230,7 +231,7 @@
     if (!confirmed) return;
 
     try {
-      await api.assetReports.delete(portalStore.portalData?.channel_id, id);
+      await assetReports.delete(portalStore.portalData?.channel_id, id);
       await portalCatalogStore.loadAssetReports();
     } catch (err) {
       console.error('Failed to delete asset report:', err);
@@ -250,7 +251,7 @@
     if (!confirmed) return;
 
     try {
-      await api.requestTypes.delete(portalStore.portalData?.channel_id, id);
+      await requestTypes.delete(portalStore.portalData?.channel_id, id);
       await portalCatalogStore.loadRequestTypes();
     } catch (err) {
       console.error('Failed to delete request type:', err);

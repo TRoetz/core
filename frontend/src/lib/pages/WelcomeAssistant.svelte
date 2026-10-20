@@ -1,6 +1,6 @@
 <script>
   import { onMount, tick } from 'svelte';
-  import { api } from '../api.js';
+  import { setup } from '../api/admin.js';
   import { User, Blocks, ClipboardList, AlertCircle, Languages } from '@lucide/svelte';
   import Modal from '../dialogs/Modal.svelte';
   import Button from '../components/Button.svelte';
@@ -131,7 +131,7 @@
         module_settings: moduleSettings
       };
 
-      const result = await api.setup.complete(setupData);
+      const result = await setup.complete(setupData);
 
       try {
         onsetupCompleted?.(result);

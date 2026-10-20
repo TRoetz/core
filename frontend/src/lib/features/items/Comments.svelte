@@ -1,7 +1,7 @@
 <script>
 	import { onMount, onDestroy, tick } from 'svelte';
 	import ColorDot from '../../components/ColorDot.svelte';
-	import { api } from '../../api.js';
+	import { createComment, deleteComment as deleteCommentApi, updateComment } from '../../api/misc.js';
 	import { authStore } from '../../stores/auth.svelte.js';
 	import { subscribeToNewNotifications } from '../../stores/notifications.js';
 	import { useEventListener } from 'runed';
@@ -153,7 +153,7 @@
 		const version = ++reconciliationVersion;
 		let response;
 		try {
-			response = await loadAttributedComments(api, itemId, { limit: COMMENT_PAGE_SIZE });
+			response = await loadAttributedComments(itemId, { limit: COMMENT_PAGE_SIZE });
 		} catch (err) {
 			if (version !== reconciliationVersion) return;
 			// Navigation can unload the document while this request is in flight.
@@ -193,7 +193,7 @@
 	async function syncNewComments() {
 		let response;
 		try {
-			response = await loadAttributedComments(api, itemId, {
+			response = await loadAttributedComments(itemId, {
 				limit: COMMENT_PAGE_SIZE,
 				...(refreshCursor ? { cursor: refreshCursor } : {})
 			});
@@ -246,7 +246,7 @@
 		try {
 			while (fresh.length < targetCount) {
 				const isFirstPage = firstResponse === null;
-				const response = await loadAttributedComments(api, itemId, {
+				const response = await loadAttributedComments(itemId, {
 					limit: Math.min(100, targetCount - fresh.length),
 					...(cursor ? { cursor } : {})
 				});
@@ -303,7 +303,7 @@
 		isLoadingMore = true;
 		error = '';
 		try {
-			const response = await loadAttributedComments(api, itemId, {
+			const response = await loadAttributedComments(itemId, {
 				limit: COMMENT_PAGE_SIZE,
 				cursor: olderCursor
 			});
@@ -369,7 +369,7 @@
 		error = '';
 
 		try {
-			const newComment = await api.createComment(itemId, {
+			const newComment = await createComment(itemId, {
 				content: newCommentContent,
 				author_id: authStore.currentUser.id,
 				is_private: isInternalComment
@@ -416,7 +416,7 @@
 		if (!confirmed) return;
 
 		try {
-			await api.deleteComment(commentId);
+			await deleteCommentApi(commentId);
 			comments = comments.filter(c => c.id !== commentId);
 			totalCount = Math.max(0, totalCount - 1);
 			// Update comment count
@@ -446,7 +446,7 @@
 		error = '';
 
 		try {
-			const updated = await api.updateComment(editingCommentId, {
+			const updated = await updateComment(editingCommentId, {
 				content: editingContent
 			});
 

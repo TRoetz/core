@@ -3,7 +3,7 @@
   import { t } from '../stores/i18n.svelte.js';
   import { errorToast } from '../stores/toasts.svelte.js';
   import { confirm } from '../composables/useConfirm.js';
-  import { api } from '../api.js';
+  import { conditionSets as conditionSetsApi } from '../api/conditionSets.js';
   import { navigate } from '../router.js';
   import { Plus, Edit, Trash2, Search } from '@lucide/svelte';
   import { IconBarrierBlock } from '@tabler/icons-svelte-runes';
@@ -39,7 +39,7 @@
   async function loadData() {
     try {
       loading = true;
-      conditionSets = (await api.conditionSets.getAll()) || [];
+      conditionSets = (await conditionSetsApi.getAll()) || [];
     } catch (error) {
       console.error('Failed to load condition sets:', error);
       conditionSets = [];
@@ -67,7 +67,7 @@
     if (!confirmed) return;
 
     try {
-      await api.conditionSets.delete(cs.id);
+      await conditionSetsApi.delete(cs.id);
       conditionSets = conditionSets.filter(c => c.id !== cs.id);
     } catch (error) {
       console.error('Failed to delete condition set:', error);

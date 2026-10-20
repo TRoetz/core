@@ -21,7 +21,7 @@
   import AlertBox from '../components/AlertBox.svelte';
   import Lozenge from '../components/Lozenge.svelte';
   import PageHeader from '../layout/PageHeader.svelte';
-  import { api } from '../api.js';
+  import { tests } from '../api/tests/index.js';
   import BDDScenarioView from '../features/testing/BDDScenarioView.svelte';
   import { parseScenarioSpec } from '../features/testing/bddSpec.js';
   import { formatAuthenticatedDateTime as formatDateTimeLocale } from '../utils/authenticatedDateFormatter.js';
@@ -71,14 +71,14 @@
     error = null;
 
     try {
-      const caseData = await api.tests.testCases.get(workspaceId, numericId);
+      const caseData = await tests.testCases.get(workspaceId, numericId);
       const stepsData = caseData?.format === 'bdd'
         ? []
-        : await api.tests.testCases.steps.getAll(workspaceId, numericId);
+        : await tests.testCases.steps.getAll(workspaceId, numericId);
 
       let connections = null;
       try {
-        connections = await api.tests.testCases.connections(workspaceId, numericId);
+        connections = await tests.testCases.connections(workspaceId, numericId);
       } catch (connErr) {
         if (!(connErr?.status === 404)) {
           throw connErr;
@@ -107,7 +107,7 @@
   async function copyFeatureFile() {
     if (!workspaceId || !testCase?.id) return;
     try {
-      const feature = await api.tests.testCases.feature(workspaceId, testCase.id);
+      const feature = await tests.testCases.feature(workspaceId, testCase.id);
       await navigator.clipboard.writeText(feature);
       copyState = 'copied';
     } catch (err) {

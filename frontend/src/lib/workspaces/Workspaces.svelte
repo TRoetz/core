@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { api } from '../api.js';
+  import { workspaces } from '../api/workspaces.js';
   import { navigate } from '../router.js';
   import { t } from '../stores/i18n.svelte.js';
   import { errorToast } from '../stores/toasts.svelte.js';
@@ -31,7 +31,7 @@
 
   async function loadWorkspaceRows() {
     try {
-      const all = await api.workspaces.getAll({}, { pageSize: 1000 });
+      const all = await workspaces.getAll({}, { pageSize: 1000 });
       workspaceRows = (all || []).filter((ws) => !ws.is_personal);
     } catch (error) {
       console.error('Failed to load workspaces:', error);
@@ -60,7 +60,7 @@
     });
     if (confirmed) {
       try {
-        await api.workspaces.delete(workspace.id);
+        await workspaces.delete(workspace.id);
         workspacesStore.remove(workspace.id);
         await loadWorkspaceRows();
       } catch (error) {

@@ -4,7 +4,7 @@
   // admin catalog managers (CapabilityManager/PriorityManager) and reuses the
   // shared DataTable, EntityRowActions, and EntityFormModal components.
   import { onMount } from 'svelte';
-  import { api } from '../api.js';
+  import { contactRoles } from '../api/portal.js';
   import { Edit, Plus, Trash2, Users } from '@lucide/svelte';
   import Button from '../components/Button.svelte';
   import DataTable from '../components/DataTable.svelte';
@@ -33,7 +33,7 @@
     try {
       loading = true;
       error = null;
-      const result = await api.contactRoles.getAll();
+      const result = await contactRoles.getAll();
       levels = (Array.isArray(result) ? result : (result?.data ?? [])).sort(
         (a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)
       );
@@ -74,9 +74,9 @@
     saving = true;
     try {
       if (editingId) {
-        await api.contactRoles.update(editingId, formData);
+        await contactRoles.update(editingId, formData);
       } else {
-        await api.contactRoles.create(formData);
+        await contactRoles.create(formData);
       }
       await loadLevels();
       closeForm();
@@ -97,7 +97,7 @@
     });
     if (!confirmed) return;
     try {
-      await api.contactRoles.delete(level.id);
+      await contactRoles.delete(level.id);
       await loadLevels();
     } catch (_err) {
       error = t('contactLevels.deleteFailed');

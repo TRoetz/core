@@ -3,7 +3,7 @@
   import { t } from '../stores/i18n.svelte.js';
   import { errorToast } from '../stores/toasts.svelte.js';
   import { confirm } from '../composables/useConfirm.js';
-  import { api } from '../api.js';
+  import { approvalSets as approvalSetsApi } from '../api/approvalSets.js';
   import { navigate } from '../router.js';
   import { Plus, Edit, Trash2, Search } from '@lucide/svelte';
   import { IconRubberStamp } from '@tabler/icons-svelte-runes';
@@ -36,7 +36,7 @@
   async function loadData() {
     try {
       loading = true;
-      approvalSets = (await api.approvalSets.getAll()) || [];
+      approvalSets = (await approvalSetsApi.getAll()) || [];
     } catch (error) {
       console.error('Failed to load approval sets:', error);
       approvalSets = [];
@@ -64,7 +64,7 @@
     if (!confirmed) return;
 
     try {
-      await api.approvalSets.delete(s.id);
+      await approvalSetsApi.delete(s.id);
       approvalSets = approvalSets.filter(c => c.id !== s.id);
     } catch (error) {
       console.error('Failed to delete approval set:', error);

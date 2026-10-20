@@ -1,6 +1,7 @@
 <script>
   import { Trash2, Upload, User } from '@lucide/svelte';
-  import { api } from '../api.js';
+  import { attachments } from '../api/misc.js';
+  import { updateUserAvatar } from '../api/users.js';
   import AlertBox from '../components/AlertBox.svelte';
   import Button from '../components/Button.svelte';
   import DescriptionText from '../components/DescriptionText.svelte';
@@ -33,9 +34,9 @@
       formData.append('item_id', '0');
       formData.append('category', 'avatar');
 
-      const uploadResult = await api.attachments.upload(formData);
+      const uploadResult = await attachments.upload(formData);
       if (uploadResult?.success && uploadResult.avatar_url) {
-        user = await api.updateUserAvatar(userId, uploadResult.avatar_url);
+        user = await updateUserAvatar(userId, uploadResult.avatar_url);
         authStore.patchCurrentUser({ avatar_url: user.avatar_url || uploadResult.avatar_url });
         showUpload = false;
       }
@@ -58,7 +59,7 @@
     if (!confirmed) return;
 
     try {
-      user = await api.updateUserAvatar(userId, null);
+      user = await updateUserAvatar(userId, null);
       authStore.patchCurrentUser({ avatar_url: '' });
     } catch (err) {
       error = err.message || t('dialogs.alerts.failedToDelete', { error: 'avatar' });

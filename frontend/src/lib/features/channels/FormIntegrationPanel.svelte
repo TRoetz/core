@@ -1,7 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import { IconExternalLink, IconCode, IconWorldWww, IconBrandJavascript } from '@tabler/icons-svelte-runes';
-  import { api } from '../../api.js';
+  import { forms as formsApi } from '../../api/forms.js';
   import { t } from '../../stores/i18n.svelte.js';
   import Button from '../../components/Button.svelte';
   import CopyButton from '../../components/CopyButton.svelte';
@@ -43,7 +43,7 @@
   onMount(async () => {
     if (!slug) return;
     try {
-      const forms = await api.forms.getForms(slug);
+      const forms = await formsApi.getForms(slug);
       hasAuthenticatedForms = (forms || []).some(form => form.config?.require_auth === true);
       embedModeCheckComplete = true;
       if (hasAuthenticatedForms) activeTab = 'hosted';

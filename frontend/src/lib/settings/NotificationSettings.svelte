@@ -1,7 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import StateDisplay from '../components/StateDisplay.svelte';
-  import { api } from '../api.js';
+  import { notificationSettings as notificationSettingsApi } from '../api/notifications.js';
   import { authStore } from '../stores/auth.svelte.js';
   import { t } from '../stores/i18n.svelte.js';
   import { errorToast } from '../stores/toasts.svelte.js';
@@ -57,7 +57,7 @@
   async function loadNotificationSettings() {
     try {
       loading = true;
-      const data = await api.notificationSettings.getAll();
+      const data = await notificationSettingsApi.getAll();
       notificationSettings = data || [];
     } catch (err) {
       console.error('Failed to load notification settings:', err);
@@ -69,7 +69,7 @@
 
   async function loadAvailableEvents() {
     try {
-      const data = await api.notificationSettings.getAvailableEvents();
+      const data = await notificationSettingsApi.getAvailableEvents();
       availableEvents = data || [];
     } catch (err) {
       console.error('Failed to load available events:', err);
@@ -151,12 +151,12 @@
     try {
       if (editingSetting) {
         translationEditor?.validate();
-        await api.notificationSettings.update(editingSetting.id, formData);
+        await notificationSettingsApi.update(editingSetting.id, formData);
         await translationEditor?.save();
       } else {
         // Add created_by from current user
         formData.created_by = /** @type {any} */ (authStore.currentUser)?.id;
-        await api.notificationSettings.create(formData);
+        await notificationSettingsApi.create(formData);
       }
 
       await loadNotificationSettings();
@@ -178,7 +178,7 @@
     if (!confirmed) return;
 
     try {
-      await api.notificationSettings.delete(setting.id);
+      await notificationSettingsApi.delete(setting.id);
       await loadNotificationSettings();
     } catch (err) {
       console.error('Failed to delete notification setting:', err);

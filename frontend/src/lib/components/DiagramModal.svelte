@@ -3,7 +3,7 @@
   import Button from './Button.svelte';
   import Input from './Input.svelte';
   import { convertMermaidToExcalidraw } from '../editors/mermaidConversion.js';
-  import { api } from '../api.js';
+  import { createDiagram, updateDiagram } from '../api/misc.js';
   import { themeStore } from '../stores/theme.svelte.js';
   import { t } from '../stores/i18n.svelte.js';
   import { errorToast } from '../stores/toasts.svelte.js';
@@ -81,10 +81,10 @@
 
       if (diagram) {
         // Update existing diagram
-        await api.updateDiagram(diagram.id, diagramName, diagramData);
+        await updateDiagram(diagram.id, diagramName, diagramData);
       } else {
         // Create new diagram
-        await api.createDiagram(itemId, diagramName, diagramData);
+        await createDiagram(itemId, diagramName, diagramData);
       }
 
       onSave();

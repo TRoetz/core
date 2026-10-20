@@ -1,7 +1,7 @@
 <script>
   import { BasePicker } from '.';
   import { createAsyncLoader } from '../composables';
-  import { api } from '../api.js';
+  import { get } from '../api/core.js';
   import { onDestroy, onMount } from 'svelte';
   import { Users } from '@lucide/svelte';
   import { t } from '../stores/i18n.svelte.js';
@@ -18,7 +18,7 @@
 
   const resolvedPlaceholder = $derived(placeholder || t('pickers.selectGroup'));
 
-  const groups = createAsyncLoader(() => api.get('/groups'));
+  const groups = createAsyncLoader(() => get('/groups'));
 
   onMount(() => groups.load());
   onDestroy(() => groups.dispose());

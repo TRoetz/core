@@ -8,7 +8,8 @@
   import PageHeader from '../layout/PageHeader.svelte';
   import AlertBox from '../components/AlertBox.svelte';
   import Panel from '../components/Panel.svelte';
-  import { api, getSecuritySettings, fetchAPI } from '../api.js';
+  import { getSecuritySettings } from '../api/admin.js';
+  import { fetchAPI } from '../api/core.js';
   import { t } from '../stores/i18n.svelte.js';
   import { confirm } from '../composables/useConfirm.js';
   import DescriptionText from '../components/DescriptionText.svelte';

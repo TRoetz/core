@@ -1,6 +1,7 @@
 <script>
   import { onMount } from 'svelte';
-  import { api } from '../../api.js';
+  import { customerOrganisations } from '../../api/portal.js';
+  import { time } from '../../api/time.js';
   import Button from '../../components/Button.svelte';
   import Card from '../../components/Card.svelte';
   import DataTable from '../../components/DataTable.svelte';
@@ -148,7 +149,7 @@
 
   async function loadCustomers() {
     try {
-      customers = (await api.customerOrganisations.getAll()) || [];
+      customers = (await customerOrganisations.getAll()) || [];
     } catch (error) {
       console.error('Failed to load customers:', error);
       customers = [];
@@ -157,7 +158,7 @@
 
   async function loadProjects() {
     try {
-      projects = (await api.time.projects.getAll()) || [];
+      projects = (await time.projects.getAll()) || [];
     } catch (error) {
       console.error('Failed to load projects:', error);
       projects = [];
@@ -172,8 +173,8 @@
     try {
       const query = { ...filters, timezone: reportTimezone };
       const [aggregate, page] = await Promise.all([
-        api.time.worklogs.aggregate(query),
-        api.time.worklogs.getPage({ ...query, page_size: ENTRY_PAGE_SIZE, page: 1 }),
+        time.worklogs.aggregate(query),
+        time.worklogs.getPage({ ...query, page_size: ENTRY_PAGE_SIZE, page: 1 }),
       ]);
       summary = buildSummary(aggregate?.totals, { dateFrom: filters.date_from, dateTo: filters.date_to });
       worklogs = page?.data || [];
@@ -190,7 +191,7 @@
     const nextPage = Math.floor(worklogs.length / ENTRY_PAGE_SIZE) + 1;
     loadingMoreEntries = true;
     try {
-      const page = await api.time.worklogs.getPage(
+      const page = await time.worklogs.getPage(
         { ...filters, timezone: reportTimezone, page_size: ENTRY_PAGE_SIZE, page: nextPage }
       );
       worklogs = [...worklogs, ...(page?.data || [])];
@@ -210,7 +211,7 @@
     let page = 1;
     let totalPages = 1;
     while (page <= totalPages) {
-      const document = await api.time.worklogs.getPage(
+      const document = await time.worklogs.getPage(
         { ...filters, timezone: reportTimezone, page_size: EXPORT_PAGE_SIZE, page }
       );
       for (const row of document?.data || []) {
@@ -241,7 +242,7 @@
         date_from: projectDateFrom,
         date_to: projectDateTo,
       };
-      const aggregate = await api.time.worklogs.aggregate(dateFilters);
+      const aggregate = await time.worklogs.aggregate(dateFilters);
       projectAggregate = aggregate || { daily: [], totals: [] };
     } catch (error) {
       console.error('Failed to load project worklogs:', error);
@@ -258,7 +259,7 @@
       const dateFilters = { timezone: reportTimezone, project_id: selectedProjectId };
       if (projectDateFrom) dateFilters.date_from = projectDateFrom;
       if (projectDateTo) dateFilters.date_to = projectDateTo;
-      const document = await api.time.projects.getWorklogsPage(selectedProjectId, {
+      const document = await time.projects.getWorklogsPage(selectedProjectId, {
         ...dateFilters, page_size: EXPORT_PAGE_SIZE, page,
       });
       rows.push(...(document?.data || []));

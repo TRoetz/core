@@ -3,7 +3,7 @@
   import StateDisplay from '../components/StateDisplay.svelte';
   import { useDebounce } from 'runed';
   import { t } from '../stores/i18n.svelte.js';
-  import { api } from '../api.js';
+  import { channels } from '../api/channels.js';
   import { formatDateSimple } from '../utils/dateFormatter.js';
   import Modal from './Modal.svelte';
   import ModalHeader from './ModalHeader.svelte';
@@ -56,7 +56,7 @@
     try {
       loading = true;
       error = null;
-      data = await api.channels.getEmailLog(channel.id, page, pageSize, search);
+      data = await channels.getEmailLog(channel.id, page, pageSize, search);
     } catch (err) {
       console.error('Failed to load email log:', err);
       error = err.message || 'Failed to load email log';
@@ -70,7 +70,7 @@
     try {
       outboxLoading = true;
       outboxError = null;
-      outboxData = await api.channels.getEmailReplies(channel.id, outboxStatus, outboxPage, pageSize);
+      outboxData = await channels.getEmailReplies(channel.id, outboxStatus, outboxPage, pageSize);
     } catch (err) {
       console.error('Failed to load customer reply queue:', err);
       outboxError = err.message || 'Failed to load customer reply queue';
@@ -197,7 +197,7 @@
     if (actingCommentID !== null) return;
     try {
       actingCommentID = reply.comment_id;
-      await api.channels.retryEmailReply(channel.id, reply.comment_id);
+      await channels.retryEmailReply(channel.id, reply.comment_id);
       await loadOutbox();
     } catch (err) {
       console.error('Failed to retry customer reply:', err);
@@ -211,7 +211,7 @@
     if (actingCommentID !== null) return;
     try {
       actingCommentID = reply.comment_id;
-      await api.channels.discardEmailReply(channel.id, reply.comment_id);
+      await channels.discardEmailReply(channel.id, reply.comment_id);
       await loadOutbox();
     } catch (err) {
       console.error('Failed to discard customer reply:', err);
@@ -225,7 +225,7 @@
     if (requeueing || !channel) return;
     try {
       requeueing = true;
-      await api.channels.requeueRateLimitedEmail(channel.id);
+      await channels.requeueRateLimitedEmail(channel.id);
       await loadLog();
     } catch (err) {
       console.error('Failed to requeue rate-limited emails:', err);

@@ -2,7 +2,7 @@
   import { ChevronDown, X } from '@lucide/svelte';
   import { BasePicker } from '.';
   import { createAsyncLoader } from '../composables';
-  import { api } from '../api.js';
+  import { getAssignableUsers, getUsers } from '../api/users.js';
   import { onDestroy, onMount } from 'svelte';
   import Avatar from '../components/Avatar.svelte';
   import Text from '../components/Text.svelte';
@@ -37,7 +37,7 @@
 
   // Load users — use assignable-users endpoint when workspaceId is provided
   const loader = createAsyncLoader(() =>
-    workspaceId ? api.getAssignableUsers(workspaceId) : api.getUsers()
+    workspaceId ? getAssignableUsers(workspaceId) : getUsers()
   );
   onMount(() => { if (!users) loader.load(); });
   onDestroy(() => loader.dispose());

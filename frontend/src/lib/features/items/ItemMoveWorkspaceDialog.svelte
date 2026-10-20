@@ -4,7 +4,7 @@
   import DialogFooter from '../../dialogs/DialogFooter.svelte';
   import BasePicker from '../../pickers/BasePicker.svelte';
   import NativeSelect from '../../components/NativeSelect.svelte';
-  import { api } from '../../api.js';
+  import { items } from '../../api/items.js';
   import { workspacePermissions } from '../../stores/workspacePermissions.svelte.js';
   import { workspacesStore } from '../../stores/workspaces.svelte.js';
   import { t } from '../../stores/i18n.svelte.js';
@@ -83,7 +83,7 @@
           ? null
           : Number(targetPriorityId);
       }
-      const result = await api.items.previewWorkspaceMove(item.id, payload);
+      const result = await items.previewWorkspaceMove(item.id, payload);
       if (version !== previewVersion) return;
       preview = result;
       targetItemTypeId = result.target_item_type_id;
@@ -108,7 +108,7 @@
     saving = true;
     error = '';
     try {
-      const result = await api.items.moveWorkspace(item.id, {
+      const result = await items.moveWorkspace(item.id, {
         destination_workspace_id: Number(destinationWorkspaceId),
         target_item_type_id: Number(targetItemTypeId),
         target_status_id: Number(targetStatusId),

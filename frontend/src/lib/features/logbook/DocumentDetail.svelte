@@ -4,7 +4,7 @@
   import { navigate, currentRoute } from '../../router.js';
   import { logbookStore } from '../../stores/logbook.svelte.js';
   import { t } from '../../stores/i18n.svelte.js';
-  import { api } from '../../api.js';
+  import { logbook } from '../../api/logbook.js';
   import { successToast, errorToast } from '../../stores/toasts.svelte.js';
   import { confirm } from '../../composables/useConfirm.js';
   import Button from '../../components/Button.svelte';
@@ -81,7 +81,7 @@
       } else {
         payload.content = articleContent;
       }
-      await api.logbook.updateDocument(resolvedDocumentId, payload);
+      await logbook.updateDocument(resolvedDocumentId, payload);
       successToast(t('logbook.saved'));
       hasChanges = false;
       // Reload to get updated metadata
@@ -134,7 +134,7 @@
     if (!confirmed) return;
     deleting = true;
     try {
-      await api.logbook.archiveDocument(resolvedDocumentId);
+      await logbook.archiveDocument(resolvedDocumentId);
       successToast(t('logbook.documentDeleted'));
       goBack();
     } catch (error) {
@@ -146,7 +146,7 @@
 
   function viewOriginal() {
     if (!resolvedDocumentId) return;
-    window.open(api.logbook.getDocumentFileUrl(resolvedDocumentId), '_blank');
+    window.open(logbook.getDocumentFileUrl(resolvedDocumentId), '_blank');
   }
 
   let doc = $derived(logbookStore.activeDocument);
@@ -184,7 +184,7 @@
           style="background-color: var(--ds-surface); border-color: var(--ds-border); max-height: 380px;"
         >
           <img
-            src={api.logbook.getDocumentPreviewUrl(resolvedDocumentId)}
+            src={logbook.getDocumentPreviewUrl(resolvedDocumentId)}
             alt=""
             class="max-h-[380px] w-auto object-contain"
             loading="eager"
@@ -302,7 +302,7 @@
           testId="logbook-document-editor"
           placeholder={isNote ? t('logbook.noteContentPlaceholder') : 'Article content...'}
           showToolbar={true}
-          customUploadFn={(formData) => api.logbook.uploadAttachment(resolvedDocumentId, formData)}
+          customUploadFn={(formData) => logbook.uploadAttachment(resolvedDocumentId, formData)}
           downloadUrlBase="/api/logbook/attachments"
         />
       </div>

@@ -4,7 +4,7 @@
   import { logbookStore } from '../../stores/logbook.svelte.js';
   import { canRunBackgroundSync, onBackgroundSyncAvailable } from '../../utils/backgroundSync.js';
   import { t } from '../../stores/i18n.svelte.js';
-  import { api } from '../../api.js';
+  import { logbook } from '../../api/logbook.js';
   import { successToast, errorToast } from '../../stores/toasts.svelte.js';
   import { confirm } from '../../composables/useConfirm.js';
   import Button from '../../components/Button.svelte';
@@ -56,7 +56,7 @@
       try {
         const params = {};
         if (bucketId) params.bucket_id = bucketId;
-        const result = await api.logbook.keywordSearch(query, params);
+        const result = await logbook.keywordSearch(query, params);
         if (version !== searchVersion) return;
         const results = result?.data ?? result;
         if (Array.isArray(results)) {
@@ -167,7 +167,7 @@
   async function createNote() {
     if (!activeBucketId || !noteFormData.title.trim()) return;
     try {
-      await api.logbook.createNote(activeBucketId, noteFormData);
+      await logbook.createNote(activeBucketId, noteFormData);
       successToast(t('logbook.noteCreated'));
       showNoteModal = false;
       noteFormData = { title: '', content: '' };
@@ -188,7 +188,7 @@
     });
     if (!confirmed) return;
     try {
-      await api.logbook.archiveDocument(docId);
+      await logbook.archiveDocument(docId);
       successToast(t('logbook.documentDeleted'));
       if (activeBucketId) {
         await logbookStore.loadDocuments(activeBucketId);
@@ -203,7 +203,7 @@
   function openFile(e, docId) {
     e.preventDefault();
     e.stopPropagation();
-    window.open(api.logbook.getDocumentFileUrl(docId), '_blank');
+    window.open(logbook.getDocumentFileUrl(docId), '_blank');
   }
 
   function handleUploadComplete() {
@@ -285,7 +285,7 @@
               </div>
             {:else if doc.has_thumbnail}
               <img
-                src={api.logbook.getDocumentThumbnailUrl(doc.id)}
+                src={logbook.getDocumentThumbnailUrl(doc.id)}
                 alt=""
                 class="w-full h-full object-contain"
                 loading="lazy"

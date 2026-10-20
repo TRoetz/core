@@ -1,7 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import { currentRoute, navigate } from '../../router.js';
-  import { api } from '../../api.js';
+  import { statusCategories as statusCategoriesApi, statuses as statusesApi, workflows } from '../../api/workflows.js';
   import { Save, X, Plus, Trash2 } from '@lucide/svelte';
   import BackButton from '../../components/BackButton.svelte';
   import { t } from '../../stores/i18n.svelte.js';
@@ -29,9 +29,9 @@
       
       // Load workflow, statuses, and status categories in parallel
       const [workflowData, statusesData, categoriesData] = await Promise.all([
-        api.workflows.get(workflowId),
-        api.statuses.getAll(),
-        api.statusCategories.getAll()
+        workflows.get(workflowId),
+        statusesApi.getAll(),
+        statusCategoriesApi.getAll()
       ]);
       
       workflow = workflowData;
@@ -62,7 +62,7 @@
 
   async function handleSave(allTransitions) {
     try {
-      await api.workflows.updateTransitions(workflow.id, allTransitions);
+      await workflows.updateTransitions(workflow.id, allTransitions);
       navigate('/admin/workflows');
     } catch (error) {
       throw error;

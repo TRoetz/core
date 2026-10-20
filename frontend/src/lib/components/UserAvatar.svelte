@@ -7,7 +7,7 @@
   import { User, Home, Shield, Sun, Moon, Monitor, Download, Settings } from '@lucide/svelte';
   import { themeStore } from '../stores/theme.svelte.js';
   import { t } from '../stores/i18n.svelte.js';
-  import { api } from '../api';
+  import { userPreferences } from '../api/users.js';
   import { hasDelegatedAdmin } from '../navigation/delegatedAdminNavigation.js';
   import { installAvailable, requestInstall } from '../mobile/installClient.js';
 
@@ -78,7 +78,7 @@
     if (themeStore.colorMode === mode) return;
     themeStore.setColorMode(mode);
     try {
-      await api.userPreferences.update({ color_mode: mode });
+      await userPreferences.update({ color_mode: mode });
     } catch (error) {
       console.warn('Failed to sync theme preference:', error);
     }

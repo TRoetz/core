@@ -16,7 +16,10 @@
     IconArchive as Archive,
     IconDots as MoreHorizontal,
   } from '@tabler/icons-svelte-runes';
-  import { agentBindings, agentRuns, agentSkills, api } from '../../api.js';
+  import { actionCapabilities, llmProviders } from '../../api/ai.js';
+  import { agentBindings } from '../../api/agentBindings.js';
+  import { agentRuns } from '../../api/agentRuns.js';
+  import { agentSkills } from '../../api/agentSkills.js';
   import { updateQueryParams } from '../../router.js';
   import { workspacePermissions } from '../../stores/workspacePermissions.svelte.js';
   import PageHeader from '../../layout/PageHeader.svelte';
@@ -203,10 +206,10 @@
           agentBindings.listForWorkspace(workspaceId),
           agentSkills.listForWorkspace(workspaceId).catch(() => []),
           agentBindings.listToolCapabilities(workspaceId).catch(() => []),
-          api.actionCapabilities
+          actionCapabilities
             .getForWorkspace(workspaceId, 'runner_pool')
             .catch(() => []),
-          api.llmProviders.getEnabled().catch(() => []),
+          llmProviders.getEnabled().catch(() => []),
         ]);
         workspaceSkills = skills || [];
         capabilityCatalog = capabilities || [];

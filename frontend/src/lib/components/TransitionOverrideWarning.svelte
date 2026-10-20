@@ -4,7 +4,7 @@
 
   import { onMount } from 'svelte';
   import { t } from '../stores/i18n.svelte.js';
-  import { api } from '../api.js';
+  import { transitions } from '../api/transitions.js';
   import { AlertTriangle } from '@lucide/svelte';
 
   let {
@@ -23,7 +23,7 @@
       return;
     }
     loading = true;
-    api.transitions
+    transitions
       .governance(id)
       .then((g) => {
         governance = g;

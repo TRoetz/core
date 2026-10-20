@@ -1,5 +1,6 @@
 <script>
-  import { api } from '../../api.js';
+  import { sla } from '../../api/sla.js';
+  import { statusCategories as statusCategoriesApi, statuses as statusesApi } from '../../api/workflows.js';
   import PageHeader from '../../layout/PageHeader.svelte';
   import Button from '../../components/Button.svelte';
   import DataTable from '../../components/DataTable.svelte';
@@ -54,7 +55,7 @@
     try {
       loading = true;
       error = null;
-      const result = await api.sla.getMetrics(workspace);
+      const result = await sla.getMetrics(workspace);
       if (generation === requestGeneration) metrics = result ?? [];
     } catch (err) {
       if (generation === requestGeneration) {
@@ -67,9 +68,9 @@
 
   async function loadReferenceData(workspace, generation) {
     const [calendarList, statusList, categoryList] = await Promise.all([
-      api.sla.getAvailableCalendars(workspace).catch(() => []),
-      api.statuses.getAll().catch(() => []),
-      api.statusCategories.getAll().catch(() => []),
+      sla.getAvailableCalendars(workspace).catch(() => []),
+      statusesApi.getAll().catch(() => []),
+      statusCategoriesApi.getAll().catch(() => []),
     ]);
     if (generation !== requestGeneration) return;
     calendars = calendarList ?? [];
@@ -100,10 +101,10 @@
 
   async function save(payload) {
     if (editing) {
-      await api.sla.updateMetric(workspaceId, editing.id, payload);
+      await sla.updateMetric(workspaceId, editing.id, payload);
       successToast(t('workspaceSettings.serviceLevels.metricUpdated'));
     } else {
-      await api.sla.createMetric(workspaceId, payload);
+      await sla.createMetric(workspaceId, payload);
       successToast(t('workspaceSettings.serviceLevels.metricCreated'));
     }
     await loadMetrics();
@@ -118,7 +119,7 @@
     });
     if (!ok) return;
     try {
-      await api.sla.deleteMetric(workspaceId, metric.id);
+      await sla.deleteMetric(workspaceId, metric.id);
       successToast(t('workspaceSettings.serviceLevels.metricDeleted'));
       await loadMetrics();
     } catch (err) {
@@ -128,7 +129,7 @@
 
   async function toggleActive(metric) {
     try {
-      await api.sla.updateMetric(workspaceId, metric.id, {
+      await sla.updateMetric(workspaceId, metric.id, {
         ...metricToPayload(metric),
         is_active: !metric.is_active,
       });
@@ -144,11 +145,11 @@
     const current = metrics[index];
     const swapped = metrics[target];
     try {
-      await api.sla.updateMetric(workspaceId, current.id, {
+      await sla.updateMetric(workspaceId, current.id, {
         ...metricToPayload(current),
         position: swapped.position ?? target,
       });
-      await api.sla.updateMetric(workspaceId, swapped.id, {
+      await sla.updateMetric(workspaceId, swapped.id, {
         ...metricToPayload(swapped),
         position: current.position ?? index,
       });

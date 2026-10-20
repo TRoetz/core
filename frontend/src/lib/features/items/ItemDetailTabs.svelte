@@ -1,6 +1,6 @@
 <script>
   import { MessageSquare, Clock, Play, Info, History, Edit, Trash2, MoreHorizontal, Bot, Activity, CalendarClock, TimerReset, RefreshCw } from '@lucide/svelte';
-  import { api } from '../../api.js';
+  import { items } from '../../api/items.js';
   import Button from '../../components/Button.svelte';
   import DropdownMenu from '../../layout/DropdownMenu.svelte';
   import Comments from '../items/Comments.svelte';
@@ -121,7 +121,7 @@
     const controller = new AbortController();
     statusDurationsLoading = true;
     statusDurationsError = false;
-    api.items.getStatusDurations(id, { signal: controller.signal })
+    items.getStatusDurations(id, { signal: controller.signal })
       .then((result) => {
         if (!controller.signal.aborted && item?.id === id && statusDurationsRetry === requestVersion) {
           statusDurations = Array.isArray(result?.statuses) ? result.statuses : [];

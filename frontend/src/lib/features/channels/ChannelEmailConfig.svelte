@@ -2,7 +2,7 @@
   import { IconCheck } from '@tabler/icons-svelte-runes';
   import { t } from '../../stores/i18n.svelte.js';
   import { errorToast } from '../../stores/toasts.svelte.js';
-  import { api } from '../../api.js';
+  import { channels } from '../../api/channels.js';
   import Button from '../../components/Button.svelte';
   import Label from '../../components/Label.svelte';
   import DescriptionText from '../../components/DescriptionText.svelte';
@@ -77,7 +77,7 @@
     try {
       loading = true;
       restoreEnabled = await onSaveBeforeOAuth();
-      const result = await api.channels.startEmailOAuth(channelId, restoreEnabled);
+      const result = await channels.startEmailOAuth(channelId, restoreEnabled);
       if (result.auth_url) {
         window.location.href = result.auth_url;
       } else {

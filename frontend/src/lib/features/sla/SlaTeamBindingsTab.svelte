@@ -1,5 +1,6 @@
 <script>
-  import { api } from '../../api.js';
+  import { sla } from '../../api/sla.js';
+  import { teams as teamsApi } from '../../api/teams.js';
   import PageHeader from '../../layout/PageHeader.svelte';
   import Button from '../../components/Button.svelte';
   import DataTable from '../../components/DataTable.svelte';
@@ -41,9 +42,9 @@
       loading = true;
       error = null;
       const [bindingList, teamList, calendarList] = await Promise.all([
-        api.sla.getWorkspaceTeamBindings(workspaceId),
-        api.teams.getAll().catch(() => []),
-        api.sla.getAvailableCalendars(workspaceId).catch(() => []),
+        sla.getWorkspaceTeamBindings(workspaceId),
+        teamsApi.getAll().catch(() => []),
+        sla.getAvailableCalendars(workspaceId).catch(() => []),
       ]);
       bindings = bindingList ?? [];
       teams = teamList ?? [];
@@ -76,7 +77,7 @@
     creating = true;
     createError = null;
     try {
-      await api.sla.createWorkspaceTeamBinding(workspaceId, selectedTeamId);
+      await sla.createWorkspaceTeamBinding(workspaceId, selectedTeamId);
       successToast(t('workspaceSettings.serviceLevels.bindingCreated'));
       showCreate = false;
       await load();
@@ -102,7 +103,7 @@
     });
     if (!ok) return;
     try {
-      await api.sla.deleteWorkspaceTeamBinding(workspaceId, binding.id);
+      await sla.deleteWorkspaceTeamBinding(workspaceId, binding.id);
       successToast(t('workspaceSettings.serviceLevels.bindingRemoved'));
       await load();
     } catch (err) {

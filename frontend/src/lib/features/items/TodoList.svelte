@@ -1,7 +1,9 @@
 <script>
   import { onMount } from 'svelte';
   import Badge from '../../components/Badge.svelte';
-  import { api } from '../../api.js';
+  import { workspaces } from '../../api/workspaces.js';
+  import { statusCategories as statusCategoriesApi } from '../../api/workflows.js';
+  import { items } from '../../api/items.js';
   import { Plus, Check, X, Trash2, ChevronDown, ChevronRight } from '@lucide/svelte';
   import WorkItemRow from './WorkItemRow.svelte';
   import DeleteItemDialog from '../../dialogs/DeleteItemDialog.svelte';
@@ -156,7 +158,7 @@
 
   async function loadStatuses() {
     try {
-      statuses = await api.workspaces.getStatuses(workspaceId);
+      statuses = await workspaces.getStatuses(workspaceId);
     } catch (error) {
       console.error('Failed to load statuses:', error);
       statuses = [];
@@ -165,7 +167,7 @@
 
   async function loadStatusCategories() {
     try {
-      statusCategories = await api.statusCategories.getAll();
+      statusCategories = await statusCategoriesApi.getAll();
     } catch (error) {
       console.error('Failed to load status categories:', error);
       statusCategories = [];
@@ -179,7 +181,7 @@
         limit: 100
       };
       if (completedSince) filters.completed_since = completedSince;
-      const response = await api.items.getAll(filters);
+      const response = await items.getAll(filters);
       personalTodos = response?.data ?? [];
     } catch (error) {
       console.error('Failed to load personal todos:', error);
@@ -200,7 +202,7 @@
         limit: 100
       };
       if (completedSince) filters.completed_since = completedSince;
-      const response = await api.items.getAll(filters);
+      const response = await items.getAll(filters);
       let allAssigned = response?.data ?? [];
       assignedWork = allAssigned.filter(item => item.workspace_id !== parseInt(workspaceId));
     } catch (error) {
@@ -232,7 +234,7 @@
         workspace_id: parseInt(workspaceId)
       };
 
-      await api.items.create(todoData);
+      await items.create(todoData);
       await loadPersonalTodos();
       cancelAddingTodo();
     } catch (error) {
@@ -243,7 +245,7 @@
 
   async function changeItemStatus(item, newStatusId, isPersonal = true) {
     try {
-      await api.items.transition(item.id, newStatusId);
+      await items.transition(item.id, newStatusId);
 
       if (isPersonal) {
         await loadPersonalTodos();

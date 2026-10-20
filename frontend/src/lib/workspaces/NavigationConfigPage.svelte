@@ -18,7 +18,8 @@
   import { workspacePermissions } from '../stores/workspacePermissions.svelte.js';
   import { currentWorkspace } from '../stores/workspaces.svelte.js';
   import { moduleSettings } from '../stores/moduleSettings.js';
-  import { api } from '../api.js';
+  import { collections } from '../api/collections.js';
+  import { workspaces } from '../api/workspaces.js';
   import { t } from '../stores/i18n.svelte.js';
   import { errorToast } from '../stores/toasts.svelte.js';
 
@@ -103,12 +104,12 @@
     loadError = null;
     try {
       const requests = [
-        api.collections.getBoardConfiguration(collectionId ?? null, workspaceId ?? null),
+        collections.getBoardConfiguration(collectionId ?? null, workspaceId ?? null),
       ];
       if (isCollectionScope) {
-        requests.push(api.collections.get(collectionId));
+        requests.push(collections.get(collectionId));
       } else {
-        requests.push(api.workspaces.get(workspaceId));
+        requests.push(workspaces.get(workspaceId));
       }
       const [data, scope] = await Promise.all(requests);
       config = data;
@@ -206,8 +207,8 @@
       // settings; adopt it without touching the local toggle state so rows
       // do not re-render from a refetch.
       config = config?.id
-        ? await api.collections.updateBoardConfiguration(collectionId, config.id, payload, workspaceId)
-        : await api.collections.createBoardConfiguration(collectionId, workspaceId, payload);
+        ? await collections.updateBoardConfiguration(collectionId, config.id, payload, workspaceId)
+        : await collections.createBoardConfiguration(collectionId, workspaceId, payload);
       persisted = sent;
       inherited = Boolean(config?.view_settings_inherited) || !config?.view_settings;
       // Reflect the saved set immediately: navigation reads this store, and
@@ -232,11 +233,11 @@
       try {
         saving = true;
         try {
-          await api.collections.updateBoardConfiguration(collectionId, config?.id, {
+          await collections.updateBoardConfiguration(collectionId, config?.id, {
             view_settings: { enabled_views: null },
           }, workspaceId);
           applyEffectiveViews(
-            await api.collections.getBoardConfiguration(collectionId ?? null, workspaceId ?? null)
+            await collections.getBoardConfiguration(collectionId ?? null, workspaceId ?? null)
           );
           viewSettingsStore.applyEnabledViews(workspaceId, collectionId, enabled, inherited);
         } finally {

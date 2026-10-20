@@ -1,6 +1,6 @@
 <script>
   import { AlertCircle } from '@lucide/svelte';
-  import { api } from '../../api.js';
+  import { deleteDiagram } from '../../api/misc.js';
   import { confirm } from '../../composables/useConfirm.js';
   import { t } from '../../stores/i18n.svelte.js';
   import { errorToast, successToast } from '../../stores/toasts.svelte.js';
@@ -285,7 +285,7 @@
     if (!confirmed) return;
 
     try {
-      await api.deleteDiagram(diagram.id);
+      await deleteDiagram(diagram.id);
       await ondiagramSaved?.();
       successToast(t('editors.diagramDeleted'));
     } catch (err) {

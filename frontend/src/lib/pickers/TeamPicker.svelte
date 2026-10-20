@@ -1,7 +1,7 @@
 <script>
   import { BasePicker } from '.';
   import { createAsyncLoader } from '../composables';
-  import { api } from '../api.js';
+  import { teams as teamsApi } from '../api/teams.js';
   import { onDestroy, onMount } from 'svelte';
   import { t } from '../stores/i18n.svelte.js';
 
@@ -23,7 +23,7 @@
 
   const resolvedPlaceholder = $derived(placeholder || t('pickers.selectTeam'));
 
-  const loader = createAsyncLoader(() => api.teams.getAll());
+  const loader = createAsyncLoader(() => teamsApi.getAll());
   onMount(() => {
     if (!teams) loader.load();
   });

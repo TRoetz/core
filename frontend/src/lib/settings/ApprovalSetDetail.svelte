@@ -3,7 +3,12 @@
   import { t } from '../stores/i18n.svelte.js';
   import { errorToast, successToast } from '../stores/toasts.svelte.js';
   import { currentRoute, navigate } from '../router.js';
-  import { api } from '../api.js';
+  import { statuses, workflows as workflowsApi } from '../api/workflows.js';
+  import { groups as groupsApi } from '../api/permissions.js';
+  import { getUsers } from '../api/users.js';
+  import { workspaceRoles } from '../api/workspaces.js';
+  import { customFields } from '../api/configuration.js';
+  import { approvalSets } from '../api/approvalSets.js';
   import { confirm } from '../composables/useConfirm.js';
   import { Plus, Trash2, ChevronDown, ChevronUp, AlertTriangle } from '@lucide/svelte';
   import Button from '../components/Button.svelte';
@@ -127,12 +132,12 @@
   async function loadReferenceData() {
     try {
       const [wf, st, gr, us, rs, cf] = await Promise.all([
-        api.workflows.getAll().catch(() => []),
-        api.statuses.getAll().catch(() => []),
-        api.groups.getAll().catch(() => []),
-        api.getUsers().catch(() => []),
-        api.workspaceRoles.getAll().catch(() => []),
-        api.customFields.getAll().catch(() => []),
+        workflowsApi.getAll().catch(() => []),
+        statuses.getAll().catch(() => []),
+        groupsApi.getAll().catch(() => []),
+        getUsers().catch(() => []),
+        workspaceRoles.getAll().catch(() => []),
+        customFields.getAll().catch(() => []),
       ]);
       workflows = wf || [];
       statusesAll = st || [];
@@ -154,7 +159,7 @@
     }
     try {
       loading = true;
-      const data = await api.approvalSets.get(approvalSetId);
+      const data = await approvalSets.get(approvalSetId);
       formData = {
         name: data.name || '',
         description: data.description || '',
@@ -184,7 +189,7 @@
       return;
     }
     try {
-      transitions = (await api.workflows.getTransitions(workflowId)) || [];
+      transitions = (await workflowsApi.getTransitions(workflowId)) || [];
     } catch (error) {
       console.error('Failed to load transitions:', error);
       transitions = [];
@@ -363,11 +368,11 @@
       };
 
       if (isNewMode) {
-        const created = await api.approvalSets.create(payload);
+        const created = await approvalSets.create(payload);
         successToast('Approval set created');
         navigate(`/admin/approval-sets/${created.id}`);
       } else {
-        await api.approvalSets.update(approvalSetId, payload);
+        await approvalSets.update(approvalSetId, payload);
         await loadData();
         successToast('Approval set saved');
       }

@@ -16,7 +16,8 @@
   import WorkspaceLabelCombobox from '../../pickers/WorkspaceLabelCombobox.svelte';
   import MilestoneCombobox from '../../pickers/MilestoneCombobox.svelte';
   import PersonalTasksPanel from '../personal/PersonalTasksPanel.svelte';
-  import { api } from '../../api.js';
+  import { approvals } from '../../api/approvals.js';
+  import { labels } from '../../api/misc.js';
   import { errorToast } from '../../stores/toasts.svelte.js';
   import ItemSCMLinks from './ItemSCMLinks.svelte';
   import ItemIntegrationLinks from './ItemIntegrationLinks.svelte';
@@ -240,7 +241,7 @@
 
   async function loadApprovalRequests(id) {
     try {
-      approvalRequests = (await api.approvals.forItem(id)) ?? [];
+      approvalRequests = (await approvals.forItem(id)) ?? [];
     } catch {
       approvalRequests = [];
     }
@@ -300,7 +301,7 @@
     editingLabels = false;
 
     try {
-      const updated = await api.labels.setForItem(item.id, labelIds);
+      const updated = await labels.setForItem(item.id, labelIds);
       if (item) item.labels = updated || [];
     } catch (err) {
       console.error('Failed to save labels:', err);

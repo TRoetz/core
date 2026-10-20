@@ -1,7 +1,7 @@
 <script>
   import { LifeBuoy, Settings, Webhook, ExternalLink, Users, Globe, Mail, Send, ClipboardList } from '@lucide/svelte';
   import TabStrip from '../components/TabStrip.svelte';
-  import { api } from '../api.js';
+  import { channels } from '../api/channels.js';
   import { workspacesStore } from '../stores/workspaces.svelte.js';
   import { channelCategoriesStore } from '../stores/channelCategories.js';
   import { t } from '../stores/i18n.svelte.js';
@@ -300,7 +300,7 @@
   // be cleared; the backend validates manage permission at save time.
   async function loadConnectedPortalOptions() {
     try {
-      const portals = await api.channels.getAll({ type: 'portal', direction: 'inbound', include_disabled: true });
+      const portals = await channels.getAll({ type: 'portal', direction: 'inbound', include_disabled: true });
       // A list response may arrive as null (empty result); the picker iterates
       // this prop, so coerce to an array before handing it to the child.
       portalOptions = Array.isArray(portals) ? portals : [];
@@ -336,17 +336,17 @@
     }
     const wasEnabled = persistedStatus === 'enabled';
     if (wasEnabled) {
-      const updated = await api.channels.toggle(channel.id);
+      const updated = await channels.toggle(channel.id);
       persistedStatus = updated?.status || 'disabled';
     }
     try {
-      await api.channels.updateConfig(channel.id, emailConfigRef.getConfig());
+      await channels.updateConfig(channel.id, emailConfigRef.getConfig());
       emailConfigRef.clearSecrets?.();
       return wasEnabled;
     } catch (error) {
       if (wasEnabled) {
         try {
-          const restored = await api.channels.toggle(channel.id);
+          const restored = await channels.toggle(channel.id);
           persistedStatus = restored?.status || 'enabled';
         } catch (rollbackError) {
           console.error('Failed to restore email channel status:', rollbackError);
@@ -358,7 +358,7 @@
 
   async function restoreEmailAfterOAuthStartFailure(restoreEnabled) {
     if (!restoreEnabled || persistedStatus === 'enabled') return;
-    const restored = await api.channels.toggle(channel.id);
+    const restored = await channels.toggle(channel.id);
     persistedStatus = restored?.status || 'enabled';
   }
 
@@ -438,14 +438,14 @@
       const wasEnabled = persistedStatus === 'enabled';
       let disabledBeforeSave = false;
       if (desiredEnabled === false && wasEnabled) {
-        const updated = await api.channels.toggle(channel.id);
+        const updated = await channels.toggle(channel.id);
         persistedStatus = updated?.status || 'disabled';
         disabledBeforeSave = true;
       }
 
       // Save basic info (status is managed via toggle endpoint, not here)
       try {
-        await api.channels.update(channel.id, {
+        await channels.update(channel.id, {
           id: channel.id,
           type: channel.type,
           direction: channel.direction,
@@ -457,23 +457,23 @@
 
         // Save type-specific config
         if (channel.type === 'portal' && portalConfigRef) {
-          await api.channels.updateConfig(channel.id, portalConfigRef.getConfig());
+          await channels.updateConfig(channel.id, portalConfigRef.getConfig());
         } else if (channel.type === 'webhook' && !isPluginOwned(channel) && webhookConfigRef) {
-          await api.channels.updateConfig(channel.id, webhookConfigRef.getConfig());
+          await channels.updateConfig(channel.id, webhookConfigRef.getConfig());
           webhookConfigRef.clearSecret?.();
         } else if (channel.type === 'email' && emailConfigRef) {
-          await api.channels.updateConfig(channel.id, emailConfigRef.getConfig());
+          await channels.updateConfig(channel.id, emailConfigRef.getConfig());
           emailConfigRef.clearSecrets?.();
         } else if (channel.type === 'smtp' && smtpConfigRef) {
-          await api.channels.updateConfig(channel.id, smtpConfigRef.getConfig());
+          await channels.updateConfig(channel.id, smtpConfigRef.getConfig());
           smtpConfigRef.clearSecret?.();
         } else if (channel.type === 'form' && formConfigRef) {
-          await api.channels.updateConfig(channel.id, formConfigRef.getConfig());
+          await channels.updateConfig(channel.id, formConfigRef.getConfig());
         }
       } catch (error) {
         if (disabledBeforeSave) {
           try {
-            const restored = await api.channels.toggle(channel.id);
+            const restored = await channels.toggle(channel.id);
             persistedStatus = restored?.status || 'enabled';
           } catch (rollbackError) {
             console.error('Failed to restore channel status:', rollbackError);
@@ -483,7 +483,7 @@
       }
 
       if (desiredEnabled === true && !wasEnabled) {
-        const updated = await api.channels.toggle(channel.id);
+        const updated = await channels.toggle(channel.id);
         persistedStatus = updated?.status || 'enabled';
       }
 

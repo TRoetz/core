@@ -22,7 +22,7 @@
   import { moduleSettings } from '../../stores/moduleSettings.js';
   import { currentRoute } from '../../router.js';
   import { formatDateShort } from '../../utils/dateFormatter.js';
-  import { api } from '../../api.js';
+  import { milestones as milestonesApi } from '../../api/milestones.js';
   import { workspacesStore } from '../../stores/workspaces.svelte.js';
   import { permissionStore, isSystemAdmin } from '../../stores/permissions.svelte.js';
   import { workspacePermissions } from '../../stores/workspacePermissions.svelte.js';
@@ -124,7 +124,7 @@
       const filters = isGlobalView ? { is_global: true } : { workspace_id: workspaceId, include_global: true };
       const [_, milestones] = await Promise.all([
         categoriesStore.init(),
-        api.milestones.getAll(filters)
+        milestonesApi.getAll(filters)
       ]);
       // Update the store with filtered milestones
       milestonesStore.set(milestones || []);
@@ -136,7 +136,7 @@
 
   async function loadTestStatistics() {
     try {
-      testStatistics = await loadMilestoneTestStatistics(api, $milestonesStore);
+      testStatistics = await loadMilestoneTestStatistics($milestonesStore);
     } catch (error) {
       console.error('Failed to load test statistics:', error);
       testStatistics = {};
@@ -276,7 +276,7 @@
     // Refresh milestones to show updated status
     const filters = isGlobalView ? { is_global: true } : { workspace_id: workspaceId, include_global: true };
     try {
-      const milestones = await api.milestones.getAll(filters);
+      const milestones = await milestonesApi.getAll(filters);
       milestonesStore.set(milestones || []);
     } catch (err) {
       console.error('Failed to refresh milestones:', err);

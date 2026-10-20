@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { api } from '../api.js';
+  import { configurationSets as configurationSetsApi } from '../api/configuration.js';
   import { t } from '../stores/i18n.svelte.js';
   import { isSystemAdmin } from '../stores/permissions.svelte.js';
   import { errorToast } from '../stores/toasts.svelte.js';
@@ -30,7 +30,7 @@
       loading = true;
 
       // Load all configuration sets
-      const response = await api.configurationSets.getAll();
+      const response = await configurationSetsApi.getAll();
       // Filter out Personal Tasks Configuration (system-managed) and the default config set
       // (since selecting "Default Configuration" option uses it automatically)
       configurationSets = (response?.configuration_sets || []).filter(cs =>
@@ -71,7 +71,7 @@
 
         try {
           // Analyze comprehensive migration requirements (item types, statuses, custom fields, priorities)
-          const migrationAnalysis = await api.configurationSets.analyzeComprehensiveMigration(newConfigSet.id, parseInt(workspaceId));
+          const migrationAnalysis = await configurationSetsApi.analyzeComprehensiveMigration(newConfigSet.id, parseInt(workspaceId));
           
           if (migrationAnalysis.requires_migration) {
             // Migrations mutate shared configuration state and are executed
@@ -130,7 +130,7 @@
   // endpoint swaps the workspace-assignment join rows atomically; a required
   // data migration surfaces as a 409 before anything is written.
   async function applyConfigurationChange(newConfigSetId, currentConfigSet, newConfigSet) {
-    await api.configurationSets.assignToWorkspace(parseInt(workspaceId), newConfigSetId);
+    await configurationSetsApi.assignToWorkspace(parseInt(workspaceId), newConfigSetId);
 
     await loadData(); // Reload to refresh the data
     

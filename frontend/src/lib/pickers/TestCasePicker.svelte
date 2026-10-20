@@ -1,7 +1,7 @@
 <script>
   import { BasePicker } from '.';
   import { untrack } from 'svelte';
-  import { api } from '../api.js';
+  import { tests } from '../api/tests/index.js';
   import { FileText } from '@lucide/svelte';
   import { t } from '../stores/i18n.svelte.js';
 
@@ -46,7 +46,7 @@
       loading = true;
       error = null;
       const rows =
-        (await api.tests.testCases.getAll(
+        (await tests.testCases.getAll(
           workspaceId,
           { limit: PICKER_PAGE_SIZE, ...(trimmed ? { q: trimmed } : {}) }
         )) || [];

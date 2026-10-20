@@ -1,7 +1,8 @@
 <script>
   import { onMount } from 'svelte';
   import TabStrip from '../../components/TabStrip.svelte';
-  import { api } from '../../api.js';
+  import { time } from '../../api/time.js';
+  import { customerOrganisations } from '../../api/portal.js';
   import Button from '../../components/Button.svelte';
   import TimeProjectCategories from './TimeProjectCategories.svelte';
   import TimeProjectModal from '../../dialogs/TimeProjectModal.svelte';
@@ -54,7 +55,7 @@
 
   async function loadProjects() {
     try {
-      const result = await api.time.projects.getAll();
+      const result = await time.projects.getAll();
       projects = result || [];
     } catch (error) {
       console.error('Failed to load projects:', error);
@@ -64,7 +65,7 @@
 
   async function loadCustomers() {
     try {
-      const result = await api.customerOrganisations.getAll();
+      const result = await customerOrganisations.getAll();
       customers = result || [];
     } catch (error) {
       console.error('Failed to load customers:', error);
@@ -74,7 +75,7 @@
 
   async function loadCategories() {
     try {
-      const result = await api.time.projectCategories.getAll();
+      const result = await time.projectCategories.getAll();
       categories = result || [];
     } catch (error) {
       console.error('Failed to load categories:', error);
@@ -144,9 +145,9 @@
       };
 
       if (editingProject) {
-        await api.time.projects.update(editingProject.id, data);
+        await time.projects.update(editingProject.id, data);
       } else {
-        await api.time.projects.create(data);
+        await time.projects.create(data);
       }
       await loadProjects();
       cancelForm();
@@ -167,7 +168,7 @@
 
     if (confirmed) {
       try {
-        await api.time.projects.delete(project.id);
+        await time.projects.delete(project.id);
         await loadProjects();
       } catch (error) {
         console.error('Failed to delete project:', error);

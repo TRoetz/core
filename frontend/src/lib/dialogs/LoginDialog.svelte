@@ -3,7 +3,7 @@
   import { navigate } from '../router.js';
   import { authStore } from '../stores/auth.svelte.js';
   import { ssoStore } from '../stores/sso.svelte.js';
-  import { api } from '../api.js';
+
   import { authPolicy } from '../api/admin.js';
   import { Eye, EyeOff, Lock, User, AlertCircle, LogIn, Key } from '@lucide/svelte';
   import { APP_NAME } from '../constants.js';
@@ -122,7 +122,7 @@
 
   // Check if FIDO authentication is available when user enters email
   async function checkFidoAvailability() {
-    const { available, showOption } = await evaluateFidoAvailability(api, emailOrUsername);
+    const { available, showOption } = await evaluateFidoAvailability(emailOrUsername);
     fidoAvailable = available;
     showFidoOption = showOption;
   }
@@ -145,7 +145,7 @@
       validationError = '';
       authStore.clearError();
 
-      const loginResult = await performFidoLogin(api, emailOrUsername);
+      const loginResult = await performFidoLogin(emailOrUsername);
 
       if (loginResult.success || loginResult.status === 'success') {
         // Verify the browser session was issued/elevated and load canonical

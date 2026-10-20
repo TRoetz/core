@@ -1,7 +1,7 @@
 <script>
   import { onMount, untrack } from 'svelte';
   import { useEventListener } from 'runed';
-  import { api } from '../../api.js';
+  import { items } from '../../api/items.js';
   import { t } from '../../stores/i18n.svelte.js';
   import { getCollection, checkItemVisibility } from '../collections/collectionService.js';
   import {
@@ -240,8 +240,8 @@
         // request; append the current parent to complete the path. Two requests
         // total instead of one GET /items/{id} per ancestor level.
         const [ancestors, currentItem] = await Promise.all([
-          api.items.getAncestors(currentParentId),
-          api.items.get(currentParentId),
+          items.getAncestors(currentParentId),
+          items.get(currentParentId),
         ]);
         const pathItems = [...(ancestors || []), currentItem];
 
@@ -409,12 +409,12 @@
       const item = collectionStore.items.find((i) => i.id === itemId);
       const currentStatusId = item?.status_id ?? null;
       if (currentStatusId !== update.transitionToStatusId) {
-        await api.items.transition(itemId, update.transitionToStatusId);
+        await items.transition(itemId, update.transitionToStatusId);
       }
       return;
     }
     if (Object.keys(update).length > 0) {
-      await api.items.update(itemId, update);
+      await items.update(itemId, update);
     }
   }
 
@@ -422,7 +422,7 @@
     try {
 
       // Update the item's parent_id
-      const result = await api.items.update(itemId, { parent_id: newParentId });
+      const result = await items.update(itemId, { parent_id: newParentId });
 
       if (laneKey) {
         try {
@@ -563,7 +563,7 @@
     }
 
     try {
-      const newItem = await api.items.create({
+      const newItem = await items.create({
         workspace_id: state.workspaceId,
         item_type_id: state.itemTypeId,
         title: state.title.trim(),
@@ -576,12 +576,12 @@
       if (lane) {
         const laneUpdate = laneDropUpdate(lane, swimlaneDimension, statuses);
         if (laneUpdate.transitionToStatusId != null) {
-          await api.items.transition(newItem.id, laneUpdate.transitionToStatusId);
+          await items.transition(newItem.id, laneUpdate.transitionToStatusId);
         }
         const fields = { ...laneUpdate };
         delete fields.transitionToStatusId;
         if (Object.keys(fields).length > 0) {
-          await api.items.update(newItem.id, fields);
+          await items.update(newItem.id, fields);
         }
       }
 
@@ -658,7 +658,7 @@
     }
 
     try {
-      await api.items.update(item.id, { title: editingTitle.trim() });
+      await items.update(item.id, { title: editingTitle.trim() });
 
       // Update the local item
       item.title = editingTitle.trim();

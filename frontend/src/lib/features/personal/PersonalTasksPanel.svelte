@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { api } from '../../api.js';
+  import { items } from '../../api/items.js';
   import { navigate } from '../../router.js';
   import { ChevronDown, ChevronRight, Plus, Check, X, ExternalLink, CheckCircle2 } from '@lucide/svelte';
   import { workspacesStore } from '../../stores/workspaces.svelte.js';
@@ -117,7 +117,7 @@
     try {
       loading = true;
       error = null;
-      const tasks = await api.items.getPersonalTasks(currentItemId, { signal });
+      const tasks = await items.getPersonalTasks(currentItemId, { signal });
       if (signal.aborted) return;
       personalTasks = tasks || [];
 
@@ -154,7 +154,7 @@
       adding = true;
       error = null;
 
-      const newTask = await api.items.create({
+      const newTask = await items.create({
         workspace_id: personalWorkspace.id,
         title: newTaskTitle.trim(),
         related_work_item_id: itemId
@@ -180,7 +180,7 @@
       const isDone = isTaskCompleted(task);
       const newStatusId = isDone ? STATUS_ID_OPEN : STATUS_ID_DONE;
 
-      await api.items.transition(task.id, newStatusId);
+      await items.transition(task.id, newStatusId);
 
       // Update in list with new status_id
       personalTasks = personalTasks.map(t =>
@@ -195,7 +195,7 @@
   // Unlink task from work item
   async function handleUnlink(task) {
     try {
-      await api.items.unlinkPersonalTask(task.id);
+      await items.unlinkPersonalTask(task.id);
 
       // Remove from list
       personalTasks = personalTasks.filter(t => t.id !== task.id);

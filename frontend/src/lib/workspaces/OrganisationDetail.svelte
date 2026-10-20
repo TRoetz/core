@@ -18,7 +18,7 @@
   import Checkbox from '../components/Checkbox.svelte';
   import { errorToast, successToast } from '../stores/toasts.svelte.js';
   import { t } from '../stores/i18n.svelte.js';
-  import { api } from '../api.js';
+  import { contactRoles as contactRolesApi, customerOrganisations } from '../api/portal.js';
   import { logbook } from '../api/logbook.js';
   import { capabilitiesStore } from '../stores/capabilities.svelte.js';
   import { formatDateShort } from '../utils/dateFormatter.js';
@@ -80,7 +80,7 @@
   $effect(() => {
     if (activeTab !== 'sharing' || contactRolesLoaded) return;
     contactRolesLoaded = true;
-    api.contactRoles
+    contactRolesApi
       .getAll()
       .then((roles) => {
         contactRoles = Array.isArray(roles) ? roles : (roles?.data ?? []);
@@ -114,7 +114,7 @@
     sharingSaving = true;
     sharingSaved = false;
     try {
-      await api.customerOrganisations.setRequestSharing(organisation.id, {
+      await customerOrganisations.setRequestSharing(organisation.id, {
         request_sharing: sharingMode,
         request_sharing_audience: sharingAudience,
         visible_role_ids: sharingAudience === 'roles' ? sharingRoleIDs : [],
@@ -182,7 +182,7 @@
     orgTickets = [];
     orgTicketsLoading = true;
     orgTicketsLoaded = false;
-    api.customerOrganisations.getTickets(orgId)
+    customerOrganisations.getTickets(orgId)
       .then((result) => {
         if (orgTicketsOrgID !== orgId) return;
         const list = result?.data ?? result ?? [];

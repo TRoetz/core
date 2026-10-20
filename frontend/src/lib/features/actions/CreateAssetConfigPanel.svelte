@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { api } from '../../api.js';
+  import { assetCategories, assetSets as assetSetsApi, assetStatuses, assetTypes as assetTypesApi } from '../../api/assets.js';
   import { HelpCircle } from '@lucide/svelte';
   import { t } from '../../stores/i18n.svelte.js';
   import { actionFlowStore } from '../../stores/actionFlowStore.svelte.js';
@@ -35,7 +35,7 @@
   // Load asset sets on mount
   onMount(async () => {
     try {
-      assetSets = await api.assetSets.getAll() || [];
+      assetSets = await assetSetsApi.getAll() || [];
     } catch (error) {
       console.error('Failed to load asset sets:', error);
     } finally {
@@ -60,9 +60,9 @@
     const token = ++assetSetLoadToken;
     try {
       const [typesResult, categoriesResult, statusesResult] = await Promise.all([
-        api.assetTypes.getAll(setId),
-        api.assetCategories.getAll(setId),
-        api.assetStatuses.getAll(setId)
+        assetTypesApi.getAll(setId),
+        assetCategories.getAll(setId),
+        assetStatuses.getAll(setId)
       ]);
       if (token !== assetSetLoadToken) return;
       assetTypes = typesResult || [];

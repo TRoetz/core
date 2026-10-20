@@ -1,7 +1,8 @@
 <script>
   import { onMount } from 'svelte';
   import StateDisplay from '../components/StateDisplay.svelte';
-  import { api } from '../api.js';
+  import { issueSync } from '../api/scm.js';
+  import { workspaces } from '../api/workspaces.js';
   import Button from '../components/Button.svelte';
   import Card from '../components/Card.svelte';
   import Toggle from '../components/Toggle.svelte';
@@ -65,7 +66,7 @@
   async function loadData() {
     loading = true;
     try {
-      const data = await loadIssueSyncPageData(api, workspaceDataStore, workspaceId);
+      const data = await loadIssueSyncPageData(workspaceDataStore, workspaceId);
       config = data.config;
       linkedRepos = data.linkedRepositories;
       itemTypes = data.itemTypes;
@@ -88,8 +89,8 @@
     if (!config) return;
     try {
       const [statusRes, itemsRes] = await Promise.all([
-        api.issueSync.getStatus(workspaceId),
-        api.issueSync.getItems(workspaceId),
+        issueSync.getStatus(workspaceId),
+        issueSync.getItems(workspaceId),
       ]);
       syncStatus = statusRes;
       syncedItems = itemsRes || [];
@@ -143,9 +144,9 @@
       };
 
       if (config) {
-        config = await api.issueSync.updateConfig(workspaceId, payload);
+        config = await issueSync.updateConfig(workspaceId, payload);
       } else {
-        config = await api.issueSync.createConfig(workspaceId, payload);
+        config = await issueSync.createConfig(workspaceId, payload);
       }
       if (config) populateForm(config);
       successToast(t('issueSync.saved'));
@@ -160,7 +161,7 @@
     const confirmed = await confirm(t('issueSync.confirmDelete'));
     if (!confirmed) return;
     try {
-      await api.issueSync.deleteConfig(workspaceId);
+      await issueSync.deleteConfig(workspaceId);
       config = null;
       formData = {
         workspace_repository_id: 0,
@@ -187,7 +188,7 @@
   async function triggerSync() {
     syncing = true;
     try {
-      await api.issueSync.triggerSync(workspaceId);
+      await issueSync.triggerSync(workspaceId);
       successToast(t('issueSync.syncTriggered'));
       // Reload status after a brief delay
       setTimeout(async () => {
@@ -236,7 +237,7 @@
   $effect(() => {
     const itemTypeId = formData.default_item_type_id;
     loadingStatuses = true;
-    api.workspaces.getStatuses(workspaceId, itemTypeId).then(res => {
+    workspaces.getStatuses(workspaceId, itemTypeId).then(res => {
       statuses = res || [];
     }).catch(() => {
       statuses = [];

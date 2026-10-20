@@ -2,7 +2,9 @@
   import { onMount } from 'svelte';
   import Spinner from '../../components/Spinner.svelte';
   import StateDisplay from '../../components/StateDisplay.svelte';
-  import { api } from '../../api.js';
+  import { ai } from '../../api/ai.js';
+  import { workspaceSCM } from '../../api/scm.js';
+  import { milestones } from '../../api/milestones.js';
   import { successToast, errorToast } from '../../stores/toasts.svelte.js';
   import Checkbox from '../../components/Checkbox.svelte';
   import Input from '../../components/Input.svelte';
@@ -59,7 +61,7 @@
   onMount(async () => {
     await Promise.all([
       loadConnections(),
-      api.ai.status().then(s => { aiAvailable = s?.available ?? false; }).catch(() => {})
+      ai.status().then(s => { aiAvailable = s?.available ?? false; }).catch(() => {})
     ]);
   });
 
@@ -67,7 +69,7 @@
     loading = true;
     error = null;
     try {
-      connections = await loadMilestoneReleaseConnections(api, workspaceId);
+      connections = await loadMilestoneReleaseConnections(workspaceId);
 
       if (connections.length === 1) {
         selectedConnectionId = connections[0].id;
@@ -96,7 +98,7 @@
       return;
     }
     try {
-      const repos = await api.workspaceSCM.getLinkedRepos(wsId, connectionId) || [];
+      const repos = await workspaceSCM.getLinkedRepos(wsId, connectionId) || [];
       repositories = repos;
       if (repos.length === 1) {
         selectedRepository = repos[0].repository_name ?? '';
@@ -119,7 +121,7 @@
     if (!repository?.id) return;
     loadingCandidates = true;
     try {
-      releaseCandidates = await api.workspaceSCM.getReleaseCandidates(repository.id) || [];
+      releaseCandidates = await workspaceSCM.getReleaseCandidates(repository.id) || [];
       if (releaseCandidates.length === 1) tagName = releaseCandidates[0].tag_name;
     } catch (err) {
       console.error('Failed to load release candidates:', err);
@@ -158,7 +160,7 @@
     generatingNotes = true;
     generateError = null;
     try {
-      const result = await api.ai.generateReleaseNotes(milestone.id);
+      const result = await ai.generateReleaseNotes(milestone.id);
       if (result?.tag_name) tagName = result.tag_name;
       if (result?.name) releaseName = result.name;
       if (result?.notes) releaseBody = result.notes;
@@ -192,7 +194,7 @@
       }
 
       idempotencyKey ??= crypto.randomUUID();
-      const updatedMilestone = await api.milestones.release(milestone.id, payload, idempotencyKey);
+      const updatedMilestone = await milestones.release(milestone.id, payload, idempotencyKey);
       successToast(
         releaseMode === 'attach'
           ? `Attached ${tagName.trim()} to the milestone.`

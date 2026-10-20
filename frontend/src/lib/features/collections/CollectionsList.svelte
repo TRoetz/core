@@ -1,7 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import { useEventListener } from 'runed';
-  import { api } from '../../api.js';
+  import { collections as collectionsApi } from '../../api/collections.js';
   import { navigate, currentRoute } from '../../router.js';
   import { t } from '../../stores/i18n.svelte.js';
   import { errorToast } from '../../stores/toasts.svelte.js';
@@ -140,7 +140,7 @@
   async function loadCollections() {
     try {
       loading = true;
-      collections = await api.collections.getAll() || [];
+      collections = await collectionsApi.getAll() || [];
     } catch (error) {
       console.error('Failed to load collections:', error);
       collections = [];
@@ -174,7 +174,7 @@
     if (!confirmed) return;
 
     try {
-      await api.collections.delete(collection.id);
+      await collectionsApi.delete(collection.id);
       await loadCollections();
     } catch (error) {
       console.error('Failed to delete collection:', error);

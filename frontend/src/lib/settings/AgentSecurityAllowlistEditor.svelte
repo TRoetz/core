@@ -5,7 +5,8 @@
   import { onMount } from 'svelte';
   import StateDisplay from '../components/StateDisplay.svelte';
 import { Plus, Trash2 } from '@lucide/svelte';
-  import { agentSecurity, api } from '../api.js';
+  import { getUsers } from '../api/users.js';
+  import { agentSecurity } from '../api/agentSecurity.js';
   import { workspacesStore } from '../stores/workspaces.svelte.js';
   import UserPicker from '../pickers/UserPicker.svelte';
   import WorkspacePicker from '../pickers/WorkspacePicker.svelte';
@@ -50,7 +51,7 @@ import { Plus, Trash2 } from '@lucide/svelte';
     try {
       const [list, users] = await Promise.all([
         agentSecurity.listAllowlist(),
-        api.getUsers(),
+        getUsers(),
       ]);
       const workspaces = await workspacesStore.load();
       entries = list ?? [];

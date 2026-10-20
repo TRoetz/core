@@ -2,7 +2,7 @@
   import { onMount, onDestroy } from 'svelte';
   import { IconSettings, IconForms, IconCode, IconUsers } from '@tabler/icons-svelte-runes';
   import { currentRoute, navigate } from '../../router.js';
-  import { api } from '../../api.js';
+  import { channels } from '../../api/channels.js';
   import { t } from '../../stores/i18n.svelte.js';
   import { errorToast, successToast } from '../../stores/toasts.svelte.js';
   import { isSystemAdmin } from '../../stores/permissions.svelte.js';
@@ -70,7 +70,7 @@
     const requestSequence = ++loadSequence;
     try {
       loading = true;
-      const loadedChannel = await api.channels.get(id);
+      const loadedChannel = await channels.get(id);
       if (loadedChannel.type !== 'form' || loadedChannel.direction !== 'inbound') {
         throw new Error('This route requires an inbound form channel');
       }

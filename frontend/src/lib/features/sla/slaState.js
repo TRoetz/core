@@ -1,5 +1,5 @@
 import { BACKGROUND_READ } from '../../api/readScheduler.js';
-import { api } from '../../api.js';
+import { sla } from '../../api/sla.js';
 
 // Item SLA reads are pure and cheap on the server, but a list/board page shows
 // many rows. Cache each item's state briefly and dedupe concurrent reads so a
@@ -78,10 +78,10 @@ export async function getItemSLA(itemId, workspaceId = null) {
   if (cached) stateCache.delete(itemId);
   if (inFlight.has(itemId)) return inFlight.get(itemId);
 
-  if (workspaceId && api.sla?.getItemSLABatch) {
+  if (workspaceId && sla?.getItemSLABatch) {
     return enqueueBatchItemSLA(itemId, workspaceId);
   }
-  if (!api.sla?.getItemSLA) return [];
+  if (!sla?.getItemSLA) return [];
   return fetchItemSLA(itemId);
 }
 
@@ -128,7 +128,7 @@ async function flushBatchItemSLA(workspaceId, queue) {
     chunks.map(async (chunkIds) => {
       let batch;
       try {
-        batch = (await api.sla.getItemSLABatch(workspaceId, chunkIds, BACKGROUND_READ)) ?? {};
+        batch = (await sla.getItemSLABatch(workspaceId, chunkIds, BACKGROUND_READ)) ?? {};
       } catch {
         // A failed chunk resolves unset rather than issuing one request per
         // item, which would amplify load under rate limiting or outages.
@@ -160,7 +160,7 @@ async function flushBatchItemSLA(workspaceId, queue) {
 function fetchItemSLA(itemId) {
   const generation = stateGeneration;
   let request;
-  request = api.sla
+  request = sla
     .getItemSLA(itemId, BACKGROUND_READ)
     .then((value) => {
       if (generation === stateGeneration) {
@@ -185,7 +185,7 @@ function fetchItemSLA(itemId) {
  * empty list.
  */
 export async function getSLAThresholds(workspaceId) {
-  if (!api.sla?.getWarningThresholds) return [];
+  if (!sla?.getWarningThresholds) return [];
   // A missing workspace is unknown, not a configured-empty threshold list.
   if (!workspaceId) return null;
   const key = normalizeWorkspaceKey(workspaceId);
@@ -205,7 +205,7 @@ export async function getSLAThresholds(workspaceId) {
   if (pending) return pending;
 
   const generation = thresholdGenerationFor(key);
-  const promise = api.sla
+  const promise = sla
     .getWarningThresholds(workspaceId, BACKGROUND_READ)
     .then((result) => {
       const value = Array.isArray(result) ? result : [];

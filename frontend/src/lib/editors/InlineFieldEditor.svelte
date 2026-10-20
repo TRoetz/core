@@ -1,5 +1,5 @@
 <script>
-  import { api } from '../api.js';
+  import { items } from '../api/items.js';
   import { updateCustomFieldValue } from '../utils/customFieldValueUpdates.js';
   import InlineTextEditor from './InlineTextEditor.svelte';
   import InlineSelectEditor from './InlineSelectEditor.svelte';
@@ -44,9 +44,9 @@
         const fieldId = field.replace('custom_field_', '');
         // The server merges custom field patches per field, so a single-field
         // payload leaves the item's other fields untouched.
-        updatedItem = await updateCustomFieldValue(api, item.id, fieldId, value);
+        updatedItem = await updateCustomFieldValue(item.id, fieldId, value);
       } else {
-        updatedItem = await api.items.update(item.id, { [field]: value });
+        updatedItem = await items.update(item.id, { [field]: value });
       }
       const merged = { ...item, ...updatedItem };
       editorComponent?.confirmSave?.(value);

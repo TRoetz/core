@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { api } from '../api.js';
+  import { workspaceRoles } from '../api/workspaces.js';
   import { BadgeCheck, Eye, CheckCircle, Plus, Trash2 } from '@lucide/svelte';
   import DataTable from '../components/DataTable.svelte';
   import PageHeader from '../layout/PageHeader.svelte';
@@ -67,7 +67,7 @@
   async function loadRoles() {
     try {
       loading = true;
-      const data = await api.workspaceRoles.getAll();
+      const data = await workspaceRoles.getAll();
       roles = data || [];
     } catch (error) {
       console.error('Failed to load workspace roles:', error);
@@ -79,7 +79,7 @@
 
   async function viewRoleDetails(role) {
     try {
-      const fullRole = await api.workspaceRoles.get(role.id);
+      const fullRole = await workspaceRoles.get(role.id);
       selectedRole = fullRole;
       rolePermissions = fullRole.permissions || [];
     } catch (error) {
@@ -97,12 +97,12 @@
     try {
       savingTranslations = true;
       translationEditor?.validate();
-      await api.workspaceRoles.update(selectedRole.id, {
+      await workspaceRoles.update(selectedRole.id, {
         name: selectedRole.name,
         description: selectedRole.description,
       });
       await translationEditor?.save();
-      selectedRole = await api.workspaceRoles.get(selectedRole.id);
+      selectedRole = await workspaceRoles.get(selectedRole.id);
       await loadRoles();
       successToast(t('common.saved'));
     } catch (error) {
@@ -132,7 +132,7 @@
     }
     try {
       creatingBusy = true;
-      await api.workspaceRoles.create({ name, description: newDescription });
+      await workspaceRoles.create({ name, description: newDescription });
       successToast(t('settings.workspaceRoles.addCustomTitle'));
       closeCreate();
       await loadRoles();
@@ -158,7 +158,7 @@
     });
     if (!ok) return;
     try {
-      await api.workspaceRoles.delete(role.id);
+      await workspaceRoles.delete(role.id);
       successToast(t('common.deleted'));
       await loadRoles();
     } catch (error) {

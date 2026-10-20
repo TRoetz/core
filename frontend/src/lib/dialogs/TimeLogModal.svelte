@@ -1,6 +1,6 @@
 <script>
   import { onDestroy } from 'svelte';
-  import { api } from '../api.js';
+  import { links } from '../api/configuration.js';
   import { BasePicker } from '../pickers';
   import Label from '../components/Label.svelte';
   import StatusPill from '../components/StatusPill.svelte';
@@ -128,7 +128,7 @@
     searchingWorkItems = true;
     workItemResults = [];
     try {
-      const results = await api.links.search(trimmedQuery, 'item', 20);
+      const results = await links.search(trimmedQuery, 'item', 20);
       if (version !== workItemSearchVersion) return;
       workItemResults = Array.isArray(results) ? results : [];
     } catch (error) {

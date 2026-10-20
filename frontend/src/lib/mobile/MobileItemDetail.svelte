@@ -1,6 +1,7 @@
 <script>
   import { Star, Play, Loader, ChevronDown, ChevronRight, GitPullRequest, Bot, RefreshCw, Plus, Check, Pencil } from '@lucide/svelte';
-  import { api } from '../api.js';
+  import { getAssignableUsers } from '../api/users.js';
+  import { items } from '../api/items.js';
   import { loadMobileItemDetailSummary } from './mobileItemDetailData.js';
   import { agentRuns as agentRunBus } from '../stores/agentRuns.svelte.js';
   import { navigate } from '../router.js';
@@ -64,7 +65,7 @@
     if (assigneeOptions) return;
     assigneeLoading = true;
     try {
-      assigneeOptions = (await api.getAssignableUsers(item.workspace_id)) ?? [];
+      assigneeOptions = (await getAssignableUsers(item.workspace_id)) ?? [];
     } catch (err) {
       console.error('Failed to load assignable users:', err);
       errorToast(t('mobile.item.assigneesFailed'));
@@ -147,7 +148,7 @@
 
   async function refreshTransitionState(id, token) {
     try {
-      const res = await api.items.getAvailableStatusTransitions(id);
+      const res = await items.getAvailableStatusTransitions(id);
       if (token === loadToken) transitions = res?.available_transitions ?? [];
     } catch (err) {
       console.error('Failed to load transitions:', err);
@@ -158,7 +159,7 @@
     if (transitioning) return;
     transitioning = true;
     try {
-      const updated = await api.items.transition(itemId, statusId);
+      const updated = await items.transition(itemId, statusId);
       item = { ...item, ...updated };
       await refreshTransitionState(itemId, loadToken);
     } catch (err) {
@@ -181,7 +182,7 @@
     const target = personalIsDone ? PERSONAL_STATUS_OPEN : PERSONAL_STATUS_DONE;
     transitioning = true;
     try {
-      const updated = await api.items.transition(itemId, target);
+      const updated = await items.transition(itemId, target);
       item = { ...item, ...updated };
     } catch (err) {
       console.error('Failed to toggle personal task:', err);
@@ -194,7 +195,7 @@
     const assigneeId = user?.id ?? null;
     if (assigneeId === (item.assignee_id ?? null)) return;
     try {
-      const updated = await api.items.update(itemId, { assignee_id: assigneeId });
+      const updated = await items.update(itemId, { assignee_id: assigneeId });
       const name = user
         ? `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email || user.username || ''
         : null;
@@ -209,8 +210,8 @@
     watchBusy = true;
     try {
       const status = isWatching
-        ? await api.items.removeWatch(itemId)
-        : await api.items.addWatch(itemId);
+        ? await items.removeWatch(itemId)
+        : await items.addWatch(itemId);
       isWatching = status?.watching ?? !isWatching;
       watcherCount = status?.watcher_count ?? watcherCount;
     } catch (err) {
@@ -303,7 +304,7 @@
     const token = loadToken;
     if (itemId == null || !item || transitioning) return;
     try {
-      const fresh = await api.items.get(itemId);
+      const fresh = await items.get(itemId);
       if (token !== loadToken) return;
       item = { ...item, ...fresh };
     } catch (err) {
@@ -313,16 +314,16 @@
       return;
     }
     try {
-      const res = await api.items.getAvailableStatusTransitions(itemId);
+      const res = await items.getAvailableStatusTransitions(itemId);
       if (token === loadToken) transitions = res?.available_transitions ?? [];
     } catch { /* keep prior */ }
     try {
-      const res = await api.items.getChildren(itemId);
+      const res = await items.getChildren(itemId);
       const list = Array.isArray(res) ? res : (res?.items ?? []);
       if (token === loadToken) children = list.filter((c) => c?.id).map(normalizeChild);
     } catch { /* keep prior */ }
     try {
-      const res = await api.items.getWatchStatus(itemId);
+      const res = await items.getWatchStatus(itemId);
       if (token === loadToken) {
         isWatching = res?.watching || false;
         watcherCount = res?.watcher_count ?? watcherCount;

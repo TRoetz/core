@@ -1,7 +1,7 @@
 <script>
 	import { onMount } from 'svelte';
 	import Avatar from '../components/Avatar.svelte';
-	import { api } from '../api.js';
+	import { activateUser as activateUserApi, createApiToken, createUser, deactivateUser as deactivateUserApi, deleteUser as deleteUserApi, getAdminUsers, inviteUser, resetUserPassword as resetUserPasswordApi, updateUser } from '../api/users.js';
 	import { authStore } from '../stores/auth.svelte.js';
 	import { Plus, Edit, Trash2, RotateCcw, Circle, CheckCircle, Key, Users, UserCheck, UserX, AlertTriangle, Send, Link } from '@lucide/svelte';
 	import CopyButton from '../components/CopyButton.svelte';
@@ -83,7 +83,7 @@
 	async function loadUsers() {
 		loading = true;
 		try {
-			users = await api.getAdminUsers();
+			users = await getAdminUsers();
 			error = '';
 		} catch (err) {
 			error = err.message || t('users.failedToLoad');
@@ -101,14 +101,14 @@
 		}
 		try {
 			if (editingUser) {
-				await api.updateUser(editingUser.id, formData);
+				await updateUser(editingUser.id, formData);
 			} else if (isInviteMode) {
-				const result = await api.inviteUser(formData);
+				const result = await inviteUser(formData);
 				invitationLink = `${publicBaseURL()}/set-password/${result.token}`;
 				emailSent = result.email_sent;
 				showInviteResultModal = true;
 			} else {
-				await api.createUser(formData);
+				await createUser(formData);
 			}
 
 			if (!isInviteMode || editingUser) {
@@ -131,7 +131,7 @@
 		});
 		if (!ok) return;
 		try {
-			await api.deleteUser(userId);
+			await deleteUserApi(userId);
 			await loadUsers();
 		} catch (err) {
 			const errorMsg = err.message || t('users.failedToDelete');
@@ -149,7 +149,7 @@
 		});
 		if (!ok) return;
 		try {
-			await api.activateUser(userId);
+			await activateUserApi(userId);
 			await loadUsers();
 		} catch (err) {
 			const errorMsg = err.message || t('users.failedToActivate');
@@ -167,7 +167,7 @@
 		});
 		if (!ok) return;
 		try {
-			await api.deactivateUser(userId);
+			await deactivateUserApi(userId);
 			await loadUsers();
 		} catch (err) {
 			const errorMsg = err.message || t('users.failedToDeactivate');
@@ -189,7 +189,7 @@
 				? { generate_random: true }
 				: { password: newPassword };
 			
-			const response = await api.resetUserPassword(resetPasswordUser.id, payload);
+			const response = await resetUserPasswordApi(resetPasswordUser.id, payload);
 			
 			if (generateRandomPassword) {
 				temporaryPassword = response.temporary_password;
@@ -404,7 +404,7 @@
 				permissions: newTokenScopes,
 				expires_on: newTokenExpiry || null
 			};
-			const result = await api.createApiToken(payload);
+			const result = await createApiToken(payload);
 			mintedToken = result?.token || result?.api_token?.token || '';
 		} catch (err) {
 			mintedTokenError = err?.message || 'Failed to create token';

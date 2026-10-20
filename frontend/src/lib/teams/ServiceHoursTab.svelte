@@ -1,5 +1,5 @@
 <script>
-  import { api } from '../api.js';
+  import { sla } from '../api/sla.js';
   import Button from '../components/Button.svelte';
   import DataTable from '../components/DataTable.svelte';
   import Lozenge from '../components/Lozenge.svelte';
@@ -26,7 +26,7 @@
     try {
       loading = true;
       error = null;
-      calendars = (await api.sla.getTeamCalendars(team.id)) ?? [];
+      calendars = (await sla.getTeamCalendars(team.id)) ?? [];
     } catch (err) {
       error = err?.message || t('teams.serviceHours.loadFailed');
     } finally {
@@ -51,10 +51,10 @@
 
   async function save(payload) {
     if (editing) {
-      await api.sla.updateTeamCalendar(team.id, editing.id, payload);
+      await sla.updateTeamCalendar(team.id, editing.id, payload);
       successToast(t('teams.serviceHours.updated'));
     } else {
-      await api.sla.createTeamCalendar(team.id, payload);
+      await sla.createTeamCalendar(team.id, payload);
       successToast(t('teams.serviceHours.created'));
     }
     await loadCalendars();
@@ -69,7 +69,7 @@
     });
     if (!ok) return;
     try {
-      await api.sla.deleteTeamCalendar(team.id, calendar.id);
+      await sla.deleteTeamCalendar(team.id, calendar.id);
       successToast(t('teams.serviceHours.deleted'));
       await loadCalendars();
     } catch (err) {
@@ -81,7 +81,7 @@
     impact = { calendar, workspaces: [] };
     impactLoading = true;
     try {
-      impact = { calendar, ...(await api.sla.getTeamCalendarImpact(team.id, calendar.id)) };
+      impact = { calendar, ...(await sla.getTeamCalendarImpact(team.id, calendar.id)) };
     } catch (err) {
       errorToast(err?.message || t('teams.serviceHours.impactFailed'));
       impact = null;

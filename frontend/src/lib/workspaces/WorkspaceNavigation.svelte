@@ -21,7 +21,7 @@
   import { currentWorkspace } from '../stores/workspaces.svelte.js';
   import { workspacePermissions } from '../stores/workspacePermissions.svelte.js';
   import { moduleSettings } from '../stores/moduleSettings.js';
-  import { api } from '../api.js';
+  import { collections as collectionsApi } from '../api/collections.js';
   import DropdownMenu from '../layout/DropdownMenu.svelte';
   import ScrollableSidebar from '../layout/ScrollableSidebar.svelte';
   import SidebarResizeHandle from '../layout/SidebarResizeHandle.svelte';
@@ -191,7 +191,7 @@
 
   async function loadCollections() {
     try {
-      const result = await api.collections.getAll();
+      const result = await collectionsApi.getAll();
       allCollections = result || [];
 
       // Filter collections for this workspace

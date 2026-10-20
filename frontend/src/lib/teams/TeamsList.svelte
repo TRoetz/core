@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { IconPlus, IconPhoneCheck, IconEdit, IconTrash, IconCircle } from '@tabler/icons-svelte-runes';
   import { Package } from '@lucide/svelte';
-  import { api } from '../api.js';
+  import { teams as teamsApi } from '../api/teams.js';
   import { navigate } from '../router.js';
   import { authStore } from '../stores/auth.svelte.js';
   import { isSystemAdmin, permissionStore } from '../stores/permissions.svelte.js';
@@ -55,7 +55,7 @@
   async function loadTeams() {
     loading = true;
     try {
-      teams = await api.teams.getAll();
+      teams = await teamsApi.getAll();
       error = '';
     } catch (err) {
       error = err.message || t('teams.failedToLoad');
@@ -68,7 +68,7 @@
     const userId = $authStore.currentUser?.id;
     if (!userId) return;
     try {
-      const myTeams = await api.teams.getTeamsForUser(userId);
+      const myTeams = await teamsApi.getTeamsForUser(userId);
       const map = new Map();
       for (const team of myTeams || []) {
         if (team.role) map.set(team.id, team.role);
@@ -122,10 +122,10 @@
     }
     try {
       if (editingTeam) {
-        await api.teams.update(editingTeam.id, formData);
+        await teamsApi.update(editingTeam.id, formData);
         successToast(t('teams.updated'));
       } else {
-        await api.teams.create(formData);
+        await teamsApi.create(formData);
         successToast(t('teams.created'));
       }
       resetForm();
@@ -145,7 +145,7 @@
     });
     if (!confirmed) return;
     try {
-      await api.teams.delete(team.id);
+      await teamsApi.delete(team.id);
       successToast(t('teams.deleted'));
       await loadTeams();
     } catch (err) {

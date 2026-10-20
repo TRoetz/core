@@ -13,7 +13,7 @@
   import StatCard from '../../components/StatCard.svelte';
   import DataTable from '../../components/DataTable.svelte';
   import { getLLMProviderStatus, getBriefingFailures, getBriefingHealth } from '../../api/diagnostics.js';
-  import { api } from '../../api.js';
+  import { llmProviders } from '../../api/ai.js';
   import { errorToast, successToast } from '../../stores/toasts.svelte.js';
   import DiagnosticsSection from './DiagnosticsSection.svelte';
   import { formatRelativeTime, formatUtcTime, truncateText } from './format-utils.js';
@@ -52,7 +52,7 @@
   async function refreshProvider(type) {
     refreshing = { ...refreshing, [type]: true };
     try {
-      const result = await api.llmProviders.refreshModels(type);
+      const result = await llmProviders.refreshModels(type);
       successToast(`Fetched ${result.models?.length ?? 0} models from ${type}`);
       await load();
     } catch (err) {

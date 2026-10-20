@@ -1,5 +1,5 @@
 <script>
-  import { api } from '../api.js';
+  import { configurationSets } from '../api/configuration.js';
   import { Settings, Workflow, Monitor, Bell } from '@lucide/svelte';
   import Lozenge from '../components/Lozenge.svelte';
   import { t } from '../stores/i18n.svelte.js';
@@ -38,7 +38,7 @@
       loading = true;
 
       // Load all configuration sets and find the one assigned to this workspace
-      const response = await api.configurationSets.getAll();
+      const response = await configurationSets.getAll();
       if (response?.configuration_sets) {
         // First, try to find workspace-assigned config set
         configurationSet = response.configuration_sets.find(cs =>

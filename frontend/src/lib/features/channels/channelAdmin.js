@@ -1,4 +1,4 @@
-import { api } from '../../api.js';
+import { channelIntakes, channels as channelsApi } from '../../api/channels.js';
 
 export function parseChannelConfig(config) {
   if (config == null) return {};
@@ -25,7 +25,7 @@ export function parseChannelConfig(config) {
  * portal (portal_channel_id) is the only link since WI-1644.
  */
 export async function loadPortalConnectedMailboxes(portalId) {
-  const emailChannels = await api.channels.getAll({
+  const emailChannels = await channelsApi.getAll({
     type: 'email',
     direction: 'inbound',
     include_disabled: true,
@@ -35,7 +35,7 @@ export async function loadPortalConnectedMailboxes(portalId) {
   for (const channel of channels) {
     let intakes = [];
     try {
-      intakes = (await api.channelIntakes.list(channel.id)) ?? [];
+      intakes = (await channelIntakes.list(channel.id)) ?? [];
     } catch {
       intakes = [];
     }
@@ -59,10 +59,10 @@ export async function saveChannelSettings({ channel, channelFormData, configRef,
   // committing basic information before a config failure would leave a
   // partial save behind.
   if (configRef) {
-    await api.channels.updateConfig(channel.id, configRef.getConfig());
+    await channelsApi.updateConfig(channel.id, configRef.getConfig());
   }
 
-  await api.channels.update(channel.id, {
+  await channelsApi.update(channel.id, {
     id: channel.id,
     type: channel.type,
     direction: channel.direction,
@@ -74,7 +74,7 @@ export async function saveChannelSettings({ channel, channelFormData, configRef,
 
   const currentlyEnabled = channel.status === 'enabled';
   if (typeof enabled === 'boolean' && enabled !== currentlyEnabled) {
-    await api.channels.toggle(channel.id);
+    await channelsApi.toggle(channel.id);
   }
 }
 
@@ -85,14 +85,14 @@ export async function prepareFormChannelForWorkspace({ channel, workspaceIds, wo
     : [...currentWorkspaceIds, workspaceId];
 
   if (nextWorkspaceIds !== currentWorkspaceIds) {
-    await api.channels.updateConfig(channel.id, {
+    await channelsApi.updateConfig(channel.id, {
       form_workspace_ids: nextWorkspaceIds,
     });
   }
 
   let status = channel.status;
   if (status !== 'enabled') {
-    const updated = await api.channels.toggle(channel.id);
+    const updated = await channelsApi.toggle(channel.id);
     status = updated?.status || 'enabled';
   }
 

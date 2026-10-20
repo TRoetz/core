@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { api } from '../../api.js';
+  import { tests } from '../../api/tests/index.js';
   import { currentRoute } from '../../router.js';
   import Button from '../../components/Button.svelte';
   import Select from '../../components/Select.svelte';
@@ -155,7 +155,7 @@
       if (selectedMilestoneId) {
         options.milestoneId = selectedMilestoneId;
       }
-      reportData = await api.tests.reports.getSummary(workspaceId, options);
+      reportData = await tests.reports.getSummary(workspaceId, options);
     } catch (error) {
       console.error('Failed to load report data:', error);
       reportData = null;

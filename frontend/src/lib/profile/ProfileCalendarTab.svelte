@@ -2,7 +2,7 @@
   import { onDestroy } from 'svelte';
   import StateDisplay from '../components/StateDisplay.svelte';
   import { CalendarDays, Copy, Eye, EyeOff, Link2, RefreshCw, Trash2 } from '@lucide/svelte';
-  import { createCalendarFeedToken, getCalendarFeedToken, revokeCalendarFeedToken } from '../api.js';
+  import { createCalendarFeedToken, getCalendarFeedToken, revokeCalendarFeedToken } from '../api/misc.js';
   import AlertBox from '../components/AlertBox.svelte';
   import Button from '../components/Button.svelte';
   import Input from '../components/Input.svelte';

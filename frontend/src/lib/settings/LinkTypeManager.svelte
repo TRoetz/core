@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { api } from '../api.js';
+  import { linkTypes as linkTypesApi } from '../api/configuration.js';
   import { writable } from 'svelte/store';
   import { t } from '../stores/i18n.svelte.js';
   import { errorToast } from '../stores/toasts.svelte.js';
@@ -47,7 +47,7 @@
 
   async function loadLinkTypes() {
     try {
-      const types = await api.linkTypes.getAll(true); // include inactive
+      const types = await linkTypesApi.getAll(true); // include inactive
       linkTypes.set(types || []);
     } catch (error) {
       console.error('Failed to load link types:', error);
@@ -88,10 +88,10 @@
     try {
       if (editingLinkType) {
         translationEditor?.validate();
-        await api.linkTypes.update(editingLinkType.id, formData);
+        await linkTypesApi.update(editingLinkType.id, formData);
         await translationEditor?.save();
       } else {
-        await api.linkTypes.create(formData);
+        await linkTypesApi.create(formData);
       }
       await loadLinkTypes();
       showForm = false;
@@ -116,7 +116,7 @@
     });
     if (confirmed) {
       try {
-        await api.linkTypes.delete(id);
+        await linkTypesApi.delete(id);
         await loadLinkTypes();
       } catch (error) {
         console.error('Failed to delete link type:', error);
@@ -127,7 +127,7 @@
 
   async function toggleActive(linkType) {
     try {
-      await api.linkTypes.update(linkType.id, { active: !linkType.active });
+      await linkTypesApi.update(linkType.id, { active: !linkType.active });
       await loadLinkTypes();
     } catch (error) {
       console.error('Failed to toggle link type status:', error);

@@ -1,5 +1,6 @@
+import { collections } from '../api/collections.js';
+import { items as itemsApi } from '../api/items.js';
 import { BACKGROUND_READ, FOREGROUND_READ } from '../api/readScheduler.js';
-import { api } from '../api.js';
 import {
   RIGHTMOST_COLUMN_LIMIT,
   rightmostCapStatusIds,
@@ -522,7 +523,7 @@ class CollectionStore {
     this.#boardConfigurationKey = key;
     this.#boardConfigurationLoaded = false;
     this.boardWorkspaceScopeLoaded = false;
-    const request = api.collections
+    const request = collections
       .getBoardConfigurationBootstrap(colId || null, wsId || null)
       .catch((error) => {
         if (error?.status !== 404) throw error;
@@ -1129,7 +1130,7 @@ class CollectionStore {
 
   async refreshItem(itemId) {
     try {
-      const updated = await api.items.get(itemId);
+      const updated = await itemsApi.get(itemId);
       this.#applyUpdatedItem(updated);
       await this.#refreshCollectionTotal();
     } catch (e) {

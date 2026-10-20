@@ -1,7 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import StateDisplay from '../../components/StateDisplay.svelte';
-  import { api } from '../../api.js';
+  import { actions } from '../../api/actions.js';
   import { t } from '../../stores/i18n.svelte.js';
   import DataTable from '../../components/DataTable.svelte';
   import Button from '../../components/Button.svelte';
@@ -52,7 +52,7 @@
   async function loadLogs() {
     loading = true;
     try {
-      logs = await api.actions.getLogs(workspaceId, action.id) || [];
+      logs = await actions.getLogs(workspaceId, action.id) || [];
     } catch (err) {
       console.error('Failed to load logs:', err);
       logs = [];

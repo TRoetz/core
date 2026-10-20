@@ -1,4 +1,4 @@
-import { api } from '../api.js';
+import { collections } from '../api/collections.js';
 import {
   COLLECTION_VIEW_IDS,
   workspaceOnlyViews,
@@ -94,7 +94,7 @@ function createViewSettingsStore() {
       if (peeked.config !== undefined) return peeked.config;
       return await peeked.pending;
     }
-    return api.collections.getBoardConfiguration(collectionId, workspaceId);
+    return collections.getBoardConfiguration(collectionId, workspaceId);
   }
 
   /** Enabled view ids for a scope; the workspace default while unloaded. */

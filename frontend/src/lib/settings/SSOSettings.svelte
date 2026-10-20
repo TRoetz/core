@@ -3,7 +3,7 @@
   import StateDisplay from '../components/StateDisplay.svelte';
   import { ssoStore } from '../stores/sso.svelte.js';
   import { capabilitiesStore } from '../stores/capabilities.svelte.js';
-  import { api } from '../api.js';
+
   import { toHotkeyString } from '../utils/keyboardShortcuts.js';
   import {
     KeyRound, Plus, Edit, Trash2, Save, X, Check, RefreshCw,

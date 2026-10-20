@@ -1,5 +1,5 @@
 import { untrack } from 'svelte';
-import { api } from '../../api.js';
+import { collections } from '../../api/collections.js';
 import { authStore } from '../../stores/auth.svelte.js';
 import { collectionStore } from '../../stores/collectionContext.js';
 import { t } from '../../stores/i18n.svelte.js';
@@ -66,14 +66,14 @@ export function useListColumnConfig(getScope) {
     try {
       const configData = buildListColumnConfiguration(boardConfig, newColumns);
       const saved = boardConfig?.id
-        ? await api.collections.updateBoardConfiguration(
+        ? await collections.updateBoardConfiguration(
             collectionId,
             boardConfig.id,
             configData,
             workspaceId
           )
         : // Pass raw collectionId so the API can detect workspace-level config
-          await api.collections.createBoardConfiguration(collectionId, workspaceId, configData);
+          await collections.createBoardConfiguration(collectionId, workspaceId, configData);
       loadToken++;
       boardConfig = saved;
       columns = listColumnsFromConfig(saved);

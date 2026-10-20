@@ -1,7 +1,7 @@
 <script>
   import { IconEdit, IconCheck, IconX, IconUser, IconUsers, IconStack2 } from '@tabler/icons-svelte-runes';
   import { Package } from '@lucide/svelte';
-  import { api } from '../api.js';
+  import { teams } from '../api/teams.js';
   import { t } from '../stores/i18n.svelte.js';
   import { errorToast, successToast } from '../stores/toasts.svelte.js';
   import { workspaceIconMap } from '../utils/icons.js';
@@ -32,7 +32,7 @@
 
   async function loadResolved() {
     try {
-      const members = (await api.teams.getResolvedMembers(team.id)) || [];
+      const members = (await teams.getResolvedMembers(team.id)) || [];
       resolvedCount = members.length;
     } catch {
       resolvedCount = null;
@@ -70,7 +70,7 @@
       return;
     }
     try {
-      await api.teams.update(team.id, formData);
+      await teams.update(team.id, formData);
       successToast(t('teams.updated'));
       editing = false;
       await onUpdated?.();
@@ -88,7 +88,7 @@
   // if the user cancels the surrounding name/description edit.
   async function persistIdentity(patch) {
     try {
-      await api.teams.update(team.id, {
+      await teams.update(team.id, {
         name: team.name,
         description: team.description || '',
         is_active: team.is_active,

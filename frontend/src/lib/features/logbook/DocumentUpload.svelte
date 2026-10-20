@@ -1,6 +1,6 @@
 <script>
   import { t } from '../../stores/i18n.svelte.js';
-  import { api } from '../../api.js';
+  import { logbook } from '../../api/logbook.js';
   import { successToast, errorToast } from '../../stores/toasts.svelte.js';
   import Button from '../../components/Button.svelte';
   import FileInput from '../../components/FileInput.svelte';
@@ -59,7 +59,7 @@
       if (title.trim()) {
         formData.append('title', title.trim());
       }
-      await api.logbook.uploadDocument(bucketId, formData);
+      await logbook.uploadDocument(bucketId, formData);
       successToast(t('logbook.uploadSuccess'));
       onupload();
     } catch (error) {

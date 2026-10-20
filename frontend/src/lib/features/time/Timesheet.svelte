@@ -1,7 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import { ChevronLeft, ChevronRight, X } from '@lucide/svelte';
-  import { api } from '../../api.js';
+  import { time } from '../../api/time.js';
   import { timeEntryStore } from '../../stores/timeEntryStore.svelte.js';
   import { BasePicker } from '../../pickers';
   import Button from '../../components/Button.svelte';
@@ -296,8 +296,8 @@
       const prevEnd = addDaysToKey(prevWeekStart, 6);
 
       const [current, prev] = await Promise.all([
-        api.time.worklogs.getAll({ date_from: fullWeekDays[0], date_to: fullWeekDays[6], timezone: reportTimezone }),
-        api.time.worklogs.getAll({ date_from: prevWeekStart, date_to: prevEnd, timezone: reportTimezone }),
+        time.worklogs.getAll({ date_from: fullWeekDays[0], date_to: fullWeekDays[6], timezone: reportTimezone }),
+        time.worklogs.getAll({ date_from: prevWeekStart, date_to: prevEnd, timezone: reportTimezone }),
       ]);
       weekWorklogs = current || [];
       prevWeekWorklogs = prev || [];
@@ -332,7 +332,7 @@
   async function handleModalSave(event) {
     try {
       const data = event.detail;
-      await api.time.worklogs.create(data);
+      await time.worklogs.create(data);
       await loadWeekWorklogs();
     } catch (error) {
       console.error('Failed to save worklog:', error);

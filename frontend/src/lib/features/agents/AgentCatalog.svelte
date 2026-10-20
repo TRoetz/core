@@ -8,7 +8,8 @@
     IconPlus as Plus,
     IconUserStar as AgentIcon,
   } from '@tabler/icons-svelte-runes';
-  import { agentBindings, agentRuns } from '../../api.js';
+  import { agentBindings } from '../../api/agentBindings.js';
+  import { agentRuns } from '../../api/agentRuns.js';
   import { workspacePermissions } from '../../stores/workspacePermissions.svelte.js';
   import { t } from '../../stores/i18n.svelte.js';
   import PageHeader from '../../layout/PageHeader.svelte';

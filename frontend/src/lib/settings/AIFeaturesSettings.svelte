@@ -3,7 +3,7 @@
   import Spinner from '../components/Spinner.svelte';
   import StateDisplay from '../components/StateDisplay.svelte';
   import {  } from '@lucide/svelte';
-  import { api } from '../api.js';
+  import { aiFeatures } from '../api/ai.js';
   import { t } from '../stores/i18n.svelte.js';
   import { errorToast, successToast } from '../stores/toasts.svelte.js';
   import { logbookStore } from '../stores/logbook.svelte.js';
@@ -61,7 +61,7 @@
   async function loadConfig() {
     loading = true;
     try {
-      const data = await api.aiFeatures.getConfig();
+      const data = await aiFeatures.getConfig();
       config = data.config ?? {};
       connections = data.connections ?? [];
     } catch (err) {
@@ -125,7 +125,7 @@
   async function save() {
     saving = true;
     try {
-      const result = await api.aiFeatures.updateConfig(config);
+      const result = await aiFeatures.updateConfig(config);
       config = result.config ?? config;
       successToast(t('settings.aiFeatures.saveSuccess'));
     } catch (err) {

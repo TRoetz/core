@@ -1,5 +1,5 @@
 <script>
-  import { api } from '../api.js';
+  import { itemSCMLinks } from '../api/scm.js';
   import Label from '../components/Label.svelte';
   import { GitMerge, GitBranch, GitCommit } from '@lucide/svelte';
   import { t } from '../stores/i18n.svelte.js';
@@ -46,7 +46,7 @@
         title: title.trim() || undefined,
       };
 
-      await api.itemSCMLinks.create(itemId, data);
+      await itemSCMLinks.create(itemId, data);
       oncreated?.();
     } catch (err) {
       console.error('Failed to create link:', err);

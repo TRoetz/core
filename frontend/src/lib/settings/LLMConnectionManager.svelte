@@ -1,7 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import StateDisplay from '../components/StateDisplay.svelte';
-  import { api } from '../api.js';
+  import { actionCapabilities as actionCapabilitiesApi, llmConnections, llmProviders } from '../api/ai.js';
   import {
     Plus, Edit, Trash2, TestTube, CheckCircle, Star, AlertTriangle, Eye, EyeOff
   } from '@lucide/svelte';
@@ -174,7 +174,7 @@
       ? editingConnection.id
       : null;
     try {
-      const result = await api.llmProviders.refreshModels(selectedProvider.type, {
+      const result = await llmProviders.refreshModels(selectedProvider.type, {
         ...(refreshConnectionId ? { connection_id: refreshConnectionId } : {}),
         ...(form.base_url ? { base_url: form.base_url } : {}),
         ...(form.api_key ? { api_key: form.api_key } : {}),
@@ -193,7 +193,7 @@
 
   async function loadConnections() {
     try {
-      connections = await api.llmConnections.getAll();
+      connections = await llmConnections.getAll();
     } catch (err) {
       console.error('Failed to load connections:', err);
       errorToast(t('settings.adminOperations.llmConnections.loadFailed'));
@@ -202,7 +202,7 @@
 
   async function loadProviders() {
     try {
-      providers = await api.llmProviders.getProviders();
+      providers = await llmProviders.getProviders();
     } catch (err) {
       console.error('Failed to load providers:', err);
     }
@@ -210,7 +210,7 @@
 
   async function loadActionCapabilities() {
     try {
-      actionCapabilities = await api.actionCapabilities.getAll();
+      actionCapabilities = await actionCapabilitiesApi.getAll();
     } catch (err) {
       console.error('Failed to load action capabilities:', err);
       actionCapabilities = [];
@@ -282,7 +282,7 @@
     });
     if (!ok) return;
     try {
-      await api.llmConnections.delete(conn.id);
+      await llmConnections.delete(conn.id);
       successToast(t('settings.adminOperations.llmConnections.deleted'));
       await reloadAfterConnectionChange();
     } catch (err) {
@@ -314,7 +314,7 @@
     if (!validateProviderConfig()) return;
     saving = true;
     try {
-      await api.llmConnections.create({ ...form, provider_config: composeProviderConfig() });
+      await llmConnections.create({ ...form, provider_config: composeProviderConfig() });
       successToast(t('settings.adminOperations.llmConnections.created'));
       showCreateModal = false;
       await reloadAfterConnectionChange();
@@ -330,7 +330,7 @@
     if (!validateProviderConfig()) return;
     saving = true;
     try {
-      await api.llmConnections.update(editingConnection.id, { ...form, provider_config: composeProviderConfig() });
+      await llmConnections.update(editingConnection.id, { ...form, provider_config: composeProviderConfig() });
       successToast(t('settings.adminOperations.llmConnections.updated'));
       showEditModal = false;
       await reloadAfterConnectionChange();
@@ -346,7 +346,7 @@
     testingConnectionId = id;
     testResult = null;
     try {
-      await api.llmConnections.test(id);
+      await llmConnections.test(id);
       testResult = { success: true, message: t('settings.adminOperations.llmConnections.connectionSuccessful') };
       successToast(t('settings.adminOperations.llmConnections.testPassed'));
     } catch (err) {

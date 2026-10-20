@@ -13,7 +13,9 @@
   import '@milkdown/theme-nord/style.css';
   import { imageBlockComponent } from '@milkdown/kit/component/image-block';
   import { Bold, Italic, Code, List, ListOrdered, Strikethrough, Image as ImageIcon, Workflow, BookOpen } from '@lucide/svelte';
-  import { api } from '../api.js';
+  import { getAssignableUsers, getUsers } from '../api/users.js';
+  import { attachments as attachmentsApi } from '../api/misc.js';
+  import { pages } from '../api/pages.js';
   import { confirm } from '../composables/useConfirm.js';
   import Tooltip from '../components/Tooltip.svelte';
   import FileInput from '../components/FileInput.svelte';
@@ -234,8 +236,8 @@
     if (mentionRoster) return Promise.resolve(mentionRoster);
     if (!mentionRosterPromise) {
       mentionRosterPromise = (workspaceId
-        ? api.getAssignableUsers(workspaceId)
-        : api.getUsers())
+        ? getAssignableUsers(workspaceId)
+        : getUsers())
         .then((roster) => {
           mentionRoster = roster || [];
           return mentionRoster;
@@ -381,7 +383,7 @@
 
           let result;
           if (!customUploadFn && effectiveEntityType === 'item' && effectiveEntityId) {
-            const attachment = await api.attachments.uploadToItem(effectiveEntityId, image);
+            const attachment = await attachmentsApi.uploadToItem(effectiveEntityId, image);
             result = { success: true, attachment };
           } else {
             const formData = new FormData();
@@ -392,11 +394,11 @@
             }
             result = customUploadFn
               ? await customUploadFn(formData)
-              : await api.attachments.upload(formData);
+              : await attachmentsApi.upload(formData);
           }
           if (result.success && result.attachment) {
             const src = downloadUrlBase === '/api/attachments'
-              ? api.attachments.getContentUrl(result.attachment.id)
+              ? attachmentsApi.getContentUrl(result.attachment.id)
               : `${downloadUrlBase}/${result.attachment.id}/download`;
             const node = schema?.nodes?.image?.createAndFill({
               src,
@@ -781,7 +783,7 @@
     const version = ++pageLinkSearchVersion;
     pageLinkTimer = setTimeout(async () => {
       try {
-        const result = await api.pages.searchPages(workspaceId, trimmed, { limit: 8 });
+        const result = await pages.searchPages(workspaceId, trimmed, { limit: 8 });
         if (version !== pageLinkSearchVersion) return;
         pageLinkResults = result?.results ?? (Array.isArray(result) ? result : []);
       } catch (error) {

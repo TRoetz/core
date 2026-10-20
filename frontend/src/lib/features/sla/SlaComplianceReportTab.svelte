@@ -1,5 +1,5 @@
 <script>
-  import { api } from '../../api.js';
+  import { sla } from '../../api/sla.js';
   import PageHeader from '../../layout/PageHeader.svelte';
   import Button from '../../components/Button.svelte';
   import DataTable from '../../components/DataTable.svelte';
@@ -36,7 +36,7 @@
     try {
       loading = true;
       error = null;
-      report = await api.sla.getReport(workspaceId, { from, to });
+      report = await sla.getReport(workspaceId, { from, to });
     } catch (err) {
       error = err?.message || t('workspaceSettings.serviceLevels.reportLoadFailed');
     } finally {

@@ -1,4 +1,5 @@
-import { api } from '../../api.js';
+import { collections } from '../../api/collections.js';
+import { items as itemsApi } from '../../api/items.js';
 
 /**
  * Builds the PATCH payload for associating a collection with a workspace.
@@ -71,7 +72,7 @@ function collectionPagination(pagination) {
 // Use the authorized item query without view filters, fetching only one summary.
 export async function fetchCollectionTotal(workspaceId, collectionId, requestOptions = {}) {
   const scope = collectionId ? { collection_id: collectionId } : { workspace_id: workspaceId };
-  const response = await api.items.getAll(
+  const response = await itemsApi.getAll(
     {
       ...scope,
       page: 1,
@@ -134,7 +135,7 @@ export async function fetchCollectionItems(
     filters.workspace_id = workspaceId;
   }
 
-  const response = await api.items.getAll(filters, requestOptions);
+  const response = await itemsApi.getAll(filters, requestOptions);
   const items = response?.data ?? [];
   const pagination = collectionPagination(response?.pagination);
   const sortableFields = response?.meta?.sortable_fields ?? [];
@@ -166,7 +167,7 @@ export async function fetchCollectionBacklog(
     }
   }
 
-  const response = await api.items.getBacklog(workspaceId, null, collectionId || null, {
+  const response = await itemsApi.getBacklog(workspaceId, null, collectionId || null, {
     page,
     limit,
     sub_ql,
@@ -196,7 +197,7 @@ export async function fetchCollectionItemChanges(
   if (collectionId) filters.collection_id = collectionId;
   if (since !== undefined && since !== null) filters.since = since;
   if (sub_ql) filters.sub_ql = sub_ql;
-  return api.items.getChanges(filters, requestOptions);
+  return itemsApi.getChanges(filters, requestOptions);
 }
 
 /**
@@ -206,7 +207,7 @@ export async function fetchCollectionItemChanges(
  */
 export async function fetchItemsById(ids) {
   if (!ids?.length) return [];
-  return api.items.getMany(ids);
+  return itemsApi.getMany(ids);
 }
 
 /**
@@ -218,7 +219,7 @@ export async function getCollection(collectionId) {
   if (!collectionId) return null;
 
   try {
-    return await api.collections.get(String(collectionId));
+    return await collections.get(String(collectionId));
   } catch (error) {
     console.error(`Failed to load collection ${collectionId}:`, error);
     return null;
@@ -231,7 +232,7 @@ export async function getCollection(collectionId) {
  * authoritative reconciliation instead of inserting a possibly out-of-filter
  * row.
  * @param {number} itemId - The item ID to check
- * @param {Object} filters - The filters to apply (same format as api.items.getAll)
+ * @param {Object} filters - The filters to apply (same format as itemsApi.getAll)
  * @returns {Promise<'member'|'nonmember'|'unknown'>}
  */
 export async function checkItemVisibility(itemId, filters) {
@@ -240,7 +241,7 @@ export async function checkItemVisibility(itemId, filters) {
   try {
     // Query the API with the same filters + the specific item ID
     const filtersWithId = { ...filters, id: itemId };
-    const response = await api.items.getAll(filtersWithId);
+    const response = await itemsApi.getAll(filtersWithId);
     const items = response?.data ?? [];
     return items.some((item) => item.id === itemId) ? 'member' : 'nonmember';
   } catch (error) {

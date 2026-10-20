@@ -3,7 +3,11 @@
   import { t } from '../stores/i18n.svelte.js';
   import { errorToast } from '../stores/toasts.svelte.js';
   import { currentRoute, navigate } from '../router.js';
-  import { api } from '../api.js';
+  import { workflows as workflowsApi } from '../api/workflows.js';
+  import { configurationSets, itemTypes as itemTypesApi, priorities as prioritiesApi, screens as screensApi } from '../api/configuration.js';
+  import { notificationSettings as notificationSettingsApi } from '../api/notifications.js';
+  import { conditionSets } from '../api/conditionSets.js';
+  import { approvalSets } from '../api/approvalSets.js';
   import { workspacesStore } from '../stores/workspaces.svelte.js';
   import Button from '../components/Button.svelte';
   import BackButton from '../components/BackButton.svelte';
@@ -145,14 +149,14 @@
   async function loadReferenceData() {
     try {
       const [workflowsData, screensData, notifData, workspacesData, itemTypesData, prioritiesData, condSetsData, apprSetsData] = await Promise.all([
-        api.workflows.getAll(),
-        api.screens.getAll(),
-        api.notificationSettings.getAll(),
+        workflowsApi.getAll(),
+        screensApi.getAll(),
+        notificationSettingsApi.getAll(),
         workspacesStore.load(),
-        api.itemTypes.getAll(),
-        api.priorities.getAll(),
-        api.conditionSets.getAll(),
-        api.approvalSets.getAll()
+        itemTypesApi.getAll(),
+        prioritiesApi.getAll(),
+        conditionSets.getAll(),
+        approvalSets.getAll()
       ]);
       workflows = workflowsData || [];
       screens = screensData || [];
@@ -175,7 +179,7 @@
 
     try {
       loading = true;
-      const data = await api.configurationSets.get(configSetId);
+      const data = await configurationSets.get(configSetId);
       configSet = data;
 
       formData = {
@@ -234,14 +238,14 @@
       };
 
       if (isNewMode) {
-        const created = await api.configurationSets.create(payload);
+        const created = await configurationSets.create(payload);
         configSet = created;
         configSetId = created.id;
         isNewMode = false;
         navigate(`/admin/configuration-sets/${created.id}`);
       } else {
         try {
-          const updated = await api.configurationSets.update(configSetId, payload);
+          const updated = await configurationSets.update(configSetId, payload);
           configSet = updated;
           await translationEditor?.save();
           await loadData();
@@ -296,7 +300,7 @@
     pendingSavePayload = null;
     try {
       saving = true;
-      const updated = await api.configurationSets.update(configSetId, payload);
+      const updated = await configurationSets.update(configSetId, payload);
       configSet = updated;
       await translationEditor?.save();
       await loadData();

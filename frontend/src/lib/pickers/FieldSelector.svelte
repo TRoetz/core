@@ -1,7 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import { ChevronDown, X } from '@lucide/svelte';
-  import { api } from '../api.js';
+  import { queryLanguage } from '../api/queryLanguage.js';
   import { t } from '../stores/i18n.svelte.js';
   import BasePicker from './BasePicker.svelte';
   import { controlSizeClasses } from '../utils/controlSizes.js';
@@ -169,7 +169,7 @@
       return;
     }
     try {
-      completionCatalog = await api.queryLanguage.getCatalog();
+      completionCatalog = await queryLanguage.getCatalog();
       customFields = (completionCatalog?.fields || [])
         .filter((field) => /^cfid_\d+$/i.test(field.name))
         .map(completionFieldToFilterField);

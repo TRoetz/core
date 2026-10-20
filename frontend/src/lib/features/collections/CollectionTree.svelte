@@ -1,6 +1,6 @@
 <script>
   import { onMount, untrack } from 'svelte';
-  import { api } from '../../api.js';
+  import { items as itemsApi } from '../../api/items.js';
   import {
     applyCollectionItem,
     collectionStore,
@@ -222,7 +222,7 @@
     }
     ancestorsRequestInFlight = true;
     try {
-      const entries = await api.items.getManyAncestors(orphanIds);
+      const entries = await itemsApi.getManyAncestors(orphanIds);
       for (const { item_id: orphanId, ancestors } of entries) {
         // The gap may have closed while the request was in flight.
         const parentId = parentByOrphanId.get(orphanId);

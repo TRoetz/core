@@ -1,7 +1,7 @@
 <script>
   import { Menu } from '@lucide/svelte';
   import { useEventListener } from 'runed';
-  import { api } from '../api.js';
+  import { auth } from '../api/auth.js';
   import Button from '../components/Button.svelte';
   import Spinner from '../components/Spinner.svelte';
   import EmailVerificationBanner from '../features/notifications/EmailVerificationBanner.svelte';
@@ -124,7 +124,7 @@
   async function recoverFromLazyLoadFailure() {
     if (!authStore.isAuthenticated) return;
 
-    sessionRevalidationPromise ??= hasSessionExpired(api.auth.getCurrentUser);
+    sessionRevalidationPromise ??= hasSessionExpired(auth.getCurrentUser);
     const sessionExpired = await sessionRevalidationPromise;
     sessionRevalidationPromise = null;
 

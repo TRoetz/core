@@ -2,7 +2,7 @@
   import { PenLine } from '@lucide/svelte';
   import { authStore } from '../../stores/auth.svelte.js';
   import { t } from '../../stores/i18n.svelte.js';
-  import { api } from '../../api.js';
+  import { items } from '../../api/items.js';
   import DashboardTaskList from './DashboardTaskList.svelte';
   import {
     createdByMeQuery,
@@ -45,7 +45,7 @@
     loading = true;
     errored = false;
     try {
-      const response = await api.items.getAll(createdByMeQuery(currentUserId, fetchLimit));
+      const response = await items.getAll(createdByMeQuery(currentUserId, fetchLimit));
       if (v !== version) return;
       tasks = normalizeTaskResponse(response, rowCount);
     } catch (err) {

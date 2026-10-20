@@ -1,7 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import { AlertTriangle, ExternalLink, RefreshCw, TicketCheck } from '@lucide/svelte';
-  import { api } from '../api.js';
+  import { zammadTickets } from '../api/integrations.js';
   import { authStore } from '../stores/auth.svelte.js';
   import { t } from '../stores/i18n.svelte.js';
   import { formatDateTimeLocale, getUserTimezone } from '../utils/dateFormatter.js';
@@ -108,7 +108,7 @@
     loading = true;
     error = null;
     try {
-      const response = await api.zammadTickets.workspaceOverview(targetWorkspaceId, { limit: 5 });
+      const response = await zammadTickets.workspaceOverview(targetWorkspaceId, { limit: 5 });
       if (!isCurrentRequest()) return;
       overview = {
         total: 0,

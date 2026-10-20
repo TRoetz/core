@@ -3,7 +3,7 @@
   import { t } from '../../stores/i18n.svelte.js';
   import { errorToast } from '../../stores/toasts.svelte.js';
   import { confirm } from '../../composables/useConfirm.js';
-  import { api } from '../../api.js';
+  import { assetSets as assetSetsApi, assetTypes as assetTypesApi, assets as assetsApi } from '../../api/assets.js';
   import { navigate, currentRoute, updateQueryParams } from '../../router.js';
   import Button from '../../components/Button.svelte';
   import BackButton from '../../components/BackButton.svelte';
@@ -116,7 +116,7 @@
     if (assetId) {
       directAssetLoading = true;
       untrack(() => {
-        api.assets.get(Number(assetId)).then(async (asset) => {
+        assetsApi.get(Number(assetId)).then(async (asset) => {
           directAsset = asset;
           if (asset?.asset_set_id && !selectedSetId) {
             selectedSetId = asset.asset_set_id;
@@ -136,7 +136,7 @@
 
   async function loadAssetSets() {
     try {
-      const sets = await api.assetSets.getAll();
+      const sets = await assetSetsApi.getAll();
       assetSets = sets || [];
       if (assetSets.length > 0 && !selectedSetId) {
         const defaultSet = assetSets.find(s => s.is_default) || assetSets[0];
@@ -161,7 +161,7 @@
     const setId = selectedSetId;
     const requestSeq = ++assetTypesRequestSeq;
     try {
-      const types = await api.assetTypes.getAll(setId);
+      const types = await assetTypesApi.getAll(setId);
       if (requestSeq !== assetTypesRequestSeq || selectedSetId !== setId) return;
       assetTypes = (types || []).filter(t => t.is_active);
       void loadAllCustomFields(setId, assetTypes);
@@ -179,7 +179,7 @@
     }
     const isStale = () => requestSeq !== allCustomFieldsRequestSeq || selectedSetId !== setId;
     try {
-      const fields = await loadAssetTypeFields(types, (typeId) => api.assetTypes.getFields(typeId), {
+      const fields = await loadAssetTypeFields(types, (typeId) => assetTypesApi.getFields(typeId), {
         isStale,
       });
       if (isStale()) return;
@@ -236,7 +236,7 @@
       if (qlParts.length > 0) {
         filters.ql = qlParts.join(' AND ');
       }
-      const result = await api.assets.getAll(setId, filters);
+      const result = await assetsApi.getAll(setId, filters);
       if (requestSeq !== assetsRequestSeq || selectedSetId !== setId) return;
 		assets = result?.data || [];
 		totalAssets = result?.pagination?.total_items || 0;
@@ -321,7 +321,7 @@
   async function loadTypeFields(typeId) {
     const requestSeq = ++selectedTypeFieldsRequestSeq;
     try {
-      const fields = await api.assetTypes.getFields(typeId);
+      const fields = await assetTypesApi.getFields(typeId);
       if (
         requestSeq !== selectedTypeFieldsRequestSeq ||
         Number(assetFormData.asset_type_id) !== Number(typeId)
@@ -354,7 +354,7 @@
 
   async function loadTypeFieldsForDisplay(typeId) {
     try {
-      const fields = await api.assetTypes.getFields(typeId);
+      const fields = await assetTypesApi.getFields(typeId);
       displayTypeFields = fields || [];
     } catch (error) {
       console.error('Failed to load type fields for display:', error);
@@ -413,11 +413,11 @@
       }
 
       if (editingAsset) {
-        await api.assets.update(editingAsset.id, assetFormData);
+        await assetsApi.update(editingAsset.id, assetFormData);
         showAssetForm = false;
         if (assetId) {
           // Refresh direct asset view
-          const refreshed = await api.assets.get(Number(assetId));
+          const refreshed = await assetsApi.get(Number(assetId));
           directAsset = refreshed;
         } else {
           await loadAssets();
@@ -428,7 +428,7 @@
           }
         }
       } else {
-        const created = await api.assets.create(selectedSetId, assetFormData);
+        const created = await assetsApi.create(selectedSetId, assetFormData);
         showAssetForm = false;
         if (created?.id) {
           await loadAssets();
@@ -457,7 +457,7 @@
     });
     if (confirmed) {
       try {
-        await api.assets.delete(id);
+        await assetsApi.delete(id);
         if (assetId) {
           navigate('/assets');
           return;

@@ -3,7 +3,7 @@
   import { ShieldX } from '@lucide/svelte';
   import EmptyState from '../components/EmptyState.svelte';
   import PieChartSegments from '../components/PieChartSegments.svelte';
-  import { api } from '../api.js';
+  import { tests } from '../api/tests/index.js';
   import { buildCoveragePieSegments } from '../utils/pieChart.js';
   import { t } from '../stores/i18n.svelte.js';
 
@@ -27,7 +27,7 @@
       loading = true;
       error = null;
       const id = collectionId || 'default';
-      coverageData = await api.tests.coverage.getSummary(id, workspaceId);
+      coverageData = await tests.coverage.getSummary(id, workspaceId);
     } catch (err) {
       console.error('Failed to load test coverage:', err);
       error = t('widgets.testCoverage.loadError');

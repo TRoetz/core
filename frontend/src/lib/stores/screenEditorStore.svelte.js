@@ -3,7 +3,7 @@
  * Uses Svelte 5 class-based reactive state pattern.
  * Centralizes screen list, field editing, and drag-and-drop state.
  */
-import { api } from '../api.js';
+import { customFields, screens } from '../api/configuration.js';
 import { isCreateRenderableCustomFieldType } from '../utils/customFieldTypes.js';
 import { createSearchFilteredFields } from '../utils/fieldSearchUtils.js';
 import {
@@ -110,7 +110,7 @@ class ScreenEditorStore extends DragStateStore {
   async loadScreens() {
     try {
       this.loading = true;
-      const result = await api.screens.getAll();
+      const result = await screens.getAll();
       this.screens = result || [];
     } catch (err) {
       console.error('Failed to load screens:', err);
@@ -122,7 +122,7 @@ class ScreenEditorStore extends DragStateStore {
 
   async loadCustomFields() {
     try {
-      this.customFields = await api.customFields.getAll();
+      this.customFields = await customFields.getAll();
     } catch (err) {
       console.error('Failed to load custom fields:', err);
       this.customFields = [];
@@ -149,9 +149,9 @@ class ScreenEditorStore extends DragStateStore {
   async saveScreen() {
     try {
       if (this.editingScreen) {
-        await api.screens.update(this.editingScreen.id, this.formData);
+        await screens.update(this.editingScreen.id, this.formData);
       } else {
-        await api.screens.create(this.formData);
+        await screens.create(this.formData);
       }
       await this.loadScreens();
       this.cancelForm();
@@ -168,7 +168,7 @@ class ScreenEditorStore extends DragStateStore {
     }
 
     try {
-      await api.screens.delete(screen.id);
+      await screens.delete(screen.id);
       await this.loadScreens();
     } catch (err) {
       console.error('Failed to delete screen:', err);
@@ -183,7 +183,7 @@ class ScreenEditorStore extends DragStateStore {
     this.showFieldEditor = true;
 
     try {
-      const fields = await api.screens.getFields(screen.id);
+      const fields = await screens.getFields(screen.id);
       this.screenFields = fields || [];
       this.ensureAlwaysVisibleSystemFields(screen.id);
 
@@ -255,7 +255,7 @@ class ScreenEditorStore extends DragStateStore {
   async saveScreenFields() {
     try {
       this.ensureAlwaysVisibleSystemFields(this.editingScreenFields.id);
-      await api.screens.updateFields(this.editingScreenFields.id, this.screenFields);
+      await screens.updateFields(this.editingScreenFields.id, this.screenFields);
       this.cancelFieldEditor();
     } catch (err) {
       console.error('Failed to save screen fields:', err);

@@ -1,5 +1,5 @@
 <script>
-  import { api } from '../../api.js';
+  import { createApiToken } from '../../api/users.js';
   import Input from '../../components/Input.svelte';
   import { IconX, IconKey, IconCheck, IconLoader2 } from '@tabler/icons-svelte-runes';
 
@@ -15,7 +15,7 @@
     try {
       generating = true;
       error = '';
-      const result = await api.createApiToken({
+      const result = await createApiToken({
         name: `ws-cli-${workspaceKey}`,
       });
       token = result.token;

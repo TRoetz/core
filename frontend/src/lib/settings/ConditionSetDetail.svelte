@@ -3,7 +3,10 @@
   import { t } from '../stores/i18n.svelte.js';
   import { errorToast } from '../stores/toasts.svelte.js';
   import { currentRoute, navigate } from '../router.js';
-  import { api } from '../api.js';
+  import { workflows as workflowsApi } from '../api/workflows.js';
+  import { groups as groupsApi } from '../api/permissions.js';
+  import { customFields } from '../api/configuration.js';
+  import { conditionSets } from '../api/conditionSets.js';
   import { confirm } from '../composables/useConfirm.js';
   import { Plus, Trash2, ChevronDown, ChevronUp, HelpCircle } from '@lucide/svelte';
   import Button from '../components/Button.svelte';
@@ -135,9 +138,9 @@
   async function loadReferenceData() {
     try {
       const [workflowsData, groupsData, fieldsData] = await Promise.all([
-        api.workflows.getAll(),
-        api.groups.getAll(),
-        api.customFields.getAll()
+        workflowsApi.getAll(),
+        groupsApi.getAll(),
+        customFields.getAll()
       ]);
       workflows = workflowsData || [];
       groups = groupsData || [];
@@ -157,7 +160,7 @@
 
     try {
       loading = true;
-      const data = await api.conditionSets.get(conditionSetId);
+      const data = await conditionSets.get(conditionSetId);
 
       formData = {
         name: data.name || '',
@@ -196,7 +199,7 @@
       return;
     }
     try {
-      transitions = (await api.workflows.getTransitions(workflowId)) || [];
+      transitions = (await workflowsApi.getTransitions(workflowId)) || [];
     } catch (error) {
       console.error('Failed to load transitions:', error);
       transitions = [];
@@ -391,12 +394,12 @@
       }));
 
       if (isNewMode) {
-        const created = await api.conditionSets.create(payload);
+        const created = await conditionSets.create(payload);
         conditionSetId = created.id;
         isNewMode = false;
         navigate(`/admin/condition-sets/${created.id}`, { replace: true });
       } else {
-        await api.conditionSets.update(conditionSetId, payload);
+        await conditionSets.update(conditionSetId, payload);
       }
 
       originalFormData = JSON.stringify(formData);

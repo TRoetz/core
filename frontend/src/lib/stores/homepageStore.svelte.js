@@ -3,7 +3,7 @@
  * Uses Svelte 5 class-based reactive state pattern.
  * Centralizes dashboard data, activity, and UI state.
  */
-import { api } from '../api.js';
+import { homepage } from '../api/misc.js';
 import {
   getDashboardResizeBounds,
   resizeDashboardWidgetRow,
@@ -202,7 +202,7 @@ class HomepageStore {
         sections: this.sections.map((s, idx) => ({ ...s, display_order: idx })),
         widgets: this.widgets.map((w, idx) => ({ ...w, position: idx })),
       };
-      const savedLayout = await api.homepage.updateLayout(layout);
+      const savedLayout = await homepage.updateLayout(layout);
       if (this._snapshot) {
         this._snapshot = { ...this._snapshot, layout: savedLayout || layout };
       }
@@ -407,7 +407,7 @@ class HomepageStore {
 
     const generation = this._generation;
     this.loading = true;
-    const request = api.homepage
+    const request = homepage
       .get()
       .then((data) => {
         if (generation !== this._generation) return this._snapshot;

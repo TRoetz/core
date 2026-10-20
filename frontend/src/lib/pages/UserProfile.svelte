@@ -1,6 +1,6 @@
 <script>
 	import { Bot, CalendarDays, Camera, GitBranch, Globe, Plane, Tag, User } from '@lucide/svelte';
-	import { api } from '../api.js';
+	import { getUser } from '../api/users.js';
 	import AlertBox from '../components/AlertBox.svelte';
 	import Badge from '../components/Badge.svelte';
 	import Tabs from '../components/Tabs.svelte';
@@ -67,7 +67,7 @@
 		const version = ++loadVersion;
 		error = '';
 		try {
-			const loadedUser = await api.getUser(userId);
+			const loadedUser = await getUser(userId);
 			if (version === loadVersion && userId === currentUserId) {
 				user = loadedUser;
 			}

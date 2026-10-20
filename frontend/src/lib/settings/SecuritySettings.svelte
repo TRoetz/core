@@ -3,7 +3,8 @@
   import Spinner from '../components/Spinner.svelte';
   import StateDisplay from '../components/StateDisplay.svelte';
   import { Shield, Calendar, Image as ImageIcon, Terminal, Key, Users, UserCog, AlertTriangle, ChevronDown, ChevronUp } from '@lucide/svelte';
-  import { agentSecurity, getSecuritySettings, updateSecuritySettings, authPolicy } from '../api.js';
+  import { agentSecurity } from '../api/agentSecurity.js';
+  import { authPolicy, getSecuritySettings, updateSecuritySettings } from '../api/admin.js';
   import AgentSecurityAllowlistEditor from './AgentSecurityAllowlistEditor.svelte';
   import Toggle from '../components/Toggle.svelte';
   import Input from '../components/Input.svelte';

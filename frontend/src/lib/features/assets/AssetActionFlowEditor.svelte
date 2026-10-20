@@ -16,7 +16,8 @@
   import { assetActionFlowStore } from '../../stores/assetActionFlowStore.svelte.js';
   import FieldSelector from '../../pickers/FieldSelector.svelte';
   import UserPicker from '../../pickers/UserPicker.svelte';
-  import { api } from '../../api.js';
+  import { assetStatuses as assetStatusesApi, assetTypes as assetTypesApi } from '../../api/assets.js';
+  import { getUsers } from '../../api/users.js';
   import { t } from '../../stores/i18n.svelte.js';
   import {
     assetActionConditionFields,
@@ -57,8 +58,8 @@
     }
     const token = ++taxonomyLoadToken;
     Promise.all([
-      api.assetTypes.getAll(setId),
-      api.assetStatuses.getAll(setId),
+      assetTypesApi.getAll(setId),
+      assetStatusesApi.getAll(setId),
     ]).then(([types, statuses]) => {
       if (token !== taxonomyLoadToken) return;
       assetTypes = types || [];
@@ -77,7 +78,7 @@
       assetCustomFields = [];
       return;
     }
-    loadAssetActionCustomFields(api, typeId).then((result) => {
+    loadAssetActionCustomFields(typeId).then((result) => {
       if (token !== fieldLoadToken) return;
       assetCustomFields = result;
     }).catch(() => {
@@ -87,7 +88,7 @@
   });
 
   $effect(() => {
-    api.getUsers().then((result) => {
+    getUsers().then((result) => {
       users = result || [];
     }).catch(() => {
       users = [];

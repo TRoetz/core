@@ -4,7 +4,7 @@
   import { portalCustomizationStore as portalStore } from '../stores/portal.svelte.js';
   import { portalAuthStore } from '../stores/portalAuth.svelte.js';
   import { t } from '../stores/i18n.svelte.js';
-  import { api } from '../api.js';
+  import { portalPasskey } from '../api/portal.js';
   import { confirm } from '../composables/useConfirm.js';
   import { navigate } from '../router.js';
   import {
@@ -50,7 +50,7 @@
     loadingCredentials = true;
     listError = '';
     try {
-      const result = await api.portalPasskey.list(slug);
+      const result = await portalPasskey.list(slug);
       credentials = Array.isArray(result) ? result : [];
       portalAuthStore.setPasskeyCount(credentials.length);
     } catch (err) {
@@ -87,12 +87,12 @@
     registering = true;
     actionError = '';
     try {
-      const startResponse = await api.portalPasskey.startRegistration(slug, name);
+      const startResponse = await portalPasskey.startRegistration(slug, name);
       const creationOptions = prepareCredentialCreationOptions(startResponse);
       const credential = await navigator.credentials.create(creationOptions);
       if (!credential) throw new Error('No credential returned from authenticator');
       const processed = processCredentialCreationResponse(/** @type {any} */ (credential));
-      await api.portalPasskey.completeRegistration(slug, {
+      await portalPasskey.completeRegistration(slug, {
         sessionId: startResponse.sessionId,
         credentialName: name,
         response: processed,
@@ -116,7 +116,7 @@
     removingId = credential.id;
     actionError = '';
     try {
-      await api.portalPasskey.remove(slug, credential.id);
+      await portalPasskey.remove(slug, credential.id);
       await loadCredentials();
     } catch (err) {
       actionError = err?.message || 'Failed to remove passkey';

@@ -14,7 +14,8 @@
     TrendingUp,
     UserRoundMinus,
   } from '@lucide/svelte';
-  import { api } from '../../api.js';
+  import { collections as collectionsApi } from '../../api/collections.js';
+  import { analytics } from '../../api/analytics.js';
   import { navigate } from '../../router.js';
   import { t } from '../../stores/i18n.svelte.js';
   import { currentWorkspace } from '../../stores/workspaces.svelte.js';
@@ -123,7 +124,7 @@
     const version = ++collectionsLoadVersion;
     collectionLoadError = false;
     try {
-      const response = await api.collections.getAll({ workspace_id: targetWorkspace });
+      const response = await collectionsApi.getAll({ workspace_id: targetWorkspace });
       if (version !== collectionsLoadVersion) return;
       collections = response || [];
       if (
@@ -157,7 +158,7 @@
     try {
       const params = { start_date: startDate, end_date: endDate };
       if (selectedCollection) params.collection_id = selectedCollection;
-      const response = await api.analytics.getAnalytics(workspaceId, params);
+      const response = await analytics.getAnalytics(workspaceId, params);
       if (version !== analyticsLoadVersion) return;
       if (response?.schema_version !== 2) {
         throw new Error(t('analytics.unsupportedVersion'));

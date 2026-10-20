@@ -3,7 +3,9 @@
   import StateDisplay from '../components/StateDisplay.svelte';
   import Modal from './Modal.svelte';
   import Spinner from '../components/Spinner.svelte';
-  import { api } from '../api.js';
+  import { groups as groupsApi } from '../api/permissions.js';
+  import { customerOrganisations } from '../api/portal.js';
+  import { requestTypes } from '../api/channels.js';
   import { t } from '../stores/i18n.svelte.js';
   import { realCustomers } from '../utils/customerLabel.js';
 
@@ -37,8 +39,8 @@
     try {
       // Load groups and organisations in parallel
       const [groupsData, orgsData] = await Promise.all([
-        api.groups.getAll(),
-        api.customerOrganisations.getAll()
+        groupsApi.getAll(),
+        customerOrganisations.getAll()
       ]);
       groups = groupsData || [];
       organisations = realCustomers(orgsData);
@@ -99,7 +101,7 @@
       const groupIds = visibilityMode === 'everyone' ? [] : selectedGroupIds;
       const orgIds = visibilityMode === 'everyone' ? [] : selectedOrgIds;
 
-      await api.requestTypes.updateVisibility(channelId, requestType.id, { groupIds, orgIds });
+      await requestTypes.updateVisibility(channelId, requestType.id, { groupIds, orgIds });
       onSaved();
       onclose();
     } catch (err) {

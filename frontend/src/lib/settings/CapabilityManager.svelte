@@ -1,7 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import StateDisplay from '../components/StateDisplay.svelte';
-  import { api } from '../api.js';
+  import { actionCapabilities, llmConnections as llmConnectionsApi } from '../api/ai.js';
   import { workspacesStore } from '../stores/workspaces.svelte.js';
   import { Plus, Edit, Trash2 } from '@lucide/svelte';
   import Button from '../components/Button.svelte';
@@ -229,7 +229,7 @@
 
   async function loadCapabilities() {
     try {
-      capabilities = await api.actionCapabilities.getAll();
+      capabilities = await actionCapabilities.getAll();
     } catch (err) {
       console.error('Failed to load capabilities:', err);
       errorToast(t('settings.actionCapabilities.loadFailed'));
@@ -238,7 +238,7 @@
 
   async function loadLLMConnections() {
     try {
-      llmConnections = await api.llmConnections.getAll();
+      llmConnections = await llmConnectionsApi.getAll();
     } catch (err) {
       console.error('Failed to load LLM connections:', err);
     }
@@ -283,7 +283,7 @@
     });
     if (!ok) return;
     try {
-      await api.actionCapabilities.delete(cap.id);
+      await actionCapabilities.delete(cap.id);
       successToast(t('settings.actionCapabilities.deleteSuccess'));
       await loadCapabilities();
     } catch (err) {
@@ -294,7 +294,7 @@
   async function handleCreate() {
     saving = true;
     try {
-      await api.actionCapabilities.create({
+      await actionCapabilities.create({
         name: form.name,
         capability_type: form.capability_type,
         config: buildConfigJSON(),
@@ -316,7 +316,7 @@
     if (!editingCapability) return;
     saving = true;
     try {
-      await api.actionCapabilities.update(editingCapability.id, {
+      await actionCapabilities.update(editingCapability.id, {
         name: form.name,
         config: buildConfigJSON(),
         is_enabled: form.is_enabled,

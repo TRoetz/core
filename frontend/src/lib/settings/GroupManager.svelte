@@ -1,6 +1,7 @@
 <script>
 	import { onMount } from 'svelte';
-	import { api } from '../api.js';
+	import { groups as groupsApi } from '../api/permissions.js';
+	import { getAdminUsers } from '../api/users.js';
 	import { Plus, Edit, Trash2, UserStar, UserPlus, UserMinus, Circle, X } from '@lucide/svelte';
 	import Button from '../components/Button.svelte';
 	import Avatar from '../components/Avatar.svelte';
@@ -45,7 +46,7 @@
 	async function loadGroups() {
 		loading = true;
 		try {
-			groups = await api.groups.getAdminAll();
+			groups = await groupsApi.getAdminAll();
 			error = '';
 		} catch (err) {
 			error = err.message || t('settings.groups.failedToLoad');
@@ -56,7 +57,7 @@
 
 	async function loadUsers() {
 		try {
-			users = await api.getAdminUsers();
+			users = await getAdminUsers();
 		} catch (err) {
 			console.error('Failed to load users:', err);
 		}
@@ -65,12 +66,12 @@
 	async function saveGroup() {
 		try {
 			if (editingGroup) {
-				await api.groups.update(editingGroup.id, {
+				await groupsApi.update(editingGroup.id, {
 					...formData,
 					is_active: editingGroup.is_active
 				});
 			} else {
-				await api.groups.create(formData);
+				await groupsApi.create(formData);
 			}
 			
 			resetForm();
@@ -91,7 +92,7 @@
 		if (!confirmed) return;
 
 		try {
-			await api.groups.delete(groupId);
+			await groupsApi.delete(groupId);
 			await loadGroups();
 		} catch (err) {
 			error = err.message || t('settings.groups.failedToDelete');
@@ -103,7 +104,7 @@
 		
 		// Get detailed group info with current members
 		try {
-			const groupDetail = await api.groups.get(group.id);
+			const groupDetail = await groupsApi.get(group.id);
 			selectedGroup = groupDetail;
 			selectedUsersToAdd = [];
 			selectedUserId = null;
@@ -138,10 +139,10 @@
 		
 		try {
 			const userIds = selectedUsersToAdd.map(u => u.id);
-			await api.groups.addMembers(selectedGroup.id, userIds);
+			await groupsApi.addMembers(selectedGroup.id, userIds);
 			
 			// Refresh group details
-			const groupDetail = await api.groups.get(selectedGroup.id);
+			const groupDetail = await groupsApi.get(selectedGroup.id);
 			selectedGroup = groupDetail;
 			
 			// Clear the selection
@@ -166,10 +167,10 @@
 		if (!confirmed) return;
 		
 		try {
-			await api.groups.removeMembers(selectedGroup.id, [userId]);
+			await groupsApi.removeMembers(selectedGroup.id, [userId]);
 			
 			// Refresh group details
-			const groupDetail = await api.groups.get(selectedGroup.id);
+			const groupDetail = await groupsApi.get(selectedGroup.id);
 			selectedGroup = groupDetail;
 			
 			// Refresh groups list

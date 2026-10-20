@@ -1,7 +1,7 @@
 <script>
   import { CheckSquare } from '@lucide/svelte';
   import { authStore } from '../stores/auth.svelte.js';
-  import { api } from '../api.js';
+  import { items } from '../api/items.js';
   import DueMark from './dashboard/DueMark.svelte';
   import WidgetState from './WidgetState.svelte';
   import ItemKey from '../components/ItemKey.svelte';
@@ -50,7 +50,7 @@
       parts.push('status_completed = false');
       const ql = parts.join(' AND ');
 
-      const response = await api.items.getAll({
+      const response = await items.getAll({
         ql,
         limit: maxItems * 3,
         order_by: 'created_at'

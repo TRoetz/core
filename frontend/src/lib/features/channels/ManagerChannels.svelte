@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import StateDisplay from '../../components/StateDisplay.svelte';
   import { IconLifebuoy } from '@tabler/icons-svelte-runes';
-  import { api } from '../../api.js';
+  import { channels as channelsApi } from '../../api/channels.js';
   import Button from '../../components/Button.svelte';
   import DataTable from '../../components/DataTable.svelte';
   import Lozenge from '../../components/Lozenge.svelte';
@@ -47,7 +47,7 @@
     loading = true;
     error = '';
     try {
-      channels = (await api.channels.getAll({ include_disabled: true })) || [];
+      channels = (await channelsApi.getAll({ include_disabled: true })) || [];
     } catch (err) {
       console.error('Failed to load managed channels:', err);
       channels = [];
