@@ -447,10 +447,6 @@ func (s *Store) reconcileConsumer(
 	return created, nil
 }
 
-// reconcileConsumerQuery builds the delivery-insertion statement. withSince
-// adds the recorded_at lower bound the bounded safety rescan relies on so the
-// planner can use idx_domain_events_recorded_at instead of scanning the full
-// retained history (WI-1770).
 // GateResult is the answer of the once-per-tick gate statement.
 type GateResult struct {
 	// ScanKeys are active consumers that may have events past the lowest cursor
@@ -522,6 +518,10 @@ func (s *Store) Gate(ctx context.Context, minCursor int64, now time.Time) (GateR
 	return result, nil
 }
 
+// reconcileConsumerQuery builds the delivery-insertion statement. withSince
+// adds the recorded_at lower bound the bounded safety rescan relies on so the
+// planner can use idx_domain_events_recorded_at instead of scanning the full
+// retained history (WI-1770).
 func reconcileConsumerQuery(driver string, withSince bool) string {
 	recordedAtFilter := ""
 	orderBy := "ORDER BY e.id"
