@@ -228,10 +228,13 @@ describe('mobile localization with real catalogs', () => {
     expect(translateError({ message: 'External server detail' })).toBe('External server detail');
     // Every shipped locale must resolve the full mobile surface — no English
     // fallback for missing mobile keys.
+    // Each locale dynamically imports its real catalog; under full-suite
+    // parallelism that load alone has measured ~5s, so give the loop its own
+    // budget instead of relying on the 5s default.
     for (const { code } of SUPPORTED_LOCALES) {
       await switchLocale(code);
       expect(t('mobile.create.item')).not.toBe('mobile.create.item');
       for (const key of Object.values(BUCKET_LABEL_KEYS)) expect(t(key)).not.toBe(key);
     }
-  });
+  }, 30_000);
 });
