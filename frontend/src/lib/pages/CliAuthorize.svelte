@@ -6,7 +6,9 @@
 	// Pairs with internal/handlers/cli_auth.go.
 
 	import { onMount } from 'svelte';
-	import { Terminal, Shield, AlertTriangle } from '@lucide/svelte';
+	import Terminal from '@lucide/svelte/icons/terminal';
+	import Shield from '@lucide/svelte/icons/shield';
+	import AlertTriangle from '@lucide/svelte/icons/alert-triangle';
 	import { cliAuth } from '../api/users.js';
 	import { authStore } from '../stores/auth.svelte.js';
 	import { currentRoute } from '../router.js';

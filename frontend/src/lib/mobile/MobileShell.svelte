@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { Plus } from '@lucide/svelte';
+  import Plus from '@lucide/svelte/icons/plus';
   import { currentRoute, navigate } from '../router.js';
   import { timerStore } from '../stores/timerStore.svelte.js';
   import { workspacesStore } from '../stores/workspaces.svelte.js';

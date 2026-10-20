@@ -4,7 +4,7 @@
   import { errorToast, successToast } from '../stores/toasts.svelte.js';
   import { packs as packsApi } from '../api/packs.js';
   import { workspacesStore } from '../stores/workspaces.svelte.js';
-  import { IconPackage } from '@tabler/icons-svelte-runes';
+  import IconPackage from '@tabler/icons-svelte-runes/icons/package';
   import Button from '../components/Button.svelte';
   import EmptyState from '../components/EmptyState.svelte';
   import Panel from '../components/Panel.svelte';

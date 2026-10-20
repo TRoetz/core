@@ -1,5 +1,5 @@
 <script>
-  import { Calendar } from '@lucide/svelte';
+  import Calendar from '@lucide/svelte/icons/calendar';
   import Text from '../../components/Text.svelte';
   import { clickOutside } from '../../actions/clickOutside.js';
   import { t } from '../../stores/i18n.svelte.js';

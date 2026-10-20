@@ -1,5 +1,9 @@
 <script>
-  import { Link2, Trash2, Plus, GripVertical, FileText } from '@lucide/svelte';
+  import Link2 from '@lucide/svelte/icons/link-2';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
+  import Plus from '@lucide/svelte/icons/plus';
+  import GripVertical from '@lucide/svelte/icons/grip-vertical';
+  import FileText from '@lucide/svelte/icons/file-text';
   import ItemTypeIcon from '../../components/ItemTypeIcon.svelte';
   import Button from '../../components/Button.svelte';
   import LinkComponent from '../../components/Link.svelte';

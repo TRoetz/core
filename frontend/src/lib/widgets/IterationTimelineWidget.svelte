@@ -1,5 +1,6 @@
 <script>
-  import { CalendarDays, RefreshCw } from '@lucide/svelte';
+  import CalendarDays from '@lucide/svelte/icons/calendar-days';
+  import RefreshCw from '@lucide/svelte/icons/refresh-cw';
   import { iterations as iterationsApi } from '../api/milestones.js';
   import { formatDateShort } from '../utils/dateFormatter.js';
   import WidgetState from './WidgetState.svelte';

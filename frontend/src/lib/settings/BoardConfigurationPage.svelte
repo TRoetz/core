@@ -14,7 +14,13 @@
   import { collectionStore } from '../stores/collectionContext.svelte.js';
   import { workspaceDataStore } from '../stores/workspaceDataStore.svelte.js';
   import { loadBoardConfigurationPageData } from './boardConfigurationData.js';
-  import { Plus, GripVertical, X, Grip, Settings, ListChecks, Columns3 } from '@lucide/svelte';
+  import Plus from '@lucide/svelte/icons/plus';
+  import GripVertical from '@lucide/svelte/icons/grip-vertical';
+  import X from '@lucide/svelte/icons/x';
+  import Grip from '@lucide/svelte/icons/grip';
+  import Settings from '@lucide/svelte/icons/settings';
+  import ListChecks from '@lucide/svelte/icons/list-checks';
+  import Columns3 from '@lucide/svelte/icons/columns-3';
   import IconSelector from '../pickers/IconSelector.svelte';
   import { useGradientStyles, loadWorkspaceGradient } from '../stores/workspaceGradient.svelte.js';
   import ViewHeader from '../layout/ViewHeader.svelte';

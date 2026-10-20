@@ -1,5 +1,6 @@
 <script>
-  import { IconInbox, IconMailExclamation } from '@tabler/icons-svelte-runes';
+  import IconInbox from '@tabler/icons-svelte-runes/icons/inbox';
+  import IconMailExclamation from '@tabler/icons-svelte-runes/icons/mail-exclamation';
   import Badge from '../../components/Badge.svelte';
   import Card from '../../components/Card.svelte';
   import { getEmailIntakeDiagnostics } from '../../api/diagnostics.js';

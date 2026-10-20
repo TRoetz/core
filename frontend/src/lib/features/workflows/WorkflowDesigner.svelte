@@ -2,7 +2,10 @@
   import { onMount } from 'svelte';
   import { currentRoute, navigate } from '../../router.js';
   import { statusCategories as statusCategoriesApi, statuses as statusesApi, workflows } from '../../api/workflows.js';
-  import { Save, X, Plus, Trash2 } from '@lucide/svelte';
+  import Save from '@lucide/svelte/icons/save';
+  import X from '@lucide/svelte/icons/x';
+  import Plus from '@lucide/svelte/icons/plus';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
   import BackButton from '../../components/BackButton.svelte';
   import { t } from '../../stores/i18n.svelte.js';
   import { errorToast } from '../../stores/toasts.svelte.js';

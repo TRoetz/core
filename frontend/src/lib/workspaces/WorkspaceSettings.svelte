@@ -5,7 +5,10 @@
   import { navigate } from '../router.js';
   import { workspacePermissions } from '../stores/workspacePermissions.svelte.js';
   import { workspacesStore, currentWorkspace } from '../stores/workspaces.svelte.js';
-  import { Trash2, AlertTriangle, Clock, Shield } from '@lucide/svelte';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
+  import AlertTriangle from '@lucide/svelte/icons/alert-triangle';
+  import Clock from '@lucide/svelte/icons/clock';
+  import Shield from '@lucide/svelte/icons/shield';
   import { moduleSettings } from '../stores/moduleSettings.js';
   import { viewSettingsStore } from '../stores/viewSettings.svelte.js';
   import WorkspaceConfigurationAssigner from './WorkspaceConfigurationAssigner.svelte';

@@ -2,7 +2,10 @@
   import { onMount } from 'svelte';
   import { publicBoard } from '../api/publicBoard.js';
   import { themeStore } from '../stores/theme.svelte.js';
-  import { IconSun, IconMoon, IconClipboardList, IconAlertTriangle } from '@tabler/icons-svelte-runes';
+  import IconSun from '@tabler/icons-svelte-runes/icons/sun';
+  import IconMoon from '@tabler/icons-svelte-runes/icons/moon';
+  import IconClipboardList from '@tabler/icons-svelte-runes/icons/clipboard-list';
+  import IconAlertTriangle from '@tabler/icons-svelte-runes/icons/alert-triangle';
   import PublicBoardItemDetail from './PublicBoardItemDetail.svelte';
 
   let { slug } = $props();

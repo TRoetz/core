@@ -1,5 +1,8 @@
 <script>
-  import { Calendar, CalendarDays, Flag, RefreshCw } from '@lucide/svelte';
+  import Calendar from '@lucide/svelte/icons/calendar';
+  import CalendarDays from '@lucide/svelte/icons/calendar-days';
+  import Flag from '@lucide/svelte/icons/flag';
+  import RefreshCw from '@lucide/svelte/icons/refresh-cw';
   import { items as itemsApi } from '../api/items.js';
   import { iterations, milestones } from '../api/milestones.js';
   import DueMark from './dashboard/DueMark.svelte';

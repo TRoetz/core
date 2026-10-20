@@ -4,7 +4,8 @@
   import { navigate } from '../../router.js';
   import { t } from '../../stores/i18n.svelte.js';
   import { errorToast, warningToast } from '../../stores/toasts.svelte.js';
-  import { IconFilter as Filter, IconSearch as Search } from '@tabler/icons-svelte-runes';
+  import Filter from '@tabler/icons-svelte-runes/icons/filter';
+  import Search from '@tabler/icons-svelte-runes/icons/search';
   import Card from '../../components/Card.svelte';
   import Pagination from '../../components/Pagination.svelte';
   import CollectionsSidebar from './CollectionsSidebar.svelte';

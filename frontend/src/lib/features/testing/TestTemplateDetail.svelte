@@ -2,7 +2,9 @@
   import { onMount } from 'svelte';
   import { currentRoute, navigate } from '../../router.js';
   import { tests } from '../../api/tests/index.js';
-  import { IconPlayerPlay, IconEdit, IconTrash } from '@tabler/icons-svelte-runes';
+  import IconPlayerPlay from '@tabler/icons-svelte-runes/icons/player-play';
+  import IconEdit from '@tabler/icons-svelte-runes/icons/edit';
+  import IconTrash from '@tabler/icons-svelte-runes/icons/trash';
   import Button from '../../components/Button.svelte';
   import BackButton from '../../components/BackButton.svelte';
   import { confirm } from '../../composables/useConfirm.js';

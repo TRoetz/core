@@ -1,5 +1,10 @@
 <script>
-  import { Link2, Plus, Paperclip, PenTool, Zap, ChevronDown } from '@lucide/svelte';
+  import Link2 from '@lucide/svelte/icons/link-2';
+  import Plus from '@lucide/svelte/icons/plus';
+  import Paperclip from '@lucide/svelte/icons/paperclip';
+  import PenTool from '@lucide/svelte/icons/pen-tool';
+  import Zap from '@lucide/svelte/icons/zap';
+  import ChevronDown from '@lucide/svelte/icons/chevron-down';
   import { tick } from 'svelte';
   import Button from '../../components/Button.svelte';
   import FileInput from '../../components/FileInput.svelte';

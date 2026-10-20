@@ -1,5 +1,6 @@
 <script>
-  import { ChevronLeft, Plus } from '@lucide/svelte';
+  import ChevronLeft from '@lucide/svelte/icons/chevron-left';
+  import Plus from '@lucide/svelte/icons/plus';
   import { t } from '../../stores/i18n.svelte.js';
   import { objectDisplayName } from '../../utils/systemLabels.js';
 

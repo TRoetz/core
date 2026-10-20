@@ -14,7 +14,10 @@
 <script>
   import { onMount } from 'svelte';
   import StateDisplay from '../components/StateDisplay.svelte';
-  import { Plus, Edit, Trash2, KeyRound } from '@lucide/svelte';
+  import Plus from '@lucide/svelte/icons/plus';
+  import Edit from '@lucide/svelte/icons/edit';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
+  import KeyRound from '@lucide/svelte/icons/key-round';
   import { actionCredentials } from '../api/ai.js';
   import { workspacesStore } from '../stores/workspaces.svelte.js';
   import Button from '../components/Button.svelte';

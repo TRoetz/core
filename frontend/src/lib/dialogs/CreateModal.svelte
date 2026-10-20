@@ -13,7 +13,12 @@
   import { attachments } from '../api/misc.js';
   import { items } from '../api/items.js';
   import { collections } from '../api/collections.js';
-  import { X, Target, Building, FolderOpen, ChevronRight, FileText } from '@lucide/svelte';
+  import X from '@lucide/svelte/icons/x';
+  import Target from '@lucide/svelte/icons/target';
+  import Building from '@lucide/svelte/icons/building';
+  import FolderOpen from '@lucide/svelte/icons/folder-open';
+  import ChevronRight from '@lucide/svelte/icons/chevron-right';
+  import FileText from '@lucide/svelte/icons/file-text';
   import { t } from '../stores/i18n.svelte.js';
   import Button from '../components/Button.svelte';
   import ModalBackdrop from '../components/ModalBackdrop.svelte';

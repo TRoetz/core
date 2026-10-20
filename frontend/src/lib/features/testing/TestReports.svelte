@@ -14,7 +14,15 @@
   import FormField from '../../components/FormField.svelte';
   import MilestoneCombobox from '../../pickers/MilestoneCombobox.svelte';
   import Chart from '../../widgets/Chart.svelte';
-  import { IconChartBar, IconRefresh, IconCircleCheck, IconCircleX, IconAlertTriangle, IconPlayerSkipForward, IconClock, IconTrendingUp, IconSettings } from '@tabler/icons-svelte-runes';
+  import IconChartBar from '@tabler/icons-svelte-runes/icons/chart-bar';
+  import IconRefresh from '@tabler/icons-svelte-runes/icons/refresh';
+  import IconCircleCheck from '@tabler/icons-svelte-runes/icons/circle-check';
+  import IconCircleX from '@tabler/icons-svelte-runes/icons/circle-x';
+  import IconAlertTriangle from '@tabler/icons-svelte-runes/icons/alert-triangle';
+  import IconPlayerSkipForward from '@tabler/icons-svelte-runes/icons/player-skip-forward';
+  import IconClock from '@tabler/icons-svelte-runes/icons/clock';
+  import IconTrendingUp from '@tabler/icons-svelte-runes/icons/trending-up';
+  import IconSettings from '@tabler/icons-svelte-runes/icons/settings';
   import TestCoverageReport from './TestCoverageReport.svelte';
   import { t } from '../../stores/i18n.svelte.js';
   import { formatAuthenticatedDateTime } from '../../utils/authenticatedDateFormatter.js';

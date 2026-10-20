@@ -6,7 +6,11 @@
   import { t } from '../../stores/i18n.svelte.js';
   import { errorToast } from '../../stores/toasts.svelte.js';
   import { confirm } from '../../composables/useConfirm.js';
-  import { FolderOpen, Plus, Eye, Pencil, Trash2 } from '@lucide/svelte';
+  import FolderOpen from '@lucide/svelte/icons/folder-open';
+  import Plus from '@lucide/svelte/icons/plus';
+  import Eye from '@lucide/svelte/icons/eye';
+  import Pencil from '@lucide/svelte/icons/pencil';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
   import Button from '../../components/Button.svelte';
   import DataTable from '../../components/DataTable.svelte';
   import CategoryModal from '../../dialogs/CategoryModal.svelte';

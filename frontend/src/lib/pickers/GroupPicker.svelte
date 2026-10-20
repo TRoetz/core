@@ -3,7 +3,7 @@
   import { createAsyncLoader } from '../composables';
   import { get } from '../api/core.js';
   import { onDestroy, onMount } from 'svelte';
-  import { Users } from '@lucide/svelte';
+  import Users from '@lucide/svelte/icons/users';
   import { t } from '../stores/i18n.svelte.js';
 
   let {

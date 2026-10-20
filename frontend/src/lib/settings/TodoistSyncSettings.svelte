@@ -3,7 +3,7 @@
 	import StateDisplay from '../components/StateDisplay.svelte';
 	import Spinner from '../components/Spinner.svelte';
 	import { todoistSync } from '../api/integrations.js';
-	import { RefreshCw } from '@lucide/svelte';
+	import RefreshCw from '@lucide/svelte/icons/refresh-cw';
 	import Button from '../components/Button.svelte';
 	import Checkbox from '../components/Checkbox.svelte';
 	import NativeSelect from '../components/NativeSelect.svelte';

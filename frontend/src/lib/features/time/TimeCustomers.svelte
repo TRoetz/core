@@ -10,7 +10,10 @@
   import Avatar from '../../components/Avatar.svelte';
   import Text from '../../components/Text.svelte';
   import { toHotkeyString } from '../../utils/keyboardShortcuts.js';
-  import { Plus, Trash2, Edit, Users } from '@lucide/svelte';
+  import Plus from '@lucide/svelte/icons/plus';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
+  import Edit from '@lucide/svelte/icons/edit';
+  import Users from '@lucide/svelte/icons/users';
   import { t } from '../../stores/i18n.svelte.js';
   import { realCustomers } from '../../utils/customerLabel.js';
   import { errorToast } from '../../stores/toasts.svelte.js';

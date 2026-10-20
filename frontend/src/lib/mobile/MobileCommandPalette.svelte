@@ -1,6 +1,7 @@
 <script>
   import { onDestroy } from 'svelte';
-  import { Loader, Search } from '@lucide/svelte';
+  import Loader from '@lucide/svelte/icons/loader';
+  import Search from '@lucide/svelte/icons/search';
   import { search } from '../api/misc.js';
   import { navigate } from '../router.js';
   import { workspacesStore } from '../stores/workspaces.svelte.js';

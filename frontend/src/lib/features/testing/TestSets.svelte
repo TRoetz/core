@@ -5,7 +5,10 @@
   import { milestones as milestonesApi } from '../../api/milestones.js';
   import { writable } from 'svelte/store';
   import { confirm } from '../../composables/useConfirm.js';
-  import { IconX, IconPackage, IconFileText, IconPlayerPlay } from '@tabler/icons-svelte-runes';
+  import IconX from '@tabler/icons-svelte-runes/icons/x';
+  import IconPackage from '@tabler/icons-svelte-runes/icons/package';
+  import IconFileText from '@tabler/icons-svelte-runes/icons/file-text';
+  import IconPlayerPlay from '@tabler/icons-svelte-runes/icons/player-play';
   import { navigate } from '../../router.js';
   import Button from '../../components/Button.svelte';
   import Input from '../../components/Input.svelte';

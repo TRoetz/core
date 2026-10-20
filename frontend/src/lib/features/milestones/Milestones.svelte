@@ -5,10 +5,20 @@
   import { t } from '../../stores/i18n.svelte.js';
   import { confirm } from '../../composables/useConfirm.js';
   import { errorToast } from '../../stores/toasts.svelte.js';
-  import {
-    IconFlag as Milestone, IconCalendar as Calendar, IconCircleCheck as CheckCircle, IconClock as Clock, IconPlus as Plus, IconEdit as Edit, IconTrash as Trash2,
-    IconDots as MoreHorizontal, IconTag as Tag, IconMessage as MessageSquare, IconWorld as Globe, IconBuilding as Building2, IconGitBranch as GitBranch, IconGripVertical as GripVertical
-  } from '@tabler/icons-svelte-runes';
+  import Milestone from '@tabler/icons-svelte-runes/icons/flag';
+  import Calendar from '@tabler/icons-svelte-runes/icons/calendar';
+  import CheckCircle from '@tabler/icons-svelte-runes/icons/circle-check';
+  import Clock from '@tabler/icons-svelte-runes/icons/clock';
+  import Plus from '@tabler/icons-svelte-runes/icons/plus';
+  import Edit from '@tabler/icons-svelte-runes/icons/edit';
+  import Trash2 from '@tabler/icons-svelte-runes/icons/trash';
+  import MoreHorizontal from '@tabler/icons-svelte-runes/icons/dots';
+  import Tag from '@tabler/icons-svelte-runes/icons/tag';
+  import MessageSquare from '@tabler/icons-svelte-runes/icons/message';
+  import Globe from '@tabler/icons-svelte-runes/icons/world';
+  import Building2 from '@tabler/icons-svelte-runes/icons/building';
+  import GitBranch from '@tabler/icons-svelte-runes/icons/git-branch';
+  import GripVertical from '@tabler/icons-svelte-runes/icons/grip-vertical';
   import DataTable from '../../components/DataTable.svelte';
   import Button from '../../components/Button.svelte';
   import Toggle from '../../components/Toggle.svelte';

@@ -1,6 +1,8 @@
 <script>
   import { onMount } from 'svelte';
-  import { ChevronLeft, ChevronRight, X } from '@lucide/svelte';
+  import ChevronLeft from '@lucide/svelte/icons/chevron-left';
+  import ChevronRight from '@lucide/svelte/icons/chevron-right';
+  import X from '@lucide/svelte/icons/x';
   import { time } from '../../api/time.js';
   import { timeEntryStore } from '../../stores/timeEntryStore.svelte.js';
   import { BasePicker } from '../../pickers';

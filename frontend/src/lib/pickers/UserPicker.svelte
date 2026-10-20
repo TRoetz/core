@@ -1,5 +1,6 @@
 <script>
-  import { ChevronDown, X } from '@lucide/svelte';
+  import ChevronDown from '@lucide/svelte/icons/chevron-down';
+  import X from '@lucide/svelte/icons/x';
   import { BasePicker } from '.';
   import { createAsyncLoader } from '../composables';
   import { getAssignableUsers, getUsers } from '../api/users.js';

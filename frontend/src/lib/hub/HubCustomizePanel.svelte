@@ -1,8 +1,14 @@
 <script>
-  import {
-    Palette, Navigation, X, TextCursorInput, Check,
-    Plus, Trash2, GripVertical, Settings, ExternalLink
-  } from '@lucide/svelte';
+  import Palette from '@lucide/svelte/icons/palette';
+  import Navigation from '@lucide/svelte/icons/navigation';
+  import X from '@lucide/svelte/icons/x';
+  import TextCursorInput from '@lucide/svelte/icons/text-cursor-input';
+  import Check from '@lucide/svelte/icons/check';
+  import Plus from '@lucide/svelte/icons/plus';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
+  import GripVertical from '@lucide/svelte/icons/grip-vertical';
+  import Settings from '@lucide/svelte/icons/settings';
+  import ExternalLink from '@lucide/svelte/icons/external-link';
   import { hubStore, gradients } from '../stores/hub.svelte.js';
   import { t } from '../stores/i18n.svelte.js';
   import LogoUploader from '../components/LogoUploader.svelte';

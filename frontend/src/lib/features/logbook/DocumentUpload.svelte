@@ -8,7 +8,9 @@
   import FormField from '../../components/FormField.svelte';
   import ModalHeader from '../../dialogs/ModalHeader.svelte';
   import Modal from '../../dialogs/Modal.svelte';
-  import { IconUpload as Upload, IconX as X, IconFileText as FileText } from '@tabler/icons-svelte-runes';
+  import Upload from '@tabler/icons-svelte-runes/icons/upload';
+  import X from '@tabler/icons-svelte-runes/icons/x';
+  import FileText from '@tabler/icons-svelte-runes/icons/file-text';
 
   let { bucketId, onclose = () => {}, onupload = () => {} } = $props();
 

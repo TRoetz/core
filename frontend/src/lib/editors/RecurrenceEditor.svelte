@@ -10,7 +10,10 @@
   import Radio from '../components/Radio.svelte';
   import Select from '../components/Select.svelte';
   import Toggle from '../components/Toggle.svelte';
-  import { Save, Trash2, X, Eye } from '@lucide/svelte';
+  import Save from '@lucide/svelte/icons/save';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
+  import X from '@lucide/svelte/icons/x';
+  import Eye from '@lucide/svelte/icons/eye';
 
   let {
     itemId,

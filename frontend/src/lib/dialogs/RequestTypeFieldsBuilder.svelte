@@ -5,7 +5,16 @@
   import { createPopover, melt } from '@melt-ui/svelte';
   import { tick } from 'svelte';
   import { requestTypes } from '../api/channels.js';
-  import { Plus, Trash2, Pencil, Type, AlignLeft, ListChecks, ToggleLeft, AlertTriangle, Search, X } from '@lucide/svelte';
+  import Plus from '@lucide/svelte/icons/plus';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
+  import Pencil from '@lucide/svelte/icons/pencil';
+  import Type from '@lucide/svelte/icons/type';
+  import AlignLeft from '@lucide/svelte/icons/align-left';
+  import ListChecks from '@lucide/svelte/icons/list-checks';
+  import ToggleLeft from '@lucide/svelte/icons/toggle-left';
+  import AlertTriangle from '@lucide/svelte/icons/alert-triangle';
+  import Search from '@lucide/svelte/icons/search';
+  import X from '@lucide/svelte/icons/x';
   import Button from '../components/Button.svelte';
   import Input from '../components/Input.svelte';
   import Spinner from '../components/Spinner.svelte';

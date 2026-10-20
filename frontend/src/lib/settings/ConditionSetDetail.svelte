@@ -8,7 +8,11 @@
   import { customFields } from '../api/configuration.js';
   import { conditionSets } from '../api/conditionSets.js';
   import { confirm } from '../composables/useConfirm.js';
-  import { Plus, Trash2, ChevronDown, ChevronUp, HelpCircle } from '@lucide/svelte';
+  import Plus from '@lucide/svelte/icons/plus';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
+  import ChevronDown from '@lucide/svelte/icons/chevron-down';
+  import ChevronUp from '@lucide/svelte/icons/chevron-up';
+  import HelpCircle from '@lucide/svelte/icons/help-circle';
   import Button from '../components/Button.svelte';
   import BackButton from '../components/BackButton.svelte';
   import Input from '../components/Input.svelte';

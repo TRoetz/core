@@ -7,7 +7,12 @@
   import Lozenge from '../../components/Lozenge.svelte';
   import Toggle from '../../components/Toggle.svelte';
   import SlaMetricEditor from './SlaMetricEditor.svelte';
-  import { Gauge, Plus, Trash2, Edit, ArrowUp, ArrowDown } from '@lucide/svelte';
+  import Gauge from '@lucide/svelte/icons/gauge';
+  import Plus from '@lucide/svelte/icons/plus';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
+  import Edit from '@lucide/svelte/icons/edit';
+  import ArrowUp from '@lucide/svelte/icons/arrow-up';
+  import ArrowDown from '@lucide/svelte/icons/arrow-down';
   import { t } from '../../stores/i18n.svelte.js';
   import { confirm } from '../../composables/useConfirm.js';
   import { successToast, errorToast } from '../../stores/toasts.svelte.js';

@@ -1,5 +1,9 @@
 <script>
-  import { IconPlus, IconEdit, IconTrash, IconClipboardList, IconX } from '@tabler/icons-svelte-runes';
+  import IconPlus from '@tabler/icons-svelte-runes/icons/plus';
+  import IconEdit from '@tabler/icons-svelte-runes/icons/edit';
+  import IconTrash from '@tabler/icons-svelte-runes/icons/trash';
+  import IconClipboardList from '@tabler/icons-svelte-runes/icons/clipboard-list';
+  import IconX from '@tabler/icons-svelte-runes/icons/x';
   import { tests } from '../../api/tests/index.js';
   import MilkdownEditor from '../../editors/LazyMilkdownEditor.svelte';
   import { navigate, currentRoute } from '../../router.js';

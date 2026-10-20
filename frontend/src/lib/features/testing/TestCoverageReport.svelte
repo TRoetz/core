@@ -18,13 +18,11 @@
   import SectionHeader from '../../layout/SectionHeader.svelte';
   import { escapeHtml } from '../../utils/sanitize.ts';
   import { buildCoveragePieSegments } from '../../utils/pieChart.js';
-  import {
-    IconShieldX,
-    IconSettings,
-    IconCircleCheck,
-    IconCircleX,
-    IconLink
-  } from '@tabler/icons-svelte-runes';
+  import IconShieldX from '@tabler/icons-svelte-runes/icons/shield-x';
+  import IconSettings from '@tabler/icons-svelte-runes/icons/settings';
+  import IconCircleCheck from '@tabler/icons-svelte-runes/icons/circle-check';
+  import IconCircleX from '@tabler/icons-svelte-runes/icons/circle-x';
+  import IconLink from '@tabler/icons-svelte-runes/icons/link';
   import ItemTypeIcon from '../../components/ItemTypeIcon.svelte';
   import { t } from '../../stores/i18n.svelte.js';
   import { errorToast } from '../../stores/toasts.svelte.js';

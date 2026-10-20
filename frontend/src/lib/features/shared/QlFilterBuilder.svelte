@@ -1,6 +1,7 @@
 <script>
   import { onMount } from 'svelte';
-  import { Plus, X } from '@lucide/svelte';
+  import Plus from '@lucide/svelte/icons/plus';
+  import X from '@lucide/svelte/icons/x';
   import { t } from '../../stores/i18n.svelte.js';
   import { queryLanguage } from '../../api/queryLanguage.js';
   import { QLBuilder } from '../../utils/ql.js';

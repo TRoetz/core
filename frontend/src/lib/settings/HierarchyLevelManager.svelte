@@ -2,7 +2,13 @@
   import { onMount } from 'svelte';
   import { hierarchyLevels as hierarchyLevelsApi } from '../api/configuration.js';
   import { t } from '../stores/i18n.svelte.js';
-  import { Plus, Edit, Trash2, ChevronUp, ChevronDown, Circle, Network } from '@lucide/svelte';
+  import Plus from '@lucide/svelte/icons/plus';
+  import Edit from '@lucide/svelte/icons/edit';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
+  import ChevronUp from '@lucide/svelte/icons/chevron-up';
+  import ChevronDown from '@lucide/svelte/icons/chevron-down';
+  import Circle from '@lucide/svelte/icons/circle';
+  import Network from '@lucide/svelte/icons/network';
   import AlertBox from '../components/AlertBox.svelte';
   import Button from '../components/Button.svelte';
   import DataTable from '../components/DataTable.svelte';

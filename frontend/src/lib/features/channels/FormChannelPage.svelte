@@ -1,6 +1,9 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
-  import { IconSettings, IconForms, IconCode, IconUsers } from '@tabler/icons-svelte-runes';
+  import IconSettings from '@tabler/icons-svelte-runes/icons/settings';
+  import IconForms from '@tabler/icons-svelte-runes/icons/forms';
+  import IconCode from '@tabler/icons-svelte-runes/icons/code';
+  import IconUsers from '@tabler/icons-svelte-runes/icons/users';
   import { currentRoute, navigate } from '../../router.js';
   import { channels } from '../../api/channels.js';
   import { t } from '../../stores/i18n.svelte.js';

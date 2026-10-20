@@ -22,7 +22,12 @@
   } from './boardColumns.js';
   import { resolveBoardWorkspaces } from './boardWorkspaces.js';
   import { infoToast, successToast, warningToast } from '../../stores/toasts.svelte.js';
-  import { Plus, ChevronDown, ChevronRight, MoreHorizontal, Layers, ArrowDownUp } from '@lucide/svelte';
+  import Plus from '@lucide/svelte/icons/plus';
+  import ChevronDown from '@lucide/svelte/icons/chevron-down';
+  import ChevronRight from '@lucide/svelte/icons/chevron-right';
+  import MoreHorizontal from '@lucide/svelte/icons/more-horizontal';
+  import Layers from '@lucide/svelte/icons/layers';
+  import ArrowDownUp from '@lucide/svelte/icons/arrow-down-up';
   import ItemPicker from '../../pickers/ItemPicker.svelte';
   import { buildIterationPickerConfig } from '../iterations/iterationPickerUtils.js';
   import ItemTypeIcon from '../../components/ItemTypeIcon.svelte';

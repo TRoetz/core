@@ -4,8 +4,12 @@
   import { setOAuthReturnURL } from '../utils/oauthReturn.js';
 	import { scmProviders, userSCM } from '../api/scm.js';
 	import { userIntegrations } from '../api/integrations.js';
- import { GitBranch, CheckCircle, XCircle, LogOut, ExternalLink } from '@lucide/svelte';
-	import { IconBrandGithub as Github } from '@tabler/icons-svelte-runes';
+ import GitBranch from '@lucide/svelte/icons/git-branch';
+ import CheckCircle from '@lucide/svelte/icons/check-circle';
+ import XCircle from '@lucide/svelte/icons/x-circle';
+ import LogOut from '@lucide/svelte/icons/log-out';
+ import ExternalLink from '@lucide/svelte/icons/external-link';
+	import Github from '@tabler/icons-svelte-runes/icons/brand-github';
 	import Button from '../components/Button.svelte';
 	import AlertBox from '../components/AlertBox.svelte';
 	import EmptyState from '../components/EmptyState.svelte';

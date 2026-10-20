@@ -1,6 +1,8 @@
 <script>
   import { onMount } from 'svelte';
-  import { Users, X, Plus } from '@lucide/svelte';
+  import Users from '@lucide/svelte/icons/users';
+  import X from '@lucide/svelte/icons/x';
+  import Plus from '@lucide/svelte/icons/plus';
   import Spinner from '../../components/Spinner.svelte';
   import Text from '../../components/Text.svelte';
   import Input from '../../components/Input.svelte';

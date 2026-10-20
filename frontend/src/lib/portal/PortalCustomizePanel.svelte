@@ -3,11 +3,22 @@
   import StateDisplay from '../components/StateDisplay.svelte';
   import Lozenge from '../components/Lozenge.svelte';
   import { draggable } from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
-  import {
-    Palette, Navigation, X, TextCursorInput, BookOpen, Check,
-    Plus, Trash2, Edit, MoreHorizontal, GripVertical,
-    Package, Shield, Table2, Edit3, Info
-  } from '@lucide/svelte';
+  import Palette from '@lucide/svelte/icons/palette';
+  import Navigation from '@lucide/svelte/icons/navigation';
+  import X from '@lucide/svelte/icons/x';
+  import TextCursorInput from '@lucide/svelte/icons/text-cursor-input';
+  import BookOpen from '@lucide/svelte/icons/book-open';
+  import Check from '@lucide/svelte/icons/check';
+  import Plus from '@lucide/svelte/icons/plus';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
+  import Edit from '@lucide/svelte/icons/edit';
+  import MoreHorizontal from '@lucide/svelte/icons/more-horizontal';
+  import GripVertical from '@lucide/svelte/icons/grip-vertical';
+  import Package from '@lucide/svelte/icons/package';
+  import Shield from '@lucide/svelte/icons/shield';
+  import Table2 from '@lucide/svelte/icons/table-2';
+  import Edit3 from '@lucide/svelte/icons/edit-3';
+  import Info from '@lucide/svelte/icons/info';
   import Tooltip from '../components/Tooltip.svelte';
   import DropdownMenu from '../layout/DropdownMenu.svelte';
   import RequestTypeVisibilityModal from '../dialogs/RequestTypeVisibilityModal.svelte';

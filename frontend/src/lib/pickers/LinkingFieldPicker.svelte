@@ -1,7 +1,10 @@
 <script>
   import { onMount } from 'svelte';
   import { links as linksApi } from '../api/configuration.js';
-  import { X, Plus, Search, Link2 } from '@lucide/svelte';
+  import X from '@lucide/svelte/icons/x';
+  import Plus from '@lucide/svelte/icons/plus';
+  import Search from '@lucide/svelte/icons/search';
+  import Link2 from '@lucide/svelte/icons/link-2';
   import { errorToast } from '../stores/toasts.svelte.js';
   import Input from '../components/Input.svelte';
   import ItemTypeIcon from '../components/ItemTypeIcon.svelte';

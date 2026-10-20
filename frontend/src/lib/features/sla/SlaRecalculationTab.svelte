@@ -5,7 +5,8 @@
   import DataTable from '../../components/DataTable.svelte';
   import Select from '../../components/Select.svelte';
   import Lozenge from '../../components/Lozenge.svelte';
-  import { RefreshCw, Play } from '@lucide/svelte';
+  import RefreshCw from '@lucide/svelte/icons/refresh-cw';
+  import Play from '@lucide/svelte/icons/play';
   import { t } from '../../stores/i18n.svelte.js';
   import { successToast, errorToast } from '../../stores/toasts.svelte.js';
 

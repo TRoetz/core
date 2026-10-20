@@ -11,7 +11,12 @@
   import { t } from '../stores/i18n.svelte.js';
   import { errorToast } from '../stores/toasts.svelte.js';
   import { formatAuthenticatedDateTime as formatDateTimeLocale } from '../utils/authenticatedDateFormatter.js';
-  import { User, Users, X, Plus, Shield, UserCheck } from '@lucide/svelte';
+  import User from '@lucide/svelte/icons/user';
+  import Users from '@lucide/svelte/icons/users';
+  import X from '@lucide/svelte/icons/x';
+  import Plus from '@lucide/svelte/icons/plus';
+  import Shield from '@lucide/svelte/icons/shield';
+  import UserCheck from '@lucide/svelte/icons/user-check';
   import DescriptionText from '../components/DescriptionText.svelte';
 
   // Props

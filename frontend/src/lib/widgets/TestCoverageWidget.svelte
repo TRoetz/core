@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { ShieldX } from '@lucide/svelte';
+  import ShieldX from '@lucide/svelte/icons/shield-x';
   import EmptyState from '../components/EmptyState.svelte';
   import PieChartSegments from '../components/PieChartSegments.svelte';
   import { tests } from '../api/tests/index.js';

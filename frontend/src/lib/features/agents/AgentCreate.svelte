@@ -1,17 +1,15 @@
 <script>
   import { onMount } from 'svelte';
-  import {
-    IconBolt as Bolt,
-    IconCode as Code,
-    IconFile as BlankIcon,
-    IconGitPullRequest as ReviewIcon,
-    IconListCheck as TriageIcon,
-    IconMap2 as WorkspaceGuideIcon,
-    IconRocket as ReleaseIcon,
-    IconRoute as DeliveryIcon,
-    IconTestPipe as QAIcon,
-    IconUserStar as AgentIcon,
-  } from '@tabler/icons-svelte-runes';
+  import Bolt from '@tabler/icons-svelte-runes/icons/bolt';
+  import Code from '@tabler/icons-svelte-runes/icons/code';
+  import BlankIcon from '@tabler/icons-svelte-runes/icons/file';
+  import ReviewIcon from '@tabler/icons-svelte-runes/icons/git-pull-request';
+  import TriageIcon from '@tabler/icons-svelte-runes/icons/list-check';
+  import WorkspaceGuideIcon from '@tabler/icons-svelte-runes/icons/map-2';
+  import ReleaseIcon from '@tabler/icons-svelte-runes/icons/rocket';
+  import DeliveryIcon from '@tabler/icons-svelte-runes/icons/route';
+  import QAIcon from '@tabler/icons-svelte-runes/icons/test-pipe';
+  import AgentIcon from '@tabler/icons-svelte-runes/icons/user-star';
   import { actionCapabilities, llmProviders, runnerPools as runnerPoolsApi } from '../../api/ai.js';
   import { workspaceSCM } from '../../api/scm.js';
   import { agentBindings } from '../../api/agentBindings.js';

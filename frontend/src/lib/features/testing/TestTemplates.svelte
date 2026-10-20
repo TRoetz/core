@@ -6,7 +6,7 @@
   import { navigate } from '../../router.js';
   import { confirm } from '../../composables/useConfirm.js';
   import { errorToast } from '../../stores/toasts.svelte.js';
-  import { IconFiles } from '@tabler/icons-svelte-runes';
+  import IconFiles from '@tabler/icons-svelte-runes/icons/files';
   import { escapeHtml } from '../../utils/sanitize.ts';
   import Button from '../../components/Button.svelte';
   import Input from '../../components/Input.svelte';

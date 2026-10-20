@@ -1,14 +1,12 @@
 <script>
-  import {
-    IconAlertTriangle,
-    IconAlertCircle,
-    IconCircleCheck,
-    IconCloud,
-    IconClock,
-    IconDatabase,
-    IconSun,
-    IconX,
-  } from '@tabler/icons-svelte-runes';
+  import IconAlertTriangle from '@tabler/icons-svelte-runes/icons/alert-triangle';
+  import IconAlertCircle from '@tabler/icons-svelte-runes/icons/alert-circle';
+  import IconCircleCheck from '@tabler/icons-svelte-runes/icons/circle-check';
+  import IconCloud from '@tabler/icons-svelte-runes/icons/cloud';
+  import IconClock from '@tabler/icons-svelte-runes/icons/clock';
+  import IconDatabase from '@tabler/icons-svelte-runes/icons/database';
+  import IconSun from '@tabler/icons-svelte-runes/icons/sun';
+  import IconX from '@tabler/icons-svelte-runes/icons/x';
   import Card from '../../components/Card.svelte';
   import StatCard from '../../components/StatCard.svelte';
   import DataTable from '../../components/DataTable.svelte';

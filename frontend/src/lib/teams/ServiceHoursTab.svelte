@@ -6,7 +6,11 @@
   import Modal from '../dialogs/Modal.svelte';
   import ModalHeader from '../dialogs/ModalHeader.svelte';
   import WorkingCalendarEditor from '../features/sla/WorkingCalendarEditor.svelte';
-  import { Clock, Plus, Trash2, Edit, Eye } from '@lucide/svelte';
+  import Clock from '@lucide/svelte/icons/clock';
+  import Plus from '@lucide/svelte/icons/plus';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
+  import Edit from '@lucide/svelte/icons/edit';
+  import Eye from '@lucide/svelte/icons/eye';
   import { t } from '../stores/i18n.svelte.js';
   import { confirm } from '../composables/useConfirm.js';
   import { successToast, errorToast } from '../stores/toasts.svelte.js';

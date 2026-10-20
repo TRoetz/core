@@ -1,7 +1,11 @@
 <script>
   import { onMount } from 'svelte';
-  import { IconPlus, IconPhoneCheck, IconEdit, IconTrash, IconCircle } from '@tabler/icons-svelte-runes';
-  import { Package } from '@lucide/svelte';
+  import IconPlus from '@tabler/icons-svelte-runes/icons/plus';
+  import IconPhoneCheck from '@tabler/icons-svelte-runes/icons/phone-check';
+  import IconEdit from '@tabler/icons-svelte-runes/icons/edit';
+  import IconTrash from '@tabler/icons-svelte-runes/icons/trash';
+  import IconCircle from '@tabler/icons-svelte-runes/icons/circle';
+  import Package from '@lucide/svelte/icons/package';
   import { teams as teamsApi } from '../api/teams.js';
   import { navigate } from '../router.js';
   import { authStore } from '../stores/auth.svelte.js';

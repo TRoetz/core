@@ -1,5 +1,8 @@
 <script>
-  import { Pencil, AlertTriangle, Loader2, Trash2 } from '@lucide/svelte';
+  import Pencil from '@lucide/svelte/icons/pencil';
+  import AlertTriangle from '@lucide/svelte/icons/alert-triangle';
+  import Loader2 from '@lucide/svelte/icons/loader-2';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
   import { t } from '../stores/i18n.svelte.js';
   import { preparePageDiagramScene } from '../features/pages/pageDiagramScene.js';
 

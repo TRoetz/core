@@ -1,5 +1,5 @@
 <script>
-  import { Trash2 } from '@lucide/svelte';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
   import { homepageStore } from '../stores/homepageStore.svelte.js';
   import { t } from '../stores/i18n.svelte.js';
   import Button from '../components/Button.svelte';

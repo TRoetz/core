@@ -10,7 +10,12 @@
   import EmptyState from '../components/EmptyState.svelte';
   import ModalBackdrop from '../components/ModalBackdrop.svelte';
   import DialogFooter from '../dialogs/DialogFooter.svelte';
-  import { X, Search, Check, GitBranch, Lock, Globe } from '@lucide/svelte';
+  import X from '@lucide/svelte/icons/x';
+  import Search from '@lucide/svelte/icons/search';
+  import Check from '@lucide/svelte/icons/check';
+  import GitBranch from '@lucide/svelte/icons/git-branch';
+  import Lock from '@lucide/svelte/icons/lock';
+  import Globe from '@lucide/svelte/icons/globe';
   import { t } from '../stores/i18n.svelte.js';
 
   let { workspaceId, connection, onclose, onlinked } = $props();

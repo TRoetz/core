@@ -4,7 +4,10 @@
   import { t } from '../stores/i18n.svelte.js';
   import { errorToast } from '../stores/toasts.svelte.js';
   import { confirm } from '../composables/useConfirm.js';
-  import { Plus, Edit, Trash2, FileText } from '@lucide/svelte';
+  import Plus from '@lucide/svelte/icons/plus';
+  import Edit from '@lucide/svelte/icons/edit';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
+  import FileText from '@lucide/svelte/icons/file-text';
   import { itemTypeIconMap, itemTypeIconOptions } from '../utils/icons.js';
   import Button from '../components/Button.svelte';
   import ItemTypeIcon from '../components/ItemTypeIcon.svelte';

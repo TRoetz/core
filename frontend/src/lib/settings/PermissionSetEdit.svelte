@@ -4,7 +4,9 @@
   import { del, get, post, put } from '../api/core.js';
   import { t } from '../stores/i18n.svelte.js';
   import { errorToast } from '../stores/toasts.svelte.js';
-  import { Save, X, UserPlus } from '@lucide/svelte';
+  import Save from '@lucide/svelte/icons/save';
+  import X from '@lucide/svelte/icons/x';
+  import UserPlus from '@lucide/svelte/icons/user-plus';
   import Button from '../components/Button.svelte';
   import BackButton from '../components/BackButton.svelte';
   import Modal from '../dialogs/Modal.svelte';

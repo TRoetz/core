@@ -9,7 +9,7 @@
   import UserPicker from '../../pickers/UserPicker.svelte';
   import GroupPicker from '../../pickers/GroupPicker.svelte';
   import RolePicker from '../../pickers/RolePicker.svelte';
-  import { IconShield as Shield } from '@tabler/icons-svelte-runes';
+  import Shield from '@tabler/icons-svelte-runes/icons/shield';
   import { pages } from '../../api/pages.js';
   import { confirm } from '../../composables/useConfirm.js';
   import { t } from '../../stores/i18n.svelte.js';

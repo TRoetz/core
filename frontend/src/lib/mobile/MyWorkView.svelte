@@ -1,5 +1,7 @@
 <script>
-  import { Search, Sparkles, Command as CommandIcon } from '@lucide/svelte';
+  import Search from '@lucide/svelte/icons/search';
+  import Sparkles from '@lucide/svelte/icons/sparkles';
+  import CommandIcon from '@lucide/svelte/icons/command';
   import { authStore } from '../stores/auth.svelte.js';
   import { aiStore } from '../stores/aiStore.svelte.js';
   import { items } from '../api/items.js';

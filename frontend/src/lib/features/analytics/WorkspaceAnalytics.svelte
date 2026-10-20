@@ -1,19 +1,17 @@
 <script>
   import { onMount } from 'svelte';
-  import {
-    AlertCircle,
-    CircleCheck,
-    CirclePlus,
-    Clock3,
-    Flag,
-    Gauge,
-    Hash,
-    Info,
-    Layers,
-    Ruler,
-    TrendingUp,
-    UserRoundMinus,
-  } from '@lucide/svelte';
+  import AlertCircle from '@lucide/svelte/icons/alert-circle';
+  import CircleCheck from '@lucide/svelte/icons/circle-check';
+  import CirclePlus from '@lucide/svelte/icons/circle-plus';
+  import Clock3 from '@lucide/svelte/icons/clock-3';
+  import Flag from '@lucide/svelte/icons/flag';
+  import Gauge from '@lucide/svelte/icons/gauge';
+  import Hash from '@lucide/svelte/icons/hash';
+  import Info from '@lucide/svelte/icons/info';
+  import Layers from '@lucide/svelte/icons/layers';
+  import Ruler from '@lucide/svelte/icons/ruler';
+  import TrendingUp from '@lucide/svelte/icons/trending-up';
+  import UserRoundMinus from '@lucide/svelte/icons/user-round-minus';
   import { collections as collectionsApi } from '../../api/collections.js';
   import { analytics } from '../../api/analytics.js';
   import { navigate } from '../../router.js';

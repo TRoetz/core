@@ -1,6 +1,7 @@
 <script>
   import { useResizeObserver } from 'runed';
-  import { ChevronRight, FileText } from '@lucide/svelte';
+  import ChevronRight from '@lucide/svelte/icons/chevron-right';
+  import FileText from '@lucide/svelte/icons/file-text';
   import { currentRoute, navigate } from '../../router.js';
   import { authStore } from '../../stores/auth.svelte.js';
   import EmptyState from '../../components/EmptyState.svelte';

@@ -10,7 +10,11 @@
   import { customFields } from '../api/configuration.js';
   import { approvalSets } from '../api/approvalSets.js';
   import { confirm } from '../composables/useConfirm.js';
-  import { Plus, Trash2, ChevronDown, ChevronUp, AlertTriangle } from '@lucide/svelte';
+  import Plus from '@lucide/svelte/icons/plus';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
+  import ChevronDown from '@lucide/svelte/icons/chevron-down';
+  import ChevronUp from '@lucide/svelte/icons/chevron-up';
+  import AlertTriangle from '@lucide/svelte/icons/alert-triangle';
   import Button from '../components/Button.svelte';
   import BackButton from '../components/BackButton.svelte';
   import Checkbox from '../components/Checkbox.svelte';

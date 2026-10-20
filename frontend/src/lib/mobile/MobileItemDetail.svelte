@@ -1,5 +1,15 @@
 <script>
-  import { Star, Play, Loader, ChevronDown, ChevronRight, GitPullRequest, Bot, RefreshCw, Plus, Check, Pencil } from '@lucide/svelte';
+  import Star from '@lucide/svelte/icons/star';
+  import Play from '@lucide/svelte/icons/play';
+  import Loader from '@lucide/svelte/icons/loader';
+  import ChevronDown from '@lucide/svelte/icons/chevron-down';
+  import ChevronRight from '@lucide/svelte/icons/chevron-right';
+  import GitPullRequest from '@lucide/svelte/icons/git-pull-request';
+  import Bot from '@lucide/svelte/icons/bot';
+  import RefreshCw from '@lucide/svelte/icons/refresh-cw';
+  import Plus from '@lucide/svelte/icons/plus';
+  import Check from '@lucide/svelte/icons/check';
+  import Pencil from '@lucide/svelte/icons/pencil';
   import { getAssignableUsers } from '../api/users.js';
   import { items } from '../api/items.js';
   import { loadMobileItemDetailSummary } from './mobileItemDetailData.js';

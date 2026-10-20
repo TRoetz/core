@@ -1,5 +1,5 @@
 <script>
-  import { IconX } from '@tabler/icons-svelte-runes';
+  import IconX from '@tabler/icons-svelte-runes/icons/x';
   import { t } from '../../stores/i18n.svelte.js';
   import { channels } from '../../api/channels.js';
   import AlertBox from '../../components/AlertBox.svelte';

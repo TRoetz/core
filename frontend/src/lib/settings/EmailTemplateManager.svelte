@@ -14,7 +14,9 @@
   import Label from '../components/Label.svelte';
   import Checkbox from '../components/Checkbox.svelte';
   import Textarea from '../components/Textarea.svelte';
-  import { Mail, Edit, Eye } from '@lucide/svelte';
+  import Mail from '@lucide/svelte/icons/mail';
+  import Edit from '@lucide/svelte/icons/edit';
+  import Eye from '@lucide/svelte/icons/eye';
 	import TextField from '../components/TextField.svelte';
 	import TextareaField from '../components/TextareaField.svelte';
 

@@ -4,7 +4,14 @@
   import { attachmentStatus } from '../stores/attachmentStatus.svelte.js';
   import { navigate } from '../router.js';
   import DropdownMenu from '../layout/DropdownMenu.svelte';
-  import { User, Home, Shield, Sun, Moon, Monitor, Download, Settings } from '@lucide/svelte';
+  import User from '@lucide/svelte/icons/user';
+  import Home from '@lucide/svelte/icons/home';
+  import Shield from '@lucide/svelte/icons/shield';
+  import Sun from '@lucide/svelte/icons/sun';
+  import Moon from '@lucide/svelte/icons/moon';
+  import Monitor from '@lucide/svelte/icons/monitor';
+  import Download from '@lucide/svelte/icons/download';
+  import Settings from '@lucide/svelte/icons/settings';
   import { themeStore } from '../stores/theme.svelte.js';
   import { t } from '../stores/i18n.svelte.js';
   import { userPreferences } from '../api/users.js';

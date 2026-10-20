@@ -1,5 +1,6 @@
 <script>
-  import { AlertCircle, RefreshCw } from '@lucide/svelte';
+  import AlertCircle from '@lucide/svelte/icons/alert-circle';
+  import RefreshCw from '@lucide/svelte/icons/refresh-cw';
   import { items as itemsApi } from '../api/items.js';
   import { dateOnlyKey, formatDate, formatDueDate, getDaysOverdue } from '../utils/dateFormatter.js';
   import { serverNow } from '../utils/serverClock.js';

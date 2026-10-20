@@ -1,5 +1,5 @@
 <script>
-  import { AlertCircle } from '@lucide/svelte';
+  import AlertCircle from '@lucide/svelte/icons/alert-circle';
   import { deleteDiagram } from '../../api/misc.js';
   import { confirm } from '../../composables/useConfirm.js';
   import { t } from '../../stores/i18n.svelte.js';

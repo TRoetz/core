@@ -1,5 +1,5 @@
 <script>
-  import { IconCheck } from '@tabler/icons-svelte-runes';
+  import IconCheck from '@tabler/icons-svelte-runes/icons/check';
   import { t } from '../../stores/i18n.svelte.js';
   import { errorToast } from '../../stores/toasts.svelte.js';
   import { channels } from '../../api/channels.js';

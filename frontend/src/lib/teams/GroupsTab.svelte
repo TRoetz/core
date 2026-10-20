@@ -1,5 +1,7 @@
 <script>
-  import { IconPlus, IconCircle, IconTrash } from '@tabler/icons-svelte-runes';
+  import IconPlus from '@tabler/icons-svelte-runes/icons/plus';
+  import IconCircle from '@tabler/icons-svelte-runes/icons/circle';
+  import IconTrash from '@tabler/icons-svelte-runes/icons/trash';
   import { teams } from '../api/teams.js';
   import { t } from '../stores/i18n.svelte.js';
   import { confirm } from '../composables/useConfirm.js';

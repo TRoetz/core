@@ -1,5 +1,5 @@
 <script>
-  import { Loader2 } from '@lucide/svelte';
+  import Loader2 from '@lucide/svelte/icons/loader-2';
   import { tests } from '../../api/tests/index.js';
   import { t } from '../../stores/i18n.svelte.js';
   import Badge from '../../components/Badge.svelte';

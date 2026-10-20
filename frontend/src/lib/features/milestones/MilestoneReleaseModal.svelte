@@ -12,7 +12,8 @@
   import Textarea from '../../components/Textarea.svelte';
   import DialogFooter from '../../dialogs/DialogFooter.svelte';
   import BasePicker from '../../pickers/BasePicker.svelte';
-  import { IconTag as Tag, IconSparkles as Sparkles } from '@tabler/icons-svelte-runes';
+  import Tag from '@tabler/icons-svelte-runes/icons/tag';
+  import Sparkles from '@tabler/icons-svelte-runes/icons/sparkles';
   import AlertBox from '../../components/AlertBox.svelte';
   import { loadMilestoneReleaseConnections } from './milestoneReleaseData.js';
 	import TextField from '../../components/TextField.svelte';

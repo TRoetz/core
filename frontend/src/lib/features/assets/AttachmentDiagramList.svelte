@@ -1,5 +1,9 @@
 <script>
-  import { IconPaperclip, IconPencil, IconTrash, IconPhoto, IconDownload } from '@tabler/icons-svelte-runes';
+  import IconPaperclip from '@tabler/icons-svelte-runes/icons/paperclip';
+  import IconPencil from '@tabler/icons-svelte-runes/icons/pencil';
+  import IconTrash from '@tabler/icons-svelte-runes/icons/trash';
+  import IconPhoto from '@tabler/icons-svelte-runes/icons/photo';
+  import IconDownload from '@tabler/icons-svelte-runes/icons/download';
   import { t } from '../../stores/i18n.svelte.js';
   import { errorToast } from '../../stores/toasts.svelte.js';
   import { portal } from '../../actions/portal.js';

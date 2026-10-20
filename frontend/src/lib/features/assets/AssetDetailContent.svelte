@@ -1,5 +1,5 @@
 <script>
-  import { IconFolder } from '@tabler/icons-svelte-runes';
+  import IconFolder from '@tabler/icons-svelte-runes/icons/folder';
   import ColorDot from '../../components/ColorDot.svelte';
   import { t } from '../../stores/i18n.svelte.js';
   import { formatDateSimple } from '../../utils/dateFormatter.js';

@@ -8,7 +8,15 @@
   import Input from '../../components/Input.svelte';
   import BasePicker from '../../pickers/BasePicker.svelte';
   import PageHeader from '../../layout/PageHeader.svelte';
-  import { Filter, Download, FileText, Clock, Hash, TrendingUp, Briefcase, Users, PieChart } from '@lucide/svelte';
+  import Filter from '@lucide/svelte/icons/filter';
+  import Download from '@lucide/svelte/icons/download';
+  import FileText from '@lucide/svelte/icons/file-text';
+  import Clock from '@lucide/svelte/icons/clock';
+  import Hash from '@lucide/svelte/icons/hash';
+  import TrendingUp from '@lucide/svelte/icons/trending-up';
+  import Briefcase from '@lucide/svelte/icons/briefcase';
+  import Users from '@lucide/svelte/icons/users';
+  import PieChart from '@lucide/svelte/icons/pie-chart';
   import StatCard from '../../components/StatCard.svelte';
   import Chart from '../../widgets/Chart.svelte';
   import { t } from '../../stores/i18n.svelte.js';

@@ -1,5 +1,5 @@
 <script>
-  import { Eye } from '@lucide/svelte';
+  import Eye from '@lucide/svelte/icons/eye';
   import { homepageStore } from '../../stores/homepageStore.svelte.js';
   import { itemModalStore } from '../../stores/itemModalStore.svelte.js';
   import DashboardItemRow from './DashboardItemRow.svelte';

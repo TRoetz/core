@@ -1,5 +1,5 @@
 <script>
-  import { IconExternalLink } from '@tabler/icons-svelte-runes';
+  import IconExternalLink from '@tabler/icons-svelte-runes/icons/external-link';
   import { t } from '../../stores/i18n.svelte.js';
   import Button from '../../components/Button.svelte';
   import BackButton from '../../components/BackButton.svelte';

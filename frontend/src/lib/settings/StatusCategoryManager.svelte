@@ -4,7 +4,11 @@
   import { t } from '../stores/i18n.svelte.js';
   import { errorToast } from '../stores/toasts.svelte.js';
   import { confirm } from '../composables/useConfirm.js';
-  import { Plus, Edit, Trash2, Palette, Folder } from '@lucide/svelte';
+  import Plus from '@lucide/svelte/icons/plus';
+  import Edit from '@lucide/svelte/icons/edit';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
+  import Palette from '@lucide/svelte/icons/palette';
+  import Folder from '@lucide/svelte/icons/folder';
   import Button from '../components/Button.svelte';
   import ColorDot from '../components/ColorDot.svelte';
   import DataTable from '../components/DataTable.svelte';

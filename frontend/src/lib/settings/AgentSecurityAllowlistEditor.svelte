@@ -4,7 +4,8 @@
 
   import { onMount } from 'svelte';
   import StateDisplay from '../components/StateDisplay.svelte';
-import { Plus, Trash2 } from '@lucide/svelte';
+import Plus from '@lucide/svelte/icons/plus';
+import Trash2 from '@lucide/svelte/icons/trash-2';
   import { getUsers } from '../api/users.js';
   import { agentSecurity } from '../api/agentSecurity.js';
   import { workspacesStore } from '../stores/workspaces.svelte.js';

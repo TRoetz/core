@@ -5,8 +5,11 @@
   import { confirm } from '../composables/useConfirm.js';
   import { conditionSets as conditionSetsApi } from '../api/conditionSets.js';
   import { navigate } from '../router.js';
-  import { Plus, Edit, Trash2, Search } from '@lucide/svelte';
-  import { IconBarrierBlock } from '@tabler/icons-svelte-runes';
+  import Plus from '@lucide/svelte/icons/plus';
+  import Edit from '@lucide/svelte/icons/edit';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
+  import Search from '@lucide/svelte/icons/search';
+  import IconBarrierBlock from '@tabler/icons-svelte-runes/icons/barrier-block';
   import Button from '../components/Button.svelte';
   import EmptyState from '../components/EmptyState.svelte';
   import Panel from '../components/Panel.svelte';

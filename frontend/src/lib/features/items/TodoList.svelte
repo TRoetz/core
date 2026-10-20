@@ -4,7 +4,12 @@
   import { workspaces } from '../../api/workspaces.js';
   import { statusCategories as statusCategoriesApi } from '../../api/workflows.js';
   import { items } from '../../api/items.js';
-  import { Plus, Check, X, Trash2, ChevronDown, ChevronRight } from '@lucide/svelte';
+  import Plus from '@lucide/svelte/icons/plus';
+  import Check from '@lucide/svelte/icons/check';
+  import X from '@lucide/svelte/icons/x';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
+  import ChevronDown from '@lucide/svelte/icons/chevron-down';
+  import ChevronRight from '@lucide/svelte/icons/chevron-right';
   import WorkItemRow from './WorkItemRow.svelte';
   import DeleteItemDialog from '../../dialogs/DeleteItemDialog.svelte';
   import ItemDetail from '../items/ItemDetail.svelte';

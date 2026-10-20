@@ -1,5 +1,5 @@
 <script>
-  import { X } from '@lucide/svelte';
+  import X from '@lucide/svelte/icons/x';
   import { gradients } from '../utils/gradients.js';
   import { t } from '../stores/i18n.svelte.js';
   import Label from './Label.svelte';

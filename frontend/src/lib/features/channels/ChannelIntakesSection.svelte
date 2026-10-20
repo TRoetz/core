@@ -1,6 +1,8 @@
 <script>
   import { onMount } from 'svelte';
-  import { IconPlus, IconTrash, IconPencil } from '@tabler/icons-svelte-runes';
+  import IconPlus from '@tabler/icons-svelte-runes/icons/plus';
+  import IconTrash from '@tabler/icons-svelte-runes/icons/trash';
+  import IconPencil from '@tabler/icons-svelte-runes/icons/pencil';
   import { workspaces as workspacesApi } from '../../api/workspaces.js';
   import { channelIntakes } from '../../api/channels.js';
   import { t } from '../../stores/i18n.svelte.js';

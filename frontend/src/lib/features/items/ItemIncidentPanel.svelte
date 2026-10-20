@@ -1,5 +1,8 @@
 <script>
-  import { Siren, Check, BellOff, RotateCcw } from '@lucide/svelte';
+  import Siren from '@lucide/svelte/icons/siren';
+  import Check from '@lucide/svelte/icons/check';
+  import BellOff from '@lucide/svelte/icons/bell-off';
+  import RotateCcw from '@lucide/svelte/icons/rotate-ccw';
   import Button from '../../components/Button.svelte';
   import Lozenge from '../../components/Lozenge.svelte';
   import Text from '../../components/Text.svelte';

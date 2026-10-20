@@ -2,7 +2,14 @@
 	import { onMount } from 'svelte';
 	import { groups as groupsApi } from '../api/permissions.js';
 	import { getAdminUsers } from '../api/users.js';
-	import { Plus, Edit, Trash2, UserStar, UserPlus, UserMinus, Circle, X } from '@lucide/svelte';
+	import Plus from '@lucide/svelte/icons/plus';
+	import Edit from '@lucide/svelte/icons/edit';
+	import Trash2 from '@lucide/svelte/icons/trash-2';
+	import UserStar from '@lucide/svelte/icons/user-star';
+	import UserPlus from '@lucide/svelte/icons/user-plus';
+	import UserMinus from '@lucide/svelte/icons/user-minus';
+	import Circle from '@lucide/svelte/icons/circle';
+	import X from '@lucide/svelte/icons/x';
 	import Button from '../components/Button.svelte';
 	import Avatar from '../components/Avatar.svelte';
 	import Input from '../components/Input.svelte';

@@ -5,7 +5,10 @@
   import { t } from '../stores/i18n.svelte.js';
   import { errorToast } from '../stores/toasts.svelte.js';
   import { confirm } from '../composables/useConfirm.js';
-  import { Edit, Plus, Circle, Grip } from '@lucide/svelte';
+  import Edit from '@lucide/svelte/icons/edit';
+  import Plus from '@lucide/svelte/icons/plus';
+  import Circle from '@lucide/svelte/icons/circle';
+  import Grip from '@lucide/svelte/icons/grip';
   import { workspaceIconMap } from '../utils/icons.js';
   import Button from '../components/Button.svelte';
   import DataTable from '../components/DataTable.svelte';

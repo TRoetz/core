@@ -2,7 +2,10 @@
   import { onMount } from 'svelte';
   import { currentRoute, navigate } from '../router.js';
   import { draggable, dropTargetForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
-  import { IconEdit as Edit2, IconTrash as Trash2, IconLock as Lock, IconLockOpen2 as Unlock } from '@tabler/icons-svelte-runes';
+  import Edit2 from '@tabler/icons-svelte-runes/icons/edit';
+  import Trash2 from '@tabler/icons-svelte-runes/icons/trash';
+  import Lock from '@tabler/icons-svelte-runes/icons/lock';
+  import Unlock from '@tabler/icons-svelte-runes/icons/lock-open-2';
   import { customFields as customFieldsApi } from '../api/configuration.js';
   import { customerOrganisations as customerOrganisationsApi, portalCustomers as portalCustomersApi } from '../api/portal.js';
   import { confirm } from '../composables/useConfirm.js';

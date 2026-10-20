@@ -1,5 +1,12 @@
 <script>
-  import { Bot, Code, Copy, Key, MoreHorizontal, Pencil, Plus, Trash2 } from '@lucide/svelte';
+  import Bot from '@lucide/svelte/icons/bot';
+  import Code from '@lucide/svelte/icons/code';
+  import Copy from '@lucide/svelte/icons/copy';
+  import Key from '@lucide/svelte/icons/key';
+  import MoreHorizontal from '@lucide/svelte/icons/more-horizontal';
+  import Pencil from '@lucide/svelte/icons/pencil';
+  import Plus from '@lucide/svelte/icons/plus';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
   import { createApiToken, createMyAgent, deleteMyAgent, getApiTokens, getMyAgents, revokeApiToken, updateMyAgent } from '../api/users.js';
   import Button from '../components/Button.svelte';
   import DescriptionText from '../components/DescriptionText.svelte';

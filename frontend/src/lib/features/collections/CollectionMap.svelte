@@ -14,7 +14,12 @@
   import { capabilitiesStore } from '../../stores/capabilities.svelte.js';
   import { itemModalStore } from '../../stores/itemModalStore.svelte.js';
   import { useGradientStyles, loadWorkspaceGradient } from '../../stores/workspaceGradient.svelte.js';
-  import { Plus, ChevronDown, ChevronRight, Home, MapPin, Settings } from '@lucide/svelte';
+  import Plus from '@lucide/svelte/icons/plus';
+  import ChevronDown from '@lucide/svelte/icons/chevron-down';
+  import ChevronRight from '@lucide/svelte/icons/chevron-right';
+  import Home from '@lucide/svelte/icons/home';
+  import MapPin from '@lucide/svelte/icons/map-pin';
+  import Settings from '@lucide/svelte/icons/settings';
   import ItemTypeIcon from '../../components/ItemTypeIcon.svelte';
   import EmptyState from '../../components/EmptyState.svelte';
   import Textarea from '../../components/Textarea.svelte';

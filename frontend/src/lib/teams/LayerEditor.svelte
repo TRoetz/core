@@ -1,5 +1,11 @@
 <script>
-  import { IconPlus, IconChevronUp, IconChevronDown, IconTrash, IconX, IconUserPlus, IconEdit } from '@tabler/icons-svelte-runes';
+  import IconPlus from '@tabler/icons-svelte-runes/icons/plus';
+  import IconChevronUp from '@tabler/icons-svelte-runes/icons/chevron-up';
+  import IconChevronDown from '@tabler/icons-svelte-runes/icons/chevron-down';
+  import IconTrash from '@tabler/icons-svelte-runes/icons/trash';
+  import IconX from '@tabler/icons-svelte-runes/icons/x';
+  import IconUserPlus from '@tabler/icons-svelte-runes/icons/user-plus';
+  import IconEdit from '@tabler/icons-svelte-runes/icons/edit';
   import { onCallSchedules } from '../api/oncall.js';
   import { t } from '../stores/i18n.svelte.js';
   import { confirm } from '../composables/useConfirm.js';

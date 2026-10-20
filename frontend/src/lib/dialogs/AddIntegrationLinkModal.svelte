@@ -9,7 +9,8 @@
   import NativeSelect from '../components/NativeSelect.svelte';
   import Modal from './Modal.svelte';
   import ModalHeader from './ModalHeader.svelte';
-  import { Search, ExternalLink } from '@lucide/svelte';
+  import Search from '@lucide/svelte/icons/search';
+  import ExternalLink from '@lucide/svelte/icons/external-link';
   import EmptyState from '../components/EmptyState.svelte';
   import { t } from '../stores/i18n.svelte.js';
   import { successToast, errorToast } from '../stores/toasts.svelte.js';

@@ -3,7 +3,10 @@
   // Private snippets are internal notes; automations never send them to customers.
 
   import { onMount } from 'svelte';
-  import { MessageSquareText, Pencil, Plus, Trash2 } from '@lucide/svelte';
+  import MessageSquareText from '@lucide/svelte/icons/message-square-text';
+  import Pencil from '@lucide/svelte/icons/pencil';
+  import Plus from '@lucide/svelte/icons/plus';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
   import { cannedResponses } from '../api/configuration.js';
   import Panel from '../components/Panel.svelte';
   import Button from '../components/Button.svelte';

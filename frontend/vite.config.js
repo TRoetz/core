@@ -91,8 +91,6 @@ export default defineConfig({
       '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge',
       '@atlaskit/pragmatic-drag-and-drop-hitbox/tree-item',
       '@atlaskit/pragmatic-drag-and-drop-auto-scroll/element',
-      '@lucide/svelte',
-      '@tabler/icons-svelte-runes',
       'marked',
       'mermaid',
       'shiki/core',

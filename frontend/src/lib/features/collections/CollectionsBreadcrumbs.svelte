@@ -1,7 +1,12 @@
 <script>
   import { navigate } from '../../router.js';
   import { t } from '../../stores/i18n.svelte.js';
-  import { IconLayoutKanban as SquareKanban, IconDeviceFloppy as Save, IconTag as Tag, IconWorld, IconLock, IconLockOpen2 } from '@tabler/icons-svelte-runes';
+  import SquareKanban from '@tabler/icons-svelte-runes/icons/layout-kanban';
+  import Save from '@tabler/icons-svelte-runes/icons/device-floppy';
+  import Tag from '@tabler/icons-svelte-runes/icons/tag';
+  import IconWorld from '@tabler/icons-svelte-runes/icons/world';
+  import IconLock from '@tabler/icons-svelte-runes/icons/lock';
+  import IconLockOpen2 from '@tabler/icons-svelte-runes/icons/lock-open-2';
   import Button from '../../components/Button.svelte';
   import Input from '../../components/Input.svelte';
   import Select from '../../components/Select.svelte';

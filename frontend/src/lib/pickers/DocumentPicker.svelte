@@ -3,7 +3,7 @@
   import { createAsyncLoader } from '../composables';
   import { logbook } from '../api/logbook.js';
   import { onDestroy, untrack } from 'svelte';
-  import { FileText } from '@lucide/svelte';
+  import FileText from '@lucide/svelte/icons/file-text';
   import { t } from '../stores/i18n.svelte.js';
 
   let {

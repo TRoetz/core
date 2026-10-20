@@ -1,6 +1,11 @@
 <script>
   import { onMount } from 'svelte';
-  import { ArrowLeft, KeyRound, Plus, Trash2, ShieldCheck, X } from '@lucide/svelte';
+  import ArrowLeft from '@lucide/svelte/icons/arrow-left';
+  import KeyRound from '@lucide/svelte/icons/key-round';
+  import Plus from '@lucide/svelte/icons/plus';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
+  import ShieldCheck from '@lucide/svelte/icons/shield-check';
+  import X from '@lucide/svelte/icons/x';
   import { portalCustomizationStore as portalStore } from '../stores/portal.svelte.js';
   import { portalAuthStore } from '../stores/portalAuth.svelte.js';
   import { t } from '../stores/i18n.svelte.js';

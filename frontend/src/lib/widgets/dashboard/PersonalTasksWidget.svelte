@@ -1,5 +1,5 @@
 <script>
-  import { ListChecks } from '@lucide/svelte';
+  import ListChecks from '@lucide/svelte/icons/list-checks';
   import { authStore } from '../../stores/auth.svelte.js';
   import { workspacesStore } from '../../stores/workspaces.svelte.js';
   import { t } from '../../stores/i18n.svelte.js';

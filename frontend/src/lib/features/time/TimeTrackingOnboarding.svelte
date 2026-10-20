@@ -2,7 +2,10 @@
   import { contactRoles, customerOrganisations, portalCustomers } from '../../api/portal.js';
   import { time } from '../../api/time.js';
   import Progress from '../../components/Progress.svelte';
-  import { Clock, Briefcase, User, X } from '@lucide/svelte';
+  import Clock from '@lucide/svelte/icons/clock';
+  import Briefcase from '@lucide/svelte/icons/briefcase';
+  import User from '@lucide/svelte/icons/user';
+  import X from '@lucide/svelte/icons/x';
   import Button from '../../components/Button.svelte';
   import Input from '../../components/Input.svelte';
   import Modal from '../../dialogs/Modal.svelte';

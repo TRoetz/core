@@ -1,7 +1,9 @@
 <script>
   import { itemSCMLinks } from '../api/scm.js';
   import Label from '../components/Label.svelte';
-  import { GitMerge, GitBranch, GitCommit } from '@lucide/svelte';
+  import GitMerge from '@lucide/svelte/icons/git-merge';
+  import GitBranch from '@lucide/svelte/icons/git-branch';
+  import GitCommit from '@lucide/svelte/icons/git-commit';
   import { t } from '../stores/i18n.svelte.js';
   import SCMRepositoryModal from './SCMRepositoryModal.svelte';
 	import TextField from '../components/TextField.svelte';

@@ -5,7 +5,7 @@
   import { onMount } from 'svelte';
   import { t } from '../stores/i18n.svelte.js';
   import { transitions } from '../api/transitions.js';
-  import { AlertTriangle } from '@lucide/svelte';
+  import AlertTriangle from '@lucide/svelte/icons/alert-triangle';
 
   let {
     transitionId = null,

@@ -10,7 +10,10 @@
   import DialogFooter from '../../dialogs/DialogFooter.svelte';
   import Input from '../../components/Input.svelte';
   import Select from '../../components/Select.svelte';
-  import { BellRing, Plus, Trash2, Edit } from '@lucide/svelte';
+  import BellRing from '@lucide/svelte/icons/bell-ring';
+  import Plus from '@lucide/svelte/icons/plus';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
+  import Edit from '@lucide/svelte/icons/edit';
   import { t } from '../../stores/i18n.svelte.js';
   import { confirm } from '../../composables/useConfirm.js';
   import { successToast, errorToast } from '../../stores/toasts.svelte.js';

@@ -1,5 +1,5 @@
 <script>
-  import { Inbox } from '@lucide/svelte';
+  import Inbox from '@lucide/svelte/icons/inbox';
   import { homepageStore } from '../../stores/homepageStore.svelte.js';
   import { workspacesStore } from '../../stores/workspaces.svelte.js';
   import { notifications, notificationActions } from '../../stores/notifications.js';

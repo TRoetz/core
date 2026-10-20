@@ -1,6 +1,16 @@
 <script>
   import { onMount } from 'svelte';
-  import { IconFolder, IconPlus, IconEdit, IconTrash, IconTags, IconGripVertical, IconFileCheck, IconChevronDown, IconChevronRight, IconDots, IconListCheck } from '@tabler/icons-svelte-runes';
+  import IconFolder from '@tabler/icons-svelte-runes/icons/folder';
+  import IconPlus from '@tabler/icons-svelte-runes/icons/plus';
+  import IconEdit from '@tabler/icons-svelte-runes/icons/edit';
+  import IconTrash from '@tabler/icons-svelte-runes/icons/trash';
+  import IconTags from '@tabler/icons-svelte-runes/icons/tags';
+  import IconGripVertical from '@tabler/icons-svelte-runes/icons/grip-vertical';
+  import IconFileCheck from '@tabler/icons-svelte-runes/icons/file-check';
+  import IconChevronDown from '@tabler/icons-svelte-runes/icons/chevron-down';
+  import IconChevronRight from '@tabler/icons-svelte-runes/icons/chevron-right';
+  import IconDots from '@tabler/icons-svelte-runes/icons/dots';
+  import IconListCheck from '@tabler/icons-svelte-runes/icons/list-check';
   import DropdownMenu from '../../layout/DropdownMenu.svelte';
   import { tests } from '../../api/tests/index.js';
   import EmptyState from '../../components/EmptyState.svelte';

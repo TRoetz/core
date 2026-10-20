@@ -1,21 +1,19 @@
 <script>
   import { onDestroy, onMount } from 'svelte';
-  import {
-    IconBolt as Bolt,
-    IconCheck as Check,
-    IconCode as Code,
-    IconFlask as Flask,
-    IconHistory as History,
-    IconLock as Lock,
-    IconMessage as Message,
-    IconNotebook as Notebook,
-    IconRefresh as Refresh,
-    IconUserStar as AgentIcon,
-    IconDeviceFloppy as Save,
-    IconShieldCheck as ShieldCheck,
-    IconArchive as Archive,
-    IconDots as MoreHorizontal,
-  } from '@tabler/icons-svelte-runes';
+  import Bolt from '@tabler/icons-svelte-runes/icons/bolt';
+  import Check from '@tabler/icons-svelte-runes/icons/check';
+  import Code from '@tabler/icons-svelte-runes/icons/code';
+  import Flask from '@tabler/icons-svelte-runes/icons/flask';
+  import History from '@tabler/icons-svelte-runes/icons/history';
+  import Lock from '@tabler/icons-svelte-runes/icons/lock';
+  import Message from '@tabler/icons-svelte-runes/icons/message';
+  import Notebook from '@tabler/icons-svelte-runes/icons/notebook';
+  import Refresh from '@tabler/icons-svelte-runes/icons/refresh';
+  import AgentIcon from '@tabler/icons-svelte-runes/icons/user-star';
+  import Save from '@tabler/icons-svelte-runes/icons/device-floppy';
+  import ShieldCheck from '@tabler/icons-svelte-runes/icons/shield-check';
+  import Archive from '@tabler/icons-svelte-runes/icons/archive';
+  import MoreHorizontal from '@tabler/icons-svelte-runes/icons/dots';
   import { actionCapabilities, llmProviders } from '../../api/ai.js';
   import { agentBindings } from '../../api/agentBindings.js';
   import { agentRuns } from '../../api/agentRuns.js';

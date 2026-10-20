@@ -1,6 +1,6 @@
 <script>
   import BasePicker from './BasePicker.svelte';
-  import { User } from '@lucide/svelte';
+  import User from '@lucide/svelte/icons/user';
   import { createAsyncLoader } from '../composables';
   import { portalCustomers } from '../api/portal.js';
   import { onDestroy, onMount } from 'svelte';

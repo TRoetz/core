@@ -3,7 +3,11 @@
   import ColorDot from '../../components/ColorDot.svelte';
   import { ai, llmProviders } from '../../api/ai.js';
   import { fetchAPI } from '../../api/core.js';
-  import { Sparkles, CalendarPlus, RotateCcw, CheckCircle, AlertCircle } from '@lucide/svelte';
+  import Sparkles from '@lucide/svelte/icons/sparkles';
+  import CalendarPlus from '@lucide/svelte/icons/calendar-plus';
+  import RotateCcw from '@lucide/svelte/icons/rotate-ccw';
+  import CheckCircle from '@lucide/svelte/icons/check-circle';
+  import AlertCircle from '@lucide/svelte/icons/alert-circle';
   import { authStore } from '../../stores/auth.svelte.js';
   import { navigate } from '../../router.js';
   import PageHeader from '../../layout/PageHeader.svelte';

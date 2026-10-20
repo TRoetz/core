@@ -3,7 +3,8 @@
   import { sla } from '../../api/sla.js';
   import Lozenge from '../../components/Lozenge.svelte';
   import Tooltip from '../../components/Tooltip.svelte';
-  import { Gauge, Clock } from '@lucide/svelte';
+  import Gauge from '@lucide/svelte/icons/gauge';
+  import Clock from '@lucide/svelte/icons/clock';
   import { t } from '../../stores/i18n.svelte.js';
   import { formatInstant } from '../../utils/dateFormatter.js';
 

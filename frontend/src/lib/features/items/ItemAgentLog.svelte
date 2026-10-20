@@ -3,7 +3,10 @@
   // with a live-tailing transcript of the selected run. Pure add-on — reads
   // only the agent_runs/agent_run_events surface, never item state.
   import { onMount, onDestroy } from 'svelte';
-  import { Bot, RefreshCw, TriangleAlert, Ban } from '@lucide/svelte';
+  import Bot from '@lucide/svelte/icons/bot';
+  import RefreshCw from '@lucide/svelte/icons/refresh-cw';
+  import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
+  import Ban from '@lucide/svelte/icons/ban';
   import { agentRuns } from '../../api/agentRuns.js';
   import Lozenge from '../../components/Lozenge.svelte';
   import EmptyState from '../../components/EmptyState.svelte';

@@ -1,5 +1,10 @@
 <script>
-  import { FileText, Pencil, Bell, HelpCircle, Zap, X } from '@lucide/svelte';
+  import FileText from '@lucide/svelte/icons/file-text';
+  import Pencil from '@lucide/svelte/icons/pencil';
+  import Bell from '@lucide/svelte/icons/bell';
+  import HelpCircle from '@lucide/svelte/icons/help-circle';
+  import Zap from '@lucide/svelte/icons/zap';
+  import X from '@lucide/svelte/icons/x';
   import Select from '../../components/Select.svelte';
   import Button from '../../components/Button.svelte';
   import Input from '../../components/Input.svelte';

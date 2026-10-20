@@ -4,7 +4,15 @@
   import { itemTypes as itemTypesApi } from '../../api/configuration.js';
   import { authStore } from '../../stores/auth.svelte.js';
   import { uiStore } from '../../stores/ui.svelte.js';
-  import { ChevronLeft, ChevronRight, Calendar, Clock, Lightbulb, Maximize, Minimize, BookOpenCheck, FileEdit } from '@lucide/svelte';
+  import ChevronLeft from '@lucide/svelte/icons/chevron-left';
+  import ChevronRight from '@lucide/svelte/icons/chevron-right';
+  import Calendar from '@lucide/svelte/icons/calendar';
+  import Clock from '@lucide/svelte/icons/clock';
+  import Lightbulb from '@lucide/svelte/icons/lightbulb';
+  import Maximize from '@lucide/svelte/icons/maximize';
+  import Minimize from '@lucide/svelte/icons/minimize';
+  import BookOpenCheck from '@lucide/svelte/icons/book-open-check';
+  import FileEdit from '@lucide/svelte/icons/file-edit';
   import EmptyState from '../../components/EmptyState.svelte';
   import Card from '../../components/Card.svelte';
   import WorkItemRow from '../items/WorkItemRow.svelte';

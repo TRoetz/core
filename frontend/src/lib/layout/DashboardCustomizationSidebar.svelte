@@ -1,20 +1,18 @@
 <script>
-  import {
-    Sparkles,
-    CheckSquare,
-    Compass,
-    LifeBuoy,
-    Bell,
-    Clock,
-    Eye,
-    Target,
-    Briefcase,
-    Grip,
-    ListChecks,
-    PenLine,
-    Search,
-    Palette,
-  } from '@lucide/svelte';
+  import Sparkles from '@lucide/svelte/icons/sparkles';
+  import CheckSquare from '@lucide/svelte/icons/check-square';
+  import Compass from '@lucide/svelte/icons/compass';
+  import LifeBuoy from '@lucide/svelte/icons/life-buoy';
+  import Bell from '@lucide/svelte/icons/bell';
+  import Clock from '@lucide/svelte/icons/clock';
+  import Eye from '@lucide/svelte/icons/eye';
+  import Target from '@lucide/svelte/icons/target';
+  import Briefcase from '@lucide/svelte/icons/briefcase';
+  import Grip from '@lucide/svelte/icons/grip';
+  import ListChecks from '@lucide/svelte/icons/list-checks';
+  import PenLine from '@lucide/svelte/icons/pen-line';
+  import Search from '@lucide/svelte/icons/search';
+  import Palette from '@lucide/svelte/icons/palette';
   import {
     dashboardWidgetCategories,
     getDashboardWidgetsByCategory,

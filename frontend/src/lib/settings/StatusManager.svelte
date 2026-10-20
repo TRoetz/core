@@ -1,7 +1,11 @@
 <script>
   import { onMount } from 'svelte';
   import { statuses as statusesApi } from '../api/workflows.js';
-  import { Plus, Edit, Trash2, Circle, GitBranch } from '@lucide/svelte';
+  import Plus from '@lucide/svelte/icons/plus';
+  import Edit from '@lucide/svelte/icons/edit';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
+  import Circle from '@lucide/svelte/icons/circle';
+  import GitBranch from '@lucide/svelte/icons/git-branch';
   import Button from '../components/Button.svelte';
   import ColorDot from '../components/ColorDot.svelte';
   import DataTable from '../components/DataTable.svelte';

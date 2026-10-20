@@ -1,7 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import { assetCategories, assetSets as assetSetsApi, assetStatuses, assetTypes as assetTypesApi } from '../../api/assets.js';
-  import { HelpCircle } from '@lucide/svelte';
+  import HelpCircle from '@lucide/svelte/icons/help-circle';
   import { t } from '../../stores/i18n.svelte.js';
   import { actionFlowStore } from '../../stores/actionFlowStore.svelte.js';
   import Select from '../../components/Select.svelte';

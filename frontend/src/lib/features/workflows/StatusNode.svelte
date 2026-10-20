@@ -1,6 +1,6 @@
 <script>
   import { Handle, Position } from '@xyflow/svelte';
-  import { X } from '@lucide/svelte';
+  import X from '@lucide/svelte/icons/x';
   import { t } from '../../stores/i18n.svelte.js';
 
   let { data, selected = false, dragging = false, ...rest } = $props();

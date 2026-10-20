@@ -1,7 +1,13 @@
 <script>
   import { onMount } from 'svelte';
   import { useEventListener } from 'runed';
-  import { ChevronLeft, ChevronRight, Calendar, CheckSquare, X, Download, MoreHorizontal } from '@lucide/svelte';
+  import ChevronLeft from '@lucide/svelte/icons/chevron-left';
+  import ChevronRight from '@lucide/svelte/icons/chevron-right';
+  import Calendar from '@lucide/svelte/icons/calendar';
+  import CheckSquare from '@lucide/svelte/icons/check-square';
+  import X from '@lucide/svelte/icons/x';
+  import Download from '@lucide/svelte/icons/download';
+  import MoreHorizontal from '@lucide/svelte/icons/more-horizontal';
   import { items } from '../../api/items.js';
   import { statuses } from '../../api/workflows.js';
   import { fetchAPI } from '../../api/core.js';

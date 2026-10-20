@@ -1,5 +1,7 @@
 <script>
-  import { Plus, RefreshCw, Search } from '@lucide/svelte';
+  import Plus from '@lucide/svelte/icons/plus';
+  import RefreshCw from '@lucide/svelte/icons/refresh-cw';
+  import Search from '@lucide/svelte/icons/search';
   import { collections as collectionsApi } from '../../api/collections.js';
   import { items as itemsApi } from '../../api/items.js';
   import { workspacesStore } from '../../stores/workspaces.svelte.js';

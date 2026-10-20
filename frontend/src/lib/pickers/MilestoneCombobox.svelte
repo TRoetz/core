@@ -8,7 +8,7 @@
   import { permissionStore, isSystemAdmin } from '../stores/permissions.svelte.js';
   import { workspacePermissions } from '../stores/workspacePermissions.svelte.js';
   import MilestoneFormDialog from '../features/milestones/MilestoneFormDialog.svelte';
-  import { Plus } from '@lucide/svelte';
+  import Plus from '@lucide/svelte/icons/plus';
   import Checkbox from '../components/Checkbox.svelte';
 
   // When `multiple` is false (the default), `value` is a single milestone ID

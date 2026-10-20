@@ -1,11 +1,9 @@
 <script>
   import { onMount } from 'svelte';
-  import {
-    IconHome as Home,
-    IconPalette as Palette,
-    IconRotate as Rotate,
-    IconSettings as Settings,
-  } from '@tabler/icons-svelte-runes';
+  import Home from '@tabler/icons-svelte-runes/icons/home';
+  import Palette from '@tabler/icons-svelte-runes/icons/palette';
+  import Rotate from '@tabler/icons-svelte-runes/icons/rotate';
+  import Settings from '@tabler/icons-svelte-runes/icons/settings';
   import Toggle from '../components/Toggle.svelte';
   import Tooltip from '../components/Tooltip.svelte';
   import {

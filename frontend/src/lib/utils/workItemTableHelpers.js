@@ -1,4 +1,5 @@
-import { Eye, Trash2 } from '@lucide/svelte';
+import Eye from '@lucide/svelte/icons/eye';
+import Trash2 from '@lucide/svelte/icons/trash-2';
 import { items } from '../api/items.js';
 import { confirm } from '../composables/useConfirm.js';
 import { t } from '../stores/i18n.svelte.js';

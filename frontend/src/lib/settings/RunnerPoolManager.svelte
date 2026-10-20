@@ -5,7 +5,10 @@
   import { onMount } from 'svelte';
   import StateDisplay from '../components/StateDisplay.svelte';
   import { actionCapabilities, runnerPools } from '../api/ai.js';
-  import { Plus, Trash2, Server, KeyRound } from '@lucide/svelte';
+  import Plus from '@lucide/svelte/icons/plus';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
+  import Server from '@lucide/svelte/icons/server';
+  import KeyRound from '@lucide/svelte/icons/key-round';
   import Button from '../components/Button.svelte';
   import PageHeader from '../layout/PageHeader.svelte';
   import Modal from '../dialogs/Modal.svelte';

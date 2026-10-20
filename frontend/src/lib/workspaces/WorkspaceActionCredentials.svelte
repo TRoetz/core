@@ -18,7 +18,11 @@
   import { successToast, errorToast } from '../stores/toasts.svelte.js';
   import { confirm } from '../composables/useConfirm.js';
   import { toHotkeyString } from '../utils/keyboardShortcuts.js';
-  import { Plus, Edit, Trash2, KeyRound, Shield } from '@lucide/svelte';
+  import Plus from '@lucide/svelte/icons/plus';
+  import Edit from '@lucide/svelte/icons/edit';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
+  import KeyRound from '@lucide/svelte/icons/key-round';
+  import Shield from '@lucide/svelte/icons/shield';
   import Button from '../components/Button.svelte';
   import Checkbox from '../components/Checkbox.svelte';
   import Input from '../components/Input.svelte';

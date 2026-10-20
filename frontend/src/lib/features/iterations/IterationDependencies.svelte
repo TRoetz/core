@@ -2,7 +2,16 @@
   import { onMount } from 'svelte';
   import { ai, llmProviders } from '../../api/ai.js';
   import { iterations } from '../../api/milestones.js';
-  import { IconSparkles, IconRotate, IconCircleCheck, IconAlertCircle, IconSquareCheck, IconSquare, IconArrowRight, IconCalendar, IconWorld, IconBuilding } from '@tabler/icons-svelte-runes';
+  import IconSparkles from '@tabler/icons-svelte-runes/icons/sparkles';
+  import IconRotate from '@tabler/icons-svelte-runes/icons/rotate';
+  import IconCircleCheck from '@tabler/icons-svelte-runes/icons/circle-check';
+  import IconAlertCircle from '@tabler/icons-svelte-runes/icons/alert-circle';
+  import IconSquareCheck from '@tabler/icons-svelte-runes/icons/square-check';
+  import IconSquare from '@tabler/icons-svelte-runes/icons/square';
+  import IconArrowRight from '@tabler/icons-svelte-runes/icons/arrow-right';
+  import IconCalendar from '@tabler/icons-svelte-runes/icons/calendar';
+  import IconWorld from '@tabler/icons-svelte-runes/icons/world';
+  import IconBuilding from '@tabler/icons-svelte-runes/icons/building';
   import { navigate } from '../../router.js';
   import PageHeader from '../../layout/PageHeader.svelte';
   import Card from '../../components/Card.svelte';

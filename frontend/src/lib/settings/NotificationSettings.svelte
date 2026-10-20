@@ -8,10 +8,16 @@
   import { currentWorkspace } from '../stores/workspaces.svelte.js';
   import { navigate } from '../router.js';
   import { confirm } from '../composables/useConfirm.js';
-  import {
-    Bell, Plus, Edit, Trash2, Save, X, Check,
-    AlertCircle, Settings, ArrowRight
-  } from '@lucide/svelte';
+  import Bell from '@lucide/svelte/icons/bell';
+  import Plus from '@lucide/svelte/icons/plus';
+  import Edit from '@lucide/svelte/icons/edit';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
+  import Save from '@lucide/svelte/icons/save';
+  import X from '@lucide/svelte/icons/x';
+  import Check from '@lucide/svelte/icons/check';
+  import AlertCircle from '@lucide/svelte/icons/alert-circle';
+  import Settings from '@lucide/svelte/icons/settings';
+  import ArrowRight from '@lucide/svelte/icons/arrow-right';
   import DataTable from '../components/DataTable.svelte';
   import PageHeader from '../layout/PageHeader.svelte';
   import Button from '../components/Button.svelte';

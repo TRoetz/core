@@ -1,6 +1,8 @@
 <script>
   import { createPopover, melt } from '@melt-ui/svelte';
-  import { IconPlus, IconCheck, IconX } from '@tabler/icons-svelte-runes';
+  import IconPlus from '@tabler/icons-svelte-runes/icons/plus';
+  import IconCheck from '@tabler/icons-svelte-runes/icons/check';
+  import IconX from '@tabler/icons-svelte-runes/icons/x';
   import { tick } from 'svelte';
   import { pageLabels } from '../../api/pages.js';
   import { t } from '../../stores/i18n.svelte.js';

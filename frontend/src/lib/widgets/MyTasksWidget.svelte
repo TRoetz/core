@@ -1,5 +1,5 @@
 <script>
-  import { CheckSquare } from '@lucide/svelte';
+  import CheckSquare from '@lucide/svelte/icons/check-square';
   import { authStore } from '../stores/auth.svelte.js';
   import { items } from '../api/items.js';
   import DueMark from './dashboard/DueMark.svelte';

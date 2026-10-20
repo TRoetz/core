@@ -1,6 +1,8 @@
 <script>
   import FileInput from './FileInput.svelte';
-  import { Upload, Trash2, Image } from '@lucide/svelte';
+  import Upload from '@lucide/svelte/icons/upload';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
+  import Image from '@lucide/svelte/icons/image';
   import Button from './Button.svelte';
   import Label from './Label.svelte';
   import { t } from '../stores/i18n.svelte.js';

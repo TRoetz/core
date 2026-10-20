@@ -11,7 +11,11 @@
   import Checkbox from '../components/Checkbox.svelte';
   import AlertBox from '../components/AlertBox.svelte';
   import PortalModal from './PortalModal.svelte';
-  import { ChevronLeft, ChevronRight, Package, Paperclip, X } from '@lucide/svelte';
+  import ChevronLeft from '@lucide/svelte/icons/chevron-left';
+  import ChevronRight from '@lucide/svelte/icons/chevron-right';
+  import Package from '@lucide/svelte/icons/package';
+  import Paperclip from '@lucide/svelte/icons/paperclip';
+  import X from '@lucide/svelte/icons/x';
   import { t } from '../stores/i18n.svelte.js';
   import FormFields from '../features/forms/FormFields.svelte';
   import {

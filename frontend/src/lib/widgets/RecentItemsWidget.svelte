@@ -1,5 +1,5 @@
 <script>
-  import { Clock } from '@lucide/svelte';
+  import Clock from '@lucide/svelte/icons/clock';
   import { items as itemsApi } from '../api/items.js';
   import { homepageStore } from '../stores/homepageStore.svelte.js';
   import { formatRelativeCompact } from '../utils/dateFormatter.js';

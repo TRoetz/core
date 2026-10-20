@@ -1,5 +1,18 @@
 <script>
-  import { IconUsers as Users, IconMail as Mail, IconSearch as Search, IconGripVertical as GripVertical, IconPlus as Plus, IconEdit as Edit2, IconTrash as Trash2, IconDots as MoreHorizontal, IconFile as FileIcon, IconTicket as Ticket, IconFileText as FileText, IconNote as StickyNote, IconExternalLink as ExternalLink, IconShare as Share } from '@tabler/icons-svelte-runes';
+  import Users from '@tabler/icons-svelte-runes/icons/users';
+  import Mail from '@tabler/icons-svelte-runes/icons/mail';
+  import Search from '@tabler/icons-svelte-runes/icons/search';
+  import GripVertical from '@tabler/icons-svelte-runes/icons/grip-vertical';
+  import Plus from '@tabler/icons-svelte-runes/icons/plus';
+  import Edit2 from '@tabler/icons-svelte-runes/icons/edit';
+  import Trash2 from '@tabler/icons-svelte-runes/icons/trash';
+  import MoreHorizontal from '@tabler/icons-svelte-runes/icons/dots';
+  import FileIcon from '@tabler/icons-svelte-runes/icons/file';
+  import Ticket from '@tabler/icons-svelte-runes/icons/ticket';
+  import FileText from '@tabler/icons-svelte-runes/icons/file-text';
+  import StickyNote from '@tabler/icons-svelte-runes/icons/note';
+  import ExternalLink from '@tabler/icons-svelte-runes/icons/external-link';
+  import Share from '@tabler/icons-svelte-runes/icons/share';
   import { toHotkeyString } from '../utils/keyboardShortcuts.js';
   import Button from '../components/Button.svelte';
   import Input from '../components/Input.svelte';

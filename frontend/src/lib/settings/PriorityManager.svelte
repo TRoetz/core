@@ -1,7 +1,10 @@
 <script>
   import { onMount } from 'svelte';
   import { priorities as prioritiesApi } from '../api/configuration.js';
-  import { Plus, Edit, Trash2, AlertCircle } from '@lucide/svelte';
+  import Plus from '@lucide/svelte/icons/plus';
+  import Edit from '@lucide/svelte/icons/edit';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
+  import AlertCircle from '@lucide/svelte/icons/alert-circle';
   import { priorityIconMap, priorityIconOptions } from '../utils/icons.js';
   import Button from '../components/Button.svelte';
   import DataTable from '../components/DataTable.svelte';

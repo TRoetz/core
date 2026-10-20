@@ -9,7 +9,12 @@
   import { onDestroy, onMount, untrack } from 'svelte';
   import Spinner from '../components/Spinner.svelte';
   import StateDisplay from '../components/StateDisplay.svelte';
-  import { ChevronDown, FlaskConical, Orbit, Pencil, Plus, Trash2 } from '@lucide/svelte';
+  import ChevronDown from '@lucide/svelte/icons/chevron-down';
+  import FlaskConical from '@lucide/svelte/icons/flask-conical';
+  import Orbit from '@lucide/svelte/icons/orbit';
+  import Pencil from '@lucide/svelte/icons/pencil';
+  import Plus from '@lucide/svelte/icons/plus';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
   import { workspaceSCM } from '../api/scm.js';
   import { actionCapabilities, llmProviders } from '../api/ai.js';
   import { agentBindings } from '../api/agentBindings.js';

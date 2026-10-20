@@ -1,7 +1,14 @@
 <script>
   import { onMount } from 'svelte';
   import Badge from '../components/Badge.svelte';
-  import { IconUsers as Users, IconMail as Mail, IconPhone as Phone, IconEdit as Edit2, IconSend as Send, IconMessage as MessageCircle, IconTrash as Trash2, IconDots as MoreHorizontal } from '@tabler/icons-svelte-runes';
+  import Users from '@tabler/icons-svelte-runes/icons/users';
+  import Mail from '@tabler/icons-svelte-runes/icons/mail';
+  import Phone from '@tabler/icons-svelte-runes/icons/phone';
+  import Edit2 from '@tabler/icons-svelte-runes/icons/edit';
+  import Send from '@tabler/icons-svelte-runes/icons/send';
+  import MessageCircle from '@tabler/icons-svelte-runes/icons/message';
+  import Trash2 from '@tabler/icons-svelte-runes/icons/trash';
+  import MoreHorizontal from '@tabler/icons-svelte-runes/icons/dots';
   import { contactRoles as contactRolesApi, portalCustomers } from '../api/portal.js';
   import { confirm } from '../composables/useConfirm.js';
   import { errorToast } from '../stores/toasts.svelte.js';

@@ -12,7 +12,8 @@
   } from '../../stores/collectionContext.js';
   import { resolveCreatedItemMembership } from './collectionService.js';
   import { useGradientStyles, loadWorkspaceGradient } from '../../stores/workspaceGradient.svelte.js';
-  import { List, Plus } from '@lucide/svelte';
+  import List from '@lucide/svelte/icons/list';
+  import Plus from '@lucide/svelte/icons/plus';
   import EmptyState from '../../components/EmptyState.svelte';
   import { draggable, dropTargetForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
   import { attachClosestEdge, extractClosestEdge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge';

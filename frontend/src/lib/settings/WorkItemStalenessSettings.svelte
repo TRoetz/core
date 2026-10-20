@@ -1,7 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import StateDisplay from '../components/StateDisplay.svelte';
-  import { IconClockPause } from '@tabler/icons-svelte-runes';
+  import IconClockPause from '@tabler/icons-svelte-runes/icons/clock-pause';
   import { workItemStaleness } from '../api/ai.js';
   import Button from '../components/Button.svelte';
   import FormField from '../components/FormField.svelte';

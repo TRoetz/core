@@ -1,6 +1,14 @@
 <script>
   import { untrack } from 'svelte';
-  import { AlertCircle, ChevronDown, ChevronUp, MoreHorizontal, Briefcase, Globe, Building2, Repeat, Shield } from '@lucide/svelte';
+  import AlertCircle from '@lucide/svelte/icons/alert-circle';
+  import ChevronDown from '@lucide/svelte/icons/chevron-down';
+  import ChevronUp from '@lucide/svelte/icons/chevron-up';
+  import MoreHorizontal from '@lucide/svelte/icons/more-horizontal';
+  import Briefcase from '@lucide/svelte/icons/briefcase';
+  import Globe from '@lucide/svelte/icons/globe';
+  import Building2 from '@lucide/svelte/icons/building-2';
+  import Repeat from '@lucide/svelte/icons/repeat';
+  import Shield from '@lucide/svelte/icons/shield';
   import { priorityIconMap } from '../../utils/icons.js';
   import { buildIterationPickerConfig } from '../iterations/iterationPickerUtils.js';
   import { rruleToText } from '../../editors/rruleUtils.js';

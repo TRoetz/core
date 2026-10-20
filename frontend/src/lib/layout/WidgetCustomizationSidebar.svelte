@@ -1,6 +1,6 @@
 <script>
   import { useEventListener } from 'runed';
-  import { GripVertical } from '@lucide/svelte';
+  import GripVertical from '@lucide/svelte/icons/grip-vertical';
   import DescriptionText from '../components/DescriptionText.svelte';
   import ModalHeader from '../dialogs/ModalHeader.svelte';
 

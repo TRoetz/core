@@ -1,7 +1,11 @@
 <script>
   import { untrack } from 'svelte';
   import StateDisplay from '../../components/StateDisplay.svelte';
-  import { ExternalLink, FileText, LogIn, Paperclip, RotateCcw } from '@lucide/svelte';
+  import ExternalLink from '@lucide/svelte/icons/external-link';
+  import FileText from '@lucide/svelte/icons/file-text';
+  import LogIn from '@lucide/svelte/icons/log-in';
+  import Paperclip from '@lucide/svelte/icons/paperclip';
+  import RotateCcw from '@lucide/svelte/icons/rotate-ccw';
   import { forms } from '../../api/forms.js';
   import { t } from '../../stores/i18n.svelte.js';
   import { authStore } from '../../stores/auth.svelte.js';

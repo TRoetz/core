@@ -1,6 +1,11 @@
 <script>
   import { onMount } from 'svelte';
-  import { IconPlus, IconBellRinging, IconCircle, IconEdit, IconTrash, IconArrowRight } from '@tabler/icons-svelte-runes';
+  import IconPlus from '@tabler/icons-svelte-runes/icons/plus';
+  import IconBellRinging from '@tabler/icons-svelte-runes/icons/bell-ringing';
+  import IconCircle from '@tabler/icons-svelte-runes/icons/circle';
+  import IconEdit from '@tabler/icons-svelte-runes/icons/edit';
+  import IconTrash from '@tabler/icons-svelte-runes/icons/trash';
+  import IconArrowRight from '@tabler/icons-svelte-runes/icons/arrow-right';
   import { onCallSchedules } from '../api/oncall.js';
   import { t } from '../stores/i18n.svelte.js';
   import { confirm } from '../composables/useConfirm.js';

@@ -1,5 +1,6 @@
 <script>
-  import { Download, LifeBuoy } from '@lucide/svelte';
+  import Download from '@lucide/svelte/icons/download';
+  import LifeBuoy from '@lucide/svelte/icons/life-buoy';
   import { support } from '../api/support.js';
   import { t } from '../stores/i18n.svelte.js';
   import { workspacesStore } from '../stores/workspaces.svelte.js';

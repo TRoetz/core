@@ -5,7 +5,9 @@
   import DataTable from '../../components/DataTable.svelte';
   import Input from '../../components/Input.svelte';
   import Lozenge from '../../components/Lozenge.svelte';
-  import { BarChart3, Download, RefreshCw } from '@lucide/svelte';
+  import BarChart3 from '@lucide/svelte/icons/bar-chart-3';
+  import Download from '@lucide/svelte/icons/download';
+  import RefreshCw from '@lucide/svelte/icons/refresh-cw';
   import { t } from '../../stores/i18n.svelte.js';
   import { formatDate } from '../../utils/dateFormatter.js';
 

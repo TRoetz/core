@@ -5,7 +5,7 @@
   // picker renders nothing until the workspace's responses load and hides
   // itself entirely when there are none.
   import DropdownMenu from '../../layout/DropdownMenu.svelte';
-  import { MessageSquareText } from '@lucide/svelte';
+  import MessageSquareText from '@lucide/svelte/icons/message-square-text';
   import { onMount } from 'svelte';
   import { cannedResponses } from '../../api/configuration.js';
   import { t } from '../../stores/i18n.svelte.js';

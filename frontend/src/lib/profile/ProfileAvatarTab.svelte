@@ -1,5 +1,7 @@
 <script>
-  import { Trash2, Upload, User } from '@lucide/svelte';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
+  import Upload from '@lucide/svelte/icons/upload';
+  import User from '@lucide/svelte/icons/user';
   import { attachments } from '../api/misc.js';
   import { updateUserAvatar } from '../api/users.js';
   import AlertBox from '../components/AlertBox.svelte';

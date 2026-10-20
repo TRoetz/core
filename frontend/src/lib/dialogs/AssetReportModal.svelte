@@ -1,5 +1,5 @@
 <script>
-  import { Trash2 } from '@lucide/svelte';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
   import { assetSets } from '../api/assets.js';
   import { itemTypes as itemTypesApi } from '../api/configuration.js';
   import { assetReports, requestTypes as requestTypesApi } from '../api/channels.js';

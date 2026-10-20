@@ -4,7 +4,10 @@
   // existing requester/organisation/linked-asset endpoints and only loads when
   // the agent expands the section, so internal items never trigger the calls.
   import { onDestroy } from 'svelte';
-  import { Building2, ChevronRight, Package, User } from '@lucide/svelte';
+  import Building2 from '@lucide/svelte/icons/building-2';
+  import ChevronRight from '@lucide/svelte/icons/chevron-right';
+  import Package from '@lucide/svelte/icons/package';
+  import User from '@lucide/svelte/icons/user';
   import Spinner from '../../components/Spinner.svelte';
   import Lozenge from '../../components/Lozenge.svelte';
   import Text from '../../components/Text.svelte';

@@ -14,7 +14,9 @@
   import StateDisplay from '../components/StateDisplay.svelte';
   import Tabs from '../components/Tabs.svelte';
   import PageHeader from '../layout/PageHeader.svelte';
-  import { Repeat, Zap, FileText } from '@lucide/svelte';
+  import Repeat from '@lucide/svelte/icons/repeat';
+  import Zap from '@lucide/svelte/icons/zap';
+  import FileText from '@lucide/svelte/icons/file-text';
 
   let { workspaceId, ruleId, onback } = $props();
 

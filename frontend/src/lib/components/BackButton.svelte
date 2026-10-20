@@ -1,5 +1,5 @@
 <script>
-  import { ArrowLeft } from '@lucide/svelte';
+  import ArrowLeft from '@lucide/svelte/icons/arrow-left';
   import Link from './Link.svelte';
   import { cn } from '../utils/cn.js';
 

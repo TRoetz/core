@@ -9,7 +9,12 @@
   import Badge from '../components/Badge.svelte';
   import TabStrip from '../components/TabStrip.svelte';
   import Input from '../components/Input.svelte';
-  import { X, ArrowRight, Type, FileText, Flag, Activity } from '@lucide/svelte';
+  import X from '@lucide/svelte/icons/x';
+  import ArrowRight from '@lucide/svelte/icons/arrow-right';
+  import Type from '@lucide/svelte/icons/type';
+  import FileText from '@lucide/svelte/icons/file-text';
+  import Flag from '@lucide/svelte/icons/flag';
+  import Activity from '@lucide/svelte/icons/activity';
   import DialogFooter from '../dialogs/DialogFooter.svelte';
   import { t } from '../stores/i18n.svelte.js';
 

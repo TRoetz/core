@@ -1,6 +1,9 @@
 <script>
   import { configurationSets } from '../api/configuration.js';
-  import { Settings, Workflow, Monitor, Bell } from '@lucide/svelte';
+  import Settings from '@lucide/svelte/icons/settings';
+  import Workflow from '@lucide/svelte/icons/workflow';
+  import Monitor from '@lucide/svelte/icons/monitor';
+  import Bell from '@lucide/svelte/icons/bell';
   import Lozenge from '../components/Lozenge.svelte';
   import { t } from '../stores/i18n.svelte.js';
 

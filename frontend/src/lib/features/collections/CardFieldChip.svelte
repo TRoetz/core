@@ -1,5 +1,7 @@
 <script>
-  import { CalendarDays, Clock, CornerLeftUp } from '@lucide/svelte';
+  import CalendarDays from '@lucide/svelte/icons/calendar-days';
+  import Clock from '@lucide/svelte/icons/clock';
+  import CornerLeftUp from '@lucide/svelte/icons/corner-left-up';
   import Chip from '../../components/Chip.svelte';
   import { formatDate, formatDateOnly, formatDateShort, formatStatusAge } from '../../utils/dateFormatter.js';
   import { resolveOptionLabel, resolveOptionLabels } from '../../utils/optionUtils.js';

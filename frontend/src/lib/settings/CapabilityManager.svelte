@@ -3,7 +3,9 @@
   import StateDisplay from '../components/StateDisplay.svelte';
   import { actionCapabilities, llmConnections as llmConnectionsApi } from '../api/ai.js';
   import { workspacesStore } from '../stores/workspaces.svelte.js';
-  import { Plus, Edit, Trash2 } from '@lucide/svelte';
+  import Plus from '@lucide/svelte/icons/plus';
+  import Edit from '@lucide/svelte/icons/edit';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
   import Button from '../components/Button.svelte';
   import Checkbox from '../components/Checkbox.svelte';
   import WorkspaceCheckboxList from '../components/WorkspaceCheckboxList.svelte';

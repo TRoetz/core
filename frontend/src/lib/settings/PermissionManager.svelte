@@ -5,7 +5,12 @@
   import { t } from '../stores/i18n.svelte.js';
   import { authStore } from '../stores/auth.svelte.js';
   import { permissionStore } from '../stores/permissions.svelte.js';
-  import { Shield, Users as UsersIcon, Plus, X, User, Crown } from '@lucide/svelte';
+  import Shield from '@lucide/svelte/icons/shield';
+  import UsersIcon from '@lucide/svelte/icons/users';
+  import Plus from '@lucide/svelte/icons/plus';
+  import X from '@lucide/svelte/icons/x';
+  import User from '@lucide/svelte/icons/user';
+  import Crown from '@lucide/svelte/icons/crown';
   import PageHeader from '../layout/PageHeader.svelte';
   import AssigneePicker from '../pickers/AssigneePicker.svelte';
   import AlertBox from '../components/AlertBox.svelte';

@@ -28,7 +28,13 @@
   import { useCollectionEventStream } from '../../composables/useCollectionEventStream.svelte.js';
   import { buildHierarchyDatePatches, projectHierarchyDates } from './roadmapHierarchyDates.js';
   import { boardColumnsForSave } from '../../utils/workItemListColumns.js';
-  import { Settings, ChevronLeft, ChevronRight, Diamond, ChevronDown, CalendarClock, RotateCcw } from '@lucide/svelte';
+  import Settings from '@lucide/svelte/icons/settings';
+  import ChevronLeft from '@lucide/svelte/icons/chevron-left';
+  import ChevronRight from '@lucide/svelte/icons/chevron-right';
+  import Diamond from '@lucide/svelte/icons/diamond';
+  import ChevronDown from '@lucide/svelte/icons/chevron-down';
+  import CalendarClock from '@lucide/svelte/icons/calendar-clock';
+  import RotateCcw from '@lucide/svelte/icons/rotate-ccw';
   import { getVisibleColor } from '../../utils/colorUtils.js';
   import ItemTypeIcon from '../../components/ItemTypeIcon.svelte';
   import ItemKey from '../../components/ItemKey.svelte';

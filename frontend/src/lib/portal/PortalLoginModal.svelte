@@ -1,5 +1,8 @@
 <script>
-  import { X, Mail, Lock, KeyRound } from '@lucide/svelte';
+  import X from '@lucide/svelte/icons/x';
+  import Mail from '@lucide/svelte/icons/mail';
+  import Lock from '@lucide/svelte/icons/lock';
+  import KeyRound from '@lucide/svelte/icons/key-round';
   import { get } from 'svelte/store';
   import { currentRoute } from '../router.js';
   import { portalCustomizationStore as portalStore } from '../stores/portal.svelte.js';

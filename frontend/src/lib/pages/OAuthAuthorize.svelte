@@ -3,7 +3,8 @@
 	// error=access_denied.
 
 	import { onMount } from 'svelte';
-	import { Lock, AlertTriangle } from '@lucide/svelte';
+	import Lock from '@lucide/svelte/icons/lock';
+	import AlertTriangle from '@lucide/svelte/icons/alert-triangle';
 	import { oauth } from '../api/oauth.js';
 	import { authStore } from '../stores/auth.svelte.js';
 	import { currentRoute } from '../router.js';

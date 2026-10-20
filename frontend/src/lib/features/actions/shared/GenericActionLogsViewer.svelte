@@ -1,6 +1,9 @@
 <script>
   import { onMount } from 'svelte';
-  import { CheckCircle, XCircle, Clock, Eye } from '@lucide/svelte';
+  import CheckCircle from '@lucide/svelte/icons/check-circle';
+  import XCircle from '@lucide/svelte/icons/x-circle';
+  import Clock from '@lucide/svelte/icons/clock';
+  import Eye from '@lucide/svelte/icons/eye';
   import Button from '../../../components/Button.svelte';
   import BackButton from '../../../components/BackButton.svelte';
   import DataTable from '../../../components/DataTable.svelte';

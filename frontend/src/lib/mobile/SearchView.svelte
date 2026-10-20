@@ -1,6 +1,8 @@
 <script>
   import { onDestroy } from 'svelte';
-  import { ChevronLeft, Search, X } from '@lucide/svelte';
+  import ChevronLeft from '@lucide/svelte/icons/chevron-left';
+  import Search from '@lucide/svelte/icons/search';
+  import X from '@lucide/svelte/icons/x';
   import { search } from '../api/misc.js';
   import { navigate } from '../router.js';
   import { workspacesStore } from '../stores/workspaces.svelte.js';

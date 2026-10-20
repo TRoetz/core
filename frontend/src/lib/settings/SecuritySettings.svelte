@@ -2,7 +2,16 @@
   import { onMount } from 'svelte';
   import Spinner from '../components/Spinner.svelte';
   import StateDisplay from '../components/StateDisplay.svelte';
-  import { Shield, Calendar, Image as ImageIcon, Terminal, Key, Users, UserCog, AlertTriangle, ChevronDown, ChevronUp } from '@lucide/svelte';
+  import Shield from '@lucide/svelte/icons/shield';
+  import Calendar from '@lucide/svelte/icons/calendar';
+  import ImageIcon from '@lucide/svelte/icons/image';
+  import Terminal from '@lucide/svelte/icons/terminal';
+  import Key from '@lucide/svelte/icons/key';
+  import Users from '@lucide/svelte/icons/users';
+  import UserCog from '@lucide/svelte/icons/user-cog';
+  import AlertTriangle from '@lucide/svelte/icons/alert-triangle';
+  import ChevronDown from '@lucide/svelte/icons/chevron-down';
+  import ChevronUp from '@lucide/svelte/icons/chevron-up';
   import { agentSecurity } from '../api/agentSecurity.js';
   import { authPolicy, getSecuritySettings, updateSecuritySettings } from '../api/admin.js';
   import AgentSecurityAllowlistEditor from './AgentSecurityAllowlistEditor.svelte';

@@ -11,20 +11,16 @@
   import PageWorkItemsButton from './PageWorkItemsButton.svelte';
   import IconSelector from '../../pickers/IconSelector.svelte';
   import { workspaceIconMap } from '../../utils/icons.js';
-  import {
-    IconArrowsMaximize,
-    IconArrowsMinimize,
-    IconX,
-  } from '@tabler/icons-svelte-runes';
+  import IconArrowsMaximize from '@tabler/icons-svelte-runes/icons/arrows-maximize';
+  import IconArrowsMinimize from '@tabler/icons-svelte-runes/icons/arrows-minimize';
+  import IconX from '@tabler/icons-svelte-runes/icons/x';
   import { parseMarkdownHeadings, slugify } from './markdownToc.js';
   import DropdownMenu from '../../layout/DropdownMenu.svelte';
   import Tooltip from '../../components/Tooltip.svelte';
-  import {
-    IconBook as Book,
-    IconDots as Dots,
-    IconPencil as Pencil,
-    IconEye as Eye,
-  } from '@tabler/icons-svelte-runes';
+  import Book from '@tabler/icons-svelte-runes/icons/book';
+  import Dots from '@tabler/icons-svelte-runes/icons/dots';
+  import Pencil from '@tabler/icons-svelte-runes/icons/pencil';
+  import Eye from '@tabler/icons-svelte-runes/icons/eye';
   import { confirm } from '../../composables/useConfirm.js';
   import { autoGrow } from '../../utils/autoGrowTextarea.js';
   import { t } from '../../stores/i18n.svelte.js';

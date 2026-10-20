@@ -1,5 +1,7 @@
 <script>
-  import { X, Calendar, Pencil } from '@lucide/svelte';
+  import X from '@lucide/svelte/icons/x';
+  import Calendar from '@lucide/svelte/icons/calendar';
+  import Pencil from '@lucide/svelte/icons/pencil';
   import FieldSelector from '../../pickers/FieldSelector.svelte';
   import BasePicker from '../../pickers/BasePicker.svelte';
   import Modal from '../../dialogs/Modal.svelte';

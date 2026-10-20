@@ -1,7 +1,11 @@
 <script>
   import { onMount } from 'svelte';
   import { workspaceRoles } from '../api/workspaces.js';
-  import { BadgeCheck, Eye, CheckCircle, Plus, Trash2 } from '@lucide/svelte';
+  import BadgeCheck from '@lucide/svelte/icons/badge-check';
+  import Eye from '@lucide/svelte/icons/eye';
+  import CheckCircle from '@lucide/svelte/icons/check-circle';
+  import Plus from '@lucide/svelte/icons/plus';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
   import DataTable from '../components/DataTable.svelte';
   import PageHeader from '../layout/PageHeader.svelte';
   import AlertBox from '../components/AlertBox.svelte';

@@ -2,7 +2,13 @@
   import { onMount } from 'svelte';
   import { items } from '../../api/items.js';
   import { navigate } from '../../router.js';
-  import { ChevronDown, ChevronRight, Plus, Check, X, ExternalLink, CheckCircle2 } from '@lucide/svelte';
+  import ChevronDown from '@lucide/svelte/icons/chevron-down';
+  import ChevronRight from '@lucide/svelte/icons/chevron-right';
+  import Plus from '@lucide/svelte/icons/plus';
+  import Check from '@lucide/svelte/icons/check';
+  import X from '@lucide/svelte/icons/x';
+  import ExternalLink from '@lucide/svelte/icons/external-link';
+  import CheckCircle2 from '@lucide/svelte/icons/check-circle-2';
   import { workspacesStore } from '../../stores/workspaces.svelte.js';
   import Tooltip from '../../components/Tooltip.svelte';
   import Text from '../../components/Text.svelte';

@@ -3,10 +3,15 @@
   import { t } from '../../stores/i18n.svelte.js';
   import { errorToast } from '../../stores/toasts.svelte.js';
   import { confirm } from '../../composables/useConfirm.js';
-  import {
-    IconCalendar, IconCircleCheck, IconClock, IconPlus, IconEdit, IconTrash,
-    IconWorld, IconBuilding, IconTarget
-  } from '@tabler/icons-svelte-runes';
+  import IconCalendar from '@tabler/icons-svelte-runes/icons/calendar';
+  import IconCircleCheck from '@tabler/icons-svelte-runes/icons/circle-check';
+  import IconClock from '@tabler/icons-svelte-runes/icons/clock';
+  import IconPlus from '@tabler/icons-svelte-runes/icons/plus';
+  import IconEdit from '@tabler/icons-svelte-runes/icons/edit';
+  import IconTrash from '@tabler/icons-svelte-runes/icons/trash';
+  import IconWorld from '@tabler/icons-svelte-runes/icons/world';
+  import IconBuilding from '@tabler/icons-svelte-runes/icons/building';
+  import IconTarget from '@tabler/icons-svelte-runes/icons/target';
   import DataTable from '../../components/DataTable.svelte';
   import Button from '../../components/Button.svelte';
   import IterationModal from '../../dialogs/IterationModal.svelte';

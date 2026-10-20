@@ -1,5 +1,5 @@
 <script>
-  import { ChevronRight } from '@lucide/svelte';
+  import ChevronRight from '@lucide/svelte/icons/chevron-right';
   import { updateUserRegionalSettings } from '../api/users.js';
   import { authStore } from '../stores/auth.svelte.js';
   import { errorToast } from '../stores/toasts.svelte.js';

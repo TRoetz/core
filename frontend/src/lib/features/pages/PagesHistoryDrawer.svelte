@@ -9,7 +9,9 @@
   import Spinner from '../../components/Spinner.svelte';
   import EmptyState from '../../components/EmptyState.svelte';
   import Badge from '../../components/Badge.svelte';
-  import { IconX, IconHistory, IconRestore } from '@tabler/icons-svelte-runes';
+  import IconX from '@tabler/icons-svelte-runes/icons/x';
+  import IconHistory from '@tabler/icons-svelte-runes/icons/history';
+  import IconRestore from '@tabler/icons-svelte-runes/icons/restore';
   import { loadPageHistory, pageRevisionAuthorName } from './pageHistoryData.js';
 
   /** Persistent page-revision drawer with read-only previews and restore. It

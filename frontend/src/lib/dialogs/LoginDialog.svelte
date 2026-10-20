@@ -5,7 +5,13 @@
   import { ssoStore } from '../stores/sso.svelte.js';
 
   import { authPolicy } from '../api/admin.js';
-  import { Eye, EyeOff, Lock, User, AlertCircle, LogIn, Key } from '@lucide/svelte';
+  import Eye from '@lucide/svelte/icons/eye';
+  import EyeOff from '@lucide/svelte/icons/eye-off';
+  import Lock from '@lucide/svelte/icons/lock';
+  import User from '@lucide/svelte/icons/user';
+  import AlertCircle from '@lucide/svelte/icons/alert-circle';
+  import LogIn from '@lucide/svelte/icons/log-in';
+  import Key from '@lucide/svelte/icons/key';
   import { APP_NAME } from '../constants.js';
   import Button from '../components/Button.svelte';
   import Checkbox from '../components/Checkbox.svelte';

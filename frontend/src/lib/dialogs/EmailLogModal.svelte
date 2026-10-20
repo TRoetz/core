@@ -11,7 +11,12 @@
   import EmptyState from '../components/EmptyState.svelte';
   import DataTable from '../components/DataTable.svelte';
   import SelectField from '../components/SelectField.svelte';
-  import { AlertTriangle, ChevronLeft, ChevronRight, Mail, MessageSquare, FileText } from '@lucide/svelte';
+  import AlertTriangle from '@lucide/svelte/icons/alert-triangle';
+  import ChevronLeft from '@lucide/svelte/icons/chevron-left';
+  import ChevronRight from '@lucide/svelte/icons/chevron-right';
+  import Mail from '@lucide/svelte/icons/mail';
+  import MessageSquare from '@lucide/svelte/icons/message-square';
+  import FileText from '@lucide/svelte/icons/file-text';
   import SearchInput from '../components/SearchInput.svelte';
   import TabStrip from '../components/TabStrip.svelte';
 

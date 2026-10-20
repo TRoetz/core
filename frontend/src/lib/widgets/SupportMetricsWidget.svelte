@@ -1,5 +1,5 @@
 <script>
-  import { Download } from '@lucide/svelte';
+  import Download from '@lucide/svelte/icons/download';
   import { support } from '../api/support.js';
   import { useCollectionEventStream } from '../composables/useCollectionEventStream.svelte.js';
   import { t } from '../stores/i18n.svelte.js';

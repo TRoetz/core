@@ -1,4 +1,4 @@
-import { IconSettings } from '@tabler/icons-svelte-runes';
+import IconSettings from '@tabler/icons-svelte-runes/icons/settings';
 import { workspaceIconMap } from '../utils/icons.js';
 
 export function workspaceMenuItems(workspaces, searchQuery, onSearch, t) {

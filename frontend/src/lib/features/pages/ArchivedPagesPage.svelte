@@ -3,7 +3,7 @@
   import Button from '../../components/Button.svelte';
   import BackButton from '../../components/BackButton.svelte';
   import PageHeader from '../../layout/PageHeader.svelte';
-  import { IconArchive } from '@tabler/icons-svelte-runes';
+  import IconArchive from '@tabler/icons-svelte-runes/icons/archive';
   import { pages } from '../../api/pages.js';
   import { navigate } from '../../router.js';
   import { t } from '../../stores/i18n.svelte.js';

@@ -2,7 +2,15 @@
   import { onMount } from 'svelte';
   import StateDisplay from '../../components/StateDisplay.svelte';
   import BackButton from '../../components/BackButton.svelte';
-  import { IconCalendar, IconTarget, IconEdit, IconTrash, IconDots, IconWorld, IconBuilding, IconSparkles, IconCircleCheck } from '@tabler/icons-svelte-runes';
+  import IconCalendar from '@tabler/icons-svelte-runes/icons/calendar';
+  import IconTarget from '@tabler/icons-svelte-runes/icons/target';
+  import IconEdit from '@tabler/icons-svelte-runes/icons/edit';
+  import IconTrash from '@tabler/icons-svelte-runes/icons/trash';
+  import IconDots from '@tabler/icons-svelte-runes/icons/dots';
+  import IconWorld from '@tabler/icons-svelte-runes/icons/world';
+  import IconBuilding from '@tabler/icons-svelte-runes/icons/building';
+  import IconSparkles from '@tabler/icons-svelte-runes/icons/sparkles';
+  import IconCircleCheck from '@tabler/icons-svelte-runes/icons/circle-check';
   import IterationBurndown from './IterationBurndown.svelte';
   import { iterations } from '../../api/milestones.js';
   import { navigate } from '../../router.js';

@@ -1,5 +1,6 @@
 <script>
-  import { ExternalLink, Inbox as InboxIcon } from '@lucide/svelte';
+  import ExternalLink from '@lucide/svelte/icons/external-link';
+  import InboxIcon from '@lucide/svelte/icons/inbox';
   import StateDisplay from '../components/StateDisplay.svelte';
   import { hubStore } from '../stores/hub.svelte.js';
   import { t } from '../stores/i18n.svelte.js';

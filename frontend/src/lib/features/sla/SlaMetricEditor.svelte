@@ -14,7 +14,10 @@
   import CategoryMultiSelect from '../../pickers/CategoryMultiSelect.svelte';
   import QlQueryBar from '../shared/QlQueryBar.svelte';
   import { sla } from '../../api/sla.js';
-  import { Plus, Trash2, ArrowUp, ArrowDown } from '@lucide/svelte';
+  import Plus from '@lucide/svelte/icons/plus';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
+  import ArrowUp from '@lucide/svelte/icons/arrow-up';
+  import ArrowDown from '@lucide/svelte/icons/arrow-down';
   import { t } from '../../stores/i18n.svelte.js';
 
   let {

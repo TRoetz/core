@@ -12,7 +12,15 @@
   import { nord } from '@milkdown/theme-nord';
   import '@milkdown/theme-nord/style.css';
   import { imageBlockComponent } from '@milkdown/kit/component/image-block';
-  import { Bold, Italic, Code, List, ListOrdered, Strikethrough, Image as ImageIcon, Workflow, BookOpen } from '@lucide/svelte';
+  import Bold from '@lucide/svelte/icons/bold';
+  import Italic from '@lucide/svelte/icons/italic';
+  import Code from '@lucide/svelte/icons/code';
+  import List from '@lucide/svelte/icons/list';
+  import ListOrdered from '@lucide/svelte/icons/list-ordered';
+  import Strikethrough from '@lucide/svelte/icons/strikethrough';
+  import ImageIcon from '@lucide/svelte/icons/image';
+  import Workflow from '@lucide/svelte/icons/workflow';
+  import BookOpen from '@lucide/svelte/icons/book-open';
   import { getAssignableUsers, getUsers } from '../api/users.js';
   import { attachments as attachmentsApi } from '../api/misc.js';
   import { pages } from '../api/pages.js';

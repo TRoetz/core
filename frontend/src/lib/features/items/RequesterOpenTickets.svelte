@@ -1,7 +1,10 @@
 <script>
   import { onDestroy, onMount } from 'svelte';
   import { useEventListener } from 'runed';
-  import { Copy, GitMerge, MoreHorizontal, Search } from '@lucide/svelte';
+  import Copy from '@lucide/svelte/icons/copy';
+  import GitMerge from '@lucide/svelte/icons/git-merge';
+  import MoreHorizontal from '@lucide/svelte/icons/more-horizontal';
+  import Search from '@lucide/svelte/icons/search';
   import Spinner from '../../components/Spinner.svelte';
   import Lozenge from '../../components/Lozenge.svelte';
   import Text from '../../components/Text.svelte';

@@ -3,7 +3,12 @@
   import StateDisplay from '../components/StateDisplay.svelte';
   import { themes as themesApi } from '../api/admin.js';
   import { attachments } from '../api/misc.js';
-  import { Plus, Edit, Trash2, Palette, Check, X } from '@lucide/svelte';
+  import Plus from '@lucide/svelte/icons/plus';
+  import Edit from '@lucide/svelte/icons/edit';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
+  import Palette from '@lucide/svelte/icons/palette';
+  import Check from '@lucide/svelte/icons/check';
+  import X from '@lucide/svelte/icons/x';
   import AlertBox from '../components/AlertBox.svelte';
   import Button from '../components/Button.svelte';
   import EmptyState from '../components/EmptyState.svelte';

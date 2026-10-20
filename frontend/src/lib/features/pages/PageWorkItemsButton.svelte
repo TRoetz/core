@@ -1,6 +1,9 @@
 <script>
   import { createPopover, melt } from '@melt-ui/svelte';
-  import { Link2, Trash2, Plus, X } from '@lucide/svelte';
+  import Link2 from '@lucide/svelte/icons/link-2';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
+  import Plus from '@lucide/svelte/icons/plus';
+  import X from '@lucide/svelte/icons/x';
   import ItemTypeIcon from '../../components/ItemTypeIcon.svelte';
   import { links } from '../../api/configuration.js';
   import { t } from '../../stores/i18n.svelte.js';

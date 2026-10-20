@@ -5,8 +5,11 @@
   import { confirm } from '../composables/useConfirm.js';
   import { approvalSets as approvalSetsApi } from '../api/approvalSets.js';
   import { navigate } from '../router.js';
-  import { Plus, Edit, Trash2, Search } from '@lucide/svelte';
-  import { IconRubberStamp } from '@tabler/icons-svelte-runes';
+  import Plus from '@lucide/svelte/icons/plus';
+  import Edit from '@lucide/svelte/icons/edit';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
+  import Search from '@lucide/svelte/icons/search';
+  import IconRubberStamp from '@tabler/icons-svelte-runes/icons/rubber-stamp';
   import Button from '../components/Button.svelte';
   import EmptyState from '../components/EmptyState.svelte';
   import Panel from '../components/Panel.svelte';

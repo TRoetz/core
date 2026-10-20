@@ -6,7 +6,7 @@
   import MobileEditorPage from './MobileEditorPage.svelte';
   import MobileConfirmSheet from './MobileConfirmSheet.svelte';
   import { autoGrow, enterMovesFocus } from '../utils/autoGrowTextarea.js';
-  import { Loader } from '@lucide/svelte';
+  import Loader from '@lucide/svelte/icons/loader';
   import { t, translateError } from '../stores/i18n.svelte.js';
 
   /**

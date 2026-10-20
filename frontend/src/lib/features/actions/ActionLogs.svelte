@@ -7,7 +7,11 @@
   import Button from '../../components/Button.svelte';
   import BackButton from '../../components/BackButton.svelte';
   import ExecutionTraceModal from './ExecutionTraceModal.svelte';
-  import { CheckCircle, XCircle, Clock, SkipForward, Eye } from '@lucide/svelte';
+  import CheckCircle from '@lucide/svelte/icons/check-circle';
+  import XCircle from '@lucide/svelte/icons/x-circle';
+  import Clock from '@lucide/svelte/icons/clock';
+  import SkipForward from '@lucide/svelte/icons/skip-forward';
+  import Eye from '@lucide/svelte/icons/eye';
   import { formatAuthenticatedDateTime } from '../../utils/authenticatedDateFormatter.js';
 
   let { workspaceId, action, onBack } = $props();

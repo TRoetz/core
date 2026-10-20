@@ -30,7 +30,8 @@
   import { errorToast } from '../../stores/toasts.svelte.js';
   import { useEventListener } from 'runed';
   import { statuses as statusesApi } from '../../api/workflows.js';
-  import { HelpCircle, Plus } from '@lucide/svelte';
+  import HelpCircle from '@lucide/svelte/icons/help-circle';
+  import Plus from '@lucide/svelte/icons/plus';
   import SearchInput from '../../components/SearchInput.svelte';
   import StatusModal from '../../dialogs/StatusModal.svelte';
 

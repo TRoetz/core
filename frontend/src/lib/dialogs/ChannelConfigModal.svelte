@@ -1,5 +1,13 @@
 <script>
-  import { LifeBuoy, Settings, Webhook, ExternalLink, Users, Globe, Mail, Send, ClipboardList } from '@lucide/svelte';
+  import LifeBuoy from '@lucide/svelte/icons/life-buoy';
+  import Settings from '@lucide/svelte/icons/settings';
+  import Webhook from '@lucide/svelte/icons/webhook';
+  import ExternalLink from '@lucide/svelte/icons/external-link';
+  import Users from '@lucide/svelte/icons/users';
+  import Globe from '@lucide/svelte/icons/globe';
+  import Mail from '@lucide/svelte/icons/mail';
+  import Send from '@lucide/svelte/icons/send';
+  import ClipboardList from '@lucide/svelte/icons/clipboard-list';
   import TabStrip from '../components/TabStrip.svelte';
   import { channels } from '../api/channels.js';
   import { workspacesStore } from '../stores/workspaces.svelte.js';

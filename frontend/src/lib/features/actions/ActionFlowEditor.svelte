@@ -1,6 +1,22 @@
 <script>
   import { onMount } from 'svelte';
-  import { Pencil, RefreshCw, MessageSquare, Bell, HelpCircle, Database, PlusSquare, Box, Globe, Sparkles, Bot, Milestone, UsersRound, Send, FileText, Tag, X } from '@lucide/svelte';
+  import Pencil from '@lucide/svelte/icons/pencil';
+  import RefreshCw from '@lucide/svelte/icons/refresh-cw';
+  import MessageSquare from '@lucide/svelte/icons/message-square';
+  import Bell from '@lucide/svelte/icons/bell';
+  import HelpCircle from '@lucide/svelte/icons/help-circle';
+  import Database from '@lucide/svelte/icons/database';
+  import PlusSquare from '@lucide/svelte/icons/plus-square';
+  import Box from '@lucide/svelte/icons/box';
+  import Globe from '@lucide/svelte/icons/globe';
+  import Sparkles from '@lucide/svelte/icons/sparkles';
+  import Bot from '@lucide/svelte/icons/bot';
+  import Milestone from '@lucide/svelte/icons/milestone';
+  import UsersRound from '@lucide/svelte/icons/users-round';
+  import Send from '@lucide/svelte/icons/send';
+  import FileText from '@lucide/svelte/icons/file-text';
+  import Tag from '@lucide/svelte/icons/tag';
+  import X from '@lucide/svelte/icons/x';
   import { toHotkeyString, getShortcutDisplay } from '../../utils/keyboardShortcuts.js';
   import { actionCapabilities } from '../../api/ai.js';
   import { actions } from '../../api/actions.js';

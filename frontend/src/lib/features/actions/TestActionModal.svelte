@@ -7,7 +7,7 @@
   import { search } from '../../api/misc.js';
   import { actions } from '../../api/actions.js';
   import { t } from '../../stores/i18n.svelte.js';
-  import { Play } from '@lucide/svelte';
+  import Play from '@lucide/svelte/icons/play';
 
   let { action, workspaceId, onclose, onsuccess } = $props();
 

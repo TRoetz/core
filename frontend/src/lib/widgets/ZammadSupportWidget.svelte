@@ -1,6 +1,9 @@
 <script>
   import { onMount } from 'svelte';
-  import { AlertTriangle, ExternalLink, RefreshCw, TicketCheck } from '@lucide/svelte';
+  import AlertTriangle from '@lucide/svelte/icons/alert-triangle';
+  import ExternalLink from '@lucide/svelte/icons/external-link';
+  import RefreshCw from '@lucide/svelte/icons/refresh-cw';
+  import TicketCheck from '@lucide/svelte/icons/ticket-check';
   import { zammadTickets } from '../api/integrations.js';
   import { authStore } from '../stores/auth.svelte.js';
   import { t } from '../stores/i18n.svelte.js';

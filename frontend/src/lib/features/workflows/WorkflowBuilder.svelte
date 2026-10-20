@@ -2,7 +2,11 @@
   import { onMount } from 'svelte';
   import { statuses as statusesApi, workflows as workflowsApi } from '../../api/workflows.js';
   import { navigate } from '../../router.js';
-  import { Plus, Edit, Trash2, Workflow, ArrowRight } from '@lucide/svelte';
+  import Plus from '@lucide/svelte/icons/plus';
+  import Edit from '@lucide/svelte/icons/edit';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
+  import Workflow from '@lucide/svelte/icons/workflow';
+  import ArrowRight from '@lucide/svelte/icons/arrow-right';
   import { t } from '../../stores/i18n.svelte.js';
   import { errorToast } from '../../stores/toasts.svelte.js';
   import { confirm } from '../../composables/useConfirm.js';

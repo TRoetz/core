@@ -17,7 +17,11 @@
   } from '../stores/workspaceGradient.svelte.js';
   import { gradients } from '../utils/gradients.js';
   import { workspaceIconMap } from '../utils/icons.js';
-  import { Palette, Camera, Trash2, Shield, Package } from '@lucide/svelte';
+  import Palette from '@lucide/svelte/icons/palette';
+  import Camera from '@lucide/svelte/icons/camera';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
+  import Shield from '@lucide/svelte/icons/shield';
+  import Package from '@lucide/svelte/icons/package';
   import IconSelector from '../pickers/IconSelector.svelte';
   import BackgroundImageSelector from '../components/BackgroundImageSelector.svelte';
   import GradientPicker from '../components/GradientPicker.svelte';

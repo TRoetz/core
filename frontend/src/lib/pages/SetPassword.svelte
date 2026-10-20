@@ -7,7 +7,10 @@
   import Button from '../components/Button.svelte';
   import TextField from '../components/TextField.svelte';
   import Logo from '../components/Logo.svelte';
-  import { Lock, CheckCircle, AlertCircle, Loader2 } from '@lucide/svelte';
+  import Lock from '@lucide/svelte/icons/lock';
+  import CheckCircle from '@lucide/svelte/icons/check-circle';
+  import AlertCircle from '@lucide/svelte/icons/alert-circle';
+  import Loader2 from '@lucide/svelte/icons/loader-2';
 
   function decodeRouteToken(value) {
     try {

@@ -12,7 +12,12 @@
   import Radio from '../components/Radio.svelte';
   import AlertBox from '../components/AlertBox.svelte';
   import Chip from '../components/Chip.svelte';
-  import { RefreshCw, Trash2, ExternalLink, Plus, X, Layers } from '@lucide/svelte';
+  import RefreshCw from '@lucide/svelte/icons/refresh-cw';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
+  import ExternalLink from '@lucide/svelte/icons/external-link';
+  import Plus from '@lucide/svelte/icons/plus';
+  import X from '@lucide/svelte/icons/x';
+  import Layers from '@lucide/svelte/icons/layers';
   import { successToast, errorToast } from '../stores/toasts.svelte.js';
   import { t } from '../stores/i18n.svelte.js';
   import { confirm } from '../composables/useConfirm.js';

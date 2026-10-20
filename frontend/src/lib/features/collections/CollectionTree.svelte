@@ -11,7 +11,10 @@
   import { errorToast } from '../../stores/toasts.svelte.js';
   import { workspacePermissions } from '../../stores/workspacePermissions.svelte.js';
   import { useGradientStyles, loadWorkspaceGradient } from '../../stores/workspaceGradient.svelte.js';
-  import { ChevronRight, ChevronDown, FileCheck, Minus } from '@lucide/svelte';
+  import ChevronRight from '@lucide/svelte/icons/chevron-right';
+  import ChevronDown from '@lucide/svelte/icons/chevron-down';
+  import FileCheck from '@lucide/svelte/icons/file-check';
+  import Minus from '@lucide/svelte/icons/minus';
   import ViewHeader from '../../layout/ViewHeader.svelte';
   import StaticViewBackground from '../../layout/StaticViewBackground.svelte';
   import SubFilterBar from './SubFilterBar.svelte';

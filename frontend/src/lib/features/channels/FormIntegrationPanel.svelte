@@ -1,6 +1,9 @@
 <script>
   import { onMount } from 'svelte';
-  import { IconExternalLink, IconCode, IconWorldWww, IconBrandJavascript } from '@tabler/icons-svelte-runes';
+  import IconExternalLink from '@tabler/icons-svelte-runes/icons/external-link';
+  import IconCode from '@tabler/icons-svelte-runes/icons/code';
+  import IconWorldWww from '@tabler/icons-svelte-runes/icons/world-www';
+  import IconBrandJavascript from '@tabler/icons-svelte-runes/icons/brand-javascript';
   import { forms as formsApi } from '../../api/forms.js';
   import { t } from '../../stores/i18n.svelte.js';
   import Button from '../../components/Button.svelte';

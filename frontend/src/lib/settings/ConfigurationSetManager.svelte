@@ -10,10 +10,18 @@
   import { workspacesStore } from '../stores/workspaces.svelte.js';
   import { navigate } from '../router.js';
   import { formatDateSimple } from '../utils/dateFormatter.js';
-  import {
-    Plus, Edit, Trash2, Settings, Workflow,
-    FileText, Search, AlertCircle, Upload, Layers, Copy, Download
-  } from '@lucide/svelte';
+  import Plus from '@lucide/svelte/icons/plus';
+  import Edit from '@lucide/svelte/icons/edit';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
+  import Settings from '@lucide/svelte/icons/settings';
+  import Workflow from '@lucide/svelte/icons/workflow';
+  import FileText from '@lucide/svelte/icons/file-text';
+  import Search from '@lucide/svelte/icons/search';
+  import AlertCircle from '@lucide/svelte/icons/alert-circle';
+  import Upload from '@lucide/svelte/icons/upload';
+  import Layers from '@lucide/svelte/icons/layers';
+  import Copy from '@lucide/svelte/icons/copy';
+  import Download from '@lucide/svelte/icons/download';
   import ItemTypeIcon from '../components/ItemTypeIcon.svelte';
   import Button from '../components/Button.svelte';
   import EmptyState from '../components/EmptyState.svelte';

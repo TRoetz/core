@@ -7,7 +7,11 @@
    *   2. The agent hitting the iteration ceiling (stopReason === 'max_iterations').
    *   3. Empty tool_calls when the agent went straight to a text reply.
    */
-  import { IconChevronRight, IconAlertTriangle, IconCircleCheck, IconCircleX, IconReceipt } from '@tabler/icons-svelte-runes';
+  import IconChevronRight from '@tabler/icons-svelte-runes/icons/chevron-right';
+  import IconAlertTriangle from '@tabler/icons-svelte-runes/icons/alert-triangle';
+  import IconCircleCheck from '@tabler/icons-svelte-runes/icons/circle-check';
+  import IconCircleX from '@tabler/icons-svelte-runes/icons/circle-x';
+  import IconReceipt from '@tabler/icons-svelte-runes/icons/receipt';
   import { formatCostUSD, hasMeteredUsage } from '../../utils/llmUsage.js';
 
   /**

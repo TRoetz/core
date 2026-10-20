@@ -1,6 +1,7 @@
 <script>
   import { onMount } from 'svelte';
-  import { ArrowLeft, BookOpen } from '@lucide/svelte';
+  import ArrowLeft from '@lucide/svelte/icons/arrow-left';
+  import BookOpen from '@lucide/svelte/icons/book-open';
   import { portal } from '../api/portal.js';
   import { navigate } from '../router.js';
   import { portalCustomizationStore as portalStore } from '../stores/portal.svelte.js';

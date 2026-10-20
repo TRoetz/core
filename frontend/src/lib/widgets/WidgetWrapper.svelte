@@ -9,7 +9,7 @@
   } from './dashboard/taskWidgetState.js';
   import DropdownMenu from '../layout/DropdownMenu.svelte';
   import { useEventListener } from 'runed';
-  import { MoreHorizontal } from '@lucide/svelte';
+  import MoreHorizontal from '@lucide/svelte/icons/more-horizontal';
 
   let {
     title = '',

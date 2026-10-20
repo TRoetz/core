@@ -12,7 +12,12 @@
   import DataTable from '../components/DataTable.svelte';
   import Lozenge from '../components/Lozenge.svelte';
   import Checkbox from '../components/Checkbox.svelte';
-  import { Plus, Link, Edit, Trash2, Power, PowerOff } from '@lucide/svelte';
+  import Plus from '@lucide/svelte/icons/plus';
+  import Link from '@lucide/svelte/icons/link';
+  import Edit from '@lucide/svelte/icons/edit';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
+  import Power from '@lucide/svelte/icons/power';
+  import PowerOff from '@lucide/svelte/icons/power-off';
   import IconSelector from '../pickers/IconSelector.svelte';
   import DialogFooter from '../dialogs/DialogFooter.svelte';
   import { toHotkeyString } from '../utils/keyboardShortcuts.js';

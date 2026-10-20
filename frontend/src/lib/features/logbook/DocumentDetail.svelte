@@ -14,9 +14,17 @@
   import Lozenge from '../../components/Lozenge.svelte';
   import Progress from '../../components/Progress.svelte';
   import { computeDocumentHealth } from './healthScore.js';
-  import {
-    IconDeviceFloppy as Save, IconFileText as FileText, IconNote as StickyNote, IconMail as Mail, IconClock as Clock, IconHash as Hash, IconEye as Eye, IconTrash as Trash2, IconExternalLink as ExternalLink, IconCircleCheck as CheckCircle, IconLoader as Loader
-  } from '@tabler/icons-svelte-runes';
+  import Save from '@tabler/icons-svelte-runes/icons/device-floppy';
+  import FileText from '@tabler/icons-svelte-runes/icons/file-text';
+  import StickyNote from '@tabler/icons-svelte-runes/icons/note';
+  import Mail from '@tabler/icons-svelte-runes/icons/mail';
+  import Clock from '@tabler/icons-svelte-runes/icons/clock';
+  import Hash from '@tabler/icons-svelte-runes/icons/hash';
+  import Eye from '@tabler/icons-svelte-runes/icons/eye';
+  import Trash2 from '@tabler/icons-svelte-runes/icons/trash';
+  import ExternalLink from '@tabler/icons-svelte-runes/icons/external-link';
+  import CheckCircle from '@tabler/icons-svelte-runes/icons/circle-check';
+  import Loader from '@tabler/icons-svelte-runes/icons/loader';
   import { formatDateShort } from '../../utils/dateFormatter.js';
   import LazyMilkdownEditor from '../../editors/LazyMilkdownEditor.svelte';
   import RunActionMenu from './RunActionMenu.svelte';

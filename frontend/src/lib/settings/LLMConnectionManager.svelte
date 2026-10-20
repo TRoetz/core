@@ -2,9 +2,15 @@
   import { onMount } from 'svelte';
   import StateDisplay from '../components/StateDisplay.svelte';
   import { actionCapabilities as actionCapabilitiesApi, llmConnections, llmProviders } from '../api/ai.js';
-  import {
-    Plus, Edit, Trash2, TestTube, CheckCircle, Star, AlertTriangle, Eye, EyeOff
-  } from '@lucide/svelte';
+  import Plus from '@lucide/svelte/icons/plus';
+  import Edit from '@lucide/svelte/icons/edit';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
+  import TestTube from '@lucide/svelte/icons/test-tube';
+  import CheckCircle from '@lucide/svelte/icons/check-circle';
+  import Star from '@lucide/svelte/icons/star';
+  import AlertTriangle from '@lucide/svelte/icons/alert-triangle';
+  import Eye from '@lucide/svelte/icons/eye';
+  import EyeOff from '@lucide/svelte/icons/eye-off';
   import Button from '../components/Button.svelte';
   import Input from '../components/Input.svelte';
   import Checkbox from '../components/Checkbox.svelte';

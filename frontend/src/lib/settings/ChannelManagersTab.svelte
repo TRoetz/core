@@ -1,7 +1,11 @@
 <script>
   import { onMount } from 'svelte';
   import StateDisplay from '../components/StateDisplay.svelte';
-  import { User, Users, X, Plus, Shield } from '@lucide/svelte';
+  import User from '@lucide/svelte/icons/user';
+  import Users from '@lucide/svelte/icons/users';
+  import X from '@lucide/svelte/icons/x';
+  import Plus from '@lucide/svelte/icons/plus';
+  import Shield from '@lucide/svelte/icons/shield';
   import Button from '../components/Button.svelte';
   import AssigneePicker from '../pickers/AssigneePicker.svelte';
   import { confirm } from '../composables/useConfirm.js';

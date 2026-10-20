@@ -1,5 +1,9 @@
 <script>
-  import { AlertTriangle, Check, Edit3, X, Search } from '@lucide/svelte';
+  import AlertTriangle from '@lucide/svelte/icons/alert-triangle';
+  import Check from '@lucide/svelte/icons/check';
+  import Edit3 from '@lucide/svelte/icons/edit-3';
+  import X from '@lucide/svelte/icons/x';
+  import Search from '@lucide/svelte/icons/search';
   import Tooltip from '../../components/Tooltip.svelte';
   import Input from '../../components/Input.svelte';
   import ItemTypeIcon from '../../components/ItemTypeIcon.svelte';

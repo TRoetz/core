@@ -1,5 +1,7 @@
 <script>
-  import { Loader2, CheckCircle2, XCircle } from '@lucide/svelte';
+  import Loader2 from '@lucide/svelte/icons/loader-2';
+  import CheckCircle2 from '@lucide/svelte/icons/check-circle-2';
+  import XCircle from '@lucide/svelte/icons/x-circle';
   import { tests } from '../../api/tests/index.js';
   import { t } from '../../stores/i18n.svelte.js';
   import Button from '../../components/Button.svelte';

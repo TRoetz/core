@@ -1,6 +1,7 @@
 <script>
   import { onMount } from 'svelte';
-  import { ChevronDown, X } from '@lucide/svelte';
+  import ChevronDown from '@lucide/svelte/icons/chevron-down';
+  import X from '@lucide/svelte/icons/x';
   import { queryLanguage } from '../api/queryLanguage.js';
   import { t } from '../stores/i18n.svelte.js';
   import BasePicker from './BasePicker.svelte';

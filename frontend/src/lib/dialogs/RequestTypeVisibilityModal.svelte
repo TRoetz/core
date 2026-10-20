@@ -1,5 +1,9 @@
 <script>
-  import { Shield, Users, Building2, Check, Info } from '@lucide/svelte';
+  import Shield from '@lucide/svelte/icons/shield';
+  import Users from '@lucide/svelte/icons/users';
+  import Building2 from '@lucide/svelte/icons/building-2';
+  import Check from '@lucide/svelte/icons/check';
+  import Info from '@lucide/svelte/icons/info';
   import StateDisplay from '../components/StateDisplay.svelte';
   import Modal from './Modal.svelte';
   import Spinner from '../components/Spinner.svelte';

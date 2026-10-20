@@ -1,6 +1,6 @@
 <script>
   import { tick } from 'svelte';
-  import { Clock } from '@lucide/svelte';
+  import Clock from '@lucide/svelte/icons/clock';
   import { t } from '../stores/i18n.svelte.js';
   import { durationToString, parseDuration } from '../utils/timeUtils.js';
   import BaseInlineEditor from './BaseInlineEditor.svelte';

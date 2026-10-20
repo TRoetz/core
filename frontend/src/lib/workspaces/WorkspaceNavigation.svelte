@@ -1,19 +1,17 @@
 <script>
   import { onMount } from 'svelte';
-  import {
-    IconPlus as Plus,
-    IconArrowLeft as ArrowLeft,
-    IconSquareCheck as CheckSquare,
-    IconCalendar as Calendar,
-    IconHome as Home,
-    IconSettings as Settings,
-    IconBook as BookOpen,
-    IconChevronDown as ChevronDown,
-    IconChevronRight,
-    IconPalette as Palette,
-    IconSparkles as Sparkles,
-    IconPencil as Pencil,
-  } from '@tabler/icons-svelte-runes';
+  import Plus from '@tabler/icons-svelte-runes/icons/plus';
+  import ArrowLeft from '@tabler/icons-svelte-runes/icons/arrow-left';
+  import CheckSquare from '@tabler/icons-svelte-runes/icons/square-check';
+  import Calendar from '@tabler/icons-svelte-runes/icons/calendar';
+  import Home from '@tabler/icons-svelte-runes/icons/home';
+  import Settings from '@tabler/icons-svelte-runes/icons/settings';
+  import BookOpen from '@tabler/icons-svelte-runes/icons/book';
+  import ChevronDown from '@tabler/icons-svelte-runes/icons/chevron-down';
+  import IconChevronRight from '@tabler/icons-svelte-runes/icons/chevron-right';
+  import Palette from '@tabler/icons-svelte-runes/icons/palette';
+  import Sparkles from '@tabler/icons-svelte-runes/icons/sparkles';
+  import Pencil from '@tabler/icons-svelte-runes/icons/pencil';
   import { workspaceViewItems, workspaceOnlyViews, testNavigationItems, visibleWorkspaceSettingsItems, workspaceSettingsViews, workspaceSettingsRoute, collectionSwitchUrl } from '../navigation/workspaceNavigation.js';
   import { viewSettingsStore } from '../stores/viewSettings.svelte.js';
   import { navigate, currentRoute } from '../router.js';

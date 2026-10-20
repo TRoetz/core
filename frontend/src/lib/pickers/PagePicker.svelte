@@ -2,7 +2,7 @@
   import { BasePicker } from '.';
   import { createAsyncLoader } from '../composables';
   import { pages as pagesApi } from '../api/pages.js';
-  import { FileText } from '@lucide/svelte';
+  import FileText from '@lucide/svelte/icons/file-text';
   import { onDestroy, untrack } from 'svelte';
   import { t } from '../stores/i18n.svelte.js';
 

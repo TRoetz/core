@@ -1,6 +1,6 @@
 <script>
   import { onDestroy } from 'svelte';
-  import { Globe } from '@lucide/svelte';
+  import Globe from '@lucide/svelte/icons/globe';
   import { updateUserRegionalSettings } from '../api/users.js';
   import AlertBox from '../components/AlertBox.svelte';
   import Button from '../components/Button.svelte';

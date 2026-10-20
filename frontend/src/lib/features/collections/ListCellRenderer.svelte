@@ -12,7 +12,10 @@
   import ColorDot from '../../components/ColorDot.svelte';
   import Checkbox from '../../components/Checkbox.svelte';
   import ListCustomFieldCell from './ListCustomFieldCell.svelte';
-  import { Calendar, User, Target, FolderKanban } from '@lucide/svelte';
+  import Calendar from '@lucide/svelte/icons/calendar';
+  import User from '@lucide/svelte/icons/user';
+  import Target from '@lucide/svelte/icons/target';
+  import FolderKanban from '@lucide/svelte/icons/folder-kanban';
   import ItemTypeIcon from '../../components/ItemTypeIcon.svelte';
   import { formatDate, formatDateOnly, formatDateTimeLocale } from '../../utils/dateFormatter.js';
   import { durationToString } from '../../utils/timeUtils.js';

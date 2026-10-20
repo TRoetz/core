@@ -2,11 +2,21 @@
   import { onMount, onDestroy } from 'svelte';
   import { draggable, dropTargetForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
   import { attachClosestEdge, extractClosestEdge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge';
-  import {
-    IconGripVertical, IconTrash, IconAsterisk, IconSearch, IconPlus, IconDeviceFloppy,
-    IconSettings, IconTextSize, IconForms, IconCheckbox, IconSelect, IconAlignBoxLeftTop,
-    IconPencil, IconEye, IconExternalLink
-  } from '@tabler/icons-svelte-runes';
+  import IconGripVertical from '@tabler/icons-svelte-runes/icons/grip-vertical';
+  import IconTrash from '@tabler/icons-svelte-runes/icons/trash';
+  import IconAsterisk from '@tabler/icons-svelte-runes/icons/asterisk';
+  import IconSearch from '@tabler/icons-svelte-runes/icons/search';
+  import IconPlus from '@tabler/icons-svelte-runes/icons/plus';
+  import IconDeviceFloppy from '@tabler/icons-svelte-runes/icons/device-floppy';
+  import IconSettings from '@tabler/icons-svelte-runes/icons/settings';
+  import IconTextSize from '@tabler/icons-svelte-runes/icons/text-size';
+  import IconForms from '@tabler/icons-svelte-runes/icons/forms';
+  import IconCheckbox from '@tabler/icons-svelte-runes/icons/checkbox';
+  import IconSelect from '@tabler/icons-svelte-runes/icons/select';
+  import IconAlignBoxLeftTop from '@tabler/icons-svelte-runes/icons/align-box-left-top';
+  import IconPencil from '@tabler/icons-svelte-runes/icons/pencil';
+  import IconEye from '@tabler/icons-svelte-runes/icons/eye';
+  import IconExternalLink from '@tabler/icons-svelte-runes/icons/external-link';
   import { t } from '../../stores/i18n.svelte.js';
   import {
     configurationSets,

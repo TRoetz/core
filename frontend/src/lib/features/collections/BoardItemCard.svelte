@@ -1,5 +1,6 @@
 <script>
-  import { CalendarDays, MoreHorizontal } from '@lucide/svelte';
+  import CalendarDays from '@lucide/svelte/icons/calendar-days';
+  import MoreHorizontal from '@lucide/svelte/icons/more-horizontal';
   import Avatar from '../../components/Avatar.svelte';
   import DropIndicator from '../../layout/DropIndicator.svelte';
   import DropdownMenu from '../../layout/DropdownMenu.svelte';

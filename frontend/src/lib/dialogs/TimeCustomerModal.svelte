@@ -6,7 +6,8 @@
   import CustomFieldRenderer from '../features/items/CustomFieldRenderer.svelte';
   import Label from '../components/Label.svelte';
   import Checkbox from '../components/Checkbox.svelte';
-  import { Camera, Trash2 } from '@lucide/svelte';
+  import Camera from '@lucide/svelte/icons/camera';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
   import { attachments } from '../api/misc.js';
   import { t } from '../stores/i18n.svelte.js';
   import { errorToast, warningToast } from '../stores/toasts.svelte.js';

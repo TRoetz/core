@@ -2,7 +2,11 @@
   import { onMount } from 'svelte';
   import StateDisplay from '../components/StateDisplay.svelte';
   import { attachmentSettings } from '../api/misc.js';
-  import { AlertCircle, CheckCircle, X, Plus, Paperclip } from '@lucide/svelte';
+  import AlertCircle from '@lucide/svelte/icons/alert-circle';
+  import CheckCircle from '@lucide/svelte/icons/check-circle';
+  import X from '@lucide/svelte/icons/x';
+  import Plus from '@lucide/svelte/icons/plus';
+  import Paperclip from '@lucide/svelte/icons/paperclip';
   import Button from '../components/Button.svelte';
   import Input from '../components/Input.svelte';
   import TextField from '../components/TextField.svelte';

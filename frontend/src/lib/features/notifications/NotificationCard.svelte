@@ -1,5 +1,10 @@
 <script>
-  import { X, MessageCircle, UserPlus, Activity, Clock, Target } from '@lucide/svelte';
+  import X from '@lucide/svelte/icons/x';
+  import MessageCircle from '@lucide/svelte/icons/message-circle';
+  import UserPlus from '@lucide/svelte/icons/user-plus';
+  import Activity from '@lucide/svelte/icons/activity';
+  import Clock from '@lucide/svelte/icons/clock';
+  import Target from '@lucide/svelte/icons/target';
   import { notificationActions } from '../../stores/notifications.js';
   import { navigate } from '../../router.js';
   import { t } from '../../stores/i18n.svelte.js';

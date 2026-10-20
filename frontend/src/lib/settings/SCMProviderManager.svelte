@@ -4,11 +4,15 @@
   import { scmProviders } from '../api/scm.js';
   import { post } from '../api/core.js';
   import { t } from '../stores/i18n.svelte.js';
-  import {
-    GitBranch, Plus, Edit, Trash2, RefreshCw,
-    TestTube, CheckCircle, XCircle
-  } from '@lucide/svelte';
-  import { IconBrandGithub as Github } from '@tabler/icons-svelte-runes';
+  import GitBranch from '@lucide/svelte/icons/git-branch';
+  import Plus from '@lucide/svelte/icons/plus';
+  import Edit from '@lucide/svelte/icons/edit';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
+  import RefreshCw from '@lucide/svelte/icons/refresh-cw';
+  import TestTube from '@lucide/svelte/icons/test-tube';
+  import CheckCircle from '@lucide/svelte/icons/check-circle';
+  import XCircle from '@lucide/svelte/icons/x-circle';
+  import Github from '@tabler/icons-svelte-runes/icons/brand-github';
   import Button from '../components/Button.svelte';
   import CopyButton from '../components/CopyButton.svelte';
   import Modal from '../dialogs/Modal.svelte';

@@ -1,18 +1,16 @@
 <script>
   import { useEventListener } from 'runed';
   import Spinner from '../../components/Spinner.svelte';
-  import {
-    TicketCheck,
-    Plus,
-    RefreshCw,
-    Loader2,
-    ExternalLink,
-    AlertTriangle,
-    Edit2,
-    Trash2,
-    ChevronDown,
-    ChevronUp,
-  } from '@lucide/svelte';
+  import TicketCheck from '@lucide/svelte/icons/ticket-check';
+  import Plus from '@lucide/svelte/icons/plus';
+  import RefreshCw from '@lucide/svelte/icons/refresh-cw';
+  import Loader2 from '@lucide/svelte/icons/loader-2';
+  import ExternalLink from '@lucide/svelte/icons/external-link';
+  import AlertTriangle from '@lucide/svelte/icons/alert-triangle';
+  import Edit2 from '@lucide/svelte/icons/edit-2';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
+  import ChevronDown from '@lucide/svelte/icons/chevron-down';
+  import ChevronUp from '@lucide/svelte/icons/chevron-up';
   import { zammadConnections, zammadTickets } from '../../api/integrations.js';
   import { isExpectedBackgroundSyncError } from '../../utils/backgroundSync.js';
   import Button from '../../components/Button.svelte';

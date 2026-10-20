@@ -7,7 +7,10 @@
 
   import { onMount } from 'svelte';
   import StateDisplay from '../components/StateDisplay.svelte';
-import { FileStack, Pencil, Plus, Trash2 } from '@lucide/svelte';
+import FileStack from '@lucide/svelte/icons/file-stack';
+import Pencil from '@lucide/svelte/icons/pencil';
+import Plus from '@lucide/svelte/icons/plus';
+import Trash2 from '@lucide/svelte/icons/trash-2';
   import { itemTemplates, itemTypes as itemTypesApi } from '../api/configuration.js';
   import Panel from '../components/Panel.svelte';
   import Button from '../components/Button.svelte';

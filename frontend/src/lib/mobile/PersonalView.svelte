@@ -1,7 +1,7 @@
 <script>
   import { workspaces } from '../api/workspaces.js';
   import { navigate } from '../router.js';
-  import { Command as CommandIcon } from '@lucide/svelte';
+  import CommandIcon from '@lucide/svelte/icons/command';
   import TodoList from '../features/items/TodoList.svelte';
   import MobileHeader from './MobileHeader.svelte';
   import { mobilePalette } from './mobilePalette.svelte.js';

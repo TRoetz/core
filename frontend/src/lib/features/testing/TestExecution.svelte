@@ -5,7 +5,14 @@
   import { items } from '../../api/items.js';
   import { tests } from '../../api/tests/index.js';
   import { isExpectedBackgroundSyncError } from '../../utils/backgroundSync.js';
-  import { IconCheck, IconX, IconBug, IconChevronRight, IconChevronLeft, IconPlus, IconLink, IconPlayerSkipForward } from '@tabler/icons-svelte-runes';
+  import IconCheck from '@tabler/icons-svelte-runes/icons/check';
+  import IconX from '@tabler/icons-svelte-runes/icons/x';
+  import IconBug from '@tabler/icons-svelte-runes/icons/bug';
+  import IconChevronRight from '@tabler/icons-svelte-runes/icons/chevron-right';
+  import IconChevronLeft from '@tabler/icons-svelte-runes/icons/chevron-left';
+  import IconPlus from '@tabler/icons-svelte-runes/icons/plus';
+  import IconLink from '@tabler/icons-svelte-runes/icons/link';
+  import IconPlayerSkipForward from '@tabler/icons-svelte-runes/icons/player-skip-forward';
   import { confirm } from '../../composables/useConfirm.js';
   import Button from '../../components/Button.svelte';
   import BackButton from '../../components/BackButton.svelte';

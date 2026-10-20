@@ -10,10 +10,17 @@
   import Modal from '../dialogs/Modal.svelte';
   import ModalHeader from '../dialogs/ModalHeader.svelte';
   import DialogFooter from '../dialogs/DialogFooter.svelte';
-  import {
-    Cloud, Plus, Trash2, ExternalLink, Link, Clock,
-    CheckCircle, XCircle, Loader, PlayCircle, AlertTriangle
-  } from '@lucide/svelte';
+  import Cloud from '@lucide/svelte/icons/cloud';
+  import Plus from '@lucide/svelte/icons/plus';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
+  import ExternalLink from '@lucide/svelte/icons/external-link';
+  import Link from '@lucide/svelte/icons/link';
+  import Clock from '@lucide/svelte/icons/clock';
+  import CheckCircle from '@lucide/svelte/icons/check-circle';
+  import XCircle from '@lucide/svelte/icons/x-circle';
+  import Loader from '@lucide/svelte/icons/loader';
+  import PlayCircle from '@lucide/svelte/icons/play-circle';
+  import AlertTriangle from '@lucide/svelte/icons/alert-triangle';
   import PageHeader from '../layout/PageHeader.svelte';
   import { addToast } from '../stores/toasts.svelte.js';
   import { t } from '../stores/i18n.svelte.js';

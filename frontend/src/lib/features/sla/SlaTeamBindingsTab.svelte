@@ -8,7 +8,10 @@
   import ModalHeader from '../../dialogs/ModalHeader.svelte';
   import DialogFooter from '../../dialogs/DialogFooter.svelte';
   import Select from '../../components/Select.svelte';
-  import { Handshake, Plus, Trash2, AlertCircle } from '@lucide/svelte';
+  import Handshake from '@lucide/svelte/icons/handshake';
+  import Plus from '@lucide/svelte/icons/plus';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
+  import AlertCircle from '@lucide/svelte/icons/alert-circle';
   import { t } from '../../stores/i18n.svelte.js';
   import { confirm } from '../../composables/useConfirm.js';
   import { successToast, errorToast } from '../../stores/toasts.svelte.js';

@@ -1,5 +1,10 @@
 <script>
-import { X, Table2, ChevronLeft, ChevronRight, AlertCircle, Package } from '@lucide/svelte';
+import X from '@lucide/svelte/icons/x';
+import Table2 from '@lucide/svelte/icons/table-2';
+import ChevronLeft from '@lucide/svelte/icons/chevron-left';
+import ChevronRight from '@lucide/svelte/icons/chevron-right';
+import AlertCircle from '@lucide/svelte/icons/alert-circle';
+import Package from '@lucide/svelte/icons/package';
 import EmptyState from '../components/EmptyState.svelte';
   import StateDisplay from '../components/StateDisplay.svelte';
   import { assetReports } from '../api/channels.js';

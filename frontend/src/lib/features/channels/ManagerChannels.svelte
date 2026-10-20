@@ -1,7 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import StateDisplay from '../../components/StateDisplay.svelte';
-  import { IconLifebuoy } from '@tabler/icons-svelte-runes';
+  import IconLifebuoy from '@tabler/icons-svelte-runes/icons/lifebuoy';
   import { channels as channelsApi } from '../../api/channels.js';
   import Button from '../../components/Button.svelte';
   import DataTable from '../../components/DataTable.svelte';

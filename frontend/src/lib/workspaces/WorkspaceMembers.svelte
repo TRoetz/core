@@ -1,7 +1,10 @@
 <script>
   import { onMount } from 'svelte';
   import { workspaceRoles } from '../api/workspaces.js';
-  import { UserPlus, Trash2, Shield, Users } from '@lucide/svelte';
+  import UserPlus from '@lucide/svelte/icons/user-plus';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
+  import Shield from '@lucide/svelte/icons/shield';
+  import Users from '@lucide/svelte/icons/users';
   import Button from '../components/Button.svelte';
   import Modal from '../dialogs/Modal.svelte';
   import UserPicker from '../pickers/UserPicker.svelte';

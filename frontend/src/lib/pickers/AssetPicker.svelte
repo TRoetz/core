@@ -3,7 +3,7 @@
   import { createAsyncLoader } from '../composables';
   import { assets as assetsApi } from '../api/assets.js';
   import { onDestroy, untrack } from 'svelte';
-  import { Box } from '@lucide/svelte';
+  import Box from '@lucide/svelte/icons/box';
   import { t } from '../stores/i18n.svelte.js';
   import DescriptionText from '../components/DescriptionText.svelte';
 

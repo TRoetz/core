@@ -8,7 +8,7 @@
   import { currentRoute, navigate, setNavigationInterceptor } from '../router.js';
   import { workspacesStore } from '../stores/workspaces.svelte.js';
   import { workspacePermissions } from '../stores/workspacePermissions.svelte.js';
-  import { FileText } from '@lucide/svelte';
+  import FileText from '@lucide/svelte/icons/file-text';
   import NativeSelect from '../components/NativeSelect.svelte';
   import CustomFieldRenderer from '../features/items/CustomFieldRenderer.svelte';
   import { loadMobileItemDetailSummary } from './mobileItemDetailData.js';

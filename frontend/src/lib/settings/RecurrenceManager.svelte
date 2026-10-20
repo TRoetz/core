@@ -4,7 +4,8 @@
   import { confirm } from '../composables/useConfirm.js';
   import { errorToast } from '../stores/toasts.svelte.js';
   import { recurrence } from '../api/recurrence.js';
-  import { Trash2, Repeat } from '@lucide/svelte';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
+  import Repeat from '@lucide/svelte/icons/repeat';
   import Button from '../components/Button.svelte';
   import DataTable from '../components/DataTable.svelte';
   import Lozenge from '../components/Lozenge.svelte';

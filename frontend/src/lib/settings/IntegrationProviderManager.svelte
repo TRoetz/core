@@ -2,7 +2,9 @@
 	import { onMount } from 'svelte';
   import StateDisplay from '../components/StateDisplay.svelte';
 	import { integrationProviders } from '../api/integrations.js';
- import { Plus, Edit2, Trash2 } from '@lucide/svelte';
+ import Plus from '@lucide/svelte/icons/plus';
+ import Edit2 from '@lucide/svelte/icons/edit-2';
+ import Trash2 from '@lucide/svelte/icons/trash-2';
 	import Button from '../components/Button.svelte';
 	import CopyButton from '../components/CopyButton.svelte';
 	import Modal from '../dialogs/Modal.svelte';

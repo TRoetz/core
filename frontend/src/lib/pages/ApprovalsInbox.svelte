@@ -3,7 +3,7 @@
   import { approvals } from '../api/approvals.js';
   import { errorToast } from '../stores/toasts.svelte.js';
   import { navigate } from '../router.js';
-  import { IconRubberStamp } from '@tabler/icons-svelte-runes';
+  import IconRubberStamp from '@tabler/icons-svelte-runes/icons/rubber-stamp';
   import PageHeader from '../layout/PageHeader.svelte';
   import Card from '../components/Card.svelte';
   import EmptyState from '../components/EmptyState.svelte';

@@ -1,6 +1,7 @@
 <script>
   import FileInput from './FileInput.svelte';
-  import { Upload, Trash2 } from '@lucide/svelte';
+  import Upload from '@lucide/svelte/icons/upload';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
   import BackgroundPresetGrid from './BackgroundPresetGrid.svelte';
   import Button from './Button.svelte';
   import Label from './Label.svelte';

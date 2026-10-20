@@ -4,7 +4,13 @@
   import { t } from '../../stores/i18n.svelte.js';
   import { confirm } from '../../composables/useConfirm.js';
   import { errorToast } from '../../stores/toasts.svelte.js';
-  import { IconCalendar as Calendar, IconFlag as Flag, IconEdit as Edit, IconTrash as Trash2, IconDots as MoreHorizontal, IconTag as Tag, IconExternalLink as ExternalLink } from '@tabler/icons-svelte-runes';
+  import Calendar from '@tabler/icons-svelte-runes/icons/calendar';
+  import Flag from '@tabler/icons-svelte-runes/icons/flag';
+  import Edit from '@tabler/icons-svelte-runes/icons/edit';
+  import Trash2 from '@tabler/icons-svelte-runes/icons/trash';
+  import MoreHorizontal from '@tabler/icons-svelte-runes/icons/dots';
+  import Tag from '@tabler/icons-svelte-runes/icons/tag';
+  import ExternalLink from '@tabler/icons-svelte-runes/icons/external-link';
   import { milestones } from '../../api/milestones.js';
   import { navigate } from '../../router.js';
   import Button from '../../components/Button.svelte';

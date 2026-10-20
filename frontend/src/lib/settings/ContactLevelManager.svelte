@@ -5,7 +5,10 @@
   // shared DataTable, EntityRowActions, and EntityFormModal components.
   import { onMount } from 'svelte';
   import { contactRoles } from '../api/portal.js';
-  import { Edit, Plus, Trash2, Users } from '@lucide/svelte';
+  import Edit from '@lucide/svelte/icons/edit';
+  import Plus from '@lucide/svelte/icons/plus';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
+  import Users from '@lucide/svelte/icons/users';
   import Button from '../components/Button.svelte';
   import DataTable from '../components/DataTable.svelte';
   import Input from '../components/Input.svelte';

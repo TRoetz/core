@@ -1,5 +1,5 @@
 <script>
-  import { PenLine } from '@lucide/svelte';
+  import PenLine from '@lucide/svelte/icons/pen-line';
   import { authStore } from '../../stores/auth.svelte.js';
   import { t } from '../../stores/i18n.svelte.js';
   import { items } from '../../api/items.js';

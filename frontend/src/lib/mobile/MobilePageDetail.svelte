@@ -1,5 +1,9 @@
 <script>
-  import { ChevronRight, House, Loader, Pencil, X } from '@lucide/svelte';
+  import ChevronRight from '@lucide/svelte/icons/chevron-right';
+  import House from '@lucide/svelte/icons/house';
+  import Loader from '@lucide/svelte/icons/loader';
+  import Pencil from '@lucide/svelte/icons/pencil';
+  import X from '@lucide/svelte/icons/x';
   import { pages } from '../api/pages.js';
   import { navigate } from '../router.js';
   import { errorToast, infoToast } from '../stores/toasts.svelte.js';

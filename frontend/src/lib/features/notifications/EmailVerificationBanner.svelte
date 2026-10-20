@@ -1,5 +1,7 @@
 <script>
-  import { Mail, RefreshCw, X } from '@lucide/svelte';
+  import Mail from '@lucide/svelte/icons/mail';
+  import RefreshCw from '@lucide/svelte/icons/refresh-cw';
+  import X from '@lucide/svelte/icons/x';
   import { auth } from '../../api/auth.js';
   import { t } from '../../stores/i18n.svelte.js';
 

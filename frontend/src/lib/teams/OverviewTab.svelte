@@ -1,6 +1,11 @@
 <script>
-  import { IconEdit, IconCheck, IconX, IconUser, IconUsers, IconStack2 } from '@tabler/icons-svelte-runes';
-  import { Package } from '@lucide/svelte';
+  import IconEdit from '@tabler/icons-svelte-runes/icons/edit';
+  import IconCheck from '@tabler/icons-svelte-runes/icons/check';
+  import IconX from '@tabler/icons-svelte-runes/icons/x';
+  import IconUser from '@tabler/icons-svelte-runes/icons/user';
+  import IconUsers from '@tabler/icons-svelte-runes/icons/users';
+  import IconStack2 from '@tabler/icons-svelte-runes/icons/stack-2';
+  import Package from '@lucide/svelte/icons/package';
   import { teams } from '../api/teams.js';
   import { t } from '../stores/i18n.svelte.js';
   import { errorToast, successToast } from '../stores/toasts.svelte.js';

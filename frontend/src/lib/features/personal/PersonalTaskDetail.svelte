@@ -7,7 +7,10 @@
   import Modal from '../../dialogs/Modal.svelte';
   import Comments from '../items/Comments.svelte';
   import ItemDetailDescription from '../items/ItemDetailDescription.svelte';
-  import { X, Calendar, MessageSquare, ExternalLink } from '@lucide/svelte';
+  import X from '@lucide/svelte/icons/x';
+  import Calendar from '@lucide/svelte/icons/calendar';
+  import MessageSquare from '@lucide/svelte/icons/message-square';
+  import ExternalLink from '@lucide/svelte/icons/external-link';
   import Button from '../../components/Button.svelte';
   import Checkbox from '../../components/Checkbox.svelte';
   import Input from '../../components/Input.svelte';

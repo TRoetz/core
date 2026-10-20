@@ -1,5 +1,9 @@
 <script>
-  import { Plus, X, Package, ChevronDown, LoaderCircle } from '@lucide/svelte';
+  import Plus from '@lucide/svelte/icons/plus';
+  import X from '@lucide/svelte/icons/x';
+  import Package from '@lucide/svelte/icons/package';
+  import ChevronDown from '@lucide/svelte/icons/chevron-down';
+  import LoaderCircle from '@lucide/svelte/icons/loader-circle';
   import { useEventListener } from 'runed';
   import Button from '../../components/Button.svelte';
   import Textarea from '../../components/Textarea.svelte';

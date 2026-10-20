@@ -1,6 +1,11 @@
 <script>
   import { onMount } from 'svelte';
-  import { IconPhoneCheck, IconUsersGroup, IconUsers, IconStack2, IconBellRinging, IconClock } from '@tabler/icons-svelte-runes';
+  import IconPhoneCheck from '@tabler/icons-svelte-runes/icons/phone-check';
+  import IconUsersGroup from '@tabler/icons-svelte-runes/icons/users-group';
+  import IconUsers from '@tabler/icons-svelte-runes/icons/users';
+  import IconStack2 from '@tabler/icons-svelte-runes/icons/stack-2';
+  import IconBellRinging from '@tabler/icons-svelte-runes/icons/bell-ringing';
+  import IconClock from '@tabler/icons-svelte-runes/icons/clock';
   import { teams } from '../api/teams.js';
   import { navigate } from '../router.js';
   import { authStore } from '../stores/auth.svelte.js';

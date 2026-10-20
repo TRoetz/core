@@ -1,5 +1,12 @@
 <script>
-	import { Bot, CalendarDays, Camera, GitBranch, Globe, Plane, Tag, User } from '@lucide/svelte';
+	import Bot from '@lucide/svelte/icons/bot';
+	import CalendarDays from '@lucide/svelte/icons/calendar-days';
+	import Camera from '@lucide/svelte/icons/camera';
+	import GitBranch from '@lucide/svelte/icons/git-branch';
+	import Globe from '@lucide/svelte/icons/globe';
+	import Plane from '@lucide/svelte/icons/plane';
+	import Tag from '@lucide/svelte/icons/tag';
+	import User from '@lucide/svelte/icons/user';
 	import { getUser } from '../api/users.js';
 	import AlertBox from '../components/AlertBox.svelte';
 	import Badge from '../components/Badge.svelte';

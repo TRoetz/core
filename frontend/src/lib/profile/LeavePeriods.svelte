@@ -1,6 +1,9 @@
 <script>
   import { onMount } from 'svelte';
-  import { IconPlus, IconEdit, IconTrash, IconCircle } from '@tabler/icons-svelte-runes';
+  import IconPlus from '@tabler/icons-svelte-runes/icons/plus';
+  import IconEdit from '@tabler/icons-svelte-runes/icons/edit';
+  import IconTrash from '@tabler/icons-svelte-runes/icons/trash';
+  import IconCircle from '@tabler/icons-svelte-runes/icons/circle';
   import { leave } from '../api/leave.js';
   import { authStore } from '../stores/auth.svelte.js';
   import { t } from '../stores/i18n.svelte.js';

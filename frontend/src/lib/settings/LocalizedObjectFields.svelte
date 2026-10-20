@@ -1,5 +1,7 @@
 <script>
-  import { ChevronDown, Languages, Trash2 } from '@lucide/svelte';
+  import ChevronDown from '@lucide/svelte/icons/chevron-down';
+  import Languages from '@lucide/svelte/icons/languages';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
   import { objectTranslations } from '../api/objectTranslations.js';
   import AlertBox from '../components/AlertBox.svelte';
   import Button from '../components/Button.svelte';

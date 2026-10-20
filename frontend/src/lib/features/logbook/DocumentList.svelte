@@ -18,9 +18,14 @@
   import Input from '../../components/Input.svelte';
   import DocumentUpload from './DocumentUpload.svelte';
   import { computeDocumentHealth } from './healthScore.js';
-  import {
-    IconPlus as Plus, IconUpload as Upload, IconFileText as FileText, IconNote as StickyNote, IconMail as Mail, IconBook as BookOpen, IconTrash as Trash2, IconExternalLink as ExternalLink
-  } from '@tabler/icons-svelte-runes';
+  import Plus from '@tabler/icons-svelte-runes/icons/plus';
+  import Upload from '@tabler/icons-svelte-runes/icons/upload';
+  import FileText from '@tabler/icons-svelte-runes/icons/file-text';
+  import StickyNote from '@tabler/icons-svelte-runes/icons/note';
+  import Mail from '@tabler/icons-svelte-runes/icons/mail';
+  import BookOpen from '@tabler/icons-svelte-runes/icons/book';
+  import Trash2 from '@tabler/icons-svelte-runes/icons/trash';
+  import ExternalLink from '@tabler/icons-svelte-runes/icons/external-link';
   import PageHeader from '../../layout/PageHeader.svelte';
   import { formatDateShort } from '../../utils/dateFormatter.js';
   import LazyMilkdownEditor from '../../editors/LazyMilkdownEditor.svelte';

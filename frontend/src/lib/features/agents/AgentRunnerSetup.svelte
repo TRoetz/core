@@ -1,10 +1,8 @@
 <script>
   import { onDestroy } from 'svelte';
-  import {
-    IconRefresh as Refresh,
-    IconServer as Server,
-    IconX as X,
-  } from '@tabler/icons-svelte-runes';
+  import Refresh from '@tabler/icons-svelte-runes/icons/refresh';
+  import Server from '@tabler/icons-svelte-runes/icons/server';
+  import X from '@tabler/icons-svelte-runes/icons/x';
   import { runnerPools } from '../../api/ai.js';
   import AlertBox from '../../components/AlertBox.svelte';
   import CopyButton from '../../components/CopyButton.svelte';

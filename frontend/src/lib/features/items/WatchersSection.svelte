@@ -1,5 +1,9 @@
 <script>
-  import { Eye, X, Plus, ChevronDown, ChevronRight } from '@lucide/svelte';
+  import Eye from '@lucide/svelte/icons/eye';
+  import X from '@lucide/svelte/icons/x';
+  import Plus from '@lucide/svelte/icons/plus';
+  import ChevronDown from '@lucide/svelte/icons/chevron-down';
+  import ChevronRight from '@lucide/svelte/icons/chevron-right';
   import Spinner from '../../components/Spinner.svelte';
   import Text from '../../components/Text.svelte';
   import Avatar from '../../components/Avatar.svelte';

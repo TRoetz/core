@@ -1,5 +1,5 @@
 <script>
-  import { ChevronRight } from '@lucide/svelte';
+  import ChevronRight from '@lucide/svelte/icons/chevron-right';
   import DropdownMenu from '../layout/DropdownMenu.svelte';
   import { workspaceMenuItems } from '../navigation/workspaceMenu.js';
   import { currentRoute } from '../router.js';

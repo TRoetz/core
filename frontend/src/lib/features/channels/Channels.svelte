@@ -3,7 +3,15 @@
   import StateDisplay from '../../components/StateDisplay.svelte';
   import { useEventListener } from 'runed';
   import { t } from '../../stores/i18n.svelte.js';
-  import { IconLifebuoy, IconPlus, IconTrash, IconSettings, IconSearch, IconTag, IconPower, IconFileText, IconMail } from '@tabler/icons-svelte-runes';
+  import IconLifebuoy from '@tabler/icons-svelte-runes/icons/lifebuoy';
+  import IconPlus from '@tabler/icons-svelte-runes/icons/plus';
+  import IconTrash from '@tabler/icons-svelte-runes/icons/trash';
+  import IconSettings from '@tabler/icons-svelte-runes/icons/settings';
+  import IconSearch from '@tabler/icons-svelte-runes/icons/search';
+  import IconTag from '@tabler/icons-svelte-runes/icons/tag';
+  import IconPower from '@tabler/icons-svelte-runes/icons/power';
+  import IconFileText from '@tabler/icons-svelte-runes/icons/file-text';
+  import IconMail from '@tabler/icons-svelte-runes/icons/mail';
   import { channels as channelsApi } from '../../api/channels.js';
   import { currentRoute, navigate } from '../../router.js';
   import { channelCategoriesStore } from '../../stores/channelCategories.js';

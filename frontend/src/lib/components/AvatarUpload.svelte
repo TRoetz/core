@@ -2,7 +2,9 @@
   import FileInput from './FileInput.svelte';
   /** Reusable image-avatar upload control with availability/MIME checks and
    * fallback tile. Categories require matching backend attachment support. */
-  import { Camera, Trash2, Package } from '@lucide/svelte';
+  import Camera from '@lucide/svelte/icons/camera';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
+  import Package from '@lucide/svelte/icons/package';
   import { attachments } from '../api/misc.js';
   import { attachmentStatus } from '../stores/attachmentStatus.svelte.js';
   import { t } from '../stores/i18n.svelte.js';

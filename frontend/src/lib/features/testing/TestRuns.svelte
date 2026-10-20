@@ -5,7 +5,9 @@
   import { getAssignableUsers } from '../../api/users.js';
   import { writable } from 'svelte/store';
   import { navigate } from '../../router.js';
-  import { IconTrash, IconPlayerPlay, IconEye } from '@tabler/icons-svelte-runes';
+  import IconTrash from '@tabler/icons-svelte-runes/icons/trash';
+  import IconPlayerPlay from '@tabler/icons-svelte-runes/icons/player-play';
+  import IconEye from '@tabler/icons-svelte-runes/icons/eye';
   import { escapeHtml } from '../../utils/sanitize.ts';
   import Button from '../../components/Button.svelte';
   import Input from '../../components/Input.svelte';

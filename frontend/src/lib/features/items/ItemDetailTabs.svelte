@@ -1,5 +1,17 @@
 <script>
-  import { MessageSquare, Clock, Play, Info, History, Edit, Trash2, MoreHorizontal, Bot, Activity, CalendarClock, TimerReset, RefreshCw } from '@lucide/svelte';
+  import MessageSquare from '@lucide/svelte/icons/message-square';
+  import Clock from '@lucide/svelte/icons/clock';
+  import Play from '@lucide/svelte/icons/play';
+  import Info from '@lucide/svelte/icons/info';
+  import History from '@lucide/svelte/icons/history';
+  import Edit from '@lucide/svelte/icons/edit';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
+  import MoreHorizontal from '@lucide/svelte/icons/more-horizontal';
+  import Bot from '@lucide/svelte/icons/bot';
+  import Activity from '@lucide/svelte/icons/activity';
+  import CalendarClock from '@lucide/svelte/icons/calendar-clock';
+  import TimerReset from '@lucide/svelte/icons/timer-reset';
+  import RefreshCw from '@lucide/svelte/icons/refresh-cw';
   import { items } from '../../api/items.js';
   import Button from '../../components/Button.svelte';
   import DropdownMenu from '../../layout/DropdownMenu.svelte';

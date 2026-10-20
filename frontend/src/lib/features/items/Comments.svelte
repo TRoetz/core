@@ -16,7 +16,8 @@
 	import Badge from '../../components/Badge.svelte';
 	import AlertBox from '../../components/AlertBox.svelte';
 	import Tooltip from '../../components/Tooltip.svelte';
-	import { Shield, Bot } from '@lucide/svelte';
+	import Shield from '@lucide/svelte/icons/shield';
+	import Bot from '@lucide/svelte/icons/bot';
 	import { agentOwnerName, loadAttributedComments } from './activityAttributionData.js';
 	import { isExpectedBackgroundSyncError } from '../../utils/backgroundSync.js';
 	import { workspacePermissions } from '../../stores/workspacePermissions.svelte.js';

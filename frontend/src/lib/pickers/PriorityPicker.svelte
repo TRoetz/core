@@ -1,7 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import { priorities as prioritiesApi } from '../api/configuration.js';
-  import { AlertCircle } from '@lucide/svelte';
+  import AlertCircle from '@lucide/svelte/icons/alert-circle';
   import { priorityIconMap } from '../utils/icons.js';
   import ItemPicker from './ItemPicker.svelte';
   import { t } from '../stores/i18n.svelte.js';

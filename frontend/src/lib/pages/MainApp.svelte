@@ -1,5 +1,5 @@
 <script>
-  import { Menu } from '@lucide/svelte';
+  import Menu from '@lucide/svelte/icons/menu';
   import { useEventListener } from 'runed';
   import { auth } from '../api/auth.js';
   import Button from '../components/Button.svelte';

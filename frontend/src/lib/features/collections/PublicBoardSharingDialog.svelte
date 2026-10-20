@@ -1,5 +1,6 @@
 <script>
-  import { IconExternalLink, IconWorld } from '@tabler/icons-svelte-runes';
+  import IconExternalLink from '@tabler/icons-svelte-runes/icons/external-link';
+  import IconWorld from '@tabler/icons-svelte-runes/icons/world';
   import Button from '../../components/Button.svelte';
   import Checkbox from '../../components/Checkbox.svelte';
   import CopyButton from '../../components/CopyButton.svelte';

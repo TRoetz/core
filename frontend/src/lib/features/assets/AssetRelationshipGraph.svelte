@@ -14,7 +14,7 @@
   import { items } from '../../api/items.js';
   import { navigate } from '../../router.js';
   import { t } from '../../stores/i18n.svelte.js';
-  import { IconAlertTriangle } from '@tabler/icons-svelte-runes';
+  import IconAlertTriangle from '@tabler/icons-svelte-runes/icons/alert-triangle';
 
   let { isOpen = $bindable(false), assetId } = $props();
 

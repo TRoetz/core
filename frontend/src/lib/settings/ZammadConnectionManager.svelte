@@ -4,7 +4,11 @@
   import { zammadConnections } from '../api/integrations.js';
   import { statuses as statusesApi } from '../api/workflows.js';
   import { workspacesStore } from '../stores/workspaces.svelte.js';
-  import { Plus, Edit2, Trash2, PlugZap, RefreshCw } from '@lucide/svelte';
+  import Plus from '@lucide/svelte/icons/plus';
+  import Edit2 from '@lucide/svelte/icons/edit-2';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
+  import PlugZap from '@lucide/svelte/icons/plug-zap';
+  import RefreshCw from '@lucide/svelte/icons/refresh-cw';
   import Button from '../components/Button.svelte';
   import Modal from '../dialogs/Modal.svelte';
   import ModalHeader from '../dialogs/ModalHeader.svelte';
