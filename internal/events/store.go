@@ -461,6 +461,18 @@ type GateResult struct {
 
 // gateSQL is the once-per-tick statement. It is dialect-neutral: no array
 // parameters, no locking clause, plain ? placeholders.
+//
+// The eligibility branch probes deliveries per active consumer instead of
+// scanning the queue. Each EXISTS stops at the first matching row, so the cost
+// is bounded by the number of consumers, not by how many deliveries are due.
+// Asking the same question as one predicate over the queue degrades with the
+// due backlog instead: at 10M due rows SQLite took 6.7 s and split two ways
+// still 3.0 s, while the probes stayed at 0.4 ms.
+//
+// The pending/retry probe rides idx_domain_event_deliveries_runnable
+// (consumer_key, state, next_attempt_at); the lease probe rides
+// idx_domain_event_deliveries_lease. Both indexes already exist, so the gate
+// needs no schema change.
 const gateSQL = `
 	SELECT 1 AS gate_kind, CAST(NULL AS TEXT) AS consumer_key, CAST(COALESCE(MAX(id), 0) AS INTEGER) AS event_id
 	FROM domain_events
@@ -470,15 +482,23 @@ const gateSQL = `
 	WHERE consumer.is_active = true
 	  AND EXISTS (SELECT 1 FROM domain_events event WHERE event.id > ?)
 	UNION ALL
-	SELECT 3, delivery.consumer_key, CAST(NULL AS INTEGER)
-	FROM domain_event_deliveries delivery
-	JOIN domain_event_consumers consumer ON consumer.consumer_key = delivery.consumer_key
+	SELECT 3, consumer.consumer_key, CAST(NULL AS INTEGER)
+	FROM domain_event_consumers consumer
 	WHERE consumer.is_active = true
 	  AND (
-		(delivery.state IN ('pending', 'retry') AND delivery.next_attempt_at <= ?)
-		OR (delivery.state = 'leased' AND delivery.lease_expires_at <= ?)
+		EXISTS (
+			SELECT 1 FROM domain_event_deliveries delivery
+			WHERE delivery.consumer_key = consumer.consumer_key
+			  AND delivery.state IN ('pending', 'retry')
+			  AND delivery.next_attempt_at <= ?
+		)
+		OR EXISTS (
+			SELECT 1 FROM domain_event_deliveries delivery
+			WHERE delivery.consumer_key = consumer.consumer_key
+			  AND delivery.state = 'leased'
+			  AND delivery.lease_expires_at <= ?
+		)
 	  )
-	GROUP BY delivery.consumer_key
 `
 
 // Gate answers which consumers have work in one statement. Before this, an
