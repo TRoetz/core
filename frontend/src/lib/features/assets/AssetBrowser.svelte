@@ -6,6 +6,7 @@
   import { api } from '../../api.js';
   import { navigate, currentRoute, updateQueryParams } from '../../router.js';
   import Button from '../../components/Button.svelte';
+  import BackButton from '../../components/BackButton.svelte';
   import Input from '../../components/Input.svelte';
   import Label from '../../components/Label.svelte';
   import PageHeader from '../../layout/PageHeader.svelte';
@@ -16,7 +17,7 @@
   import ColorDot from '../../components/ColorDot.svelte';
   import Select from '../../components/Select.svelte';
   import DataTable from '../../components/DataTable.svelte';
-  import { IconPlus, IconPackage, IconEdit, IconTrash, IconBox, IconChevronRight, IconChevronDown, IconFolder, IconFolderOpen, IconSearch, IconCode, IconUpload, IconShare, IconArrowLeft, IconSettings } from '@tabler/icons-svelte-runes';
+  import { IconPlus, IconPackage, IconEdit, IconTrash, IconBox, IconChevronRight, IconChevronDown, IconFolder, IconFolderOpen, IconSearch, IconCode, IconUpload, IconShare, IconSettings } from '@tabler/icons-svelte-runes';
   import { permissionStore } from '../../stores/permissions.svelte.js';
   import AssetRelationshipGraph from './AssetRelationshipGraph.svelte';
   import AssetImportWizard from './import/AssetImportWizard.svelte';
@@ -557,14 +558,11 @@
         </div>
       {:else if directAsset}
         <!-- Back button -->
-        <button
-          class="hover-bg inline-flex items-center gap-1.5 mb-6 text-sm font-medium rounded-lg px-3 py-1.5 transition-colors"
-          style="color: var(--ds-text-subtle);"
+        <BackButton
           onclick={() => navigate('/assets')}
-        >
-          <IconArrowLeft class="w-4 h-4" />
-          {t('common.back')}
-        </button>
+          label={t('common.back')}
+          class="mb-6"
+        />
 
         <!-- Header -->
         <div class="flex items-center justify-between mb-6">

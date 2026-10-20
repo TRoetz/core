@@ -1,7 +1,6 @@
 <script>
   import { onDestroy, onMount } from 'svelte';
   import {
-    IconArrowLeft as ArrowLeft,
     IconBolt as Bolt,
     IconCheck as Check,
     IconCode as Code,
@@ -24,6 +23,7 @@
   import DropdownMenu from '../../layout/DropdownMenu.svelte';
   import AlertBox from '../../components/AlertBox.svelte';
   import Avatar from '../../components/Avatar.svelte';
+  import BackButton from '../../components/BackButton.svelte';
   import Badge from '../../components/Badge.svelte';
   import Button from '../../components/Button.svelte';
   import Card from '../../components/Card.svelte';
@@ -670,15 +670,11 @@
   data-testid="agent-profile"
 >
   <div class="mx-auto max-w-5xl space-y-6">
-    <Button
+    <BackButton
       href={`/workspaces/${workspaceId}/agents`}
-      variant="subtle"
-      size="small"
-      icon={ArrowLeft}
-      dataTestid="agent-profile-back"
-    >
-      Back to agents
-    </Button>
+      label="Back to agents"
+      testid="agent-profile-back"
+    />
 
     {#if loading}
       <StateDisplay type="loading" message="Loading agent profile…" class="py-20" />

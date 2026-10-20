@@ -2,8 +2,8 @@
   import { onMount } from 'svelte';
   import { currentRoute, navigate } from '../../router.js';
   import { api } from '../../api.js';
-  import { ArrowLeft, Save, X, Plus, Trash2 } from '@lucide/svelte';
-  import Button from '../../components/Button.svelte';
+  import { Save, X, Plus, Trash2 } from '@lucide/svelte';
+  import BackButton from '../../components/BackButton.svelte';
   import { t } from '../../stores/i18n.svelte.js';
   import { errorToast } from '../../stores/toasts.svelte.js';
 
@@ -81,13 +81,10 @@
     <div class="max-w-full px-6 py-4">
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-4">
-          <Button
-            variant="default"
-            icon={ArrowLeft}
+          <BackButton
             onclick={() => navigate('/admin/workflows')}
-          >
-            {t('workflows.backToWorkflows')}
-          </Button>
+            label={t('workflows.backToWorkflows')}
+          />
           <div>
             <h1 class="text-xl font-medium" style="color: var(--ds-text);">
               {workflow?.name || t('nav.loading')} - {t('workflows.workflowDesigner')}

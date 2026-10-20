@@ -1,5 +1,5 @@
 <script>
-  import { Sun, Moon, Palette, Type, Ruler, Square, TextCursor, AlertCircle, List, AlignLeft, FormInput, Search, Loader, MessageCircle, Tag, CircleDot, Inbox, PanelTop, Columns3, Navigation, Link2, ChevronsLeftRight, Layers, ChevronDown, Hash, MousePointer, Sliders, Building, Users, AtSign, Grid, FileText, BarChart3, BadgeCheck, Disc, MousePointer2, LayoutDashboard, ClipboardPenLine } from '@lucide/svelte'
+  import { Sun, Moon, Palette, Type, Ruler, Square, TextCursor, AlertCircle, List, AlignLeft, FormInput, Search, Loader, MessageCircle, Tag, CircleDot, Inbox, PanelTop, Columns3, Navigation, Link2, ChevronsLeftRight, Layers, ChevronDown, Hash, MousePointer, Sliders, Building, Users, AtSign, Grid, FileText, BarChart3, BadgeCheck, Disc, MousePointer2, LayoutDashboard, ClipboardPenLine, ArrowLeft } from '@lucide/svelte'
 
   // Composition Examples
   import BoardExample from './pages/BoardExample.svelte'
@@ -43,6 +43,7 @@
   // Navigation Component Pages
   import TabsPage from './pages/Tabs.svelte'
   import LinkPage from './pages/Link.svelte'
+  import BackButtonPage from './pages/BackButton.svelte'
   import PaginationPage from './pages/Pagination.svelte'
 
   // Modal Component Pages
@@ -140,6 +141,7 @@
       items: [
         { id: 'tabs', label: 'Tabs', icon: Navigation },
         { id: 'link', label: 'Link', icon: Link2 },
+        { id: 'backbutton', label: 'BackButton', icon: ArrowLeft },
         { id: 'pagination', label: 'Pagination', icon: ChevronsLeftRight },
       ]
     },
@@ -297,6 +299,8 @@
       <TabsPage />
     {:else if currentPage === 'link'}
       <LinkPage />
+    {:else if currentPage === 'backbutton'}
+      <BackButtonPage />
     {:else if currentPage === 'pagination'}
       <PaginationPage />
     {:else if currentPage === 'modal'}

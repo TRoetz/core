@@ -24,6 +24,7 @@
   import ScrollableSidebar from '../layout/ScrollableSidebar.svelte';
   import SidebarResizeHandle from '../layout/SidebarResizeHandle.svelte';
   import Tooltip from '../components/Tooltip.svelte';
+  import BackButton from '../components/BackButton.svelte';
   import PagesNavSidebar from '../features/pages/PagesNavSidebar.svelte';
   import WorkspaceAdminNav from './WorkspaceAdminNav.svelte';
   import { i18n, t } from '../stores/i18n.svelte.js';
@@ -447,10 +448,13 @@
 
 {#snippet drilldownSidebarHeader()}
   <div class="px-4 pb-3">
-    <a class="workspace-header-back-link" href={`/workspaces/${workspaceId}`} data-testid="workspace-back-link">
-      <ArrowLeft size={13} />
-      <span>{t('workspaceSettings.backToWorkspace')}</span>
-    </a>
+    <BackButton
+      href={`/workspaces/${workspaceId}`}
+      label={t('workspaceSettings.backToWorkspace')}
+      size="small"
+      testid="workspace-back-link"
+      class="mt-0.5"
+    />
   </div>
 {/snippet}
 
@@ -678,23 +682,6 @@
       opacity: 1;
       transform: translateX(0);
     }
-  }
-
-  .workspace-header-back-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
-    margin-top: 0.125rem;
-    color: var(--ds-text-subtle);
-    font-size: 0.75rem;
-    line-height: 1rem;
-    text-decoration: none;
-    transition: color 120ms ease;
-  }
-
-  .workspace-header-back-link:hover {
-    color: var(--ds-text);
-    text-decoration: underline;
   }
 
   /* Keep the shared handle's outer half clickable. */

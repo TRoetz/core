@@ -5,8 +5,9 @@
   import { currentRoute, navigate } from '../router.js';
   import { api } from '../api.js';
   import { confirm } from '../composables/useConfirm.js';
-  import { ArrowLeft, Plus, Trash2, ChevronDown, ChevronUp, HelpCircle } from '@lucide/svelte';
+  import { Plus, Trash2, ChevronDown, ChevronUp, HelpCircle } from '@lucide/svelte';
   import Button from '../components/Button.svelte';
+  import BackButton from '../components/BackButton.svelte';
   import Input from '../components/Input.svelte';
   import NativeSelect from '../components/NativeSelect.svelte';
   import Textarea from '../components/Textarea.svelte';
@@ -417,14 +418,7 @@
   <div class="border-b px-6 py-4" style="background-color: var(--ds-surface-raised); border-color: var(--ds-border);">
     <div class="flex items-center justify-between">
       <div class="flex items-center gap-4">
-        <button
-          onclick={goBack}
-          class="transition-colors"
-          style="color: var(--ds-text-subtle);"
-          title={t('conditionSets.backToList')}
-        >
-          <ArrowLeft class="w-5 h-5" />
-        </button>
+        <BackButton onclick={goBack} tooltip={t('conditionSets.backToList')} class="p-1" />
         <div>
           <h1 class="text-xl font-semibold" style="color: var(--ds-text);">
             {#if loading}

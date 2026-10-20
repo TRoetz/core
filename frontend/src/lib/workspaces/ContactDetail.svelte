@@ -1,11 +1,12 @@
 <script>
   import { onMount } from 'svelte';
   import Badge from '../components/Badge.svelte';
-  import { IconArrowLeft as ArrowLeft, IconUsers as Users, IconMail as Mail, IconPhone as Phone, IconEdit as Edit2, IconSend as Send, IconMessage as MessageCircle, IconTrash as Trash2, IconDots as MoreHorizontal } from '@tabler/icons-svelte-runes';
+  import { IconUsers as Users, IconMail as Mail, IconPhone as Phone, IconEdit as Edit2, IconSend as Send, IconMessage as MessageCircle, IconTrash as Trash2, IconDots as MoreHorizontal } from '@tabler/icons-svelte-runes';
   import { api } from '../api.js';
   import { confirm } from '../composables/useConfirm.js';
   import { errorToast } from '../stores/toasts.svelte.js';
   import Button from '../components/Button.svelte';
+  import BackButton from '../components/BackButton.svelte';
   import Avatar from '../components/Avatar.svelte';
   import Tabs from '../components/Tabs.svelte';
   import Spinner from '../components/Spinner.svelte';
@@ -236,14 +237,11 @@
 
 <div>
   <!-- Back button -->
-  <button
+  <BackButton
     onclick={onBack}
-    class="flex items-center gap-2 mb-4 text-sm hover:underline"
-    style="color: var(--ds-text-subtle);"
-  >
-    <ArrowLeft class="w-4 h-4" />
-    {t('workspaces.customers.backToCustomers') || 'Back to Customers'}
-  </button>
+    label={t('workspaces.customers.backToCustomers') || 'Back to Customers'}
+    class="mb-4"
+  />
 
   {#if loading}
     <div class="flex items-center justify-center h-64">

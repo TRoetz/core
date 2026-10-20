@@ -1,8 +1,9 @@
 <script>
   import DataTable from '../../components/DataTable.svelte';
   import Button from '../../components/Button.svelte';
+  import BackButton from '../../components/BackButton.svelte';
   import PageHeader from '../../layout/PageHeader.svelte';
-  import { IconArchive, IconArrowLeft } from '@tabler/icons-svelte-runes';
+  import { IconArchive } from '@tabler/icons-svelte-runes';
   import { api } from '../../api.js';
   import { navigate } from '../../router.js';
   import { t } from '../../stores/i18n.svelte.js';
@@ -90,10 +91,7 @@
     subtitle={t('pages.archivedSubtitle')}
   >
     {#snippet actions()}
-      <Button variant="ghost" size="small" onclick={goBack} dataTestid="archived-pages-back">
-        <IconArrowLeft size={14} />
-        {t('pages.archivedBack')}
-      </Button>
+      <BackButton onclick={goBack} testid="archived-pages-back" label={t('pages.archivedBack')} />
     {/snippet}
   </PageHeader>
 

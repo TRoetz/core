@@ -2,8 +2,9 @@
   import { onMount } from 'svelte';
   import { currentRoute, navigate } from '../../router.js';
   import { api } from '../../api.js';
-  import { IconArrowLeft, IconPlayerPlay, IconEdit, IconTrash } from '@tabler/icons-svelte-runes';
+  import { IconPlayerPlay, IconEdit, IconTrash } from '@tabler/icons-svelte-runes';
   import Button from '../../components/Button.svelte';
+  import BackButton from '../../components/BackButton.svelte';
   import { confirm } from '../../composables/useConfirm.js';
   import EmptyState from '../../components/EmptyState.svelte';
   import Input from '../../components/Input.svelte';
@@ -175,9 +176,7 @@
       <StateDisplay type="loading" message={t('common.loading')} size="lg" />
     {:else if template}
       <!-- Header -->
-      <Button onclick={goBack} variant="ghost" size="small" icon={IconArrowLeft} class="mb-4">
-        {t('testing.testRunTemplates')}
-      </Button>
+      <BackButton onclick={goBack} label={t('testing.testRunTemplates')} class="mb-4" />
       {#if editMode}
         <div class="flex items-center justify-between gap-4 mb-8">
           <div class="flex-1 max-w-2xl">

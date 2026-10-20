@@ -4,9 +4,10 @@
   import { currentRoute, navigate } from '../../router.js';
   import { api } from '../../api.js';
   import { isExpectedBackgroundSyncError } from '../../utils/backgroundSync.js';
-  import { IconCheck, IconX, IconBug, IconArrowLeft, IconChevronRight, IconChevronLeft, IconPlus, IconLink, IconPlayerSkipForward } from '@tabler/icons-svelte-runes';
+  import { IconCheck, IconX, IconBug, IconChevronRight, IconChevronLeft, IconPlus, IconLink, IconPlayerSkipForward } from '@tabler/icons-svelte-runes';
   import { confirm } from '../../composables/useConfirm.js';
   import Button from '../../components/Button.svelte';
+  import BackButton from '../../components/BackButton.svelte';
   import Card from '../../components/Card.svelte';
   import Panel from '../../components/Panel.svelte';
   import Progress from '../../components/Progress.svelte';
@@ -514,14 +515,12 @@ import { parseScenarioSpec, flattenExamples } from './bddSpec.js';
       <div class="p-3 border-b flex items-center {sidebarCollapsed ? 'justify-center' : 'justify-between'}" style="border-color: var(--ds-border);">
         {#if !sidebarCollapsed}
           <div class="flex items-center gap-2 min-w-0">
-            <button
+            <BackButton
               onclick={goBack}
-              data-testid="test-execution-back"
-              class="hover-bg p-1 rounded cursor-pointer flex-shrink-0"
-              style="color: var(--ds-icon);"
-            >
-              <IconArrowLeft class="w-4 h-4" />
-            </button>
+              testid="test-execution-back"
+              tooltip={t('common.back')}
+              class="p-1"
+            />
             <div class="min-w-0">
               <h2 class="font-semibold text-sm truncate" style="color: var(--ds-text);">{t('testing.testExecution')}</h2>
               <div class="text-xs truncate" style="color: var(--ds-text-subtle);">

@@ -1,7 +1,8 @@
 <script>
-  import { IconArrowLeft, IconExternalLink } from '@tabler/icons-svelte-runes';
+  import { IconExternalLink } from '@tabler/icons-svelte-runes';
   import { t } from '../../stores/i18n.svelte.js';
   import Button from '../../components/Button.svelte';
+  import BackButton from '../../components/BackButton.svelte';
   import Spinner from '../../components/Spinner.svelte';
   import TabStrip from '../../components/TabStrip.svelte';
 
@@ -35,13 +36,7 @@
   <div class="flex-1 flex flex-col overflow-hidden">
     <div class="px-16 pt-8 pb-0">
       <div class="mb-4">
-        <a
-          href="/admin/channels"
-          class="admin-back inline-flex items-center gap-1 text-sm transition-colors"
-        >
-          <IconArrowLeft class="w-4 h-4" />
-          {t('channels.title')}
-        </a>
+        <BackButton href="/admin/channels" label={t('channels.title')} />
       </div>
 
       <div class="flex items-center justify-between mb-6">
@@ -75,13 +70,3 @@
 
   {@render after?.()}
 {/if}
-
-<style>
-  .admin-back {
-    color: var(--ds-text-subtle);
-  }
-
-  .admin-back:hover {
-    color: var(--ds-text);
-  }
-</style>
