@@ -20,7 +20,7 @@
     "format:check": "biome format .",
     "lint": "biome lint .",
     "lint:fix": "biome lint --write .",
-    "check": "biome check . && node scripts/check-shortcuts.js && node scripts/check-i18n.js && node scripts/check-hardcoded-i18n.js && node scripts/check-design-tokens.js",
+    "check": "biome check . && node scripts/check-shortcuts.js && node scripts/check-i18n.js && node scripts/check-hardcoded-i18n.js && node scripts/check-design-tokens.js && node scripts/check-hmr-boundaries.js",
     "check:entry-assets": "node scripts/check-entry-assets.js",
     "check:fix": "biome check --write .",
     "test": "vitest",
@@ -29,7 +29,8 @@
     "licenses:generate": "node scripts/generate-license-manifest.mjs",
     "typecheck": "svelte-check --threshold error",
     "tauri:dev": "cd ../../desktop && ./build.sh && cargo tauri dev",
-    "tauri:build": "cd ../../desktop && ./build.sh --all"
+    "tauri:build": "cd ../../desktop && ./build.sh --all",
+    "check:hmr-boundaries": "node scripts/check-hmr-boundaries.js"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.14",
