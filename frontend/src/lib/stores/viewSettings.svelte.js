@@ -1,5 +1,9 @@
 import { api } from '../api.js';
-import { workspaceOnlyViews, workspaceViewItems } from '../navigation/workspaceNavigation.js';
+import {
+  COLLECTION_VIEW_IDS,
+  workspaceOnlyViews,
+  workspaceViewItems,
+} from '../navigation/workspaceNavigation.js';
 import { collectionStore } from './collectionContext.js';
 
 // Every collection-scoped view, used whenever a scope has no explicit
@@ -11,6 +15,9 @@ const ALL_VIEW_IDS = workspaceViewItems.map((view) => view.id);
 // test-management entries are not toggleable and stay gated by module and
 // permission only.
 export const ALL_NAV_IDS = [...ALL_VIEW_IDS, ...workspaceOnlyViews.map((view) => view.id)];
+
+// Registry order for nav ids, so locally applied sets match server ordering.
+const NAV_ID_ORDER = new Map(ALL_NAV_IDS.map((id, index) => [id, index]));
 
 // Workspace-scope fallback when a scope has no explicit enabled-views setting:
 // everything except the support queue, which is opt-in via the helpdesk pack.
@@ -105,6 +112,33 @@ function createViewSettingsStore() {
     return entries[scopeKey(workspaceId, null)]?.views ?? DEFAULT_NAV_IDS;
   }
 
+  /**
+   * Records the view set a successful write just persisted for a scope, so
+   * navigation reacts immediately instead of waiting for a refetch that may
+   * read a stale board-configuration cache. A collection's override keeps the
+   * workspace-only ids inherited from the workspace scope, mirroring the
+   * server's merge.
+   */
+  function applyEnabledViews(workspaceId, collectionId, views, inherited = false) {
+    const scopeViews = collectionId
+      ? [
+          ...views,
+          ...(entries[scopeKey(workspaceId, null)]?.views ?? DEFAULT_NAV_IDS).filter(
+            (id) => !COLLECTION_VIEW_IDS.has(id)
+          ),
+        ]
+      : [...views];
+    entries[scopeKey(workspaceId, collectionId)] = {
+      views: [...new Set(scopeViews)].sort(
+        (a, b) =>
+          (NAV_ID_ORDER.get(a) ?? Number.MAX_SAFE_INTEGER) -
+          (NAV_ID_ORDER.get(b) ?? Number.MAX_SAFE_INTEGER)
+      ),
+      inherited: Boolean(inherited),
+      loaded: true,
+    };
+  }
+
   /** The raw scope entry (reactive), or null before the first load. */
   function entryFor(workspaceId, collectionId = null) {
     return entries[scopeKey(workspaceId, collectionId)] ?? null;
@@ -130,6 +164,7 @@ function createViewSettingsStore() {
   return {
     load,
     entryFor,
+    applyEnabledViews,
     enabledViewIds,
     enabledNavIds,
     inherited,
