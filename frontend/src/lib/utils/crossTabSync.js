@@ -9,6 +9,7 @@ export const tabId =
 
 let channel = null;
 let initialized = false;
+let activeHandlers = null;
 
 /** @returns {BroadcastChannel | null} */
 function getChannel() {
@@ -48,6 +49,9 @@ export function notifyItemMutation(detail = {}) {
  * @returns {() => void} disposer
  */
 export function initCrossTabSync(handlers = {}) {
+  // HMR re-executes the injecting module, so a repeat init swaps the handlers
+  // instead of leaving a listener that calls into stale code.
+  activeHandlers = handlers;
   if (initialized) return () => {};
   initialized = true;
 
@@ -65,16 +69,16 @@ export function initCrossTabSync(handlers = {}) {
   const onMessage = (/** @type {MessageEvent} */ event) => {
     const data = event?.data;
     if (!data || data.origin === tabId) return; // ignore self echoes
-    if (typeof handlers.onInvalidate !== 'function') return;
+    if (typeof activeHandlers?.onInvalidate !== 'function') return;
 
     // Coalesce bulk mutations into one invalidation.
     if (refreshTimer !== null) clearTimeout(refreshTimer);
     refreshTimer = setTimeout(() => {
       refreshTimer = null;
-      Promise.resolve(handlers.onInvalidate()).catch((err) =>
+      Promise.resolve(activeHandlers.onInvalidate()).catch((err) =>
         console.warn('[crossTabSync] invalidation handler failed:', err)
       );
-    }, debounceMs);
+    }, activeHandlers.debounceMs ?? debounceMs);
   };
 
   ch.addEventListener('message', onMessage);
@@ -89,6 +93,7 @@ export function initCrossTabSync(handlers = {}) {
       /* ignore */
     }
     channel = null;
+    activeHandlers = null;
     initialized = false;
   };
 }

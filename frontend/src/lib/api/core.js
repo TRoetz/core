@@ -22,6 +22,26 @@ export const ADMIN_UI_MUTATION_EVENT = 'windshift:admin-ui-mutation';
 // Ensure the clock-drift warning toast fires at most once per session
 let driftWarningShown = false;
 
+// The API layer must not import stores or the router: those imports would put
+// every API module back behind entry-level importers and turn store edits into
+// full page reloads in dev. The app shell registers the side effects instead.
+const apiEventHandlers = {
+  /** @type {null | (() => void)} */
+  onAuthExpired: null,
+  /** @type {null | ((event: { offsetMs: number }) => void)} */
+  onClockDrift: null,
+};
+
+/**
+ * Register app-shell side effects for API responses. Handlers left out of
+ * `handlers` keep their current value; pass `null` to unregister one.
+ * @param {{ onAuthExpired?: (() => void) | null, onClockDrift?: ((event: { offsetMs: number }) => void) | null }} [handlers]
+ */
+export function configureAPIEventHandlers(handlers = {}) {
+  if ('onAuthExpired' in handlers) apiEventHandlers.onAuthExpired = handlers.onAuthExpired ?? null;
+  if ('onClockDrift' in handlers) apiEventHandlers.onClockDrift = handlers.onClockDrift ?? null;
+}
+
 // The per-user concurrency limiter (internal/middleware/user_concurrency.go)
 // answers bursts with 429 + Retry-After. Safe, finite reads recover from that
 // within the shared budget; writes are never automatically replayed.
@@ -252,34 +272,10 @@ async function performFetchAPI(base, endpoint, options = {}) {
     // Track server-vs-client clock offset from the Date header
     updateOffset(response.headers.get('Date'));
 
-    // After enough samples, warn admins once if drift is significant
+    // After enough samples, report drift once so the shell can warn admins.
     if (!driftWarningShown && getSampleCount() >= 3 && isClockDriftSignificant()) {
       driftWarningShown = true;
-      // Dynamic import avoids circular deps (stores → api → stores)
-      Promise.all([
-        import('../stores'),
-        import('../stores/toasts.svelte.js'),
-        import('../stores/i18n.svelte.js'),
-        import('../router.js'),
-      ]).then(([{ authStore }, { addToast }, { t }, { navigate }]) => {
-        let user;
-        authStore.subscribe((s) => (user = s.currentUser))();
-        if (/** @type {any} */ (user)?.is_system_admin) {
-          const offsetSec = Math.round(getClockOffset() / 1000);
-          const absMin = Math.floor(Math.abs(offsetSec) / 60);
-          const absSec = Math.abs(offsetSec) % 60;
-          const direction = offsetSec > 0 ? 'ahead' : 'behind';
-          const amount =
-            absMin > 0 ? `${absMin}m ${absSec}s ${direction}` : `${absSec}s ${direction}`;
-          addToast({
-            message: `Server clock appears to be ${amount}. Click for details.`,
-            title: t('toast.warning'),
-            variant: 'warning',
-            clickable: true,
-            onClick: () => navigate('/admin/diagnostics?subtab=clock'),
-          });
-        }
-      });
+      apiEventHandlers.onClockDrift?.({ offsetMs: getClockOffset() });
     }
 
     if (!response.ok) {
@@ -297,9 +293,7 @@ async function performFetchAPI(base, endpoint, options = {}) {
         response.status === 401 &&
         /** @type {any} */ (apiError).code !== 'AUTHENTICATION_PENDING'
       ) {
-        // Import auth store dynamically to avoid circular dependencies
-        const { authStore } = await import('../stores');
-        authStore.clearAuth();
+        apiEventHandlers.onAuthExpired?.();
       }
       throw apiError;
     }

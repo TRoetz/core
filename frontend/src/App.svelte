@@ -15,6 +15,7 @@
     loadAuthenticatedShellUI,
     resetAuthenticatedShellUILoad,
   } from './lib/services/authenticatedShellUI.js';
+  import { installAppShellHandlers } from './lib/services/appShellHandlers.js';
   import BrandedLoader from './lib/components/BrandedLoader.svelte';
   import Button from './lib/components/Button.svelte';
   import LazyRootDialog from './lib/components/LazyRootDialog.svelte';
@@ -76,6 +77,9 @@
   }
 
   onMount(() => {
+    // Wire the API, service-worker and cross-tab side effects here rather than
+    // in main.js so store, API and router edits stay hot updates.
+    installAppShellHandlers();
     initRouter();
     themeStore.init();
     void initializeApp();

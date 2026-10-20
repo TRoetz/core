@@ -1,9 +1,26 @@
-import { addToast } from '../stores/toasts.svelte.js';
-
 let registrationPromise = null;
 let updateReloadRequested = false;
 const UPDATE_APPLIED_KEY = 'pwa-just-updated';
 const UPDATE_SUPPRESSION_MS = 30_000;
+
+// Injected by the app shell so this module never imports the toast store (and
+// through it i18n) while main.js still owns the registration.
+let notifyUpdateAvailable = null;
+let pendingOffer = null;
+
+/**
+ * @param {{ notifyUpdateAvailable?: null | ((update: { onApply: () => void }) => void) }} [handlers]
+ */
+export function configureServiceWorkerNotifications(handlers = {}) {
+  if (!('notifyUpdateAvailable' in handlers)) return;
+  notifyUpdateAvailable =
+    typeof handlers.notifyUpdateAvailable === 'function' ? handlers.notifyUpdateAvailable : null;
+  if (notifyUpdateAvailable && pendingOffer) {
+    const offer = pendingOffer;
+    pendingOffer = null;
+    offer();
+  }
+}
 
 function recentlyAppliedUpdate() {
   try {
@@ -51,16 +68,14 @@ function monitorRegistration(registration) {
     ) {
       return;
     }
+    if (!notifyUpdateAvailable) {
+      // Hold the offer until the shell registers a notifier. A waiting worker
+      // keeps waiting, so deferring the toast loses nothing.
+      pendingOffer = offerUpdate;
+      return;
+    }
     updateOffered = true;
-    addToast({
-      title: 'Update available',
-      message: 'A new version of Windshift is ready.',
-      variant: 'info',
-      actionLabel: 'Reload',
-      duration: 0,
-      clickable: true,
-      onClick: () => applyWaitingUpdate(registration),
-    });
+    notifyUpdateAvailable({ onApply: () => applyWaitingUpdate(registration) });
   };
 
   const watchInstalling = () => {
@@ -115,4 +130,6 @@ export function registerMobileServiceWorker() {
 export function resetServiceWorkerRegistrationForTests() {
   registrationPromise = null;
   updateReloadRequested = false;
+  notifyUpdateAvailable = null;
+  pendingOffer = null;
 }
