@@ -1,4 +1,6 @@
 // Centralized reactive state for the work-item create form.
+
+import { FOREGROUND_READ } from '../api/readScheduler.js';
 import { api } from '../api.js';
 import {
   defaultCustomFieldValue,
@@ -507,6 +509,20 @@ class WorkItemFormStore {
   }
 
   /**
+   * Resolve a workspace's effective configuration without disturbing the
+   * active route scope. The shared cache only holds the route's workspace;
+   * activating it here for another workspace would fight the app shell's
+   * route hydration and can ping-pong forever when the create modal targets
+   * a workspace other than the one behind it.
+   */
+  #effectiveConfig(workspaceId, itemTypeId = null) {
+    if (Number(workspaceDataStore.workspaceId) === Number(workspaceId)) {
+      return workspaceDataStore.screenConfig(itemTypeId);
+    }
+    return api.workspaces.getEffectiveConfig(workspaceId, itemTypeId, FOREGROUND_READ);
+  }
+
+  /**
    * Load the workspace's effective configuration (resolved once per workspace
    * by the backend: assigned config set, else the global default) and project
    * the parts the create flow needs onto currentConfigSet.
@@ -514,10 +530,7 @@ class WorkItemFormStore {
   async loadConfigSetForWorkspace(workspaceId) {
     if (this.configSetLoadedForWorkspace === workspaceId) return;
     try {
-      if (Number(workspaceDataStore.workspaceId) !== Number(workspaceId)) {
-        await workspaceDataStore.initialize(workspaceId);
-      }
-      const config = await workspaceDataStore.screenConfig(null);
+      const config = await this.#effectiveConfig(workspaceId, null);
       this.currentConfigSet = config
         ? {
             priorities_detailed: config.priorities || [],
@@ -536,11 +549,10 @@ class WorkItemFormStore {
   }
 
   /**
-   * Resolve the create screen ID for an item type through the shared
-   * effective-config cache (resolved server-side per workspace + type).
+   * Resolve the create screen ID for an item type in the given workspace.
    */
-  async #resolveCreateScreenId(itemTypeId) {
-    const config = await workspaceDataStore.screenConfig(itemTypeId);
+  async #resolveCreateScreenId(workspaceId, itemTypeId) {
+    const config = await this.#effectiveConfig(workspaceId, itemTypeId);
     return config?.screens?.create ?? 1;
   }
 
@@ -552,7 +564,7 @@ class WorkItemFormStore {
     if (this.loadingScreenFields || this.screenFieldsLoadedForKey === key) return;
     try {
       this.loadingScreenFields = true;
-      const createScreenId = await this.#resolveCreateScreenId(itemTypeId);
+      const createScreenId = await this.#resolveCreateScreenId(workspaceId, itemTypeId);
       const fields = createScreenId ? await api.screens.getFields(createScreenId) : [];
       this.screenFields = fields || [];
 
