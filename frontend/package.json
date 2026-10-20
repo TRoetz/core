@@ -43,7 +43,7 @@
     "@vitest/coverage-istanbul": "^4.1.11",
     "carbon-icons-svelte": "13.13.0",
     "iconoir": "7.11.1",
-    "jscpd": "^4.0.9",
+    "jscpd": "^5.4.0",
     "jsdom": "^27.4.0",
     "phosphor-svelte": "3.1.0",
     "rollup-plugin-visualizer": "^6.0.3",
@@ -88,6 +88,7 @@
     "tauri-pty": "^0.2.1"
   },
   "overrides": {
+    "sass": "^1.83.0",
     "@tailwindcss/vite": {
       "vite": "$vite"
     },
