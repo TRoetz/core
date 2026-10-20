@@ -55,18 +55,29 @@ const OPTION_LOADERS = {
 };
 
 /**
- * Compare primed rows by identity. Callers pass fresh slices of the workspace
- * store's own rows, so ids match even though Svelte hands out a new proxy for
- * every read. Field-level refreshes arrive through load().
+ * Rows are equal when their primitive fields match. Nested objects are compared
+ * in load(); callers prime with fresh slices of the same workspace-store rows,
+ * so ignoring them keeps re-priming idempotent.
  */
+function sameRow(left, right) {
+  if (left === right) return true;
+  if (!left || !right || typeof left !== 'object') return false;
+  const leftKeys = Object.keys(left);
+  if (leftKeys.length !== Object.keys(right).length) return false;
+  for (const key of leftKeys) {
+    const leftValue = left[key];
+    const rightValue = right[key];
+    if (leftValue === rightValue) continue;
+    if (leftValue && rightValue && typeof leftValue === 'object') continue;
+    return false;
+  }
+  return true;
+}
+
 function sameArrayContents(left, right) {
   if (left === right) return true;
   if (!Array.isArray(left) || !Array.isArray(right) || left.length !== right.length) return false;
-  return left.every((value, index) => {
-    const leftKey = value?.id ?? value;
-    const rightKey = right[index]?.id ?? right[index];
-    return leftKey === rightKey;
-  });
+  return left.every((value, index) => sameRow(value, right[index]));
 }
 
 function normalizeWorkspaceId(workspaceId) {
