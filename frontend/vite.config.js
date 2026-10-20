@@ -140,6 +140,23 @@ export default defineConfig({
   },
   server: {
     port: 5555,
+    // Pre-transform the app shell and the heaviest route roots right after
+    // "ready" so the first navigation does not pay the compile cost (WI-1760).
+    // Warmup follows static imports recursively and runs in the background,
+    // so startup itself is not delayed. Without it, the first item-detail
+    // load after a server restart transforms ~400 modules (~1.8 s); once
+    // warm the same walk is ~10 ms.
+    warmup: {
+      clientFiles: [
+        'src/App.svelte',
+        'src/lib/pages/MainApp.svelte',
+        'src/lib/features/items/ItemDetail.svelte',
+        'src/lib/workspaces/WorkspaceDetail.svelte',
+        'src/lib/features/collections/CollectionBoard.svelte',
+        'src/lib/features/collections/CollectionList.svelte',
+        'src/lib/features/assets/AssetBrowser.svelte',
+      ],
+    },
     proxy: {
       ...pluginProxies,
       '/api': {
