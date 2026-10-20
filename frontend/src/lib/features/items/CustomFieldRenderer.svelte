@@ -39,7 +39,7 @@
   let {
     field, value = $bindable(''), onChange = () => {}, onCommit = null, milestones = [], iterations = [],
     isDarkMode = false, required = false, readonly = true, disabled = false,
-    onStartEdit = null, onCancel = null, showSelectedInTrigger = true, autoOpenPickers = true,
+    onStartEdit = null, onCancel = null, showSelectedInTrigger = true, autoOpenPickers = false,
     noPadding = false, itemId = null, users: providedUsers = null, fieldLinks = null,
     onFieldLinksChanged = null,
     optionData = {}, optionLoading = {}, onRequestOptions = null, loadAssetOptions = null,
@@ -322,8 +322,8 @@
   // Booleans edit in place — render the checkbox directly instead of routing
   // through a display→editor swap.
   const renderLiveEditor = $derived(isSelfEditing && isBooleanCustomFieldType(field.field_type));
-  // Opening the editor means the user already clicked the cell, so menus open
-  // immediately instead of needing a second click on the picker trigger.
+  // Self-editing opens the picker after the click; forms mount every field at
+  // once and stay closed unless a caller opts in with autoOpenPickers.
   const pickerAutoOpen = $derived(autoOpenPickers || editorOpen);
   const editorValue = $derived(draftValue !== null ? draftValue : value);
 

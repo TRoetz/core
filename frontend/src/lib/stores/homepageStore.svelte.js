@@ -18,6 +18,7 @@ import {
   formatDateWithOptions,
   formatRelativeTime as formatRelativeTimeValue,
 } from '../utils/dateFormatter.js';
+import { gradients } from '../utils/gradients.js';
 import { t } from './i18n.svelte.js';
 import { errorToast } from './toasts.svelte.js';
 
@@ -58,6 +59,8 @@ class HomepageStore {
   // === Layout / Customization ===
   sections = $state([]);
   widgets = $state([]);
+  gradient = $state(0);
+  backgroundImageUrl = $state(null);
   layoutRevision = $state('');
   layoutLoaded = $state(false);
   isEditMode = $state(false);
@@ -71,6 +74,56 @@ class HomepageStore {
   _generation = 0;
 
   // === Derived Values ===
+
+  /**
+   * Whether a custom background image is set on the dashboard.
+   */
+  get hasBackgroundImage() {
+    return this.backgroundImageUrl !== null && this.backgroundImageUrl !== '';
+  }
+
+  /**
+   * Whether a gradient (and no image) is active on the dashboard.
+   */
+  get hasGradient() {
+    return !this.hasBackgroundImage && this.gradient > 0 && !!gradients[this.gradient]?.value;
+  }
+
+  /**
+   * Whether any custom dashboard background (image or gradient) is active.
+   */
+  get hasCustomBackground() {
+    return this.hasBackgroundImage || this.hasGradient;
+  }
+
+  /**
+   * Background style for the dashboard container.
+   */
+  get backgroundStyle() {
+    if (this.hasBackgroundImage) {
+      return `background: linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)), url(${this.backgroundImageUrl}) center/cover no-repeat fixed;`;
+    }
+    if (this.hasGradient) {
+      return `background: ${gradients[this.gradient].value};`;
+    }
+    return 'background-color: var(--ds-surface);';
+  }
+
+  /**
+   * Text color for content rendered directly on the dashboard background.
+   */
+  get backgroundTextStyle() {
+    return this.hasCustomBackground ? 'color: white;' : 'color: var(--ds-text);';
+  }
+
+  /**
+   * Subtle text color for secondary content on the dashboard background.
+   */
+  get backgroundSubtleTextStyle() {
+    return this.hasCustomBackground
+      ? 'color: rgba(255, 255, 255, 0.8);'
+      : 'color: var(--ds-text-subtle);';
+  }
 
   /**
    * Check if in onboarding mode.
@@ -107,6 +160,8 @@ class HomepageStore {
   }
 
   applyLayout(layout, revision = '') {
+    this.gradient = typeof layout?.gradient === 'number' ? layout.gradient : 0;
+    this.backgroundImageUrl = layout?.background_image_url || null;
     if (layout && Array.isArray(layout.sections) && layout.sections.length > 0) {
       this.sections = [...layout.sections].sort((a, b) => a.display_order - b.display_order);
       const widgets = Array.isArray(layout.widgets) ? [...layout.widgets] : [];
@@ -142,6 +197,8 @@ class HomepageStore {
     try {
       const layout = {
         grid_columns: DASHBOARD_GRID_COLUMNS,
+        gradient: this.gradient,
+        background_image_url: this.backgroundImageUrl || '',
         sections: this.sections.map((s, idx) => ({ ...s, display_order: idx })),
         widgets: this.widgets.map((w, idx) => ({ ...w, position: idx })),
       };
@@ -167,6 +224,27 @@ class HomepageStore {
   debouncedSaveLayout() {
     clearTimeout(this._saveTimeout);
     this._saveTimeout = setTimeout(() => this.saveLayout(), 1000);
+  }
+
+  // === Dashboard background ===
+
+  selectGradient(index) {
+    this.gradient = index;
+    // A gradient replaces any selected background image.
+    if (index > 0) this.backgroundImageUrl = null;
+    this.debouncedSaveLayout();
+  }
+
+  selectBackgroundImage(url) {
+    this.backgroundImageUrl = url;
+    // A background image replaces any selected gradient.
+    this.gradient = 0;
+    this.debouncedSaveLayout();
+  }
+
+  removeBackgroundImage() {
+    this.backgroundImageUrl = null;
+    this.debouncedSaveLayout();
   }
 
   // === Mode toggles ===
@@ -489,6 +567,8 @@ class HomepageStore {
     this.currentDate = '';
     this.sections = [];
     this.widgets = [];
+    this.gradient = 0;
+    this.backgroundImageUrl = null;
     this.layoutRevision = '';
     this.layoutLoaded = false;
     this.isEditMode = false;

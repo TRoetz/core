@@ -7,13 +7,14 @@
   import { rruleToText } from '../editors/rruleUtils.js';
   import RecurrenceEditor from '../editors/RecurrenceEditor.svelte';
   import Button from '../components/Button.svelte';
+  import BackButton from '../components/BackButton.svelte';
   import Lozenge from '../components/Lozenge.svelte';
   import EmptyState from '../components/EmptyState.svelte';
   import DataTable from '../components/DataTable.svelte';
   import StateDisplay from '../components/StateDisplay.svelte';
   import Tabs from '../components/Tabs.svelte';
   import PageHeader from '../layout/PageHeader.svelte';
-  import { ArrowLeft, Repeat, Zap, FileText } from '@lucide/svelte';
+  import { Repeat, Zap, FileText } from '@lucide/svelte';
 
   let { workspaceId, ruleId, onback } = $props();
 
@@ -162,14 +163,11 @@
     <EmptyState icon={Repeat} title={t('common.notFound')} description={t('recurrence.empty')} />
   {:else}
     <div class="flex items-start gap-3">
-      <Button
-        variant="ghost"
-        size="small"
-        icon={ArrowLeft}
+      <BackButton
         onclick={goBack}
-        dataTestid="recurrence-detail-back"
-        title={t('common.back')}
-        class="mt-0.5 px-2"
+        testid="recurrence-detail-back"
+        tooltip={t('common.back')}
+        class="mt-0.5 p-1"
       />
       <div class="min-w-0 flex-1">
         <PageHeader

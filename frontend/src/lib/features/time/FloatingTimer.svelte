@@ -5,6 +5,7 @@
   import { Clock, Square, Maximize2, Minimize2, ExternalLink } from '@lucide/svelte';
   import { navigate } from '../../router.js';
   import { t } from '../../stores/i18n.svelte.js';
+  import { customerDisplayName } from '../../utils/customerLabel.js';
 
   let dragging = $state(false);
   let dragOffset = $state({ x: 0, y: 0 });
@@ -169,6 +170,14 @@
 
   // Reactive position style
   const positionStyle = $derived(`left: ${position.x}px; top: ${position.y}px;`);
+
+  const activeCustomerName = $derived(
+    customerDisplayName(
+      timerStore.activeTimer?.customer_name,
+      timerStore.activeTimer?.customer_builtin_key,
+      t
+    )
+  );
 </script>
 
 {#if timerStore.activeTimer}
@@ -252,8 +261,8 @@
             {#if timerStore.activeTimer.project_name}
               <div class="text-white/90">
                 <span class="font-medium">{t('time.timer.project')}:</span> {timerStore.activeTimer.project_name}
-                {#if timerStore.activeTimer.customer_name}
-                  ({timerStore.activeTimer.customer_name})
+                {#if activeCustomerName}
+                  ({activeCustomerName})
                 {/if}
               </div>
             {/if}

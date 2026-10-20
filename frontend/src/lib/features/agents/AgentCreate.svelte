@@ -1,7 +1,6 @@
 <script>
   import { onMount } from 'svelte';
   import {
-    IconArrowLeft as ArrowLeft,
     IconBolt as Bolt,
     IconCode as Code,
     IconFile as BlankIcon,
@@ -17,6 +16,7 @@
   import { navigate } from '../../router.js';
   import PageHeader from '../../layout/PageHeader.svelte';
   import AlertBox from '../../components/AlertBox.svelte';
+  import BackButton from '../../components/BackButton.svelte';
   import Button from '../../components/Button.svelte';
   import Card from '../../components/Card.svelte';
   import Checkbox from '../../components/Checkbox.svelte';
@@ -362,15 +362,7 @@
   data-testid="agent-create"
 >
   <div class="mx-auto max-w-5xl space-y-6">
-    <Button
-      variant="subtle"
-      size="small"
-      icon={ArrowLeft}
-      onclick={leaveCreate}
-      dataTestid="agent-create-back"
-    >
-      Back to agents
-    </Button>
+    <BackButton onclick={leaveCreate} label="Back to agents" testid="agent-create-back" />
 
     <PageHeader
       icon={AgentIcon}
@@ -481,7 +473,7 @@
             id="agent-llm"
             label="LLM connection"
             required
-            helper="The selected model is fixed for this profile."
+            helper="You can change the model later from the profile's Tools and access tab."
           >
             <Select
               id="agent-create-llm"

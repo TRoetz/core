@@ -3,7 +3,12 @@
   import { useEventListener } from 'runed';
   import { api } from '../../api.js';
   import { t } from '../../stores/i18n.svelte.js';
-  import { collectionStore, refreshCollectionDeltas, reloadCollection } from '../../stores/collectionContext.js';
+  import {
+    collectionStore,
+    reloadCollection,
+    scheduleCollectionReconciliation,
+  } from '../../stores/collectionContext.js';
+  import { resolveCreatedItemMembership } from './collectionService.js';
   import { useGradientStyles, loadWorkspaceGradient } from '../../stores/workspaceGradient.svelte.js';
   import { List, Plus } from '@lucide/svelte';
   import EmptyState from '../../components/EmptyState.svelte';
@@ -224,9 +229,7 @@
 
     try {
       await api.items.update(item.id, { story_points: value });
-      collectionStore.backlogItems = collectionStore.backlogItems.map((backlogItem) =>
-        backlogItem.id === item.id ? { ...backlogItem, story_points: value } : backlogItem
-      );
+      collectionStore.patchItem(item.id, { story_points: value });
     } catch (error) {
       console.error('Failed to update story points:', error);
       errorToast(t('collections.backlogActionFailed'));
@@ -251,20 +254,25 @@
 
   // Listen for newly created items
   async function handleRefreshWorkItems(event) {
-    if (event.detail?.itemId) {
-      try {
-        const newItem = event.detail.item ?? await api.items.get(event.detail.itemId);
-        // When viewing a collection, accept items from any workspace (the collection defines scope).
-        // Otherwise fall back to current-workspace check.
-        const belongsToView = collectionId
-          ? true
-          : Number(newItem.workspace_id) === Number(workspaceId);
-        if (belongsToView) {
-          collectionStore.backlogItems = [...collectionStore.backlogItems, newItem];
-        }
-      } catch (error) {
-        console.error('Failed to load new item:', error);
+    if (!event.detail?.itemId) return;
+    try {
+      const newItem = event.detail.item ?? await api.items.get(event.detail.itemId);
+      // Collection QL and sub-filters depend on server state, so verify rather
+      // than assume membership. Unknown never permits an insert; it reconciles.
+      const membership = await resolveCreatedItemMembership(newItem, {
+        workspaceId,
+        collectionId,
+        subFilterQL: collectionStore.subFilterQL ? collectionStore.effectiveSubFilterQL : '',
+      });
+      if (membership === 'member') {
+        // insertCreatedItem deduplicates by id so a repeated create event cannot
+        // append the same backlog row twice.
+        collectionStore.insertCreatedItem(newItem, { backlog: true });
+      } else if (membership === 'unknown') {
+        scheduleCollectionReconciliation();
       }
+    } catch (error) {
+      console.error('Failed to load new item:', error);
     }
   }
 
@@ -278,11 +286,19 @@
 
       // Load iterations for this workspace
       try {
-        const iters = await api.iterations.getAll({
-          workspace_id: workspaceId,
-          include_global: !workspace?.is_personal,
-        });
-        allIterations = iters || [];
+        const isPersonal = workspaceDataStore.workspace?.is_personal === true;
+        if (workspaceDataStore.planningCompleteness?.iterations === true) {
+          // Complete bootstrap data avoids a second full iteration fetch.
+          allIterations = (workspaceDataStore.iterations || []).filter(
+            (iteration) => !isPersonal || !iteration.is_global
+          );
+        } else {
+          const iters = await api.iterations.getAll({
+            workspace_id: workspaceId,
+            include_global: !isPersonal,
+          });
+          allIterations = iters || [];
+        }
       } catch (error) {
         console.error('Failed to load iterations:', error);
       }
@@ -304,7 +320,7 @@
   // and a reconnect reconciles. No polling fallback.
   useCollectionEventStream(
     () => (collectionId ? { kind: 'collection', id: collectionId } : { kind: 'workspace', id: workspaceId }),
-    { onInvalidate: () => refreshCollectionDeltas() }
+    { onInvalidate: () => scheduleCollectionReconciliation() }
   );
 
   function openItem(itemId, event) {
@@ -415,10 +431,7 @@
         ? { previous_item_id: null, next_item_id: boundaryItem.id }
         : { previous_item_id: boundaryItem.id, next_item_id: null });
 
-      const otherItems = collectionStore.backlogItems.filter(i => i.id !== item.id);
-      collectionStore.backlogItems = boundary === 'start'
-        ? [item, ...otherItems]
-        : [...otherItems, item];
+      collectionStore.moveBacklogItemToBoundary(item, boundary);
       successToast(t(boundary === 'start'
         ? 'collections.movedToBeginningOfBacklog'
         : 'collections.sentToEndOfBacklog', { title: item.title }));
@@ -440,11 +453,10 @@
         warningToast(t('iterations.activeScopeWarning'));
       }
       await api.items.update(item.id, { iteration_id: iteration.id });
-      collectionStore.backlogItems = collectionStore.backlogItems.map(i =>
-        i.id === item.id
-          ? { ...i, iteration_id: iteration.id, iteration_name: iteration.name }
-          : i
-      );
+      collectionStore.patchItem(item.id, {
+        iteration_id: iteration.id,
+        iteration_name: iteration.name,
+      });
       successToast(t('collections.assignedToIteration', {
         title: item.title,
         iteration: iteration.name,
@@ -601,8 +613,7 @@
           warningToast(t('iterations.activeScopeWarning'));
         }
         await api.items.update(draggedItem.id, { iteration_id: targetIterationId });
-        // Update store directly
-        collectionStore.backlogItems = collectionStore.backlogItems.map(i => i.id === draggedItem.id ? { ...i, iteration_id: targetIterationId } : i);
+        collectionStore.patchItem(draggedItem.id, { iteration_id: targetIterationId });
       }
 
       // Compute prev/next within the target section
@@ -682,7 +693,7 @@
       }
 
       await api.items.update(draggedItem.id, { iteration_id: newIterationId });
-      collectionStore.backlogItems = collectionStore.backlogItems.map(i => i.id === draggedItem.id ? { ...i, iteration_id: newIterationId } : i);
+      collectionStore.patchItem(draggedItem.id, { iteration_id: newIterationId });
       reloadCollection();
     } catch (error) {
       console.error('Failed to handle section drop:', error);

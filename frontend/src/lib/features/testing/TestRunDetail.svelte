@@ -2,8 +2,9 @@
   import { onMount } from 'svelte';
   import { currentRoute, navigate } from '../../router.js';
   import { api } from '../../api.js';
-  import { IconArrowLeft, IconPlayerPlay, IconAlertTriangle, IconFileText, IconTrash } from '@tabler/icons-svelte-runes';
+  import { IconPlayerPlay, IconAlertTriangle, IconFileText, IconTrash } from '@tabler/icons-svelte-runes';
   import Button from '../../components/Button.svelte';
+  import BackButton from '../../components/BackButton.svelte';
   import { confirm } from '../../composables/useConfirm.js';
   import Lozenge from '../../components/Lozenge.svelte';
   import Card from '../../components/Card.svelte';
@@ -221,16 +222,12 @@
       <StateDisplay type="loading" message={t('common.loading')} size="lg" />
     {:else if testRun}
       <!-- Header -->
-      <Button
+      <BackButton
         onclick={goBack}
-        dataTestid="test-run-detail-back"
-        variant="ghost"
-        size="small"
-        icon={IconArrowLeft}
+        testid="test-run-detail-back"
+        label={fromPage === 'reports' ? t('testing.testRunReport') : t('testing.testRuns')}
         class="mb-4"
-      >
-        {fromPage === 'reports' ? t('testing.testRunReport') : t('testing.testRuns')}
-      </Button>
+      />
       <PageHeader
         title={testRun.name}
         subtitle={`${t('testing.started')}: ${formatAuthenticatedDateTime(testRun.started_at)}${testRun.ended_at ? ` • ${t('testing.ended')}: ${formatAuthenticatedDateTime(testRun.ended_at)}` : ''}`}

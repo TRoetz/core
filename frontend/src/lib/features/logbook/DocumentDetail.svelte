@@ -8,13 +8,14 @@
   import { successToast, errorToast } from '../../stores/toasts.svelte.js';
   import { confirm } from '../../composables/useConfirm.js';
   import Button from '../../components/Button.svelte';
+  import BackButton from '../../components/BackButton.svelte';
   import Input from '../../components/Input.svelte';
   import Spinner from '../../components/Spinner.svelte';
   import Lozenge from '../../components/Lozenge.svelte';
   import Progress from '../../components/Progress.svelte';
   import { computeDocumentHealth } from './healthScore.js';
   import {
-    IconArrowLeft as ArrowLeft, IconDeviceFloppy as Save, IconFileText as FileText, IconNote as StickyNote, IconMail as Mail, IconClock as Clock, IconHash as Hash, IconEye as Eye, IconTrash as Trash2, IconExternalLink as ExternalLink, IconCircleCheck as CheckCircle, IconLoader as Loader
+    IconDeviceFloppy as Save, IconFileText as FileText, IconNote as StickyNote, IconMail as Mail, IconClock as Clock, IconHash as Hash, IconEye as Eye, IconTrash as Trash2, IconExternalLink as ExternalLink, IconCircleCheck as CheckCircle, IconLoader as Loader
   } from '@tabler/icons-svelte-runes';
   import { formatDateShort } from '../../utils/dateFormatter.js';
   import LazyMilkdownEditor from '../../editors/LazyMilkdownEditor.svelte';
@@ -171,13 +172,11 @@
   {:else if doc}
     <!-- Back + Header -->
     <div class="mb-6">
-      <a
+      <BackButton
         href={doc?.bucket_id ? `/logbook/bucket/${doc.bucket_id}` : '/logbook'}
-        class="back-link flex items-center gap-2 text-sm mb-4 cursor-pointer transition-colors no-underline"
-      >
-        <ArrowLeft class="w-4 h-4" />
-        {t('logbook.back')}
-      </a>
+        label={t('logbook.back')}
+        class="mb-4"
+      />
 
       {#if doc.has_preview}
         <div
@@ -343,13 +342,3 @@
     </div>
   {/if}
 </div>
-
-<style>
-  .back-link {
-    color: var(--ds-text-subtle);
-  }
-
-  .back-link:hover {
-    color: var(--ds-text);
-  }
-</style>

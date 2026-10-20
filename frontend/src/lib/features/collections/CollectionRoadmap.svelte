@@ -3,8 +3,14 @@
   import { untrack } from 'svelte';
   import { t } from '../../stores/i18n.svelte.js';
   import { api } from '../../api.js';
+  import { createDependencyLoader } from './dependencyLoader.svelte.js';
   import { navigate } from '../../router.js';
-  import { collectionStore, refreshCollectionDeltas, reloadCollection, refreshCollectionItem } from '../../stores/collectionContext.js';
+  import {
+    collectionStore,
+    reloadCollection,
+    refreshCollectionItem,
+    scheduleCollectionReconciliation,
+  } from '../../stores/collectionContext.js';
   import { findOrphansByMissingParent, indexCollectionHierarchy, mergeAncestorContext } from './collectionHierarchy.js';
   import { useGradientStyles, loadWorkspaceGradient } from '../../stores/workspaceGradient.svelte.js';
   import { workspaceDataStore, itemModalStore } from '../../stores/index.js';
@@ -15,6 +21,7 @@
   import Select from '../../components/Select.svelte';
   import Toggle from '../../components/Toggle.svelte';
   import RoadmapItemPreview from './RoadmapItemPreview.svelte';
+  import CollectionHierarchyLoadMore from './CollectionHierarchyLoadMore.svelte';
   import { useCollectionEventStream } from '../../composables/useCollectionEventStream.svelte.js';
   import { buildHierarchyDatePatches, projectHierarchyDates } from './roadmapHierarchyDates.js';
   import { boardColumnsForSave } from '../../utils/workItemListColumns.js';
@@ -172,9 +179,15 @@
   // Drag state (bar move/resize)
   let dragInfo = $state(null);
 
-  // Links/dependencies
-  let itemLinks = $state({});
-  const ROADMAP_LINK_CHUNK = 100;
+  // Links/dependencies. The roadmap projects outgoing links only.
+  const roadmapDependencyLoader = createDependencyLoader();
+  let itemLinks = $derived.by(() => {
+    const map = {};
+    for (const [id, entry] of Object.entries(roadmapDependencyLoader.entries)) {
+      if (entry.outgoing?.length) map[id] = entry.outgoing;
+    }
+    return map;
+  });
 
   // Timeline computation
   let containerWidth = $state(1200);
@@ -733,34 +746,14 @@
   // Scoped SSE invalidations (WI-1624): any frame runs the existing delta fetch.
   useCollectionEventStream(
     () => (collectionId ? { kind: 'collection', id: collectionId } : { kind: 'workspace', id: workspaceId }),
-    { onInvalidate: () => refreshCollectionDeltas() }
+    { onInvalidate: () => scheduleCollectionReconciliation() }
   );
 
   // Load links for visible items in batched requests instead of one per item.
   async function loadLinksForItems(items) {
     if (!roadmapConfig.dependency_link_type_id) return;
     const ids = items.filter((i) => i?.id != null).map((i) => i.id);
-    const newLinks = {};
-    for (const id of ids) newLinks[id] = [];
-    const chunks = [];
-    for (let i = 0; i < ids.length; i += ROADMAP_LINK_CHUNK) {
-      chunks.push(ids.slice(i, i + ROADMAP_LINK_CHUNK));
-    }
-    const groupsPerChunk = await Promise.all(
-      chunks.map(async (chunk) => {
-        try {
-          return await api.links.getForItems(chunk);
-        } catch {
-          return {};
-        }
-      })
-    );
-    for (const groups of groupsPerChunk) {
-      for (const [id, group] of Object.entries(groups)) {
-        newLinks[id] = group?.outgoing || [];
-      }
-    }
-    itemLinks = newLinks;
+    await roadmapDependencyLoader.ensure(ids);
   }
 
   // Load config data
@@ -1717,6 +1710,10 @@
             </div>
           </div>
         </div>
+      {/if}
+
+      {#if roadmapConfig.start_field_id}
+        <CollectionHierarchyLoadMore testid="roadmap-load-more" />
       {/if}
   </StaticViewBackground>
 {/if}

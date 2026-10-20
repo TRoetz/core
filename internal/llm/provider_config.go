@@ -10,9 +10,10 @@ import (
 // per-connection vision override. It is windshift-private — see
 // reservedProviderConfigKeys.
 const (
-	providerConfigVisionModeKey  = "vision_mode"
-	providerConfigAPIContractKey = "api_contract"
-	providerConfigReasoningKey   = "reasoning"
+	providerConfigVisionModeKey      = "vision_mode"
+	providerConfigAPIContractKey     = "api_contract"
+	providerConfigReasoningKey       = "reasoning"
+	providerConfigMaxOutputTokensKey = "max_output_tokens"
 
 	APIContractAuto            = "auto"
 	APIContractResponses       = "responses"
@@ -26,9 +27,10 @@ const (
 // key like vision_mode would be sent to OpenAI/OpenRouter as an unknown request
 // field and could be rejected.
 var reservedProviderConfigKeys = map[string]bool{
-	providerConfigVisionModeKey:  true,
-	providerConfigAPIContractKey: true,
-	providerConfigReasoningKey:   true,
+	providerConfigVisionModeKey:      true,
+	providerConfigAPIContractKey:     true,
+	providerConfigReasoningKey:       true,
+	providerConfigMaxOutputTokensKey: true,
 }
 
 // ResponsesReasoningConfig contains the Responses reasoning controls that
@@ -88,7 +90,40 @@ func ValidateProviderConfig(raw string) error {
 			return fmt.Errorf("provider_config.reasoning.budget_tokens must be non-negative")
 		}
 	}
+	if rawMax, ok := cfg[providerConfigMaxOutputTokensKey]; ok {
+		var value int
+		if err := json.Unmarshal(rawMax, &value); err != nil {
+			return fmt.Errorf("provider_config.max_output_tokens must be an integer")
+		}
+		if value < 0 {
+			return fmt.Errorf("provider_config.max_output_tokens must be non-negative")
+		}
+	}
 	return nil
+}
+
+// ProviderConfigMaxOutputTokens returns the per-connection output-token
+// override, or 0 when absent or invalid. A positive value replaces the model
+// catalog's output limit so an operator can force a larger (or smaller) cap for
+// a model the catalog describes incorrectly or does not describe at all.
+func ProviderConfigMaxOutputTokens(raw string) int {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return 0
+	}
+	var cfg map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(raw), &cfg); err != nil {
+		return 0
+	}
+	rawMax, ok := cfg[providerConfigMaxOutputTokensKey]
+	if !ok {
+		return 0
+	}
+	var value int
+	if err := json.Unmarshal(rawMax, &value); err != nil || value < 0 {
+		return 0
+	}
+	return value
 }
 
 // ProviderConfigAPIContract returns the requested generation wire contract.

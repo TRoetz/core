@@ -209,10 +209,15 @@
         : await api.collections.createBoardConfiguration(collectionId, workspaceId, payload);
       persisted = sent;
       inherited = Boolean(config?.view_settings_inherited) || !config?.view_settings;
+      // Reflect the saved set immediately: navigation reads this store, and
+      // dropping the entry would fall back to the everything-enabled default
+      // until some later refetch. A workspace-scope save also changes every
+      // inheriting collection, so drop those caches and let them refetch.
       if (collectionId) {
-        viewSettingsStore.invalidate(workspaceId, collectionId);
+        viewSettingsStore.applyEnabledViews(workspaceId, collectionId, sent, inherited);
       } else {
         viewSettingsStore.invalidateWorkspace(workspaceId);
+        viewSettingsStore.applyEnabledViews(workspaceId, null, sent, inherited);
       }
     } finally {
       saving = false;
@@ -229,10 +234,10 @@
           await api.collections.updateBoardConfiguration(collectionId, config?.id, {
             view_settings: { enabled_views: null },
           }, workspaceId);
-          viewSettingsStore.invalidate(workspaceId, collectionId);
           applyEffectiveViews(
             await api.collections.getBoardConfiguration(collectionId ?? null, workspaceId ?? null)
           );
+          viewSettingsStore.applyEnabledViews(workspaceId, collectionId, enabled, inherited);
         } finally {
           saving = false;
         }

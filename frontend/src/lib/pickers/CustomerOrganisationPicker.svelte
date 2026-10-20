@@ -3,6 +3,7 @@
   import { Building2 } from '@lucide/svelte';
   import { createAsyncLoader } from '../composables';
   import { api } from '../api.js';
+  import { isNoCustomer } from '../utils/customerLabel.js';
   import { onDestroy, onMount } from 'svelte';
 
   let {
@@ -26,7 +27,9 @@
   const organisations = createAsyncLoader(() => api.customerOrganisations.getAll());
   onMount(() => { if (providedOrganisations === null) organisations.load(); });
   onDestroy(() => organisations.dispose());
-  const organisationOptions = $derived(providedOrganisations ?? organisations.data ?? []);
+  const organisationOptions = $derived(
+    (providedOrganisations ?? organisations.data ?? []).filter((org) => !isNoCustomer(org))
+  );
 </script>
 
 {#snippet organisationRow({ item })}

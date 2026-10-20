@@ -21,7 +21,7 @@ require (
 	github.com/emersion/go-sasl v0.0.0-20241020182733-b788ff22d5a6
 	github.com/extism/go-sdk v1.7.1
 	github.com/felixge/httpsnoop v1.1.0
-	github.com/getkin/kin-openapi v0.144.0
+	github.com/getkin/kin-openapi v0.151.0
 	github.com/go-ldap/ldap/v3 v3.4.12
 	github.com/go-playground/validator/v10 v10.28.0
 	github.com/go-webauthn/webauthn v0.17.4
@@ -39,11 +39,11 @@ require (
 	github.com/openai/openai-go/v3 v3.46.0
 	github.com/prometheus/client_golang v1.24.1
 	github.com/sahilm/fuzzy v0.1.3
-	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2
+	github.com/santhosh-tekuri/jsonschema/v6 v6.0.3
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/pflag v1.0.10
 	github.com/teambition/rrule-go v1.8.2
-	github.com/yuin/goldmark v1.7.17
+	github.com/yuin/goldmark v1.8.6
 	github.com/zitadel/oidc/v3 v3.45.3
 	golang.org/x/crypto v0.57.0
 	golang.org/x/image v0.45.0

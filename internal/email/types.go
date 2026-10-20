@@ -68,6 +68,9 @@ type ProcessingResult struct {
 	CommentID    *int
 	CustomerID   *int
 	ErrorMessage string
+	// SkipReason is set for ActionSkipped when the message was machine-generated
+	// (see SystemMailCategory). Empty for a skipped empty reply.
+	SkipReason string
 }
 
 // ProcessingAction represents what happened when processing an email

@@ -261,7 +261,11 @@ func (l queryLanguageValueLoader) loadUserCompletionValues(ctx context.Context, 
 			if label == "" {
 				label = row.Username
 			}
-			values = append(values, qlCompletionValue(row.ID, row.Username, "", valueField, label, row.Username))
+			value := qlCompletionValue(row.ID, row.Username, "", valueField, label, row.Username)
+			// The label is the display name, which is not unique. Carry the
+			// username so value pickers can disambiguate identical names.
+			value.Description = row.Username
+			values = append(values, value)
 		}
 	}
 	slices.SortStableFunc(values, func(a, b qlCompletionValueDTO) int {

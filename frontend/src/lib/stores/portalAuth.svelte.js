@@ -242,14 +242,15 @@ function createPortalAuthStore() {
      * Request a magic link email
      * @param {string} slug - Portal slug
      * @param {string} email - Customer email
+     * @param {string} [next] - Same-portal path to resume after sign-in
      */
-    async requestMagicLink(slug, email) {
+    async requestMagicLink(slug, email, next) {
       loading.set(true);
       error.set(null);
       emailSent.set(false);
 
       try {
-        await api.portalAuth.requestMagicLink(slug, email);
+        await api.portalAuth.requestMagicLink(slug, email, next);
         // Always show success (prevents email enumeration)
         emailSent.set(true);
         return { success: true };

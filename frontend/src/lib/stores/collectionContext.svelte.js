@@ -1,3 +1,4 @@
+import { BACKGROUND_READ, FOREGROUND_READ } from '../api/readScheduler.js';
 import { api } from '../api.js';
 import {
   RIGHTMOST_COLUMN_LIMIT,
@@ -38,7 +39,10 @@ const LARGE_COLLECTION_PAGE_SIZE = 250;
 const BOARD_UNFINISHED_PAGE_SIZE = 1000;
 const BOARD_UNTHROTTLED_ITEM_COUNT = 1000;
 const BOARD_BACKGROUND_PAGE_DELAY_MS = 250;
-const BOARD_SEARCH_PAGE_SIZE = 100;
+const SEARCH_PAGE_SIZE = 100;
+// Local refresh-work-items bursts coalesce into one authoritative delta
+// reconciliation instead of one visibility query per item.
+const LOCAL_RECONCILE_DEBOUNCE_MS = 200;
 
 function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -107,13 +111,14 @@ class CollectionStore {
   boardDeferred = $state(null);
   rightmostCap = $state(null);
 
-  // Board search is a separate server-scoped result set. Keeping it apart
-  // prevents a search from changing the board's normal cap or pagination.
-  boardSearchItems = $state([]);
-  boardSearchPagination = $state(null);
-  boardSearchLoading = $state(false);
-  boardSearchLoadingMore = $state(false);
-  boardSearchError = $state(false);
+  // View search is a separate server-scoped result set, shared by the board
+  // and list views. Keeping it apart prevents a search from changing the
+  // view's normal pagination or completed-item trimming.
+  searchItems = $state([]);
+  searchPagination = $state(null);
+  searchLoading = $state(false);
+  searchLoadingMore = $state(false);
+  searchError = $state(false);
 
   // Backlog pagination
   backlogPagination = $state(null);
@@ -149,7 +154,7 @@ class CollectionStore {
     } catch {
       // Keep the setting usable when browser storage is unavailable.
     }
-    this.clearBoardSearch();
+    this.clearSearch();
     if (this.#wsId || this.#colId) {
       await this.load(this.#wsId, this.#colId, this.#currentView);
     }
@@ -177,8 +182,11 @@ class CollectionStore {
   #boardConfigurationKey = null;
   #boardConfigurationPromise = null;
   #boardConfigurationLoaded = false;
-  #boardSearchId = 0;
-  #boardSearchQuery = '';
+  #searchId = 0;
+  #searchQuery = '';
+  #reconcileTimer = null;
+  #reconcileInFlight = null;
+  #reconcilePending = false;
 
   constructor() {
     this.#unsubscribe = currentRoute.subscribe(($route) => {
@@ -294,7 +302,7 @@ class CollectionStore {
       this.#boardConfigurationPromise = null;
       this.#boardConfigurationLoaded = false;
       this.#changesWatermark = null;
-      this.clearBoardSearch();
+      this.clearSearch();
     }
     this.#wsId = wsId;
     this.#colId = colId;
@@ -330,6 +338,7 @@ class CollectionStore {
               limit: DEFAULT_PAGE_SIZE,
               sub_ql: this.effectiveSubFilterQL || undefined,
               collection,
+              requestOptions: FOREGROUND_READ,
             })
           : Promise.resolve(null),
         loadsItems(view)
@@ -360,10 +369,19 @@ class CollectionStore {
       }
     } catch (error) {
       if (loadId !== this.#loadId) return;
-      console.error('[collectionStore] Load failed:', error);
+      // Page teardown and session replacement abort in-flight reads; that is
+      // expected control flow, not a load failure to surface.
+      if (!isExpectedBackgroundSyncError(error)) {
+        console.error('[collectionStore] Load failed:', error);
+      }
     } finally {
       if (loadId === this.#loadId) {
         this.loading = false;
+      }
+      // Local events that arrived during the initial load get one trailing run.
+      if (this.#reconcilePending) {
+        this.#reconcilePending = false;
+        void this.refreshDeltas();
       }
     }
   }
@@ -429,7 +447,7 @@ class CollectionStore {
     const requestId = ++this.#countRequestId;
     const loadId = this.#loadId;
     try {
-      const result = await fetchCollectionTotal(this.#wsId, this.#colId);
+      const result = await fetchCollectionTotal(this.#wsId, this.#colId, FOREGROUND_READ);
       if (requestId === this.#countRequestId && loadId === this.#loadId) {
         this.collectionTotal = result.total;
         this.#changesWatermark = minimumWatermark(this.#changesWatermark, result.watermark);
@@ -533,6 +551,20 @@ class CollectionStore {
     return request;
   }
 
+  /**
+   * Non-starting view of the board-configuration request for a scope. Returns
+   * the cached config, the in-flight bootstrap promise, or null when this store
+   * has not loaded that scope. Navigation joins this instead of issuing a
+   * duplicate plain-config request.
+   */
+  peekBoardConfiguration(wsId = this.#wsId, colId = this.#colId) {
+    const key = `${colId ?? ''}|${wsId ?? ''}`;
+    if (this.#boardConfigurationKey !== key) return null;
+    if (this.#boardConfigurationLoaded) return { config: this.boardConfiguration };
+    if (this.#boardConfigurationPromise) return { pending: this.#boardConfigurationPromise };
+    return null;
+  }
+
   invalidateBoardConfiguration(wsId = this.#wsId, colId = this.#colId) {
     const key = `${colId ?? ''}|${wsId ?? ''}`;
     if (this.#boardConfigurationKey !== key) return;
@@ -557,6 +589,7 @@ class CollectionStore {
         limit: pageLimit,
         sub_ql: this.effectiveSubFilterQL || undefined,
         collection,
+        requestOptions: FOREGROUND_READ,
         ...this.#itemSortOptions(),
         ...this.#boardExclusionFilter(boardPartition?.statusIds ?? null),
       });
@@ -583,6 +616,7 @@ class CollectionStore {
           limit: BOARD_UNFINISHED_PAGE_SIZE,
           sub_ql: this.effectiveSubFilterQL || undefined,
           collection,
+          requestOptions: BACKGROUND_READ,
           ...this.#itemSortOptions(),
           ...this.#boardExclusionFilter(boardPartition?.statusIds),
         });
@@ -614,6 +648,7 @@ class CollectionStore {
       limit,
       sub_ql: subQL,
       collection,
+      requestOptions: FOREGROUND_READ,
     });
     const totalPages = first.pagination?.total_pages ?? 1;
     const pages = [first];
@@ -625,6 +660,7 @@ class CollectionStore {
         limit,
         sub_ql: subQL,
         collection,
+        requestOptions: BACKGROUND_READ,
       });
       pages.push(result);
       if (result.items.length === 0) break;
@@ -663,6 +699,7 @@ class CollectionStore {
         limit: BOARD_UNFINISHED_PAGE_SIZE,
         sub_ql: this.effectiveSubFilterQL || undefined,
         collection,
+        requestOptions: BACKGROUND_READ,
         ...this.#itemSortOptions(),
         ...this.#boardExclusionFilter(boardPartition?.statusIds),
       });
@@ -687,6 +724,7 @@ class CollectionStore {
       limit,
       sub_ql: this.effectiveSubFilterQL || undefined,
       collection,
+      requestOptions: FOREGROUND_READ,
       status_id: boardPartition.statusIds.join(','),
       completed_activity_days: boardPartition.completedActivityDays || undefined,
       ...(boardPartition.capped
@@ -718,87 +756,88 @@ class CollectionStore {
     return mainTotal + (this.boardDeferred?.total ?? 0);
   }
 
-  get boardSearchHasMore() {
-    return calcHasMore(this.boardSearchPagination);
+  get searchHasMore() {
+    return calcHasMore(this.searchPagination);
   }
 
-  get boardSearchRemainingCount() {
-    const loaded = this.boardSearchItems.length;
-    return Math.max(0, (this.boardSearchPagination?.total_items ?? loaded) - loaded);
+  get searchRemainingCount() {
+    const loaded = this.searchItems.length;
+    return Math.max(0, (this.searchPagination?.total_items ?? loaded) - loaded);
   }
 
-  clearBoardSearch() {
-    this.#boardSearchId++;
-    this.#boardSearchQuery = '';
-    this.boardSearchItems = [];
-    this.boardSearchPagination = null;
-    this.boardSearchLoading = false;
-    this.boardSearchLoadingMore = false;
-    this.boardSearchError = false;
+  clearSearch() {
+    this.#searchId++;
+    this.#searchQuery = '';
+    this.searchItems = [];
+    this.searchPagination = null;
+    this.searchLoading = false;
+    this.searchLoadingMore = false;
+    this.searchError = false;
   }
 
-  async searchBoardItems(query) {
+  async runSearch(query) {
     const normalized = query.trim();
     if (!normalized) {
-      this.clearBoardSearch();
+      this.clearSearch();
       return;
     }
 
-    const searchId = ++this.#boardSearchId;
-    this.#boardSearchQuery = normalized;
-    this.boardSearchItems = [];
-    this.boardSearchPagination = null;
-    this.boardSearchLoading = true;
-    this.boardSearchError = false;
+    const searchId = ++this.#searchId;
+    this.#searchQuery = normalized;
+    this.searchItems = [];
+    this.searchPagination = null;
+    this.searchLoading = true;
+    this.searchError = false;
 
     try {
-      const result = await this.#fetchBoardSearchPage(normalized, 1);
-      if (searchId !== this.#boardSearchId || normalized !== this.#boardSearchQuery) return;
-      this.boardSearchItems = result.items;
-      this.boardSearchPagination = result.pagination;
+      const result = await this.#fetchSearchPage(normalized, 1);
+      if (searchId !== this.#searchId || normalized !== this.#searchQuery) return;
+      this.searchItems = result.items;
+      this.searchPagination = result.pagination;
     } catch (error) {
-      if (searchId !== this.#boardSearchId) return;
-      console.error('[collectionStore] board search failed:', error);
-      this.boardSearchError = true;
+      if (searchId !== this.#searchId) return;
+      console.error('[collectionStore] search failed:', error);
+      this.searchError = true;
     } finally {
-      if (searchId === this.#boardSearchId) {
-        this.boardSearchLoading = false;
+      if (searchId === this.#searchId) {
+        this.searchLoading = false;
       }
     }
   }
 
-  async loadMoreBoardSearchItems() {
-    if (!this.#boardSearchQuery || !this.boardSearchHasMore || this.boardSearchLoadingMore) return;
+  async loadMoreSearchItems() {
+    if (!this.#searchQuery || !this.searchHasMore || this.searchLoadingMore) return;
 
-    const searchId = ++this.#boardSearchId;
-    const query = this.#boardSearchQuery;
-    const nextPage = (this.boardSearchPagination?.page ?? 0) + 1;
-    this.boardSearchLoadingMore = true;
-    this.boardSearchError = false;
+    const searchId = ++this.#searchId;
+    const query = this.#searchQuery;
+    const nextPage = (this.searchPagination?.page ?? 0) + 1;
+    this.searchLoadingMore = true;
+    this.searchError = false;
 
     try {
-      const result = await this.#fetchBoardSearchPage(query, nextPage);
-      if (searchId !== this.#boardSearchId || query !== this.#boardSearchQuery) return;
-      this.boardSearchItems = [...this.boardSearchItems, ...result.items];
-      this.boardSearchPagination = result.pagination;
+      const result = await this.#fetchSearchPage(query, nextPage);
+      if (searchId !== this.#searchId || query !== this.#searchQuery) return;
+      this.searchItems = [...this.searchItems, ...result.items];
+      this.searchPagination = result.pagination;
     } catch (error) {
-      if (searchId !== this.#boardSearchId) return;
-      console.error('[collectionStore] loading more board search results failed:', error);
-      this.boardSearchError = true;
+      if (searchId !== this.#searchId) return;
+      console.error('[collectionStore] loading more search results failed:', error);
+      this.searchError = true;
     } finally {
-      if (searchId === this.#boardSearchId) {
-        this.boardSearchLoadingMore = false;
+      if (searchId === this.#searchId) {
+        this.searchLoadingMore = false;
       }
     }
   }
 
-  #fetchBoardSearchPage(query, page) {
+  #fetchSearchPage(query, page) {
     return fetchCollectionItems(this.#wsId, this.#colId, {
       page,
-      limit: BOARD_SEARCH_PAGE_SIZE,
+      limit: SEARCH_PAGE_SIZE,
       search: query,
       sub_ql: this.effectiveSubFilterQL || undefined,
       collection: this.boardCollection ?? undefined,
+      requestOptions: FOREGROUND_READ,
       ...this.#itemSortOptions(),
     });
   }
@@ -833,6 +872,7 @@ class CollectionStore {
         page: nextPage,
         limit: pagination?.limit ?? DEFAULT_PAGE_SIZE,
         sub_ql: this.effectiveSubFilterQL || undefined,
+        requestOptions: BACKGROUND_READ,
         ...this.#itemSortOptions(),
         ...(deferred
           ? {
@@ -879,6 +919,7 @@ class CollectionStore {
         page: nextPage,
         limit: this.backlogPagination?.limit ?? DEFAULT_PAGE_SIZE,
         sub_ql: this.effectiveSubFilterQL || undefined,
+        requestOptions: BACKGROUND_READ,
       });
 
       if (loadId !== this.#loadId) return;
@@ -911,6 +952,7 @@ class CollectionStore {
           page,
           limit,
           sub_ql: this.effectiveSubFilterQL || undefined,
+          requestOptions: FOREGROUND_READ,
           ...this.#itemSortOptions(),
         }),
         this.#refreshCollectionTotal(),
@@ -947,7 +989,7 @@ class CollectionStore {
    * Used by pollers and background updates.
    */
   async refresh() {
-    if (!this.#wsId && !this.#colId) return;
+    if (!this.#wsId && !this.#colId) return false;
     const loadId = ++this.#loadId;
     this.boardBackgroundLoading = false;
 
@@ -965,7 +1007,7 @@ class CollectionStore {
           ? (this.boardCollection ?? (await getCollection(this.#colId)))
           : await getCollection(this.#colId)
         : null;
-      if (loadId !== this.#loadId) return;
+      if (loadId !== this.#loadId) return false;
 
       const deferredLoadedCount = this.items.length - this.mainItemsLoadedCount;
       const [itemsResult, backlogResult, deferredResult, countResult] = await Promise.all([
@@ -1001,7 +1043,7 @@ class CollectionStore {
           : Promise.resolve(null),
         this.#refreshCollectionTotal(),
       ]);
-      if (loadId !== this.#loadId) return;
+      if (loadId !== this.#loadId) return false;
 
       this.#applyResults({
         itemsResult,
@@ -1011,11 +1053,13 @@ class CollectionStore {
         boardPartition,
         collection,
       });
+      return true;
     } catch (error) {
-      if (loadId !== this.#loadId) return;
+      if (loadId !== this.#loadId) return false;
       if (!isExpectedBackgroundSyncError(error)) {
         console.error('[collectionStore] Refresh failed:', error);
       }
+      return false;
     }
   }
 
@@ -1108,42 +1152,130 @@ class CollectionStore {
   }
 
   /**
-   * Poll for cheap deltas and patch loaded rows by ID. Falls back to a full
+   * Insert a just-created item into the loaded projection. `backlog` targets
+   * the backlog array, otherwise the main items array. Deduplicates by id so
+   * repeated create events (modal plus delta or cross-tab frame) cannot append
+   * the same row twice.
+   */
+  insertCreatedItem(item, { backlog = false } = {}) {
+    if (!item?.id) return;
+    const target = backlog ? this.backlogItems : this.items;
+    if (target.some((existing) => existing.id === item.id)) return;
+    if (backlog) this.backlogItems = [...this.backlogItems, item];
+    else this.items = [...this.items, item];
+  }
+
+  /**
+   * Merge a patch into every loaded projection that holds the item. This is the
+   * only path components use to reflect a confirmed mutation. Update-only: a
+   * missing row is off-page or filtered out, so the next reconciliation owns it.
+   */
+  patchItem(itemId, patch) {
+    if (itemId == null || !patch) return;
+    const apply = (list) => {
+      let found = false;
+      const next = list.map((item) => {
+        if (item.id !== itemId) return item;
+        found = true;
+        return { ...item, ...patch };
+      });
+      return found ? next : list;
+    };
+    const items = apply(this.items);
+    if (items !== this.items) this.items = items;
+    const backlog = apply(this.backlogItems);
+    if (backlog !== this.backlogItems) this.backlogItems = backlog;
+    const search = apply(this.searchItems);
+    if (search !== this.searchItems) this.searchItems = search;
+  }
+
+  /**
+   * Move a loaded backlog row to the start or end of the backlog list after the
+   * server confirmed the new rank.
+   */
+  moveBacklogItemToBoundary(item, boundary) {
+    if (!item?.id) return;
+    const others = this.backlogItems.filter((existing) => existing.id !== item.id);
+    this.backlogItems = boundary === 'start' ? [item, ...others] : [...others, item];
+  }
+
+  /**
+   * Replace the cached board configuration for a scope after a successful save.
+   * A scope that is not currently loaded is left alone; its next load fetches
+   * the saved config.
+   */
+  setBoardConfiguration(config, workspaceId = this.#wsId, collectionId = this.#colId) {
+    const key = `${collectionId ?? ''}|${workspaceId ?? ''}`;
+    if (this.#boardConfigurationKey !== key) return;
+    this.boardConfiguration = config;
+    this.#boardConfigurationLoaded = true;
+  }
+
+  /**
+   * The single reconciliation entry point. Local events, SSE invalidations and
+   * cross-tab broadcasts all funnel here; callers must not fetch deltas on
+   * their own. Single-flight: concurrent requests join the active run, and a
+   * request that arrives during a run or the initial load is replayed exactly
+   * once after it settles.
+   */
+  refreshDeltas() {
+    if (this.loading || this.#reconcileInFlight) {
+      this.#reconcilePending = true;
+      return this.#reconcileInFlight ?? Promise.resolve(false);
+    }
+    const run = this.#fetchDeltas();
+    this.#reconcileInFlight = run;
+    const settle = () => {
+      if (this.#reconcileInFlight === run) this.#reconcileInFlight = null;
+      if (this.#reconcilePending) {
+        this.#reconcilePending = false;
+        void this.refreshDeltas();
+      }
+    };
+    void run.then(settle, settle);
+    return run;
+  }
+
+  /**
+   * Fetch cheap deltas and patch loaded rows by ID. Falls back to a full
    * refresh when the delta implies structural uncertainty (new visible item,
    * server-side sort, or backlog membership changes).
    */
-  async refreshDeltas() {
-    if ((!this.#wsId && !this.#colId) || this.loading) return;
-    if (this.#changesWatermark === null) {
-      await this.#primeChangesWatermark();
-      return;
-    }
+  async #fetchDeltas() {
+    if (!this.#wsId && !this.#colId) return false;
 
     const loadId = this.#loadId;
     try {
+      if (this.#changesWatermark === null) {
+        await this.#primeChangesWatermark();
+        return true;
+      }
+
       const changes = await fetchCollectionItemChanges(this.#wsId, this.#colId, {
         since: this.#changesWatermark,
         sub_ql: this.effectiveSubFilterQL || undefined,
       });
-      if (loadId !== this.#loadId) return;
-      this.#changesWatermark = changes?.watermark ?? this.#changesWatermark;
+      if (loadId !== this.#loadId) return false;
+      const nextWatermark = changes?.watermark ?? this.#changesWatermark;
 
       if (changes?.requires_full_reload) {
-        await this.refresh();
-        return;
+        return await this.refresh();
       }
 
       const removedIds = new Set(changes?.removed_item_ids ?? []);
       if (removedIds.size > 0) {
         // Removed IDs may be off-page or outside the saved query altogether.
-        await this.refresh();
-        return;
+        return await this.refresh();
       }
 
       const changedIds = [...new Set(changes?.changed_item_ids ?? [])].filter(
         (id) => !removedIds.has(id)
       );
-      if (changedIds.length === 0) return;
+      if (changedIds.length === 0) {
+        // Nothing to patch; advancing the cursor is safe.
+        this.#changesWatermark = nextWatermark;
+        return true;
+      }
 
       const loadedMainIds = new Set(this.items.map((item) => item.id));
       const loadedBacklogIds = new Set(this.backlogItems.map((item) => item.id));
@@ -1157,12 +1289,11 @@ class CollectionStore {
         BOARD_VIEWS.has(this.#currentView) ||
         (LIST_VIEWS.has(this.#currentView) && (this.#sortBy || this.#sortDirection));
       if (hasNewVisibleItem || touchesBacklog || usesServerOrderedItems) {
-        await this.refresh();
-        return;
+        return await this.refresh();
       }
 
       const updatedItems = await fetchItemsById(loadedChangedIds);
-      if (loadId !== this.#loadId) return;
+      if (loadId !== this.#loadId) return false;
       for (const updated of updatedItems) {
         this.#applyUpdatedItem(updated);
       }
@@ -1171,11 +1302,29 @@ class CollectionStore {
       this.items = [...this.items];
       this.backlogItems = [...this.backlogItems];
       await this.#refreshCollectionTotal();
+      // Commit the cursor only after the patch applied successfully so a
+      // failure preserves the previous cursor for replay.
+      this.#changesWatermark = nextWatermark;
+      return true;
     } catch (error) {
       if (!isExpectedBackgroundSyncError(error)) {
         console.error('[collectionStore] Delta refresh failed:', error);
       }
+      return false;
     }
+  }
+
+  /**
+   * Debounce local refresh-work-items, SSE and cross-tab bursts into one
+   * reconciliation. refreshDeltas() remains the single owner that serializes
+   * runs and retains a trailing run.
+   */
+  scheduleLocalReconciliation() {
+    if (this.#reconcileTimer) clearTimeout(this.#reconcileTimer);
+    this.#reconcileTimer = setTimeout(() => {
+      this.#reconcileTimer = null;
+      void this.refreshDeltas();
+    }, LOCAL_RECONCILE_DEBOUNCE_MS);
   }
 
   async #primeChangesWatermark() {
@@ -1195,8 +1344,8 @@ class CollectionStore {
     if (idx !== -1) Object.assign(this.items[idx], updated);
     const bIdx = this.backlogItems.findIndex((i) => i.id === updated.id);
     if (bIdx !== -1) Object.assign(this.backlogItems[bIdx], updated);
-    const searchIdx = this.boardSearchItems.findIndex((i) => i.id === updated.id);
-    if (searchIdx !== -1) Object.assign(this.boardSearchItems[searchIdx], updated);
+    const searchIdx = this.searchItems.findIndex((i) => i.id === updated.id);
+    if (searchIdx !== -1) Object.assign(this.searchItems[searchIdx], updated);
   }
 
   #hideCompletedItem(item) {
@@ -1224,7 +1373,7 @@ class CollectionStore {
       return false;
     });
     this.backlogItems = this.backlogItems.filter((item) => !ids.has(item.id));
-    this.boardSearchItems = this.boardSearchItems.filter((item) => !ids.has(item.id));
+    this.searchItems = this.searchItems.filter((item) => !ids.has(item.id));
 
     const removedBacklog = beforeBacklog - this.backlogItems.length;
     if (removedItems > 0 && this.itemsPagination) {
@@ -1284,6 +1433,10 @@ class CollectionStore {
     if (this.#unsubscribe) {
       this.#unsubscribe();
     }
+    if (this.#reconcileTimer) {
+      clearTimeout(this.#reconcileTimer);
+      this.#reconcileTimer = null;
+    }
   }
 }
 
@@ -1294,9 +1447,9 @@ export function reloadCollection() {
   collectionStore.refresh();
 }
 
-/** Poll for cheap collection deltas and patch loaded items when safe */
-export function refreshCollectionDeltas() {
-  return collectionStore.refreshDeltas();
+/** Coalesce local refresh-work-items, SSE and cross-tab events into one reconciliation. */
+export function scheduleCollectionReconciliation() {
+  collectionStore.scheduleLocalReconciliation();
 }
 
 /** Refresh a single item in the store without reloading the entire collection */

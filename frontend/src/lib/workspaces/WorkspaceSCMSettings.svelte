@@ -308,17 +308,6 @@
 </script>
 
 <div class="space-y-6" data-testid="workspace-scm-settings">
-  <!-- Header -->
-  <div class="flex items-center justify-between">
-    <div class="flex items-center gap-3">
-      <GitMerge class="w-5 h-5" style="color: var(--ds-text-subtle);" />
-      <div>
-        <h3 class="text-lg font-medium" style="color: var(--ds-text);">{t('scmSettings.title')}</h3>
-        <p class="text-sm" style="color: var(--ds-text-subtle);">{t('scmSettings.subtitle')}</p>
-      </div>
-    </div>
-  </div>
-
   {#if loading}
     <StateDisplay type="loading" />
   {:else}

@@ -246,7 +246,7 @@ func (s *EmailReplyService) handleCommentCreated(params HandleCommentParams, del
 				from_email, from_name, reply_to_email, reply_to_name,
 				next_attempt_at, created_at, updated_at
 			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-			ON CONFLICT(comment_id, to_email) DO NOTHING
+			ON CONFLICT(comment_id, to_email) WHERE comment_id IS NOT NULL DO NOTHING
 			RETURNING id
 		`, params.CommentID, *item.ChannelID, params.ItemID, recipient.Email, recipient.Name,
 			subject, htmlBody, textBody, messageID, inReplyTo, string(referencesJSON),
@@ -370,7 +370,8 @@ func recipientMessageID(commentID int, email, domain string) string {
 
 type emailReplyOutboxRow struct {
 	ID             int
-	CommentID      int
+	Kind           string
+	CommentID      sql.NullInt64
 	ChannelID      int
 	ItemID         int
 	ToEmail        string
@@ -567,11 +568,14 @@ func (s *EmailReplyService) sendItemNotice(item *models.Item, toEmail, toName, s
 	return true, "", nil
 }
 
-// SendIntakeConfirmation emails the sender a receipt for a request an email
-// intake just created (WI-1712). The message starts a fresh thread and records
-// its own Message-ID, so a reply to the receipt lands on the ticket. Expected
-// skips (missing customer/item, no SMTP) are non-errors.
-func (s *EmailReplyService) SendIntakeConfirmation(itemID, customerID int) error {
+// EnqueueIntakeConfirmation queues the sender's receipt for a request an
+// email intake just created (WI-1712, WI-1769). The receipt goes through the
+// durable reply outbox instead of sending inline, so a slow or failing SMTP
+// server never stalls mailbox polling and the receipt is retried with backoff.
+// The receipt starts a fresh thread and records its own Message-ID on
+// delivery, so a reply to it lands on the ticket. Expected skips (missing
+// customer/item, no SMTP) are non-errors.
+func (s *EmailReplyService) EnqueueIntakeConfirmation(itemID, customerID int) error {
 	if !s.smtpSender.IsSMTPConfigured() {
 		return nil
 	}
@@ -617,34 +621,21 @@ func (s *EmailReplyService) SendIntakeConfirmation(itemID, customerID int) error
 
 	messageID := fmt.Sprintf("<ws-confirm-%d-%d@%s>", itemID, time.Now().UnixNano(), s.getSMTPDomain())
 	replyToEmail, replyToName := s.resolveReplyToAddress(itemID, *item.ChannelID)
-	if err := s.smtpSender.SendThreadedEmail(smtp.ThreadedEmailParams{
-		ToEmail:      customerEmail,
-		ToName:       customerName,
-		ReplyToEmail: replyToEmail,
-		ReplyToName:  replyToName,
-		Subject:      subject,
-		HTMLBody:     htmlBody,
-		TextBody:     textBody,
-		MessageID:    messageID,
-	}); err != nil {
-		return fmt.Errorf("send intake confirmation: %w", err)
-	}
-
-	// Record the receipt's Message-ID so a reply that carries only In-Reply-To
-	// resolves to the ticket instead of starting a new one. Best-effort: the
-	// mail is already sent.
+	// The per-item confirmation unique index makes re-processing the same email
+	// a no-op, so a duplicate receipt is never queued.
 	if _, err := s.db.ExecWrite(`
-		INSERT INTO email_message_tracking (
-			channel_id, message_id, dedup_key, in_reply_to, from_email, from_name, subject,
-			item_id, comment_id, direction, processed_at
-		) VALUES (?, ?, ?, NULL, ?, ?, ?, ?, NULL, 'outbound', CURRENT_TIMESTAMP)
-		ON CONFLICT(channel_id, dedup_key) DO NOTHING
-	`, *item.ChannelID, messageID, messageID, s.getSMTPFromEmail(), customerName, subject, itemID); err != nil {
-		slog.Warn("failed to record intake confirmation in email tracking",
-			"component", "email_reply_service", "item_id", itemID, "message_id", messageID, "error", err)
+		INSERT INTO email_reply_outbox (
+			kind, channel_id, item_id, to_email, to_name, subject,
+			html_body, text_body, message_id, in_reply_to, references_json,
+			from_email, from_name, reply_to_email, reply_to_name,
+			next_attempt_at, created_at, updated_at
+		) VALUES ('intake_confirmation', ?, ?, ?, ?, ?, ?, ?, ?, '', '[]', ?, ?, ?, ?,
+		          CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+		ON CONFLICT DO NOTHING
+	`, *item.ChannelID, itemID, customerEmail, customerName, subject,
+		htmlBody, textBody, messageID, s.getSMTPFromEmail(), customerName, replyToEmail, replyToName); err != nil {
+		return fmt.Errorf("enqueue intake confirmation: %w", err)
 	}
-	slog.Info("sent intake confirmation",
-		"component", "email_reply_service", "item_id", itemID, "to", customerEmail)
 	return nil
 }
 
@@ -770,11 +761,11 @@ func (s *EmailReplyService) deliverPendingReply(ctx context.Context, outboxID in
 		SET next_attempt_at = ?, lease_owner = ?, updated_at = CURRENT_TIMESTAMP
 		WHERE id = ? AND delivered_at IS NULL AND discarded_at IS NULL
 		  AND next_attempt_at <= CURRENT_TIMESTAMP
-		RETURNING id, comment_id, channel_id, item_id, to_email, to_name, subject,
+		RETURNING id, kind, comment_id, channel_id, item_id, to_email, to_name, subject,
 		       html_body, text_body, message_id, in_reply_to, references_json,
 		       from_email, from_name, reply_to_email, reply_to_name, attempt_count
 	`, leaseUntil, s.leaseOwner, outboxID).Scan(
-		&row.ID, &row.CommentID, &row.ChannelID, &row.ItemID, &row.ToEmail, &row.ToName,
+		&row.ID, &row.Kind, &row.CommentID, &row.ChannelID, &row.ItemID, &row.ToEmail, &row.ToName,
 		&row.Subject, &row.HTMLBody, &row.TextBody, &row.MessageID, &row.InReplyTo,
 		&row.ReferencesJSON, &row.FromEmail, &row.FromName, &row.ReplyToEmail, &row.ReplyToName,
 		&row.AttemptCount,
@@ -833,6 +824,7 @@ func (s *EmailReplyService) deliverPendingReply(ctx context.Context, outboxID in
 
 	slog.Info("sent threaded email reply to customer",
 		"component", "email_reply_service",
+		"kind", row.Kind,
 		"comment_id", row.CommentID,
 		"item_id", row.ItemID,
 		"to", row.ToEmail,

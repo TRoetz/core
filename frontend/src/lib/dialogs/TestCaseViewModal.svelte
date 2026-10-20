@@ -1,6 +1,5 @@
 <script>
   import {
-    ArrowLeft,
     Edit,
     Play,
     CheckCircle,
@@ -14,6 +13,7 @@
   } from '@lucide/svelte';
   import Modal from './Modal.svelte';
   import Button from '../components/Button.svelte';
+  import BackButton from '../components/BackButton.svelte';
   import Card from '../components/Card.svelte';
   import Panel from '../components/Panel.svelte';
   import EmptyState from '../components/EmptyState.svelte';
@@ -207,9 +207,11 @@
     >
       {#snippet actions()}
         {#if embedded}
-          <Button variant="ghost" icon={ArrowLeft} onclick={handleClose} dataTestid="test-case-detail-back">
-            {backLabel || t('testCase.backToItem')}
-          </Button>
+          <BackButton
+            onclick={handleClose}
+            testid="test-case-detail-back"
+            label={backLabel || t('testCase.backToItem')}
+          />
         {/if}
       {/snippet}
     </PageHeader>

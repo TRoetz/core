@@ -4,6 +4,7 @@
  * Centralizes screen list, field editing, and drag-and-drop state.
  */
 import { api } from '../api.js';
+import { isCreateRenderableCustomFieldType } from '../utils/customFieldTypes.js';
 import { createSearchFilteredFields } from '../utils/fieldSearchUtils.js';
 import {
   ALWAYS_VISIBLE_SYSTEM_FIELDS,
@@ -352,7 +353,15 @@ class ScreenEditorStore extends DragStateStore {
 
   canFieldBeRequired(field) {
     if (!field) return false;
-    if (field.field_type !== 'system') return true;
+    if (field.field_type !== 'system') {
+      // Custom fields are required-able unless the create form cannot render
+      // or satisfy them (linking fields need an existing item). An unknown
+      // definition (deleted field) keeps the previous permissive behavior.
+      const definition = this.customFields.find(
+        (cf) => cf.id === parseInt(field.field_identifier, 10)
+      );
+      return !definition || isCreateRenderableCustomFieldType(definition.field_type);
+    }
     return canSystemFieldBeRequiredOnCreate(field.field_identifier);
   }
 

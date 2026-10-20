@@ -110,9 +110,15 @@ export default {
   },
 
   items: {
-    requesterOpenTickets: 'Possible duplicates',
+    requesterOpenTickets: 'Other open tickets from this requester',
     requesterOpenTicketsHelp:
-      "Other open tickets from the same requester — this conversation may belong on one of them. Merge to keep one thread.",
+      'Other open tickets from the same requester — this conversation may belong on one of them. Merge to keep one thread.',
+    requesterOpenTicketsEmpty: 'No other open tickets from this requester.',
+    findDuplicates: 'Find duplicates',
+    findDuplicatesFailed: 'Could not search for duplicates',
+    aiSuggested: 'AI',
+    aiSuggestionsTemporary: 'AI suggestions are temporary and are not saved to this ticket.',
+    mergeIntoThisTicket: 'Merge into this',
     customerContext: 'Customer context',
     customerContextRequester: 'Requester',
     customerContextOrganisation: 'Organisation',
@@ -169,6 +175,7 @@ export default {
       outsideHours: 'Outside service hours',
       elapsedOfGoal: '{elapsed} elapsed of {goal} goal',
       notRunning: 'No running cycle',
+      noGoal: 'No goal matched for this item',
       completedCycles: 'Completed cycles ({count})',
       coverageDiscrepancies: {
         sla_wider: 'This SLA counts time outside the bound team’s service hours.',
@@ -385,6 +392,7 @@ export default {
     mergeTitle: 'Merge duplicate into this ticket',
     mergeDuplicateLabel: 'Duplicate ticket',
     mergeHelp: 'Search for the duplicate ticket. Its comments, attachments and email thread move here, and the duplicate shows a link back to this ticket.',
+    mergeDifferentRequester: 'These tickets have different requesters. The duplicate’s comments move here but are marked private, and its files, email thread, and participants stay on the duplicate.',
     mergeSelfError: 'A ticket cannot be merged into itself',
     mergeConfirm: 'Merge',
     mergeWorking: 'Merging…',
@@ -958,6 +966,7 @@ export default {
       reorderFailed: 'Failed to reorder metrics',
       noMetrics: 'No SLA metrics yet.',
       nameRequired: 'Name is required.',
+      goalRequired: 'Add at least one goal so the SLA has a target.',
       goalQueryRequired: 'Every goal needs a query.',
       targetRequired: 'Every goal needs at least one target.',
       targetCalendarRequired: 'Every target needs a calendar.',
@@ -990,6 +999,7 @@ export default {
       },
       goals: 'Goals',
       goalQueryPlaceholder: 'QL query, e.g. priority = High',
+      goalQueryOptionalHint: 'Optional — leave blank to match all tickets.',
       addGoal: 'Add goal',
       addTarget: 'Add target',
       fallback: 'Fallback',
@@ -1023,6 +1033,11 @@ export default {
       loadRecalculationsFailed: 'Failed to load recalculation work',
       noRecalculations: 'No pending recalculation work.',
       jobKind: 'Kind',
+      jobKinds: {
+        recalcItem: 'Item recalculation',
+        recalcMetric: 'Metric recalculation',
+        recalcCalendar: 'Calendar recalculation',
+      },
       jobTarget: 'Target',
       attempts: 'Attempts',
       jobState: 'State',
@@ -1038,7 +1053,7 @@ export default {
       bindingCreated: 'Team bound',
       bindingRemoved: 'Binding removed',
       bindingDenied:
-        'You must be an administrator of both the team and this workspace to change a binding.',
+        'You need to administer the team and this workspace, or be a global administrator, to change a binding.',
       removeBindingBlocked:
         'This binding cannot be removed while an SLA goal still uses one of the team’s calendars.',
       loadBindingsFailed: 'Failed to load team bindings',
@@ -1048,7 +1063,7 @@ export default {
       selectTeam: 'Select a team',
       selectTeamRequired: 'Select a team to bind.',
       bindingConsentHelp:
-        'Both the team and the workspace must consent. You need to be an administrator of both.',
+        'Both the team and the workspace must consent. Administer both, or be a global administrator.',
       reportTitle: 'SLA Compliance Report',
       reportSubtitle:
         'Completed, breached, and ongoing aggregates per metric, with the breached-cycle list for the selected window.',
@@ -1113,6 +1128,14 @@ export default {
       recurring: 'Repeats yearly',
       setDefault: 'Set as the workspace default calendar',
       applyToOngoing: 'Apply this change to ongoing cycles too',
+      applyToOngoingHint:
+        'Recalculates every ongoing cycle that uses this calendar in this workspace.',
+      applyToOngoingTeamHint:
+        'Recalculates every ongoing cycle that uses this calendar, in every workspace bound to this team.',
+      applyToOngoingImpact:
+        'Right now that is {cycles} ongoing cycle(s) across {workspaces} workspace(s).',
+      applyToOngoingNoImpact: 'No bound workspace currently references this calendar.',
+      saveAndRecalculate: 'Save and recalculate',
       owner: 'Owner',
       sharedByTeam: 'Shared by team',
       ownedByWorkspace: 'This workspace',

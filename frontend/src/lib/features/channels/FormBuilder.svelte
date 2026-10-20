@@ -4,7 +4,7 @@
   import { attachClosestEdge, extractClosestEdge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge';
   import {
     IconGripVertical, IconTrash, IconAsterisk, IconSearch, IconPlus, IconDeviceFloppy,
-    IconSettings, IconArrowLeft, IconTextSize, IconForms, IconCheckbox, IconSelect, IconAlignBoxLeftTop,
+    IconSettings, IconTextSize, IconForms, IconCheckbox, IconSelect, IconAlignBoxLeftTop,
     IconPencil, IconEye, IconExternalLink
   } from '@tabler/icons-svelte-runes';
   import { t } from '../../stores/i18n.svelte.js';
@@ -14,6 +14,7 @@
   import { errorToast, successToast } from '../../stores/toasts.svelte.js';
   import { confirm } from '../../composables/useConfirm.js';
   import Button from '../../components/Button.svelte';
+  import BackButton from '../../components/BackButton.svelte';
   import EmptyState from '../../components/EmptyState.svelte';
   import Input from '../../components/Input.svelte';
   import Checkbox from '../../components/Checkbox.svelte';
@@ -365,7 +366,7 @@
   {#if embedded || formBuilderStore.showFieldEditor}
   <div class="px-6 py-4 border-b flex items-center justify-between" style="border-color: var(--ds-border);">
     <div class="flex items-center gap-3">
-      <Button onclick={handleBack} variant="ghost" size="small" icon={IconArrowLeft} />
+      <BackButton onclick={handleBack} tooltip={t('common.back')} class="p-1" />
       <div>
         <h3 class="text-lg font-semibold" style="color: var(--ds-text);">
           {#if formBuilderStore.showFieldEditor}

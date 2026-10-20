@@ -322,9 +322,11 @@ func ExportCustomerData(db database.Database, customerID int, actor AuditActor) 
 		return export, fmt.Errorf("iterate attachment metadata: %w", err)
 	}
 
+	// The tracking address is stored as it arrived in the From header, which
+	// may differ in case from the profile email, so match case-insensitively.
 	trackingRows, err := db.Query(`
 		SELECT id, channel_id, message_id, from_email, from_name, subject, direction, processed_at
-		FROM email_message_tracking WHERE from_email = ? ORDER BY id
+		FROM email_message_tracking WHERE UPPER(from_email) = UPPER(?) ORDER BY id
 	`, export.Customer.Email)
 	if err != nil {
 		return export, fmt.Errorf("load email tracking: %w", err)

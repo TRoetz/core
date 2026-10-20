@@ -25,9 +25,9 @@ const app = mount(App, {
 // stores import cycle. initCrossTabSync is a no-op when BroadcastChannel is
 // unavailable, so this is safe to run unconditionally.
 initCrossTabSync({
-  refreshCollectionDeltas: async () => {
-    const { refreshCollectionDeltas } = await import('./lib/stores/collectionContext.js');
-    return refreshCollectionDeltas();
+  onInvalidate: async () => {
+    const { scheduleCollectionReconciliation } = await import('./lib/stores/collectionContext.js');
+    scheduleCollectionReconciliation();
   },
 });
 

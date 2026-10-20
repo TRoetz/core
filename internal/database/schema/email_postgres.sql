@@ -120,6 +120,8 @@ CREATE TABLE IF NOT EXISTS email_message_tracking (
 	uid_validity BIGINT NOT NULL DEFAULT 0,
 	rate_limited_at TIMESTAMPTZ,
 	completed_at TIMESTAMPTZ,
+	-- skipped_reason: see email.sql for the column contract.
+	skipped_reason TEXT,
 	processed_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	FOREIGN KEY (channel_id) REFERENCES channels(id) ON DELETE CASCADE,
 	FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE SET NULL,
@@ -132,11 +134,16 @@ CREATE INDEX IF NOT EXISTS idx_email_message_tracking_in_reply_to ON email_messa
 CREATE UNIQUE INDEX IF NOT EXISTS idx_email_message_tracking_dedup ON email_message_tracking(channel_id, dedup_key);
 CREATE INDEX IF NOT EXISTS idx_email_message_tracking_sender ON email_message_tracking(from_email);
 CREATE INDEX IF NOT EXISTS idx_email_message_tracking_channel_sender_time ON email_message_tracking(channel_id, LOWER(from_email), processed_at);
+CREATE INDEX IF NOT EXISTS idx_email_message_tracking_intake_sender_time ON email_message_tracking(intake_id, LOWER(from_email), processed_at);
+CREATE INDEX IF NOT EXISTS idx_email_message_tracking_item_time ON email_message_tracking(item_id, processed_at);
 
 -- Durable at-least-once queue for comment replies. See email.sql.
 CREATE TABLE IF NOT EXISTS email_reply_outbox (
 	id SERIAL PRIMARY KEY,
-	comment_id INTEGER NOT NULL,
+	-- kind separates comment replies from intake receipts. Receipts have no
+	-- comment_id; the partial unique indexes below keep each kind idempotent.
+	kind TEXT NOT NULL DEFAULT 'reply',
+	comment_id INTEGER,
 	channel_id INTEGER NOT NULL,
 	item_id INTEGER NOT NULL,
 	to_email TEXT NOT NULL,
@@ -173,7 +180,14 @@ CREATE INDEX IF NOT EXISTS idx_email_reply_outbox_pending
 
 -- One outbound reply per comment recipient (WI-1136).
 CREATE UNIQUE INDEX IF NOT EXISTS uq_email_reply_outbox_comment_recipient
-	ON email_reply_outbox(comment_id, to_email);
+	ON email_reply_outbox(comment_id, to_email)
+	WHERE comment_id IS NOT NULL;
+
+-- One intake receipt per item (WI-1769), so re-processing the same email
+-- cannot enqueue a second receipt.
+CREATE UNIQUE INDEX IF NOT EXISTS uq_email_reply_outbox_confirmation
+	ON email_reply_outbox(item_id)
+	WHERE kind = 'intake_confirmation';
 
 -- Email OAuth state for tracking OAuth flow state
 CREATE TABLE IF NOT EXISTS email_oauth_state (

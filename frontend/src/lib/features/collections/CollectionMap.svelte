@@ -4,7 +4,11 @@
   import { api } from '../../api.js';
   import { t } from '../../stores/i18n.svelte.js';
   import { getCollection, checkItemVisibility } from '../collections/collectionService.js';
-  import { collectionStore, refreshCollectionDeltas, reloadCollection } from '../../stores/collectionContext.js';
+  import {
+    collectionStore,
+    reloadCollection,
+    scheduleCollectionReconciliation,
+  } from '../../stores/collectionContext.js';
   import { workspaceDataStore, workspacesStore, capabilitiesStore, itemModalStore } from '../../stores/index.js';
   import { useGradientStyles, loadWorkspaceGradient } from '../../stores/workspaceGradient.svelte.js';
   import { Plus, ChevronDown, ChevronRight, Home, MapPin, Settings } from '@lucide/svelte';
@@ -25,6 +29,7 @@
   import Lozenge from '../../components/Lozenge.svelte';
   import { getStatusCategory } from '../../utils/statusColors.js';
   import CollectionViewSwitcher from './CollectionViewSwitcher.svelte';
+  import CollectionHierarchyLoadMore from './CollectionHierarchyLoadMore.svelte';
   import QuickAddForm from './QuickAddForm.svelte';
   import { childItemTypesForParent } from '../../utils/hierarchy.js';
   import { indexCollectionHierarchy } from './collectionHierarchy.js';
@@ -189,7 +194,7 @@
   // Scoped SSE invalidations (WI-1624): any frame runs the existing delta fetch.
   useCollectionEventStream(
     () => (collectionId ? { kind: 'collection', id: collectionId } : { kind: 'workspace', id: workspaceId }),
-    { onInvalidate: () => refreshCollectionDeltas() }
+    { onInvalidate: () => scheduleCollectionReconciliation() }
   );
 
   async function loadAllData() {
@@ -587,10 +592,13 @@
         }
       }
 
-      const isVisible = await checkItemVisibility(newItem.id, filters);
+      const membership = await checkItemVisibility(newItem.id, filters);
 
-      // Show toast notification if item won't be visible
-      if (!isVisible) {
+      if (membership === 'unknown') {
+        // Never guess membership after a failed verification; reconcile instead.
+        scheduleCollectionReconciliation();
+      } else if (membership === 'nonmember') {
+        // Show toast notification if item won't be visible
         const selectedWorkspace = workspaces.find(w => w.id === state.workspaceId);
         const workspaceName = selectedWorkspace?.name || 'another workspace';
         infoToast(`Card created in ${workspaceName} but won't appear here due to collection filters`, 'Card created successfully');
@@ -1044,6 +1052,7 @@
       </div>
     </div>
 
+    <CollectionHierarchyLoadMore testid="map-load-more" />
   </StaticViewBackground>
 {:else}
   <div class="p-6">

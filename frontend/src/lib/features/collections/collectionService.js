@@ -25,6 +25,22 @@ export function buildCollectionAssociationUpdate({
 }
 
 /**
+ * Merge a privacy-toggle PATCH response into the current collection. Marking a
+ * collection private unpublishes its public board, and the API omits
+ * `public_slug` once it is cleared, so reset both public fields from the
+ * response instead of only flipping the local privacy flag.
+ */
+export function applyCollectionPrivacyToggle(collection, updated, isPrivate) {
+  return {
+    ...collection,
+    ...updated,
+    is_private: isPrivate,
+    is_public: updated?.is_public ?? false,
+    public_slug: updated?.public_slug ?? null,
+  };
+}
+
+/**
  * Collection-specific list-column configuration is owned by the collection
  * creator; workspace-default configuration is owned by workspace admins. The
  * API enforces the same split, so a collection owner without workspace.admin
@@ -53,15 +69,18 @@ function collectionPagination(pagination) {
 }
 
 // Use the authorized item query without view filters, fetching only one summary.
-export async function fetchCollectionTotal(workspaceId, collectionId) {
+export async function fetchCollectionTotal(workspaceId, collectionId, requestOptions = {}) {
   const scope = collectionId ? { collection_id: collectionId } : { workspace_id: workspaceId };
-  const response = await api.items.getAll({
-    ...scope,
-    page: 1,
-    limit: 1,
-    omit_descriptions: true,
-    include_watermark: true,
-  });
+  const response = await api.items.getAll(
+    {
+      ...scope,
+      page: 1,
+      limit: 1,
+      omit_descriptions: true,
+      include_watermark: true,
+    },
+    requestOptions
+  );
   return {
     total: response?.pagination?.total_items ?? null,
     watermark: response?.meta?.watermark ?? 0,
@@ -78,7 +97,14 @@ export async function fetchCollectionTotal(workspaceId, collectionId) {
 export async function fetchCollectionItems(
   workspaceId,
   collectionId,
-  { page, limit, sub_ql, collection: preloadedCollection, ...extraFilters } = {}
+  {
+    page,
+    limit,
+    sub_ql,
+    collection: preloadedCollection,
+    requestOptions = {},
+    ...extraFilters
+  } = {}
 ) {
   let collectionName = 'Default';
   let collection = null;
@@ -108,7 +134,7 @@ export async function fetchCollectionItems(
     filters.workspace_id = workspaceId;
   }
 
-  const response = await api.items.getAll(filters);
+  const response = await api.items.getAll(filters, requestOptions);
   const items = response?.data ?? [];
   const pagination = collectionPagination(response?.pagination);
   const sortableFields = response?.meta?.sortable_fields ?? [];
@@ -123,12 +149,12 @@ export async function fetchCollectionItems(
  * Fetches backlog items for a collection.
  * @param {string|number} workspaceId
  * @param {string|number|null} collectionId
- * @param {{ page?: number, limit?: number, sub_ql?: string, collection?: any }} [options]
+ * @param {{ page?: number, limit?: number, sub_ql?: string, collection?: any, requestOptions?: object }} [options]
  */
 export async function fetchCollectionBacklog(
   workspaceId,
   collectionId,
-  { page, limit, sub_ql, collection: preloadedCollection } = {}
+  { page, limit, sub_ql, collection: preloadedCollection, requestOptions = {} } = {}
 ) {
   let collectionName = 'Default';
 
@@ -146,6 +172,7 @@ export async function fetchCollectionBacklog(
     sub_ql,
     omit_descriptions: true,
     include_watermark: true,
+    requestOptions,
   });
   const items = response?.data ?? [];
   const pagination = collectionPagination(response?.pagination);
@@ -157,19 +184,19 @@ export async function fetchCollectionBacklog(
  * Fetches cheap item deltas for the current workspace/collection view.
  * @param {string|number|null} workspaceId
  * @param {string|number|null} collectionId
- * @param {{ since?: number|string, sub_ql?: string }} [options]
+ * @param {{ since?: number|string, sub_ql?: string, requestOptions?: object }} [options]
  */
 export async function fetchCollectionItemChanges(
   workspaceId,
   collectionId,
-  { since, sub_ql } = {}
+  { since, sub_ql, requestOptions = {} } = {}
 ) {
   const filters = {};
   if (workspaceId) filters.workspace_id = workspaceId;
   if (collectionId) filters.collection_id = collectionId;
   if (since !== undefined && since !== null) filters.since = since;
   if (sub_ql) filters.sub_ql = sub_ql;
-  return api.items.getChanges(filters);
+  return api.items.getChanges(filters, requestOptions);
 }
 
 /**
@@ -199,27 +226,50 @@ export async function getCollection(collectionId) {
 }
 
 /**
- * Checks if an item would be visible given a set of filters (e.g., collection filters)
+ * Classify an item's membership in the given filters (e.g. collection QL).
+ * An unknown result must never be treated as membership: callers defer to an
+ * authoritative reconciliation instead of inserting a possibly out-of-filter
+ * row.
  * @param {number} itemId - The item ID to check
  * @param {Object} filters - The filters to apply (same format as api.items.getAll)
- * @returns {Promise<boolean>} True if the item is visible with the given filters
+ * @returns {Promise<'member'|'nonmember'|'unknown'>}
  */
 export async function checkItemVisibility(itemId, filters) {
-  if (!itemId) return false;
+  if (!itemId) return 'nonmember';
 
   try {
     // Query the API with the same filters + the specific item ID
     const filtersWithId = { ...filters, id: itemId };
     const response = await api.items.getAll(filtersWithId);
-
-    // Handle paginated response
     const items = response?.data ?? [];
-
-    // Check if the item is in the results
-    return items.some((item) => item.id === itemId);
+    return items.some((item) => item.id === itemId) ? 'member' : 'nonmember';
   } catch (error) {
     console.error(`Failed to check visibility for item ${itemId}:`, error);
-    // If there's an error, assume the item is visible to avoid confusing the user
-    return true;
+    return 'unknown';
   }
+}
+
+/**
+ * Decide whether a just-created item belongs in the current collection view.
+ * Collection QL and sub-filters depend on server state, so membership is
+ * verified rather than inferred from the workspace. An `unknown` result must
+ * never be treated as membership; callers reconcile instead.
+ *
+ * @param {{ id: number, workspace_id?: number|string }} item
+ * @param {{ workspaceId?: number|string|null, collectionId?: number|string|null, subFilterQL?: string }} scope
+ * @returns {Promise<'member'|'nonmember'|'unknown'>}
+ */
+export async function resolveCreatedItemMembership(
+  item,
+  { workspaceId, collectionId, subFilterQL } = {}
+) {
+  if (collectionId || subFilterQL) {
+    const filters = collectionId ? { collection_id: collectionId } : { workspace_id: workspaceId };
+    if (subFilterQL) filters.sub_ql = subFilterQL;
+    return checkItemVisibility(item.id, filters);
+  }
+  if (workspaceId) {
+    return Number(item.workspace_id) === Number(workspaceId) ? 'member' : 'nonmember';
+  }
+  return 'member';
 }

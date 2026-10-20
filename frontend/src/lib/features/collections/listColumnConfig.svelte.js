@@ -4,6 +4,7 @@ import { collectionStore } from '../../stores/collectionContext.js';
 import { t } from '../../stores/i18n.svelte.js';
 import { authStore } from '../../stores/index.js';
 import { errorToast } from '../../stores/toasts.svelte.js';
+import { viewSettingsStore } from '../../stores/viewSettings.svelte.js';
 import { workspacePermissions } from '../../stores/workspacePermissions.svelte.js';
 import {
   buildListColumnConfiguration,
@@ -78,7 +79,14 @@ export function useListColumnConfig(getScope) {
       columns = listColumnsFromConfig(saved);
       // Keep the store's cached config current so switching views does not
       // show the columns from before this save.
-      collectionStore.boardConfiguration = saved;
+      collectionStore.setBoardConfiguration(saved, workspaceId, collectionId);
+      // The write may also change view settings; drop the cached navigation
+      // entry so it re-reads instead of keeping a stale copy.
+      if (collectionId) {
+        viewSettingsStore.invalidate(workspaceId, collectionId);
+      } else {
+        viewSettingsStore.invalidateWorkspace(workspaceId);
+      }
     } catch (error) {
       console.error('Failed to save board configuration:', error);
       errorToast(t('dialogs.alerts.failedToSave', { error: error.message || error }));

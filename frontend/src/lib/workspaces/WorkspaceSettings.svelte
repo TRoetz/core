@@ -25,7 +25,7 @@ import WorkspaceCannedResponses from './WorkspaceCannedResponses.svelte';
   import AlertBox from '../components/AlertBox.svelte';
   import Toggle from '../components/Toggle.svelte';
   import Card from '../components/Card.svelte';
-  import { workspaceSettingsItems } from '../navigation/workspaceNavigation.js';
+  import { workspaceSettingsItems, workspaceSettingsSubtitleKeys } from '../navigation/workspaceNavigation.js';
   import { successToast, errorToast } from '../stores/toasts.svelte.js';
   import { t } from '../stores/i18n.svelte.js';
   import DescriptionText from '../components/DescriptionText.svelte';
@@ -75,22 +75,6 @@ import WorkspaceCannedResponses from './WorkspaceCannedResponses.svelte';
   const currentModule = $derived(
     workspaceSettingsItems.find((m) => m.id === activeTab) || workspaceSettingsItems[0]
   );
-  // Per-module page-header subtitle keys (id → i18n key).
-  const HEADER_SUBTITLE = {
-    general: 'workspaceSettings.headers.general',
-    categories: 'workspaceSettings.headers.categories',
-    members: 'workspaceSettings.headers.members',
-    configuration: 'workspaceSettings.headers.configuration',
-    'source-control': 'workspaceSettings.headers.sourceControl',
-    'coding-agents': 'workspaceSettings.headers.codingAgents',
-    'issue-sync': 'workspaceSettings.headers.issueSync',
-    'action-credentials': 'workspaceSettings.headers.actionCredentials',
-    recurrence: 'workspaceSettings.headers.recurrence',
-    templates: 'workspaceSettings.headers.templates',
-    'canned-responses': 'workspaceSettings.headers.cannedResponses',
-    'service-levels': 'workspaceSettings.headers.serviceLevels',
-    danger: 'workspaceSettings.headers.danger',
-  };
 
   // Permission check for workspace admin
   const canAdmin = $derived(workspacePermissions.canAdminWorkspace(workspaceId));
@@ -348,7 +332,7 @@ import WorkspaceCannedResponses from './WorkspaceCannedResponses.svelte';
     <PageHeader
       icon={currentModule?.icon}
       title={t(currentModule?.labelKey)}
-      subtitle={t(HEADER_SUBTITLE[activeTab])}
+      subtitle={t(workspaceSettingsSubtitleKeys[activeTab] || 'workspaceSettings.title')}
     />
 
     <div class="workspace-settings-content">

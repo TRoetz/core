@@ -114,10 +114,10 @@
         hasValuePicker = true;
         const rows = await api.queryLanguage.getValues(completion.value_help, query);
         if (token !== valueLoadToken) return;
-        valueOptions = (rows || []).map((row) => ({ value: row.value, label: row.label }));
+        valueOptions = (rows || []).map((row) => ({ value: row.value, label: row.label, description: row.description }));
       } else if (completion?.values?.length) {
         hasValuePicker = true;
-        valueOptions = completion.values.map((row) => ({ value: row.value, label: row.label }));
+        valueOptions = completion.values.map((row) => ({ value: row.value, label: row.label, description: row.description }));
       } else if (field.options) {
         valueOptions = parseFieldOptions(field.options).items.map((option) => ({
           value: option.id,
@@ -210,6 +210,15 @@
   }
 </script>
 
+{#snippet valueOptionSnippet({ item })}
+  <div class="flex flex-col min-w-0">
+    <span class="truncate">{item.label}</span>
+    {#if item.description}
+      <span class="truncate" style="color: var(--ds-text-subtle); font-size: 0.75rem;">{item.description}</span>
+    {/if}
+  </div>
+{/snippet}
+
 <div
   data-testid={testIdPrefix || undefined}
   class={compact ? "flex flex-col gap-2" : "flex items-start gap-2 p-2.5 rounded border"}
@@ -222,6 +231,7 @@
         selectedField={filter.field}
         placeholder="Choose field..."
         {fieldGroups}
+        fieldSource={fieldGroups ? 'standard' : 'catalog'}
         {customFieldItems}
         onSelect={handleFieldSelect}
         onClear={handleFieldClear}
@@ -275,6 +285,7 @@
             onSearchChange={searchValueOptions}
             getValue={(item) => item.value}
             getLabel={(item) => item.label}
+            itemSnippet={valueOptionSnippet}
             optionTestid={(option) => testIdPrefix ? `${testIdPrefix}-value-option-${option.value}` : undefined}
             onChange={(values) => onchange?.({ ...filter, values, value: '' })}
           />
@@ -320,6 +331,7 @@
           onSearchChange={searchValueOptions}
           getValue={(item) => item.value}
           getLabel={(item) => item.label}
+          itemSnippet={valueOptionSnippet}
           optionTestid={(option) => testIdPrefix ? `${testIdPrefix}-value-option-${option.value}` : undefined}
           onSelect={(item) => onchange?.({ ...filter, value: item ? item.value : '' })}
         />

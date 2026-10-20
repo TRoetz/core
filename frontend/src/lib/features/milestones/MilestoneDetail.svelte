@@ -4,10 +4,11 @@
   import { t } from '../../stores/i18n.svelte.js';
   import { confirm } from '../../composables/useConfirm.js';
   import { errorToast } from '../../stores/toasts.svelte.js';
-  import { IconArrowLeft as ArrowLeft, IconCalendar as Calendar, IconFlag as Flag, IconEdit as Edit, IconTrash as Trash2, IconDots as MoreHorizontal, IconTag as Tag, IconExternalLink as ExternalLink } from '@tabler/icons-svelte-runes';
+  import { IconCalendar as Calendar, IconFlag as Flag, IconEdit as Edit, IconTrash as Trash2, IconDots as MoreHorizontal, IconTag as Tag, IconExternalLink as ExternalLink } from '@tabler/icons-svelte-runes';
   import { api } from '../../api.js';
   import { navigate } from '../../router.js';
   import Button from '../../components/Button.svelte';
+  import BackButton from '../../components/BackButton.svelte';
   import Lozenge from '../../components/Lozenge.svelte';
   import Modal from '../../dialogs/Modal.svelte';
   import ModalHeader from '../../dialogs/ModalHeader.svelte';
@@ -206,14 +207,7 @@
   <div class="flex-1 max-w-5xl mx-auto p-6">
     <!-- Header -->
     <div class="flex items-center justify-between mb-6">
-      <button
-        onclick={goBack}
-        class="flex items-center gap-2 text-sm font-medium hover:opacity-80 transition-opacity"
-        style="color: var(--ds-text-subtle);"
-      >
-        <ArrowLeft class="w-4 h-4" />
-        {t('common.back')}
-      </button>
+      <BackButton onclick={goBack} label={t('common.back')} />
 
       {#if progress}
         <DropdownMenu

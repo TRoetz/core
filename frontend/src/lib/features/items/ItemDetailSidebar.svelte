@@ -20,6 +20,7 @@
   import { errorToast } from '../../stores/toasts.svelte.js';
   import ItemSCMLinks from './ItemSCMLinks.svelte';
   import ItemIntegrationLinks from './ItemIntegrationLinks.svelte';
+  import ItemSLAPanel from './ItemSLAPanel.svelte';
   import ZammadItemPanel from './ZammadItemPanel.svelte';
 	import RequesterOpenTickets from './RequesterOpenTickets.svelte';
   import CustomerContextSection from './CustomerContextSection.svelte';
@@ -31,6 +32,8 @@
   import CreatePRFromBranchModal from '../../dialogs/CreatePRFromBranchModal.svelte';
   import { getShortcutDisplay } from '../../utils/keyboardShortcuts.js';
   import { workspacePermissions } from '../../stores';
+  import { workspaceDataStore } from '../../stores/workspaceDataStore.svelte.js';
+  import { collectionEditorOptions } from '../../stores/collectionEditorOptions.svelte.js';
   import { t } from '../../stores/i18n.svelte.js';
   import { formatDateOnly, formatCustomFieldDate } from '../../utils/dateFormatter.js';
   import { parseDuration, durationToString } from '../../utils/timeUtils.js';
@@ -146,6 +149,62 @@
     oneditRecurrence = null,
     onrequestmerge = null,
   } = $props();
+
+  // Detail owns one scoped milestone options loader. Complete workspace
+  // snapshots seed it; partial/unknown lists load every page on first open.
+  function filterMilestonesByWorkspace(list = [], scope) {
+    const allowedCategoryIds = scope?.milestone_categories;
+    if (!allowedCategoryIds?.length) return list;
+    return list.filter((milestone) => allowedCategoryIds.includes(milestone.category_id));
+  }
+
+  // The item's owning workspace scopes every lazily loaded editor option.
+  const detailWorkspaceId = $derived(item?.workspace_id ?? workspace?.id ?? null);
+  const editorOptionsEntry = $derived(collectionEditorOptions.get(detailWorkspaceId));
+
+  $effect(() => {
+    const wsId = detailWorkspaceId;
+    if (!wsId || !Array.isArray(milestones)) return;
+    const isActiveWorkspace = Number(workspaceDataStore.workspaceId) === Number(wsId);
+    const complete =
+      isActiveWorkspace && workspaceDataStore.planningCompleteness?.milestones === true;
+    const isPersonal = workspaceDataStore.workspace?.is_personal === true;
+    collectionEditorOptions.prime(
+      wsId,
+      { milestones: milestones.filter((milestone) => !isPersonal || !milestone.is_global) },
+      { milestones: complete }
+    );
+  });
+
+  async function openMilestoneOptions() {
+    if (detailWorkspaceId) {
+      await collectionEditorOptions.load(detailWorkspaceId, 'milestones');
+    }
+  }
+
+  // Assignee and team options load on first open only. The authorized
+  // assignable-users endpoint (not the user-display cache) keeps agent
+  // presence and assignability semantics intact.
+  async function openAssigneeOptions() {
+    if (detailWorkspaceId) {
+      await collectionEditorOptions.load(detailWorkspaceId, 'users');
+    }
+  }
+
+  async function openTeamOptions() {
+    if (detailWorkspaceId) {
+      await collectionEditorOptions.load(detailWorkspaceId, 'teams');
+    }
+  }
+
+  const milestonePickerOptions = $derived(
+    filterMilestonesByWorkspace(editorOptionsEntry.milestones, workspace)
+  );
+  const milestonePickerLoading = $derived(editorOptionsEntry.loading.milestones === true);
+  const assigneeOptions = $derived(editorOptionsEntry.users);
+  const assigneeOptionsLoading = $derived(editorOptionsEntry.loading.users === true);
+  const teamOptions = $derived(editorOptionsEntry.teams);
+  const teamOptionsLoading = $derived(editorOptionsEntry.loading.teams === true);
 
   // State for SCM Link modals
   let showAddSCMLinkModal = $state(false);
@@ -576,6 +635,34 @@
 >
   <!-- Panel Content -->
   <div class="flex-1 px-4 py-4 overflow-y-auto">
+    <!-- Shared custom-field editor. Date fields save on change; every other
+         free-form type defers to commit-on-blur. -->
+    {#snippet customFieldEditor(fieldDef, screenField, currentValue, fieldEditable, commitOnBlur)}
+      <CustomFieldRenderer
+        field={fieldDef}
+        value={currentValue}
+        readonly={!fieldEditable}
+        autoOpenPickers={true}
+        disabled={!canEdit || !fieldEditable}
+        {milestones}
+        {iterations}
+        itemId={item?.id}
+        required={screenField.is_required}
+        onChange={(val) => {
+          editCustomFieldValues[screenField.field_identifier] = val;
+          if (!DEFERRED_SAVE_CUSTOM_FIELD_TYPES.has(fieldDef.field_type)) {
+            onsaveField?.({ field: `custom_field_${screenField.field_identifier}` });
+          }
+        }}
+        onCommit={commitOnBlur
+          ? (val) => onsaveField?.({ field: `custom_field_${screenField.field_identifier}`, value: val })
+          : null}
+        onCancel={() => oncancelEdit?.({ field: `custom_field_${screenField.field_identifier}` })}
+      />
+    {/snippet}
+    {#if item?.id}
+      <ItemSLAPanel itemId={item.id} />
+    {/if}
     <!-- DETAILS Section Header -->
     <div class="flex items-center justify-between mb-4">
       <Text variant="subtle" size="xs" weight="semibold" class="uppercase tracking-wider">{t('common.details')}</Text>
@@ -800,6 +887,10 @@
           showUnassigned={true}
           disabled={!canEdit || !isSystemFieldEditable('assignee')}
           workspaceId={item?.workspace_id}
+          users={assigneeOptions}
+          loading={assigneeOptionsLoading}
+          onOpen={openAssigneeOptions}
+          autoOpen={editingAssignee}
           class="w-full"
           onSelect={(selectedUser) => {
             onsaveField?.({
@@ -835,6 +926,9 @@
           value={item.team_id ?? null}
           placeholder={t('items.selectTeam')}
           disabled={!canEdit || !isSystemFieldEditable('team')}
+          teams={teamOptions}
+          loading={teamOptionsLoading}
+          onOpen={openTeamOptions}
           class="w-full"
           onSelect={(selectedTeam) => {
             onsaveField?.({
@@ -875,6 +969,9 @@
           multiple={true}
           value={itemMilestones}
           workspaceId={item.workspace_id}
+          milestones={milestonePickerOptions}
+          loading={milestonePickerLoading}
+          onOpen={openMilestoneOptions}
           disabled={!canEdit || !isSystemFieldEditable('milestone')}
           class="w-full"
           onSelect={({ ids }) => {
@@ -1161,22 +1258,7 @@
             {@const fieldEditable = isCustomFieldEditable(fieldDef.id)}
             <div class="mb-3" data-testid={`item-custom-field-${fieldDef.id}`}>
               {#if isEditing}
-                <CustomFieldRenderer
-                  field={fieldDef}
-                  value={currentValue}
-                  readonly={!fieldEditable}
-                  disabled={!canEdit || !fieldEditable}
-                  {milestones}
-                  {iterations}
-                  itemId={item?.id}
-                  required={screenField.is_required}
-                  onChange={(val) => {
-                    editCustomFieldValues[screenField.field_identifier] = val;
-                    onsaveField?.({ field: `custom_field_${screenField.field_identifier}` });
-                  }}
-                  onStartEdit={() => startEditingCustomField(screenField.field_identifier)}
-                  onCancel={() => oncancelEdit?.({ field: `custom_field_${screenField.field_identifier}` })}
-                />
+                {@render customFieldEditor(fieldDef, screenField, currentValue, fieldEditable, false)}
               {:else}
                 <button
                   onclick={() => startEditingCustomField(screenField.field_identifier)}
@@ -1235,28 +1317,7 @@
                     />
                   </div>
                 {:else if isEditing}
-                  <CustomFieldRenderer
-                    field={fieldDef}
-                    value={currentValue}
-                    readonly={!fieldEditable}
-                    disabled={!canEdit || !fieldEditable}
-                    {milestones}
-                    {iterations}
-                    itemId={item?.id}
-                    required={screenField.is_required}
-                    onChange={(val) => {
-                      editCustomFieldValues[screenField.field_identifier] = val;
-                      if (!DEFERRED_SAVE_CUSTOM_FIELD_TYPES.has(fieldDef.field_type)) {
-                        onsaveField?.({ field: `custom_field_${screenField.field_identifier}` });
-                      }
-                    }}
-                    onCommit={(val) => onsaveField?.({
-                      field: `custom_field_${screenField.field_identifier}`,
-                      value: val,
-                    })}
-                    onStartEdit={() => startEditingCustomField(screenField.field_identifier)}
-                    onCancel={() => oncancelEdit?.({ field: `custom_field_${screenField.field_identifier}` })}
-                  />
+                  {@render customFieldEditor(fieldDef, screenField, currentValue, fieldEditable, true)}
                 {:else}
                   {@const hasValue = currentValue !== null && currentValue !== undefined && currentValue !== ''}
                   {@const displayValue = hasValue ? formatCustomFieldValue(fieldDef, currentValue) : t('common.none')}

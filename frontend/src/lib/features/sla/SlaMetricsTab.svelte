@@ -18,7 +18,6 @@
   let calendars = $state([]);
   let statuses = $state([]);
   let statusCategories = $state([]);
-  let priorities = $state([]);
   let loading = $state(true);
   let error = $state(null);
   let showEditor = $state(false);
@@ -41,10 +40,9 @@
         position: goal.position ?? index,
         ql_query: goal.ql_query ?? '',
         import_status: goal.import_status || 'native',
-        targets: (goal.targets ?? []).map((target, targetIndex) => ({
+        // A goal has exactly one target; priority-specific durations are separate goals.
+        targets: (goal.targets ?? []).slice(0, 1).map((target, targetIndex) => ({
           position: target.position ?? targetIndex,
-          is_fallback: target.is_fallback,
-          priority_id: target.priority_id ?? null,
           target_ms: target.target_ms,
           calendar_id: target.calendar_id,
         })),
@@ -52,7 +50,7 @@
     };
   }
 
-  async function loadMetrics(workspace, generation) {
+  async function loadMetrics(workspace = workspaceId, generation = requestGeneration) {
     try {
       loading = true;
       error = null;
@@ -68,17 +66,15 @@
   }
 
   async function loadReferenceData(workspace, generation) {
-    const [calendarList, statusList, categoryList, priorityList] = await Promise.all([
+    const [calendarList, statusList, categoryList] = await Promise.all([
       api.sla.getAvailableCalendars(workspace).catch(() => []),
       api.statuses.getAll().catch(() => []),
       api.statusCategories.getAll().catch(() => []),
-      api.priorities.getAll().catch(() => []),
     ]);
     if (generation !== requestGeneration) return;
     calendars = calendarList ?? [];
     statuses = statusList ?? [];
     statusCategories = categoryList ?? [];
-    priorities = priorityList ?? [];
   }
 
   let requestGeneration = 0;
@@ -271,7 +267,6 @@
   {calendars}
   {statuses}
   {statusCategories}
-  {priorities}
   onSave={save}
   onClose={() => {
     showEditor = false;

@@ -27,6 +27,15 @@
     return metrics.find((metric) => metric.id === metricId)?.name || `#${metricId}`;
   }
 
+  function jobKindLabel(kind) {
+    const key = {
+      recalc_item: 'recalcItem',
+      recalc_metric: 'recalcMetric',
+      recalc_calendar: 'recalcCalendar',
+    }[kind];
+    return key ? t(`workspaceSettings.serviceLevels.jobKinds.${key}`) : kind;
+  }
+
   async function loadJobs() {
     try {
       loading = true;
@@ -126,7 +135,7 @@
   rowAttrs={(job) => ({ 'data-testid': `sla-recalc-row-${job.id}` })}
 >
   {#snippet kind(job)}
-    <span class="text-xs" style="color: var(--ds-text-subtle)">{job.kind}</span>
+    <span class="text-xs" style="color: var(--ds-text-subtle)">{jobKindLabel(job.kind)}</span>
   {/snippet}
   {#snippet target(job)}
     {#if job.metric_id}

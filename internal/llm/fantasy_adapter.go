@@ -35,7 +35,14 @@ func (c *dynamicFantasyClient) modelClient(model string) *fantasyClient {
 	if client := c.models[model]; client != nil {
 		return client
 	}
-	client := newFantasyClient(c.endpoint, model, c.apiKey, APIContractChatCompletions, "/v1/chat/completions", "", c.timeout)
+	client := newFantasyClient(fantasyClientOptions{
+		baseURL:  c.endpoint,
+		model:    model,
+		apiKey:   c.apiKey,
+		protocol: APIContractChatCompletions,
+		chatPath: "/v1/chat/completions",
+		timeout:  c.timeout,
+	})
 	c.models[model] = client
 	return client
 }
@@ -78,54 +85,73 @@ type fantasyClient struct {
 	completionTokens completionTokenNegotiator
 }
 
-func newFantasyClient(baseURL, model, apiKey, protocol, chatPath, providerConfig string, timeout time.Duration) *fantasyClient {
-	if timeout <= 0 {
-		timeout = DefaultRequestTimeout
+// fantasyClientOptions is the resolved configuration for one provider/model
+// generation client. It is a struct rather than positional arguments because
+// the header fields are only meaningful for some providers.
+type fantasyClientOptions struct {
+	baseURL        string
+	model          string
+	apiKey         string
+	protocol       string
+	chatPath       string
+	providerConfig string
+	timeout        time.Duration
+	userAgent      string
+	sessionHeader  string
+}
+
+func newFantasyClient(opts fantasyClientOptions) *fantasyClient {
+	if opts.timeout <= 0 {
+		opts.timeout = DefaultRequestTimeout
 	}
 	client := &fantasyClient{
-		modelID:        model,
-		protocol:       protocol,
-		providerConfig: providerConfig,
+		modelID:        opts.model,
+		protocol:       opts.protocol,
+		providerConfig: opts.providerConfig,
 		replay:         &reasoningReplayState{},
 	}
-	httpClient := newAdminConfiguredHTTPClient(timeout)
+	httpClient := newAdminConfiguredHTTPClient(opts.timeout)
 	transport := httpClient.Transport
 	if transport == nil {
 		transport = http.DefaultTransport
 	}
-	httpClient.Transport = &reasoningReplayTransport{next: transport, state: client.replay}
+	httpClient.Transport = &providerHeaderTransport{
+		next:          &reasoningReplayTransport{next: transport, state: client.replay},
+		userAgent:     opts.userAgent,
+		sessionHeader: opts.sessionHeader,
+	}
 
 	var provider fantasy.Provider
 	var err error
-	switch protocol {
+	switch opts.protocol {
 	case APIContractAnthropic:
 		provider, err = anthropic.New(
-			anthropic.WithBaseURL(strings.TrimRight(baseURL, "/")),
-			anthropic.WithAPIKey(apiKey),
+			anthropic.WithBaseURL(strings.TrimRight(opts.baseURL, "/")),
+			anthropic.WithAPIKey(opts.apiKey),
 			anthropic.WithHTTPClient(httpClient),
 		)
 	case APIContractResponses:
 		provider, err = openai.New(
-			openai.WithBaseURL(fantasyOpenAIBaseURL(baseURL, "/v1/responses")),
-			openai.WithAPIKey(apiKey),
+			openai.WithBaseURL(fantasyOpenAIBaseURL(opts.baseURL, "/v1/responses")),
+			openai.WithAPIKey(opts.apiKey),
 			openai.WithHTTPClient(httpClient),
 			openai.WithUseResponsesAPI(),
 			openai.WithResponsesAPIFunc(func(string) bool { return true }),
-			openai.WithSDKOptions(providerConfigSDKOptions(providerConfig, protocol)...),
+			openai.WithSDKOptions(providerConfigSDKOptions(opts.providerConfig, opts.protocol)...),
 		)
 	default:
 		provider, err = openai.New(
-			openai.WithBaseURL(fantasyOpenAIBaseURL(baseURL, chatPath)),
-			openai.WithAPIKey(apiKey),
+			openai.WithBaseURL(fantasyOpenAIBaseURL(opts.baseURL, opts.chatPath)),
+			openai.WithAPIKey(opts.apiKey),
 			openai.WithHTTPClient(httpClient),
-			openai.WithSDKOptions(providerConfigSDKOptions(providerConfig, protocol)...),
+			openai.WithSDKOptions(providerConfigSDKOptions(opts.providerConfig, opts.protocol)...),
 		)
 	}
 	if err != nil {
 		client.initErr = err
 		return client
 	}
-	client.model, client.initErr = provider.LanguageModel(context.Background(), model)
+	client.model, client.initErr = provider.LanguageModel(context.Background(), opts.model)
 	return client
 }
 
@@ -176,6 +202,12 @@ func fantasyOpenAIBaseURL(baseURL, endpointPath string) string {
 func (c *fantasyClient) Complete(ctx context.Context, req CompletionRequest) (*CompletionResponse, error) {
 	if c.initErr != nil {
 		return nil, mapFantasyError(c.initErr)
+	}
+	// Guarantee one session per logical call so an internal retry (the
+	// max_tokens negotiation below) stays on the same provider session even when
+	// the caller attached none.
+	if SessionIDFromContext(ctx) == "" {
+		ctx = WithSessionID(ctx, NewSessionID("ws-request"))
 	}
 	prompt, err := toFantasyPrompt(req.Messages, req.EnablePromptCache)
 	if err != nil {

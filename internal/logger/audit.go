@@ -378,16 +378,17 @@ const (
 
 	// Work item lifecycle. Routine create/update/transition changes are also
 	// captured in work item history; central audit starts with destructive gaps.
-	ActionItemDelete        = "item.delete"
-	ActionItemDeleteCascade = "item.delete_cascade"
-	ActionItemMoveWorkspace = "item.move_workspace"
-	ActionItemAssign        = "item.assign"
-	ActionItemMerge         = "item.merge"
-	ActionItemSplit         = "item.split"
-	ActionItemBulkUpdate    = "item.bulk_update"
-	ActionCommentDelete     = "comment.delete"
-	ActionCommentCreate     = "comment.create"
-	ActionAttachmentDelete  = "attachment.delete"
+	ActionItemDelete         = "item.delete"
+	ActionItemDeleteCascade  = "item.delete_cascade"
+	ActionItemMoveWorkspace  = "item.move_workspace"
+	ActionItemAssign         = "item.assign"
+	ActionItemMerge          = "item.merge"
+	ActionItemSplit          = "item.split"
+	ActionItemBulkUpdate     = "item.bulk_update"
+	ActionItemBulkTransition = "item.bulk_transition"
+	ActionCommentDelete      = "comment.delete"
+	ActionCommentCreate      = "comment.create"
+	ActionAttachmentDelete   = "attachment.delete"
 
 	// External request participants (WI-1136).
 	ActionItemParticipantAdd    = "item.participant_add"

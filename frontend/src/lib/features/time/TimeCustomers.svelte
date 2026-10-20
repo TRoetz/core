@@ -11,6 +11,7 @@
   import { toHotkeyString } from '../../utils/keyboardShortcuts.js';
   import { Plus, Trash2, Edit, Users } from '@lucide/svelte';
   import { t } from '../../stores/i18n.svelte.js';
+  import { realCustomers } from '../../utils/customerLabel.js';
   import { errorToast } from '../../stores/toasts.svelte.js';
   import { permissionStore, isSystemAdmin } from '../../stores';
   import PageHeader from '../../layout/PageHeader.svelte';
@@ -49,7 +50,7 @@
   async function loadCustomers() {
     try {
       const result = await api.customerOrganisations.getAll();
-      customers = result || [];
+      customers = realCustomers(result);
     } catch (error) {
       console.error('Failed to load customers:', error);
       customers = []; // Ensure customers is always an array

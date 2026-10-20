@@ -1,5 +1,5 @@
 <script>
-  import { onMount } from 'svelte';
+  import { onDestroy, onMount } from 'svelte';
   import { t } from '../../stores/i18n.svelte.js';
   import { api } from '../../api.js';
   import { fetchV2Data } from '../../api/core.js';
@@ -7,10 +7,14 @@
   import { authStore, collectionStore, workspaceDataStore } from '../../stores';
   import { navigate } from '../../router.js';
   import { confirm } from '../../composables/useConfirm.js';
+  import { useCollectionEventStream } from '../../composables/useCollectionEventStream.svelte.js';
   import { ArrowLeft, ArrowRight, EyeOff, MoreHorizontal, Pencil, Plus, Trash2 } from '@lucide/svelte';
   import Badge from '../../components/Badge.svelte';
   import Button from '../../components/Button.svelte';
   import Input from '../../components/Input.svelte';
+  import Select from '../../components/Select.svelte';
+  import TeamPicker from '../../pickers/TeamPicker.svelte';
+  import { objectDisplayName } from '../../utils/systemLabels.js';
   import Modal from '../../dialogs/Modal.svelte';
   import DialogFooter from '../../dialogs/DialogFooter.svelte';
   import { createDeleteItemHandler, createItemActionsBuilder } from '../../utils/workItemTableHelpers.js';
@@ -33,6 +37,7 @@
   import TableHeaderBar from '../../components/TableHeaderBar.svelte';
   import DropdownMenu from '../../layout/DropdownMenu.svelte';
   import LazyRender from '../../components/LazyRender.svelte';
+  import Pagination from '../../components/Pagination.svelte';
   import ListCellRenderer from '../collections/ListCellRenderer.svelte';
   import ColumnSelector from '../collections/ColumnSelector.svelte';
   import QlFilterBuilder from '../shared/QlFilterBuilder.svelte';
@@ -44,20 +49,28 @@
   let activeRef = $state('');
   let loadingQueues = $state(true);
 
-  // Ticket rows for the active queue.
+  // Ticket rows for the active queue. Paging uses the same page/page_size
+  // contract the /items endpoint returns, so the list's Pagination component
+  // drives the queue too.
+  const QUEUE_PAGE_SIZE = 100;
   let items = $state([]);
   let loadingItems = $state(false);
-  let itemsTruncated = $state(false);
+  let itemsPagination = $state(null);
   let itemsLoadId = 0;
+  let currentPage = $state(1);
+  let itemsPerPage = $state(QUEUE_PAGE_SIZE);
 
   // Bulk selection state.
   let selectedIds = $state(new Set());
   let bulkRunning = $state(false);
-  let bulkTeamId = $state('');
+  let bulkTeamId = $state(null);
+  let bulkStatusId = $state('');
   let teams = $state([]);
 
-  // Client-side search over the loaded rows, matching the list view.
+  // Server-side search, matching the board and list views (GH #328).
   let searchQuery = $state('');
+  let searchDebouncing = $state(false);
+  let searchTimer = null;
 
   // Queue authoring dialog.
   let editorOpen = $state(false);
@@ -85,6 +98,9 @@
 
   let activeQueue = $derived(queues.find((entry) => queueRef(entry) === activeRef) ?? null);
   let activeQueueCount = $derived(activeQueue?.count ?? 0);
+  let statusOptions = $derived(
+    statuses.map((status) => ({ value: String(status.id), label: objectDisplayName(status, 'status') }))
+  );
   let allSelected = $derived(items.length > 0 && items.every((item) => selectedIds.has(item.id)));
   let currentUser = $derived(authStore.currentUser);
   let canEdit = $derived(workspacePermissions.canEdit(workspaceId));
@@ -122,16 +138,28 @@
 
   const styles = useGradientStyles();
 
-  const QUEUE_PAGE_SIZE = 100;
+  // Queue tabs reuse the tree's glass button treatment so labels and counts
+  // stay legible over custom gradient backgrounds. The active tab keeps the
+  // design system's highlight as an overlay on top of the glass surface.
+  function queueTabStyle(isActive) {
+    const base = `${styles.glassStyle(12)} ${styles.glassTextStyle}`;
+    return isActive
+      ? `${base} font-weight: 500; background-image: linear-gradient(var(--ctx-active-bg, transparent), var(--ctx-active-bg, transparent));`
+      : base;
+  }
 
-  let filteredItems = $derived.by(() => {
-    if (!searchQuery.trim()) return items;
-    const query = searchQuery.toLowerCase();
-    return items.filter((item) => {
-      if (item.title.toLowerCase().includes(query)) return true;
-      const itemKey = `${item.workspace_key || ''}-${item.workspace_item_number}`.toLowerCase();
-      return itemKey.includes(query);
-    });
+  function handleSearchInput() {
+    if (searchTimer) clearTimeout(searchTimer);
+    searchDebouncing = true;
+    searchTimer = setTimeout(() => {
+      searchTimer = null;
+      searchDebouncing = false;
+      void loadItems({ page: 1 });
+    }, 250);
+  }
+
+  onDestroy(() => {
+    if (searchTimer) clearTimeout(searchTimer);
   });
 
   // Built-in presets are addressed by their stable key; custom queues by id.
@@ -159,13 +187,17 @@
       return;
     }
 
-    collectionEditorOptions.prime(id, {
-      statuses,
-      users,
-      milestones,
-      iterations,
-      projects,
-    });
+    collectionEditorOptions.prime(
+      id,
+      {
+        statuses,
+        users,
+        milestones,
+        iterations,
+        projects,
+      },
+      workspaceDataStore.planningCompleteness
+    );
   });
 
   async function loadCollection() {
@@ -247,35 +279,52 @@
     activeRef = refs.includes('unassigned') ? 'unassigned' : (refs[0] ?? '');
   }
 
-  async function loadItems() {
+  async function loadItems({ page = currentPage, limit = itemsPerPage, search = searchQuery.trim() } = {}) {
     if (!activeQueue?.ql) {
       items = [];
+      itemsPagination = null;
       return;
     }
     const loadId = ++itemsLoadId;
     loadingItems = true;
     try {
-      const query = new URLSearchParams({
-        workspace_id: String(workspaceId),
+      const response = await api.items.getAll({
+        workspace_id: workspaceId,
         ql: activeQueue.ql,
-        fields: 'summary',
-        page_size: String(QUEUE_PAGE_SIZE),
-        sort: '-updated_at',
+        page,
+        limit,
+        omit_descriptions: true,
+        order_by: 'updated_at',
+        sort_direction: 'desc',
+        ...(search ? { search } : {}),
       });
-      const result = (await fetchV2Data(`/items?${query.toString()}`)) ?? [];
       if (loadId !== itemsLoadId) return;
-      items = result;
-      itemsTruncated = activeQueueCount > items.length;
+      items = response?.data ?? [];
+      // The v2 document names the effective size page_size; the shared
+      // Pagination component reads limit.
+      const pagination = response?.pagination ?? null;
+      itemsPagination = pagination ? { ...pagination, limit: pagination.page_size } : null;
+      currentPage = pagination?.page ?? page;
+      itemsPerPage = pagination?.page_size ?? limit;
       selectedIds = new Set(
         [...selectedIds].filter((id) => items.some((item) => item.id === id))
       );
     } catch (error) {
       if (loadId !== itemsLoadId) return;
       items = [];
+      itemsPagination = null;
       errorToast(t('supportQueue.loadFailed'));
     } finally {
       if (loadId === itemsLoadId) loadingItems = false;
     }
+  }
+
+  function handlePageChange(event) {
+    void loadItems({ page: event.detail.page, limit: event.detail.itemsPerPage });
+  }
+
+  function handlePageSizeChange(event) {
+    void loadItems({ page: event.detail.page, limit: event.detail.itemsPerPage });
   }
 
   async function refreshQueuesAndItems() {
@@ -283,15 +332,29 @@
     await loadItems();
   }
 
+  // Scoped SSE invalidations (WI-1624): a ticket deleted from the item detail
+  // modal emits no local event, so the queue reconciles through the same
+  // collection/workspace stream the board and list views use. Without this the
+  // row and tab counts kept showing deleted tickets.
+  useCollectionEventStream(
+    () => (collectionId ? { kind: 'collection', id: collectionId } : { kind: 'workspace', id: workspaceId }),
+    { onInvalidate: () => refreshQueuesAndItems() }
+  );
+
   function selectQueue(ref) {
     if (ref === activeRef) return;
     activeRef = ref;
     selectedIds = new Set();
+    if (searchTimer) {
+      clearTimeout(searchTimer);
+      searchTimer = null;
+    }
+    searchDebouncing = false;
     searchQuery = '';
     const url = new URL(window.location.href);
     url.searchParams.set('queue', ref);
     window.history.replaceState(null, '', `${url.pathname}${url.search}`);
-    void loadItems();
+    void loadItems({ page: 1 });
   }
 
   function toggleItem(id) {
@@ -335,7 +398,71 @@
 
   function bulkAssignToTeam() {
     if (!bulkTeamId) return;
-    void runBulkUpdate({ team_id: Number(bulkTeamId) });
+    void runBulkUpdate({ team_id: bulkTeamId });
+  }
+
+  // One request moves every selected item; the server enforces workflow rules
+  // per item and reports which ones could not move instead of the client
+  // fanning out one transition call per ticket.
+  async function bulkTransition() {
+    const ids = [...selectedIds];
+    if (ids.length === 0 || bulkRunning || !bulkStatusId) return;
+    bulkRunning = true;
+    try {
+      const result = await api.items.bulkTransition(ids, Number(bulkStatusId));
+      if (result.failed_count > 0) {
+        errorToast(
+          t('supportQueue.bulkPartial', {
+            updated: result.transitioned_count,
+            requested: result.requested_count,
+            failed: result.failed_count,
+          })
+        );
+      } else {
+        successToast(t('supportQueue.bulkTransitionSuccess', { n: result.transitioned_count }));
+      }
+      clearSelection();
+      await refreshQueuesAndItems();
+    } catch (error) {
+      errorToast(error?.message || t('supportQueue.loadFailed'));
+    } finally {
+      bulkRunning = false;
+    }
+  }
+
+  // One request deletes every selected item; the server keeps each item's
+  // single-delete history and audit record and reports any that were refused.
+  async function bulkDelete() {
+    const ids = [...selectedIds];
+    if (ids.length === 0 || bulkRunning) return;
+    const confirmed = await confirm({
+      title: t('supportQueue.bulkDelete'),
+      message: t('supportQueue.bulkDeleteConfirm', { n: ids.length }),
+      confirmText: t('common.delete'),
+      variant: 'danger',
+    });
+    if (!confirmed) return;
+    bulkRunning = true;
+    try {
+      const result = await api.items.bulkDelete(ids);
+      if (result.failed_count > 0) {
+        errorToast(
+          t('supportQueue.bulkPartial', {
+            updated: result.deleted_count,
+            requested: result.requested_count,
+            failed: result.failed_count,
+          })
+        );
+      } else {
+        successToast(t('supportQueue.bulkDeleteSuccess', { n: result.deleted_count }));
+      }
+      clearSelection();
+      await refreshQueuesAndItems();
+    } catch (error) {
+      errorToast(error?.message || t('supportQueue.loadFailed'));
+    } finally {
+      bulkRunning = false;
+    }
   }
 
   function viewItem(item) {
@@ -523,7 +650,7 @@
   onMount(() => {
     void loadCollection();
     void loadBoardConfiguration();
-    void loadQueues().then(loadItems);
+    void loadQueues().then(() => loadItems({ page: 1 }));
     void workspaceDataStore.initialize(workspaceId);
     api.teams
       .getAll()
@@ -551,7 +678,7 @@
       <ViewHeader
         viewName={t('supportQueue.title')}
         itemCount={activeQueueCount}
-        shownCount={loadingItems ? null : filteredItems.length}
+        shownCount={loadingItems ? null : items.length}
       />
     </div>
 
@@ -560,9 +687,7 @@
         {#each queues as entry (queueRef(entry))}
           <div
             class="flex items-center rounded-md border transition-colors"
-            style={queueRef(entry) === activeRef
-              ? 'color: var(--ctx-active-text, var(--ds-interactive)); background-color: var(--ctx-active-bg, var(--ds-interactive-subtle)); border-color: var(--ctx-border, var(--ds-border)); backdrop-filter: var(--ctx-backdrop, none);'
-              : 'color: var(--ctx-text-subtle, var(--ds-text-subtle)); background-color: transparent; border-color: var(--ctx-border, var(--ds-border)); backdrop-filter: var(--ctx-backdrop, none);'}
+            style={queueTabStyle(queueRef(entry) === activeRef)}
           >
             <button
               type="button"
@@ -614,6 +739,8 @@
         <SearchInput
           bind:value={searchQuery}
           placeholder={t('common.search')}
+          dataTestid="support-queue-search-input"
+          on_input={handleSearchInput}
         />
         <ColumnSelector
           columns={listColumns}
@@ -623,6 +750,12 @@
           onchange={handleColumnChange}
         />
       </div>
+
+      {#if searchDebouncing}
+        <p class="-mt-2 mb-4 text-sm" style="color: var(--ctx-text-subtle, var(--ds-text-subtle));" data-testid="support-queue-search-status">
+          {t('common.searching')}
+        </p>
+      {/if}
 
     {#if selectedIds.size > 0}
       <div
@@ -641,17 +774,16 @@
         >
           {t('supportQueue.bulkAssignMe')}
         </Button>
-        <select
-          class="px-2 py-1 rounded text-sm border transition-colors"
-          style="border-color: var(--ctx-border, var(--ds-border)); background-color: var(--ctx-surface-overlay, var(--ds-surface-overlay)); color: var(--ds-text); backdrop-filter: var(--ctx-backdrop, none);"
-          data-testid="support-queue-bulk-team-select"
-          bind:value={bulkTeamId}
-        >
-          <option value="">{t('supportQueue.bulkAssignTeam')}</option>
-          {#each teams as team (team.id)}
-            <option value={String(team.id)}>{team.name}</option>
-          {/each}
-        </select>
+        <div class="w-56" data-testid="support-queue-bulk-team-picker">
+          <TeamPicker
+            bind:value={bulkTeamId}
+            teams={teams}
+            placeholder={t('supportQueue.bulkAssignTeam')}
+            searchTestid="support-queue-bulk-team-search"
+            menuTestid="support-queue-bulk-team-menu"
+            disabled={bulkRunning}
+          />
+        </div>
         <Button
           variant="ghost"
           size="small"
@@ -661,6 +793,35 @@
           onclick={bulkAssignToTeam}
         >
           {t('supportQueue.bulkApplyTeam')}
+        </Button>
+        <div class="w-48" data-testid="support-queue-bulk-status-picker">
+          <Select
+            id="support-queue-bulk-status"
+            bind:value={bulkStatusId}
+            options={statusOptions}
+            placeholder={t('supportQueue.bulkTransition')}
+            ariaLabel={t('supportQueue.bulkTransition')}
+          />
+        </div>
+        <Button
+          variant="ghost"
+          size="small"
+          style="border-color: var(--ctx-border, var(--ds-border)); color: var(--ds-text);"
+          dataTestid="support-queue-bulk-status-apply"
+          disabled={bulkRunning || !bulkStatusId}
+          onclick={bulkTransition}
+        >
+          {t('supportQueue.bulkApplyStatus')}
+        </Button>
+        <Button
+          variant="ghost"
+          size="small"
+          style="color: var(--ds-text-danger);"
+          dataTestid="support-queue-bulk-delete"
+          disabled={bulkRunning}
+          onclick={bulkDelete}
+        >
+          {t('supportQueue.bulkDelete')}
         </Button>
         <Button
           variant="ghost"
@@ -690,7 +851,7 @@
         <div class="flex items-center gap-2 py-8">
           <Spinner class="w-4 h-4" />
         </div>
-      {:else if filteredItems.length === 0}
+      {:else if items.length === 0}
         <div data-testid="support-queue-empty">
           <EmptyState title={t('supportQueue.empty')} description={t('supportQueue.emptyDescription')} />
         </div>
@@ -709,7 +870,7 @@
           </TableHeaderBar>
 
           <div>
-            {#each filteredItems as item (item.id)}
+            {#each items as item (item.id)}
               <div
                 class="px-4 py-3 list-row transition-colors"
                 style="border-top: 1px solid var(--ds-border);"
@@ -769,10 +930,17 @@
           </div>
         </div>
 
-        {#if itemsTruncated}
-          <p class="mt-2 text-xs" style="color: var(--ctx-text-subtle, var(--ds-text-subtle));">
-            {t('supportQueue.showingFirst', { n: items.length })}
-          </p>
+        {#if itemsPagination && itemsPagination.total_items > 0 && items.length > 0}
+          <div class="mt-6">
+            <Pagination
+              currentPage={itemsPagination.page}
+              totalItems={itemsPagination.total_items}
+              itemsPerPage={itemsPagination.limit}
+              maxItems={10000}
+              onpageChange={handlePageChange}
+              onpageSizeChange={handlePageSizeChange}
+            />
+          </div>
         {/if}
       {/if}
     </div>

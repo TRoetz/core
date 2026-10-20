@@ -15,6 +15,7 @@
   import { confirm } from '../../composables/useConfirm.js';
   import { successToast, errorToast } from '../../stores/toasts.svelte.js';
   import { toHotkeyString } from '../../utils/keyboardShortcuts.js';
+  import { invalidateSLAThresholds } from './slaState.js';
 
   let { workspaceId = null } = $props();
 
@@ -103,6 +104,8 @@
         await api.sla.createWarningThreshold(workspaceId, payload);
         successToast(t('workspaceSettings.serviceLevels.thresholdCreated'));
       }
+      // Successful mutation: drop cached thresholds and refresh mounted badges.
+      invalidateSLAThresholds(workspaceId);
       showEditor = false;
       await loadThresholds();
     } catch (err) {
@@ -125,6 +128,7 @@
     try {
       await api.sla.deleteWarningThreshold(workspaceId, threshold.id);
       successToast(t('workspaceSettings.serviceLevels.thresholdDeleted'));
+      invalidateSLAThresholds(workspaceId);
       await loadThresholds();
     } catch (err) {
       errorToast(err?.message || t('workspaceSettings.serviceLevels.saveFailed'));

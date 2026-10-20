@@ -201,7 +201,7 @@
         title={t('items.clickToEditDescription')}
         data-testid="item-description-display"
       >
-        <MilkdownEditor content={item.description} readonly={true} showToolbar={false} />
+        <MilkdownEditor content={item.description} readonly={true} showToolbar={false} workspaceId={item.workspace_id} />
       </div>
     {:else}
       <div
@@ -209,7 +209,7 @@
         style="color: var(--ds-text);"
         data-testid="item-description-display"
       >
-        <MilkdownEditor content={item.description} readonly={true} showToolbar={false} />
+        <MilkdownEditor content={item.description} readonly={true} showToolbar={false} workspaceId={item.workspace_id} />
       </div>
     {/if}
   {:else if canEdit}

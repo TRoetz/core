@@ -1,13 +1,17 @@
 <script>
-  import { onDestroy, onMount, untrack } from 'svelte';
+  import { onMount, untrack } from 'svelte';
   import { useEventListener } from 'runed';
   import { t } from '../../stores/i18n.svelte.js';
   import { api } from '../../api.js';
   import { navigate } from '../../router.js';
-  import { collectionStore, refreshCollectionDeltas, reloadCollection } from '../../stores/collectionContext.js';
+  import {
+    collectionStore,
+    reloadCollection,
+    scheduleCollectionReconciliation,
+  } from '../../stores/collectionContext.js';
   import { useGradientStyles, loadWorkspaceGradient } from '../../stores/workspaceGradient.svelte.js';
   import QuickAddForm from './QuickAddForm.svelte';
-  import { getCollection, checkItemVisibility } from './collectionService.js';
+  import { resolveCreatedItemMembership } from './collectionService.js';
   import {
     RIGHTMOST_COLUMN_LIMIT,
     boardStatusIdForItem,
@@ -37,6 +41,8 @@
   import DropdownMenu from '../../layout/DropdownMenu.svelte';
   import { backlogStore, workspaceDataStore, workspacesStore, workspacePermissions, itemModalStore } from '../../stores/index.js';
   import { useCollectionEventStream } from '../../composables/useCollectionEventStream.svelte.js';
+  import { createDependencyLoader } from './dependencyLoader.svelte.js';
+  import { useCollectionSearch } from '../../composables/useCollectionSearch.svelte.js';
   import { invalidateSLAState } from '../sla/slaState.js';
   import { agentRuns } from '../../stores/agentRuns.svelte.js';
   import { getVisibleColor, hexToRgb } from '../../utils/colorUtils.js';
@@ -63,26 +69,18 @@
   let projects = $derived(workspaceDataStore.projects);
   let customFieldDefinitions = $derived(workspaceDataStore.customFieldDefinitions);
 
-  let searchQuery = $state('');
-  let searchDebouncing = $state(false);
-  let searchEffectId = 0;
-  let searchActive = $derived(Boolean(searchQuery.trim()));
-  let activeItemsHasMore = $derived(
-    searchActive ? collectionStore.boardSearchHasMore : collectionStore.itemsHasMore
+  // Search is server-scoped and shared with the list view so both find items on
+  // every page (GH #220, GH #328).
+  const search = useCollectionSearch(
+    () => `${workspaceId ?? ''}|${collectionId ?? ''}|${collectionStore.effectiveSubFilterQL}`
   );
-  let activeItemsLoadingMore = $derived(
-    searchActive
-      ? collectionStore.boardSearchLoadingMore
-      : collectionStore.itemsLoadingMore || collectionStore.boardBackgroundLoading
-  );
-  let activeItemsRemainingCount = $derived(
-    searchActive ? collectionStore.boardSearchRemainingCount : collectionStore.itemsRemainingCount
-  );
+  let searchActive = $derived(search.active);
+  let searchDebouncing = $derived(search.debouncing);
+  let activeItemsHasMore = $derived(search.hasMore);
+  let activeItemsLoadingMore = $derived(search.loadingMore);
+  let activeItemsRemainingCount = $derived(search.remainingCount);
 
-  // Dynamic view-specific state — board searches use their own scoped server
-  // result set so normal board pagination and completed-item trimming remain
-  // unchanged when the query is cleared.
-  let items = $derived(searchActive ? collectionStore.boardSearchItems : collectionStore.items);
+  let items = $derived(search.items);
   let itemsById = $derived(new Map(items.map((item) => [item.id, item])));
 
   // Hydrate only the assignees the visible cards reference.
@@ -101,10 +99,8 @@
   let showItemModal = $state(false);
   let selectedItemId = $state(null);
 
-  // Cached outgoing and incoming links for dependency hover summaries.
-  let dependencyLinksByItem = $state({});
-  let dependencyLinksToken = 0; // guards against stale async when items change
-  const DEPENDENCY_LINK_CHUNK = 100;
+  // Scope-owned dependency-link loader for hover summaries and blocker counts.
+  const dependencyLoader = createDependencyLoader();
 
   // Quick-add state per column
   let quickAddState = $state({});
@@ -175,36 +171,6 @@
   const styles = useGradientStyles();
 
   $effect(() => {
-    const query = searchQuery.trim();
-    const scope = `${workspaceId ?? ''}|${collectionId ?? ''}|${collectionStore.effectiveSubFilterQL}`;
-    const effectId = ++searchEffectId;
-    collectionStore.clearBoardSearch();
-
-    if (!query) {
-      searchDebouncing = false;
-      return;
-    }
-
-    searchDebouncing = true;
-    const timer = setTimeout(async () => {
-      await collectionStore.searchBoardItems(query);
-      if (
-        effectId === searchEffectId &&
-        query === searchQuery.trim() &&
-        scope === `${workspaceId ?? ''}|${collectionId ?? ''}|${collectionStore.effectiveSubFilterQL}`
-      ) {
-        searchDebouncing = false;
-      }
-    }, 250);
-
-    return () => clearTimeout(timer);
-  });
-
-  onDestroy(() => {
-    collectionStore.clearBoardSearch();
-  });
-
-  $effect(() => {
     if (!boardScrollElement) return;
     return autoScrollForElements({
       element: boardScrollElement,
@@ -212,27 +178,31 @@
     });
   });
 
+  // An active sub-filter makes workspace equality insufficient; verify it too.
+  function createdItemScope() {
+    return {
+      workspaceId,
+      collectionId,
+      subFilterQL: collectionStore.subFilterQL ? collectionStore.effectiveSubFilterQL : '',
+    };
+  }
+
   // Listen for newly created items
   async function handleRefreshWorkItems(event) {
-    if (event.detail?.itemId) {
-      try {
-        const newItem = event.detail.item ?? await api.items.get(event.detail.itemId);
-        // Collection membership may span workspaces; verify it server-side.
-        const belongsToView = collectionId
-          ? await checkItemVisibility(newItem.id, { collection_id: collectionId })
-          : Number(newItem.workspace_id) === Number(workspaceId);
-        if (belongsToView) {
-          if (newItem.status_id) {
-            // Item has a status, add it to the board (at the end, since board is ordered by rank)
-            collectionStore.items = [...collectionStore.items, newItem];
-          } else {
-            // Item has no status, add it to backlog (at the end)
-            collectionStore.backlogItems = [...collectionStore.backlogItems, newItem];
-          }
-        }
-      } catch (error) {
-        console.error('Failed to load new item:', error);
+    if (!event.detail?.itemId) return;
+    try {
+      const newItem = event.detail.item ?? (await api.items.get(event.detail.itemId));
+      const membership = await resolveCreatedItemMembership(newItem, createdItemScope());
+      if (membership === 'member') {
+        // A create event can arrive more than once (modal event plus a delta or
+        // cross-tab frame). insertCreatedItem deduplicates by id and routes an
+        // item without a status to the backlog.
+        collectionStore.insertCreatedItem(newItem, { backlog: !newItem.status_id });
+      } else if (membership === 'unknown') {
+        scheduleCollectionReconciliation();
       }
+    } catch (error) {
+      console.error('Failed to load new item:', error);
     }
   }
 
@@ -392,17 +362,12 @@
 
       // A collection can span several allowed workspaces while applying other
       // filters. Only add the new item locally when it matches the full view.
-      let belongsToView = true;
-      if (collectionId) {
-        const collection = await getCollection(collectionId);
-        if (collection) {
-          belongsToView = await checkItemVisibility(newItem.id, { collection_id: collectionId });
-        }
-      } else if (workspaceId) {
-        belongsToView = Number(newItem.workspace_id) === Number(workspaceId);
-      }
+      const membership = await resolveCreatedItemMembership(newItem, createdItemScope());
 
-      if (!belongsToView) {
+      if (membership === 'unknown') {
+        // Never guess membership after a failed verification; reconcile instead.
+        scheduleCollectionReconciliation();
+      } else if (membership === 'nonmember') {
         const selectedWorkspace = availableWorkspaces.find(w => w.id === state.workspaceId);
         const workspaceName = selectedWorkspace?.name || t('collections.anotherWorkspace');
         const reason = collectionId
@@ -418,10 +383,10 @@
         localStorage.setItem('board-quickadd-last-item-type-id', String(state.itemTypeId));
       } catch (e) { /* ignore storage errors */ }
 
-      if (belongsToView) {
+      if (membership === 'member') {
         // The create endpoint returns the complete permission-masked item, so it
         // can be added directly without an immediate GET of the same item.
-        collectionStore.items = [...collectionStore.items, newItem];
+        collectionStore.insertCreatedItem(newItem);
 
         // Toast feedback
         showCreatedItemToast(newItem);
@@ -455,10 +420,19 @@
     if (requestedView !== viewSignature) return;
 
     try {
-      const iters = await api.iterations.getAll({
-        workspace_id: requestedWorkspaceId,
-        include_global: !workspaceDataStore.workspace?.is_personal,
-      });
+      const isPersonal = workspaceDataStore.workspace?.is_personal === true;
+      let iters;
+      if (workspaceDataStore.planningCompleteness?.iterations === true) {
+        // Complete bootstrap data avoids a second full iteration fetch.
+        iters = (workspaceDataStore.iterations || []).filter(
+          (iteration) => !isPersonal || !iteration.is_global
+        );
+      } else {
+        iters = await api.iterations.getAll({
+          workspace_id: requestedWorkspaceId,
+          include_global: !isPersonal,
+        });
+      }
       if (requestedView !== viewSignature) return;
       allIterations = iters || [];
 
@@ -500,7 +474,7 @@
     const view = viewSignature;
     if (view === setupViewSignature) return;
     setupViewSignature = view;
-    dependencyLinksByItem = {};
+    dependencyLoader.reset();
     allIterations = [];
     iterationFilterId = null;
     groupByItemTypeId = null;
@@ -530,48 +504,14 @@
     }
   });
 
-  // Preload dependency links when the loaded item set changes.
+  // Preload dependency links when the loaded item set changes. Overlapping
+  // waves join pending ids; each successful chunk commits independently.
   $effect(() => {
     if (collectionStore.items.length > 0 && !collectionStore.loading) {
       // Avoid subscribing this effect to cache writes.
-      untrack(() => loadDependencyLinksForItems(collectionStore.items));
+      untrack(() => dependencyLoader.ensure(collectionStore.items.map((item) => item.id)));
     }
   });
-
-  // Fetch and cache merged links for dependency summaries.
-  async function loadDependencyLinksForItems(items) {
-    const toFetch = items.filter((i) => i?.id != null && !dependencyLinksByItem[i.id]);
-    if (toFetch.length === 0) return;
-    const token = ++dependencyLinksToken;
-    const ids = toFetch.map((i) => i.id);
-    // Batch at the canonical API cap.
-    const chunks = [];
-    for (let i = 0; i < ids.length; i += DEPENDENCY_LINK_CHUNK) {
-      chunks.push(ids.slice(i, i + DEPENDENCY_LINK_CHUNK));
-    }
-    const groupsPerChunk = await Promise.all(
-      chunks.map(async (chunk) => {
-        try {
-          return await api.links.getForItems(chunk);
-        } catch {
-          return {};
-        }
-      })
-    );
-    if (token !== dependencyLinksToken) return; // a newer load superseded us
-    const next = { ...dependencyLinksByItem };
-    // Seed every requested id so items with no links are cached and not re-fetched.
-    for (const id of ids) next[id] = next[id] ?? [];
-    for (const groups of groupsPerChunk) {
-      for (const [id, group] of Object.entries(groups)) {
-        const all = [];
-        if (group?.outgoing) all.push(...group.outgoing);
-        if (group?.incoming) all.push(...group.incoming);
-        next[id] = all;
-      }
-    }
-    dependencyLinksByItem = next;
-  }
 
   async function loadBoardConfig() {
     const requestedView = viewSignature;
@@ -593,7 +533,7 @@
   // and a reconnect reconciles. No polling fallback.
   useCollectionEventStream(
     () => (collectionId ? { kind: 'collection', id: collectionId } : { kind: 'workspace', id: workspaceId }),
-    { onInvalidate: () => refreshCollectionDeltas() }
+    { onInvalidate: () => scheduleCollectionReconciliation() }
   );
 
   // SLA badges ride a board-level cadence instead of the SSE stream. Coupling
@@ -722,11 +662,7 @@
 
     try {
       const updatedItem = await api.items.update(item.id, { parent_id: targetParentId });
-      collectionStore.items = collectionStore.items.map(existing =>
-        existing.id === item.id
-          ? { ...existing, ...updatedItem, parent_id: targetParentId }
-          : existing
-      );
+      collectionStore.patchItem(item.id, { ...updatedItem, parent_id: targetParentId });
       return { ...item, ...updatedItem, parent_id: targetParentId };
     } catch (error) {
       console.error('Failed to move item to swimlane:', error);
@@ -937,7 +873,7 @@
     const useServerTotal =
       deferred &&
       !selectedGroupByItemType &&
-      !searchQuery.trim() &&
+      !search.query.trim() &&
       !iterationFilterId &&
       deferred.statusIds.every((statusId) => columnStatusIds.has(statusId));
     if (!useServerTotal) return allColumnItems.length;
@@ -1038,9 +974,19 @@
     const parentIds = new Set(parentItems.map(item => item.id));
     const visibleItemIds = new Set(filteredItems.map(item => item.id));
 
+    // Bucket children by parent once instead of rescanning filteredItems per
+    // parent; the scan is O(parents × items) on large boards.
+    const childrenByParent = new Map();
+    for (const item of filteredItems) {
+      if (item.parent_id == null || item.parent_id === item.id) continue;
+      const bucket = childrenByParent.get(item.parent_id);
+      if (bucket) bucket.push(item);
+      else childrenByParent.set(item.parent_id, [item]);
+    }
+
     const lanes = parentItems
       .map(parent => {
-        const laneItems = filteredItems.filter(item => item.parent_id === parent.id && item.id !== parent.id);
+        const laneItems = childrenByParent.get(parent.id) ?? [];
         return {
           id: `parent-${parent.id}`,
           title: parent.title,
@@ -1352,16 +1298,12 @@
   }
 
   function updateLocalItemStatus(itemId, statusId) {
-    collectionStore.items = collectionStore.items.map(item =>
-      item.id === itemId ? { ...item, status_id: statusId } : item
-    );
+    collectionStore.patchItem(itemId, { status_id: statusId });
   }
 
   function mergeLocalItem(itemId, updatedItem) {
     if (!updatedItem) return;
-    collectionStore.items = collectionStore.items.map(item =>
-      item.id === itemId ? { ...item, ...updatedItem } : item
-    );
+    collectionStore.patchItem(itemId, updatedItem);
   }
 
   async function handleEdgeBasedDrop(draggedItem, targetItem, closestEdge, targetStatus, targetLaneParentId = undefined) {
@@ -1628,7 +1570,7 @@
         <!-- Controls Bar -->
         <div class="flex flex-wrap items-center gap-4" data-testid="board-controls">
           <SearchInput
-            bind:value={searchQuery}
+            bind:value={search.query}
             placeholder={t('common.search')}
             dataTestid="board-search-input"
           />
@@ -1645,11 +1587,11 @@
       >
       <div class="px-6 py-6 min-w-fit">
 
-      {#if searchActive && (searchDebouncing || collectionStore.boardSearchLoading)}
+      {#if searchActive && (searchDebouncing || collectionStore.searchLoading)}
         <p class="-mt-2 mb-4 text-sm" style="color: var(--ds-text-subtle);" data-testid="board-search-status">
           {t('common.searching')}
         </p>
-      {:else if searchActive && collectionStore.boardSearchError}
+      {:else if searchActive && collectionStore.searchError}
         <p class="-mt-2 mb-4 text-sm" style="color: var(--ds-text-danger);" data-testid="board-search-error">
           {t('common.error')}
         </p>
@@ -1834,7 +1776,7 @@
                                 labels={wdsLabels}
                                 {customFieldDefinitions}
                                 {users}
-                                dependencyLinks={dependencyLinksByItem[item.id] ?? []}
+                                dependencyLinks={dependencyLoader.merged(item.id)}
                                 moveMenuItems={canDragCard ? moveMenuItems : []}
                                 showMoveMenu={canDragCard}
                                 closestEdge={dragState.get(item.id)?.closestEdge}
@@ -1864,7 +1806,7 @@
             <button
               data-testid="board-load-more"
               onclick={() => searchActive
-                ? collectionStore.loadMoreBoardSearchItems()
+                ? search.loadMore()
                 : collectionStore.loadMoreItems()}
               disabled={activeItemsLoadingMore}
               class="px-4 py-2 text-sm  rounded-lg border transition-colors"

@@ -15,6 +15,7 @@
   import ColorDot from '../../components/ColorDot.svelte';
   import { toHotkeyString } from '../../utils/keyboardShortcuts.js';
   import { t } from '../../stores/i18n.svelte.js';
+  import { customerDisplayName, isNoCustomer } from '../../utils/customerLabel.js';
   import { errorToast } from '../../stores/toasts.svelte.js';
   import { permissionStore, isSystemAdmin } from '../../stores';
   import { confirm } from '../../composables/useConfirm.js';
@@ -88,9 +89,10 @@
   }
 
   function startEdit(project) {
+    const noCustomerId = customers.find(isNoCustomer)?.id;
     editingProject = project;
     formData = {
-      customer_id: project.customer_id || '',
+      customer_id: project.customer_id && project.customer_id !== noCustomerId ? project.customer_id : '',
       category_id: project.category_id || '',
       name: project.name,
       description: project.description || '',
@@ -173,9 +175,8 @@
     }
   }
 
-  function getCustomerName(customerId) {
-    const customer = customers.find(c => c.id === customerId);
-    return customer ? customer.name : t('time.projects.unknownCustomer');
+  function projectCustomerName(project) {
+    return customerDisplayName(project.customer_name, project.customer_builtin_key, t) || '-';
   }
 
   function openPermissions(project) {
@@ -252,7 +253,7 @@
       const query = searchQuery.toLowerCase();
       const matchesName = p.name.toLowerCase().includes(query);
       const matchesDescription = (p.description || '').toLowerCase().includes(query);
-      const matchesCustomer = (p.customer_name || '').toLowerCase().includes(query);
+      const matchesCustomer = projectCustomerName(p).toLowerCase().includes(query);
       return matchesName || matchesDescription || matchesCustomer;
     }
 
@@ -413,7 +414,7 @@
     <!-- Customer -->
     {#snippet customer(project)}
       <span class="text-sm" style="color: var(--ds-text);">
-        {project.customer_name || '-'}
+        {projectCustomerName(project)}
       </span>
     {/snippet}
 

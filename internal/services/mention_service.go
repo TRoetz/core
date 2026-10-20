@@ -43,6 +43,10 @@ type MentionService struct {
 // the SMTP transport and test doubles stay trivial.
 type MentionEmailNotifier interface {
 	EnqueueMentionEmail(params MentionEmailParams) error
+	// RefreshPendingMentionContent rewrites the body of still-pending mention
+	// emails for a source after an edit, so a recipient never receives a stale
+	// pre-edit body.
+	RefreshPendingMentionContent(sourceType string, sourceID int, content string) error
 }
 
 // SetWorkspaceUserResolver aligns stored mentions and agent triggers with the
@@ -281,6 +285,18 @@ func (s *MentionService) ProcessMentions(params ProcessMentionsParams) error {
 			if err != nil {
 				slog.Error("Error deleting mention", slog.String("component", "mentions"), slog.Int("mention_id", existingMention.ID), slog.Any("error", err))
 			}
+		}
+	}
+
+	// A source edit keeps its existing mentions, so rewrite any pending email
+	// body; new mentions are enqueued below with the current content.
+	if s.mentionEmailNotifier != nil && len(currentMentions) > 0 {
+		if err := s.mentionEmailNotifier.RefreshPendingMentionContent(params.SourceType, params.SourceID, params.Content); err != nil {
+			slog.Error("failed to refresh pending mention email content",
+				slog.String("component", "mentions"),
+				slog.String("source_type", params.SourceType),
+				slog.Int("source_id", params.SourceID),
+				slog.Any("error", err))
 		}
 	}
 

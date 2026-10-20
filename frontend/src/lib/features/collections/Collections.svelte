@@ -9,7 +9,7 @@
   import Pagination from '../../components/Pagination.svelte';
   import CollectionsSidebar from './CollectionsSidebar.svelte';
   import CollectionsBreadcrumbs from './CollectionsBreadcrumbs.svelte';
-  import { buildCollectionAssociationUpdate } from './collectionService.js';
+  import { applyCollectionPrivacyToggle, buildCollectionAssociationUpdate } from './collectionService.js';
   import QlQueryBar from '../shared/QlQueryBar.svelte';
   import { createWorkItemSearchStore } from '../../stores/searchStore.svelte.js';
   import { createWorkItemSearchHandlers } from '../../composables/useWorkItemSearch.svelte.js';
@@ -301,8 +301,13 @@
     if (!currentCollection) return;
     const next = !currentCollection.is_private;
     try {
-      await api.collections.update(currentCollection.id, buildCollectionUpdate({ is_private: next }));
-      currentCollection = { ...currentCollection, is_private: next };
+      const updated = await api.collections.update(
+        currentCollection.id,
+        buildCollectionUpdate({ is_private: next })
+      );
+      // Marking a collection private unpublishes its board server-side.
+      currentCollection = applyCollectionPrivacyToggle(currentCollection, updated, next);
+      slugSaved = Boolean(updated.is_public && updated.public_slug);
     } catch (error) {
       console.error('Failed to update collection privacy:', error);
       errorToast(t('dialogs.alerts.failedToUpdate', { error: error.message || error }));

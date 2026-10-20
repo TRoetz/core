@@ -1,11 +1,12 @@
 <script>
   import { onMount } from 'svelte';
   import { api } from '../../api.js';
-  import { IconSparkles, IconArrowLeft, IconRotate, IconCircleCheck, IconAlertCircle, IconSquareCheck, IconSquare, IconArrowRight, IconCalendar, IconWorld, IconBuilding } from '@tabler/icons-svelte-runes';
+  import { IconSparkles, IconRotate, IconCircleCheck, IconAlertCircle, IconSquareCheck, IconSquare, IconArrowRight, IconCalendar, IconWorld, IconBuilding } from '@tabler/icons-svelte-runes';
   import { navigate } from '../../router.js';
   import PageHeader from '../../layout/PageHeader.svelte';
   import Card from '../../components/Card.svelte';
   import Button from '../../components/Button.svelte';
+  import BackButton from '../../components/BackButton.svelte';
   import Select from '../../components/Select.svelte';
   import Lozenge from '../../components/Lozenge.svelte';
   import ItemKey from '../../components/ItemKey.svelte';
@@ -158,14 +159,11 @@
   />
 
   <!-- Back link -->
-  <a
+  <BackButton
     href={`/iterations/${iterationId}`}
-    class="flex items-center gap-2 text-sm font-medium hover:opacity-80 transition-opacity mb-6 no-underline"
-    style="color: var(--ds-text-subtle);"
-  >
-    <IconArrowLeft class="w-4 h-4" />
-    Back to Iteration
-  </a>
+    label="Back to Iteration"
+    class="mb-6"
+  />
 
   <div class="space-y-6">
     {#if !result && !loading}

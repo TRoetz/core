@@ -5704,6 +5704,10 @@
         "format": "binary",
         "type": "string"
       },
+      "GetAttachmentsAttachmentIdDownloadResult": {
+        "format": "binary",
+        "type": "string"
+      },
       "GetAttachmentsAttachmentIdResult": {
         "additionalProperties": false,
         "properties": {
@@ -23065,6 +23069,10 @@
                   "description": "The created at value.",
                   "type": "integer"
                 },
+                "customer_builtin_key": {
+                  "description": "The customer builtin key value.",
+                  "type": "string"
+                },
                 "customer_id": {
                   "description": "The customer id value.",
                   "type": "integer"
@@ -26387,6 +26395,11 @@
                 "asset_type_name": {
                   "description": "The asset type name value.",
                   "type": "string"
+                },
+                "creator_portal_customer_id": {
+                  "description": "The creator portal customer id value.",
+                  "nullable": true,
+                  "type": "integer"
                 },
                 "description": {
                   "description": "The description value.",
@@ -29765,6 +29778,10 @@
                 "description": "The created at value.",
                 "type": "string"
               },
+              "customer_builtin_key": {
+                "description": "The customer builtin key value.",
+                "type": "string"
+              },
               "customer_id": {
                 "description": "The customer id value.",
                 "nullable": true,
@@ -29843,6 +29860,10 @@
                 "created_at": {
                   "description": "The created at value.",
                   "type": "integer"
+                },
+                "customer_builtin_key": {
+                  "description": "The customer builtin key value.",
+                  "type": "string"
                 },
                 "customer_id": {
                   "description": "The customer id value.",
@@ -29997,6 +30018,10 @@
                   "description": "The created at value.",
                   "type": "string"
                 },
+                "customer_builtin_key": {
+                  "description": "The customer builtin key value.",
+                  "type": "string"
+                },
                 "customer_id": {
                   "description": "The customer id value.",
                   "nullable": true,
@@ -30077,6 +30102,11 @@
               "created_at": {
                 "description": "The created at value.",
                 "type": "integer"
+              },
+              "customer_builtin_key": {
+                "description": "The customer builtin key value.",
+                "nullable": true,
+                "type": "string"
               },
               "customer_name": {
                 "description": "The customer name value.",
@@ -30163,6 +30193,10 @@
             "items": {
               "additionalProperties": false,
               "properties": {
+                "customer_builtin_key": {
+                  "description": "The customer builtin key value.",
+                  "type": "string"
+                },
                 "customer_id": {
                   "description": "The customer id value.",
                   "type": "integer"
@@ -30215,6 +30249,10 @@
             "items": {
               "additionalProperties": false,
               "properties": {
+                "customer_builtin_key": {
+                  "description": "The customer builtin key value.",
+                  "type": "string"
+                },
                 "customer_id": {
                   "description": "The customer id value.",
                   "type": "integer"
@@ -30279,6 +30317,10 @@
                 "created_at": {
                   "description": "The created at value.",
                   "type": "integer"
+                },
+                "customer_builtin_key": {
+                  "description": "The customer builtin key value.",
+                  "type": "string"
                 },
                 "customer_id": {
                   "description": "The customer id value.",
@@ -30414,6 +30456,10 @@
               "created_at": {
                 "description": "The created at value.",
                 "type": "integer"
+              },
+              "customer_builtin_key": {
+                "description": "The customer builtin key value.",
+                "type": "string"
               },
               "customer_id": {
                 "description": "The customer id value.",
@@ -38891,10 +38937,6 @@
                             "description": "The goal id value.",
                             "type": "integer"
                           },
-                          "is_fallback": {
-                            "description": "The is fallback value.",
-                            "type": "boolean"
-                          },
                           "metric_id": {
                             "description": "The metric id value.",
                             "type": "integer"
@@ -38902,11 +38944,6 @@
                           "metric_name": {
                             "description": "The metric name value.",
                             "type": "string"
-                          },
-                          "priority_id": {
-                            "description": "The priority id value.",
-                            "nullable": true,
-                            "type": "integer"
                           },
                           "target_id": {
                             "description": "The target id value.",
@@ -38919,7 +38956,6 @@
                         },
                         "required": [
                           "goal_id",
-                          "is_fallback",
                           "metric_id",
                           "metric_name",
                           "target_id",
@@ -39248,17 +39284,8 @@
                             "description": "The id value.",
                             "type": "integer"
                           },
-                          "is_fallback": {
-                            "description": "The is fallback value.",
-                            "type": "boolean"
-                          },
                           "position": {
                             "description": "The position value.",
-                            "type": "integer"
-                          },
-                          "priority_id": {
-                            "description": "The priority id value.",
-                            "nullable": true,
                             "type": "integer"
                           },
                           "source_id": {
@@ -39280,7 +39307,6 @@
                           "calendar_id",
                           "goal_id",
                           "id",
-                          "is_fallback",
                           "position",
                           "target_ms"
                         ],
@@ -39497,17 +39523,8 @@
                               "description": "The id value.",
                               "type": "integer"
                             },
-                            "is_fallback": {
-                              "description": "The is fallback value.",
-                              "type": "boolean"
-                            },
                             "position": {
                               "description": "The position value.",
-                              "type": "integer"
-                            },
-                            "priority_id": {
-                              "description": "The priority id value.",
-                              "nullable": true,
                               "type": "integer"
                             },
                             "source_id": {
@@ -39529,7 +39546,6 @@
                             "calendar_id",
                             "goal_id",
                             "id",
-                            "is_fallback",
                             "position",
                             "target_ms"
                           ],
@@ -44295,6 +44311,10 @@
                 },
                 "created_at": {
                   "description": "The created at value.",
+                  "type": "string"
+                },
+                "customer_builtin_key": {
+                  "description": "The customer builtin key value.",
                   "type": "string"
                 },
                 "customer_id": {
@@ -58035,6 +58055,10 @@
                 "description": "The created at value.",
                 "type": "string"
               },
+              "customer_builtin_key": {
+                "description": "The customer builtin key value.",
+                "type": "string"
+              },
               "customer_id": {
                 "description": "The customer id value.",
                 "nullable": true,
@@ -58163,6 +58187,10 @@
               "created_at": {
                 "description": "The created at value.",
                 "type": "integer"
+              },
+              "customer_builtin_key": {
+                "description": "The customer builtin key value.",
+                "type": "string"
               },
               "customer_id": {
                 "description": "The customer id value.",
@@ -72363,6 +72391,82 @@
         ],
         "type": "object"
       },
+      "PostItemsBulkDeletePayload": {
+        "additionalProperties": false,
+        "properties": {
+          "item_ids": {
+            "description": "The item ids value.",
+            "items": {
+              "type": "integer"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "item_ids"
+        ],
+        "type": "object"
+      },
+      "PostItemsBulkDeleteResult": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "additionalProperties": false,
+            "properties": {
+              "deleted_count": {
+                "description": "The deleted count value.",
+                "type": "integer"
+              },
+              "failed_count": {
+                "description": "The failed count value.",
+                "type": "integer"
+              },
+              "failures": {
+                "description": "The failures value.",
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "description": "The code value.",
+                      "type": "string"
+                    },
+                    "item_id": {
+                      "description": "The item id value.",
+                      "type": "integer"
+                    },
+                    "message": {
+                      "description": "The message value.",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "item_id",
+                    "message"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "requested_count": {
+                "description": "The requested count value.",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "deleted_count",
+              "failed_count",
+              "failures",
+              "requested_count"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
       "PostItemsBulkPatchPayload": {
         "additionalProperties": false,
         "properties": {
@@ -73460,6 +73564,92 @@
               "requested_count",
               "unchanged_count",
               "updated_count"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "PostItemsBulkTransitionPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "item_ids": {
+            "description": "The item ids value.",
+            "items": {
+              "type": "integer"
+            },
+            "type": "array"
+          },
+          "to_status_id": {
+            "description": "The to status id value.",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "item_ids",
+          "to_status_id"
+        ],
+        "type": "object"
+      },
+      "PostItemsBulkTransitionResult": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "additionalProperties": false,
+            "properties": {
+              "failed_count": {
+                "description": "The failed count value.",
+                "type": "integer"
+              },
+              "failures": {
+                "description": "The failures value.",
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "description": "The code value.",
+                      "type": "string"
+                    },
+                    "item_id": {
+                      "description": "The item id value.",
+                      "type": "integer"
+                    },
+                    "message": {
+                      "description": "The message value.",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "item_id",
+                    "message"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "requested_count": {
+                "description": "The requested count value.",
+                "type": "integer"
+              },
+              "transitioned_count": {
+                "description": "The transitioned count value.",
+                "type": "integer"
+              },
+              "unchanged_count": {
+                "description": "The unchanged count value.",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "failed_count",
+              "failures",
+              "requested_count",
+              "transitioned_count",
+              "unchanged_count"
             ],
             "type": "object"
           }
@@ -85958,6 +86148,7 @@
           },
           "customer_id": {
             "description": "The customer id value.",
+            "nullable": true,
             "type": "integer"
           },
           "description": {
@@ -85986,7 +86177,6 @@
         },
         "required": [
           "color",
-          "customer_id",
           "description",
           "hourly_rate",
           "name",
@@ -86170,6 +86360,10 @@
                 "description": "The created at value.",
                 "type": "string"
               },
+              "customer_builtin_key": {
+                "description": "The customer builtin key value.",
+                "type": "string"
+              },
               "customer_id": {
                 "description": "The customer id value.",
                 "nullable": true,
@@ -86324,6 +86518,11 @@
                 "description": "The created at value.",
                 "type": "integer"
               },
+              "customer_builtin_key": {
+                "description": "The customer builtin key value.",
+                "nullable": true,
+                "type": "string"
+              },
               "customer_name": {
                 "description": "The customer name value.",
                 "nullable": true,
@@ -86463,6 +86662,10 @@
               "created_at": {
                 "description": "The created at value.",
                 "type": "integer"
+              },
+              "customer_builtin_key": {
+                "description": "The customer builtin key value.",
+                "type": "string"
               },
               "customer_id": {
                 "description": "The customer id value.",
@@ -91489,17 +91692,8 @@
                         "description": "The id value.",
                         "type": "integer"
                       },
-                      "is_fallback": {
-                        "description": "The is fallback value.",
-                        "type": "boolean"
-                      },
                       "position": {
                         "description": "The position value.",
-                        "type": "integer"
-                      },
-                      "priority_id": {
-                        "description": "The priority id value.",
-                        "nullable": true,
                         "type": "integer"
                       },
                       "source_id": {
@@ -91521,7 +91715,6 @@
                       "calendar_id",
                       "goal_id",
                       "id",
-                      "is_fallback",
                       "position",
                       "target_ms"
                     ],
@@ -91702,17 +91895,8 @@
                             "description": "The id value.",
                             "type": "integer"
                           },
-                          "is_fallback": {
-                            "description": "The is fallback value.",
-                            "type": "boolean"
-                          },
                           "position": {
                             "description": "The position value.",
-                            "type": "integer"
-                          },
-                          "priority_id": {
-                            "description": "The priority id value.",
-                            "nullable": true,
                             "type": "integer"
                           },
                           "source_id": {
@@ -91734,7 +91918,6 @@
                           "calendar_id",
                           "goal_id",
                           "id",
-                          "is_fallback",
                           "position",
                           "target_ms"
                         ],
@@ -96317,17 +96500,8 @@
                         "description": "The id value.",
                         "type": "integer"
                       },
-                      "is_fallback": {
-                        "description": "The is fallback value.",
-                        "type": "boolean"
-                      },
                       "position": {
                         "description": "The position value.",
-                        "type": "integer"
-                      },
-                      "priority_id": {
-                        "description": "The priority id value.",
-                        "nullable": true,
                         "type": "integer"
                       },
                       "source_id": {
@@ -96349,7 +96523,6 @@
                       "calendar_id",
                       "goal_id",
                       "id",
-                      "is_fallback",
                       "position",
                       "target_ms"
                     ],
@@ -96530,17 +96703,8 @@
                             "description": "The id value.",
                             "type": "integer"
                           },
-                          "is_fallback": {
-                            "description": "The is fallback value.",
-                            "type": "boolean"
-                          },
                           "position": {
                             "description": "The position value.",
-                            "type": "integer"
-                          },
-                          "priority_id": {
-                            "description": "The priority id value.",
-                            "nullable": true,
                             "type": "integer"
                           },
                           "source_id": {
@@ -96562,7 +96726,6 @@
                           "calendar_id",
                           "goal_id",
                           "id",
-                          "is_fallback",
                           "position",
                           "target_ms"
                         ],
@@ -101447,6 +101610,63 @@
         ]
       }
     },
+    "/attachments/{attachment_id}/download": {
+      "get": {
+        "description": "Download item attachment. Results include only resources visible to the authenticated caller; collections use their documented stable order and bounds.",
+        "operationId": "getAttachmentsAttachmentIdDownload",
+        "parameters": [
+          {
+            "description": "The attachment identifier.",
+            "in": "path",
+            "name": "attachment_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetAttachmentsAttachmentIdDownloadResult"
+                }
+              }
+            },
+            "description": "Download item attachment response."
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationError"
+          },
+          "403": {
+            "$ref": "#/components/responses/PermissionError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Download item attachment",
+        "tags": [
+          "Work items"
+        ],
+        "x-required-scopes": [
+          "items:read"
+        ]
+      }
+    },
     "/attachments/{attachment_id}/thumbnail": {
       "get": {
         "description": "Get item attachment thumbnail. Results include only resources visible to the authenticated caller; collections use their documented stable order and bounds.",
@@ -106035,6 +106255,68 @@
         ]
       }
     },
+    "/items/bulk-delete": {
+      "post": {
+        "description": "Bulk delete items. The server validates resource ownership and command preconditions before persisting changes. Unknown JSON fields are rejected when the operation accepts a body.",
+        "operationId": "postItemsBulkDelete",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostItemsBulkDeletePayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostItemsBulkDeleteResult"
+                }
+              }
+            },
+            "description": "Bulk delete items response."
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationError"
+          },
+          "403": {
+            "$ref": "#/components/responses/PermissionError"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLargeError"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaTypeError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Bulk delete items",
+        "tags": [
+          "Work items"
+        ],
+        "x-required-scopes": [
+          "items:delete"
+        ]
+      }
+    },
     "/items/bulk-patch": {
       "post": {
         "description": "Bulk patch items. The server validates resource ownership and command preconditions before persisting changes. Unknown JSON fields are rejected when the operation accepts a body.",
@@ -106089,6 +106371,68 @@
           }
         ],
         "summary": "Bulk patch items",
+        "tags": [
+          "Work items"
+        ],
+        "x-required-scopes": [
+          "items:write"
+        ]
+      }
+    },
+    "/items/bulk-transition": {
+      "post": {
+        "description": "Bulk transition items. The server validates resource ownership and command preconditions before persisting changes. Unknown JSON fields are rejected when the operation accepts a body.",
+        "operationId": "postItemsBulkTransition",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostItemsBulkTransitionPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostItemsBulkTransitionResult"
+                }
+              }
+            },
+            "description": "Bulk transition items response."
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationError"
+          },
+          "403": {
+            "$ref": "#/components/responses/PermissionError"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLargeError"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaTypeError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Bulk transition items",
         "tags": [
           "Work items"
         ],

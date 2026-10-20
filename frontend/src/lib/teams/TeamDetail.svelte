@@ -1,12 +1,12 @@
 <script>
   import { onMount } from 'svelte';
-  import { IconPhoneCheck, IconUsersGroup, IconUsers, IconStack2, IconBellRinging, IconClock, IconArrowLeft } from '@tabler/icons-svelte-runes';
+  import { IconPhoneCheck, IconUsersGroup, IconUsers, IconStack2, IconBellRinging, IconClock } from '@tabler/icons-svelte-runes';
   import { api } from '../api.js';
   import { navigate } from '../router.js';
   import { authStore, isSystemAdmin, permissionStore } from '../stores';
   import { t } from '../stores/i18n.svelte.js';
   import PageHeader from '../layout/PageHeader.svelte';
-  import Button from '../components/Button.svelte';
+  import BackButton from '../components/BackButton.svelte';
   import Tabs from '../components/Tabs.svelte';
   import AlertBox from '../components/AlertBox.svelte';
   import OverviewTab from './OverviewTab.svelte';
@@ -81,14 +81,7 @@
 </script>
 
 <div class="space-y-4" data-testid="team-detail">
-  <Button
-    variant="ghost"
-    size="sm"
-    icon={IconArrowLeft}
-    onclick={() => navigate('/teams')}
-  >
-    {t('teams.backToTeams')}
-  </Button>
+  <BackButton onclick={() => navigate('/teams')} label={t('teams.backToTeams')} />
 
   {#if loading}
     <div class="text-center py-8" style="color: var(--ds-text-subtle)">

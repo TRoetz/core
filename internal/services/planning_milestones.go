@@ -148,15 +148,20 @@ func scanMilestoneRow(sc milestoneScanner) (MilestoneResult, error) {
 	return m, nil
 }
 
-// scanMilestones scans all rows from a milestone query into a slice.
-func scanMilestones(rows *sql.Rows) ([]MilestoneResult, error) { //nolint:unparam // error is always nil but kept for consistency with scan pattern
+// scanMilestones scans all rows from a milestone query into a slice. A scan or
+// iteration failure is returned rather than silently dropping rows, so callers
+// never mistake an incomplete read for a complete empty result.
+func scanMilestones(rows *sql.Rows) ([]MilestoneResult, error) {
 	var milestones []MilestoneResult
 	for rows.Next() {
 		m, err := scanMilestoneRow(rows)
 		if err != nil {
-			continue
+			return nil, fmt.Errorf("failed to scan milestone row: %w", err)
 		}
 		milestones = append(milestones, m)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("failed to iterate milestones: %w", err)
 	}
 	if milestones == nil {
 		milestones = []MilestoneResult{}
@@ -282,7 +287,10 @@ func (s *PlanningService) ListMilestones(params MilestoneListParams) ([]Mileston
 	}
 	defer rows.Close()
 
-	milestones, _ := scanMilestones(rows)
+	milestones, err := scanMilestones(rows)
+	if err != nil {
+		return nil, 0, err
+	}
 
 	var total int
 	if err := s.db.QueryRow(list.countQuery, list.countArgs...).Scan(&total); err != nil {

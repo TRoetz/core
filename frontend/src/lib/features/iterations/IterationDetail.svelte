@@ -1,7 +1,8 @@
 <script>
   import { onMount } from 'svelte';
   import StateDisplay from '../../components/StateDisplay.svelte';
-  import { IconArrowLeft, IconCalendar, IconTarget, IconEdit, IconTrash, IconDots, IconWorld, IconBuilding, IconSparkles, IconCircleCheck } from '@tabler/icons-svelte-runes';
+  import BackButton from '../../components/BackButton.svelte';
+  import { IconCalendar, IconTarget, IconEdit, IconTrash, IconDots, IconWorld, IconBuilding, IconSparkles, IconCircleCheck } from '@tabler/icons-svelte-runes';
   import IterationBurndown from './IterationBurndown.svelte';
   import { api } from '../../api.js';
   import { navigate } from '../../router.js';
@@ -253,14 +254,7 @@
   <div class="flex-1 max-w-5xl mx-auto p-6">
     <!-- Header -->
     <div class="flex items-center justify-between mb-6">
-      <button
-        onclick={goBack}
-        class="flex items-center gap-2 text-sm font-medium hover:opacity-80 transition-opacity"
-        style="color: var(--ds-text-subtle);"
-      >
-        <IconArrowLeft class="w-4 h-4" />
-        {t('iterations.backToIterations')}
-      </button>
+      <BackButton onclick={goBack} label={t('iterations.backToIterations')} />
 
       {#if progress}
         <DropdownMenu

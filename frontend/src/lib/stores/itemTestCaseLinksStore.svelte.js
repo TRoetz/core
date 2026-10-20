@@ -1,3 +1,4 @@
+import { BACKGROUND_READ } from '../api/readScheduler.js';
 import { api } from '../api.js';
 import { BaseCacheStore } from './BaseCacheStore.svelte.js';
 
@@ -61,7 +62,7 @@ class ItemTestCaseLinksStore extends BaseCacheStore {
     const scopedWorkspaceId = this.workspaceId;
     const promise = (async () => {
       try {
-        const groups = await api.links.getForItems(chunk);
+        const groups = await api.links.getForItems(chunk, BACKGROUND_READ);
         if (generation !== this._generation || scopedWorkspaceId !== this.workspaceId) return;
         const now = Date.now();
         for (const itemId of chunk) {

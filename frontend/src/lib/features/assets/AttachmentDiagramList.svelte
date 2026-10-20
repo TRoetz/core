@@ -1,5 +1,5 @@
 <script>
-  import { IconPaperclip, IconPencil, IconTrash, IconPhoto } from '@tabler/icons-svelte-runes';
+  import { IconPaperclip, IconPencil, IconTrash, IconPhoto, IconDownload } from '@tabler/icons-svelte-runes';
   import { t } from '../../stores/i18n.svelte.js';
   import { errorToast } from '../../stores/toasts.svelte.js';
   import { portal } from '../../actions/portal.js';
@@ -51,7 +51,7 @@
   }
 
   function contentUrl(att) {
-    return api.attachments.getDownloadUrl(att.id);
+    return api.attachments.getContentUrl(att.id);
   }
 
   function formatFileSize(bytes) {
@@ -208,14 +208,26 @@
     aria-modal="true"
     tabindex="-1"
   >
-    <button
-      type="button"
-      class="absolute top-4 right-4 text-white/80 hover:text-white text-3xl leading-none"
-      onclick={closeLightbox}
-      aria-label={t('common.close') || 'Close'}
-    >
-      ×
-    </button>
+    <div class="absolute top-4 right-4 flex items-center gap-3">
+      <button
+        type="button"
+        class="text-white/80 hover:text-white"
+        onclick={() => handleDownload(lightbox)}
+        aria-label={t('common.download') || 'Download'}
+        title={t('common.download') || 'Download'}
+        data-testid="attachment-lightbox-download"
+      >
+        <IconDownload class="w-7 h-7" />
+      </button>
+      <button
+        type="button"
+        class="text-white/80 hover:text-white text-3xl leading-none"
+        onclick={closeLightbox}
+        aria-label={t('common.close') || 'Close'}
+      >
+        ×
+      </button>
+    </div>
     <div class="max-w-full max-h-full">
       {#if isImage(lightbox)}
         <img

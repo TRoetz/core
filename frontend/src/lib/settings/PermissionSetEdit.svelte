@@ -4,8 +4,9 @@
   import { api } from '../api.js';
   import { t } from '../stores/i18n.svelte.js';
   import { errorToast } from '../stores/toasts.svelte.js';
-  import { ArrowLeft, Save, X, UserPlus } from '@lucide/svelte';
+  import { Save, X, UserPlus } from '@lucide/svelte';
   import Button from '../components/Button.svelte';
+  import BackButton from '../components/BackButton.svelte';
   import Modal from '../dialogs/Modal.svelte';
   import UserPicker from '../pickers/UserPicker.svelte';
   import RolePicker from '../pickers/RolePicker.svelte';
@@ -267,14 +268,11 @@
 <!-- Header -->
 <div class="border-b px-6 py-4" style="background-color: var(--ds-surface-raised); border-color: var(--ds-border);">
   <div class="flex items-center gap-4">
-    <button
+    <BackButton
       onclick={goBack}
-      class="transition-colors"
-      style="color: var(--ds-text-subtle);"
-      title={t('settings.permissionSets.backToPermissionSets')}
-    >
-      <ArrowLeft class="w-5 h-5" />
-    </button>
+      tooltip={t('settings.permissionSets.backToPermissionSets')}
+      class="p-1"
+    />
     <div>
       <h1 class="text-xl font-semibold" style="color: var(--ds-text);">
         {loading ? t('common.loading') : permissionSet?.name || t('settings.permissionSets.title')}

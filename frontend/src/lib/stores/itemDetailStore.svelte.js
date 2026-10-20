@@ -35,10 +35,10 @@ function isAbortError(error) {
 // item by the time the caller resumes.
 const LOAD_SUPERSEDED = Object.freeze({ status: 'superseded' });
 
-function hasSharedWorkspaceReferences(workspaceId) {
-  return (
-    workspaceDataStore.initialized && Number(workspaceDataStore.workspaceId) === Number(workspaceId)
-  );
+function filterMilestonesByWorkspace(milestones = [], workspace) {
+  const allowedCategoryIds = workspace?.milestone_categories;
+  if (!allowedCategoryIds?.length) return milestones;
+  return milestones.filter((milestone) => allowedCategoryIds.includes(milestone.category_id));
 }
 
 function childItemListsMatch(current = [], next = []) {
@@ -290,9 +290,16 @@ class ItemDetailStore {
     this.loadingChildItems = true;
 
     try {
-      let workspaceInitPromise = isNumericID(effectiveWorkspaceId)
-        ? workspaceDataStore.initialize(effectiveWorkspaceId)
+      // Do not activate a different scope (e.g. a global board) just because
+      // the item lives in a workspace; the reference snapshot below handles it.
+      const activeScope = workspaceDataStore.initialized
+        ? Number(workspaceDataStore.workspaceId)
         : null;
+      let workspaceInitPromise =
+        isNumericID(effectiveWorkspaceId) &&
+        (activeScope === null || activeScope === Number(effectiveWorkspaceId))
+          ? workspaceDataStore.initialize(effectiveWorkspaceId)
+          : null;
       const summary = lookupWorkspaceKey
         ? await api.items.getDetailSummaryByKey(
             lookupWorkspaceKey,
@@ -323,37 +330,40 @@ class ItemDetailStore {
       const wsId = effectiveWorkspaceId || itemData.workspace_id;
       this.workspaceId = wsId;
 
-      // Share MainApp's in-flight workspace bootstrap.
-      workspaceInitPromise ??= workspaceDataStore.initialize(wsId);
-      await workspaceInitPromise;
-      if (token !== this.#loadToken) return LOAD_SUPERSEDED;
-      const useSharedReferences = hasSharedWorkspaceReferences(wsId);
-
-      this.workspace = useSharedReferences
-        ? workspaceDataStore.workspace
-        : await api.workspaces.get(wsId, requestOptions);
-      this.customFieldDefinitions = useSharedReferences
-        ? workspaceDataStore.customFieldDefinitions
-        : [];
-
-      // Filter milestones by workspace restrictions
-      const allMilestones = useSharedReferences ? workspaceDataStore.milestones : [];
-      if (this.workspace?.milestone_categories?.length > 0) {
-        const allowedCategoryIds = this.workspace.milestone_categories;
-        this.milestones = allMilestones.filter((m) => allowedCategoryIds.includes(m.category_id));
-      } else {
-        this.milestones = allMilestones;
+      // Activate the item's workspace only when no other scope is active. A
+      // global board must keep its own references; the snapshot below is
+      // fetched without clobbering it.
+      const currentScope = workspaceDataStore.initialized
+        ? Number(workspaceDataStore.workspaceId)
+        : null;
+      if (currentScope === null || currentScope === Number(wsId)) {
+        workspaceInitPromise ??= workspaceDataStore.initialize(wsId);
+        await workspaceInitPromise;
+        if (token !== this.#loadToken) return LOAD_SUPERSEDED;
       }
 
-      this.iterations = useSharedReferences ? workspaceDataStore.iterations : [];
-      this.timeProjects = useSharedReferences ? workspaceDataStore.projects : [];
-      this.itemTypes = useSharedReferences ? workspaceDataStore.itemTypes : [];
+      // One aggregate bootstrap request instead of six independent domain
+      // reads when the shared store serves a different scope. A fresh
+      // snapshot needs no recovery request.
+      const references = await workspaceDataStore.getReferenceSnapshot(wsId);
+      if (token !== this.#loadToken) return LOAD_SUPERSEDED;
+      this.workspace = references?.workspace ?? null;
+      this.customFieldDefinitions = references?.custom_field_definitions ?? [];
+      this.milestones = filterMilestonesByWorkspace(references?.milestones ?? [], this.workspace);
+      this.iterations = references?.iterations ?? [];
+      this.timeProjects = references?.projects ?? [];
+      this.itemTypes = references?.item_types ?? [];
+      // The loaded-scope priorities are only a valid fallback for the active
+      // scope. A null snapshot for a foreign item must not borrow them.
+      const referencesInActiveScope =
+        workspaceDataStore.initialized && Number(workspaceDataStore.workspaceId) === Number(wsId);
+      const fallbackPriorities = referencesInActiveScope
+        ? (workspaceDataStore.priorities ?? [])
+        : [];
       this.priorities = [
         ...(summary.priorities?.length
           ? summary.priorities
-          : useSharedReferences
-            ? workspaceDataStore.priorities
-            : []),
+          : (references?.priorities ?? fallbackPriorities)),
       ].sort((a, b) => a.sort_order - b.sort_order);
 
       this.requestTypeFields = summary.request_type_fields || [];
@@ -747,14 +757,10 @@ class ItemDetailStore {
     try {
       const ancestors = await api.items.getAncestors(this.item.id, requestOptions);
       try {
-        // Reuse the already-loaded type list (set by #loadItemTypeData, which
-        // runs first); only fetch as a fallback if it isn't populated yet.
-        const itemTypesData = this.itemTypes?.length
-          ? this.itemTypes
-          : await api.itemTypes.getAll({}, requestOptions);
+        // The type list came with the workspace reference snapshot.
         this.parentHierarchy = ancestors.map((ancestor) => {
           if (ancestor.item_type_id) {
-            const itemType = itemTypesData.find((type) => type.id === ancestor.item_type_id);
+            const itemType = this.itemTypes.find((type) => type.id === ancestor.item_type_id);
             return { ...ancestor, itemType };
           }
           return ancestor;
@@ -773,15 +779,9 @@ class ItemDetailStore {
 
   async #loadItemTypeData(requestOptions = {}) {
     try {
-      const useSharedReferences = hasSharedWorkspaceReferences(this.workspaceId);
-      const [itemTypesData, hierarchyLevels] = await Promise.all([
-        useSharedReferences
-          ? Promise.resolve(workspaceDataStore.itemTypes)
-          : api.itemTypes.getAll({}, requestOptions),
-        api.hierarchyLevels.getAll({}, requestOptions),
-      ]);
-
-      this.itemTypes = itemTypesData || [];
+      // The type list already came with the workspace reference snapshot; only
+      // the hierarchy-level catalog needs its own read here.
+      const hierarchyLevels = await api.hierarchyLevels.getAll({}, requestOptions);
 
       if (this.item.item_type_id) {
         this.currentItemType = this.itemTypes.find((type) => type.id === this.item.item_type_id);

@@ -3,7 +3,7 @@
   "kind": "windshift.workspace-bundle",
   "payload": {
     "view_settings": {
-      "enabled_views": ["backlog", "board", "list", "queue", "agents", "analytics", "actions", "pages"]
+      "enabled_views": ["board", "list", "queue", "agents", "analytics", "actions", "pages"]
     },
     "slas": {
       "calendars": [

@@ -679,6 +679,7 @@
         bind:value={searchQuery}
         placeholder={t('fields.searchFields')}
         class="w-64"
+        dataTestid="custom-fields-search"
       />
       {#if boardReturnTarget && !boardCreateFlow}
         <Button

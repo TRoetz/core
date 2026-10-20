@@ -92,7 +92,7 @@ export default {
       },
       linkTypes: {
         title: 'Verknüpfungstypen',
-        description: 'Verknüpfungstypen zwischen Elementen verwalten',
+        description: 'Verknüpfungstypen zwischen Vorgängen verwalten',
       },
       attachments: {
         title: 'Anhänge',
@@ -681,7 +681,7 @@ export default {
       forwardHint: 'Wenn A mit B verknüpft ist, als „A implementiert B“ anzeigen',
       reverseHint: 'Wenn B von A verknüpft wird, als „B implementiert von A“ anzeigen',
       descriptionPlaceholder: 'Optionale Beschreibung dieses Verknüpfungstyps',
-      empty: 'Keine Verknüpfungstypen gefunden. Erstellen Sie den ersten Typ für Beziehungen zwischen Einträgen.',
+      empty: 'Keine Verknüpfungstypen gefunden. Erstellen Sie den ersten Typ für Beziehungen zwischen Vorgängen.',
       defaults: {
         tests: { name: 'Testet', description: 'Testfall testet einen Arbeitsvorgang' },
         implements: { name: 'Implementiert', description: 'Arbeitsvorgang implementiert einen anderen Arbeitsvorgang' },
@@ -747,9 +747,9 @@ export default {
         subtask: 'Unteraufgabe',
       },
       genericSubtaskLevel: 'Generischer Untervorgang (jede übergeordnete Ebene)',
-      hierarchyChangeWarningTitle: 'Bestehende Einträge behalten ihre Verknüpfungen',
+      hierarchyChangeWarningTitle: 'Bestehende Vorgänge behalten ihre Verknüpfungen',
       hierarchyChangeWarningDescription:
-        'Beim Wechsel von Ebene {fromLevel} zu Ebene {toLevel} werden bestehende Einträge nicht verschoben. Künftige Auswahlmöglichkeiten für übergeordnete und untergeordnete Einträge werden anhand von Ebene {toLevel} berechnet; für ältere Einträge muss vor einer neuen Zuordnung möglicherweise ein kompatibler Typ gewählt werden.',
+        'Beim Wechsel von Ebene {fromLevel} zu Ebene {toLevel} werden bestehende Vorgänge nicht verschoben. Künftige Auswahlmöglichkeiten für übergeordnete und untergeordnete Vorgänge werden anhand von Ebene {toLevel} berechnet; für ältere Vorgänge muss vor einer neuen Zuordnung möglicherweise ein kompatibler Typ gewählt werden.',
     },
     hierarchyLevels: {
       title: 'Hierarchieebenen',
@@ -860,7 +860,7 @@ export default {
       mappedStatuses: 'Zugeordnete Status',
       noStatusesSelected: 'Keine Status ausgewählt',
       backlogStatuses: 'Backlog-Status',
-      backlogStatusesHelp: 'Einträge mit diesen Status erscheinen im Backlog',
+      backlogStatusesHelp: 'Vorgänge mit diesen Status erscheinen im Backlog',
       availableStatuses: 'Verfügbare Status',
       dragStatusesToColumns: 'Status in Spalten ziehen, um sie zuzuweisen',
       dropStatusesHere: 'Status hier ablegen',
@@ -925,7 +925,7 @@ export default {
         },
         dependency_analysis: {
           name: 'Abhängigkeitsanalyse',
-          description: 'Abhängigkeiten zwischen Elementen analysieren und vorschlagen',
+          description: 'Abhängigkeiten zwischen Vorgängen analysieren und vorschlagen',
         },
         logbook_articles: {
           name: 'Logbuch-Artikel',

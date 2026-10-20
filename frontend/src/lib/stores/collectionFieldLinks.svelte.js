@@ -1,3 +1,4 @@
+import { BACKGROUND_READ } from '../api/readScheduler.js';
 import { api } from '../api.js';
 
 const BATCH_SIZE = 200;
@@ -73,7 +74,7 @@ export class CollectionFieldLinksStore {
   #loadChunk(chunk) {
     const generation = this.#generation;
     const promise = api.links
-      .getForItems(chunk, { includeCustomFields: true })
+      .getForItems(chunk, { includeCustomFields: true, ...BACKGROUND_READ })
       .then((groups) => {
         if (generation !== this.#generation) return;
         const updates = {};

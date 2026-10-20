@@ -310,6 +310,18 @@ func (s *ItemLifecycleService) Merge(ctx context.Context, input ItemMergeInput) 
 				if _, err := tx.Exec(`UPDATE email_message_tracking SET item_id = ? WHERE item_id = ?`, target.ID, plan.item.ID); err != nil {
 					return fmt.Errorf("re-point email threads from item %d: %w", plan.item.ID, err)
 				}
+				// Intake receipts are one per item
+				// (uq_email_reply_outbox_confirmation), so the canonical's own
+				// receipt wins and the duplicate's extra one is dropped before
+				// the move. Everything that remains then lives on the canonical,
+				// so mail delivered after the merge tracks back to it.
+				if _, err := tx.Exec(`
+					DELETE FROM email_reply_outbox
+					WHERE item_id = ? AND kind = 'intake_confirmation'
+					  AND EXISTS (SELECT 1 FROM email_reply_outbox WHERE item_id = ? AND kind = 'intake_confirmation')
+				`, plan.item.ID, target.ID); err != nil {
+					return fmt.Errorf("drop duplicate intake receipt for item %d: %w", plan.item.ID, err)
+				}
 				if _, err := tx.Exec(`UPDATE email_reply_outbox SET item_id = ? WHERE item_id = ?`, target.ID, plan.item.ID); err != nil {
 					return fmt.Errorf("re-point pending replies from item %d: %w", plan.item.ID, err)
 				}
@@ -346,6 +358,15 @@ func (s *ItemLifecycleService) Merge(ctx context.Context, input ItemMergeInput) 
 				ItemID: plan.item.ID, UserID: input.ActorUserID,
 				FieldName: "merged_into_item_id", OldValueNull: true,
 				NewValue: fmt.Sprintf("%d", target.ID), ChangedAt: now,
+			}); err != nil {
+				return err
+			}
+			// The canonical records its half of the fold so its own history
+			// explains where the duplicate's content came from.
+			if err := s.items.RecordHistory(tx, repository.HistoryEntry{
+				ItemID: target.ID, UserID: input.ActorUserID,
+				FieldName: "merged_item_id", OldValueNull: true,
+				NewValue: fmt.Sprintf("%d", plan.item.ID), ChangedAt: now,
 			}); err != nil {
 				return err
 			}

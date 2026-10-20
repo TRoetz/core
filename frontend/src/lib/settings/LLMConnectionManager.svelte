@@ -43,6 +43,7 @@
     base_url: '',
     provider_config: '',
     vision_mode: 'auto',
+    max_output_tokens: '',
     is_default: false,
     is_enabled: true,
   });
@@ -56,20 +57,22 @@
       base_url: '',
       provider_config: '',
       vision_mode: 'auto',
+      max_output_tokens: '',
       is_default: false,
       is_enabled: true,
     };
     testResult = null;
   }
 
-  // vision_mode is stored inside the provider_config blob (a reserved key the
-  // backend strips before forwarding to the provider). The form manages it via a
-  // dedicated select, so we split it out of the raw JSON on edit and merge it
-  // back on save — the textarea never shows or duplicates vision_mode.
+  // Reserved provider_config keys the form manages through dedicated controls
+  // (vision_mode, max_output_tokens). They are split out of the raw JSON on
+  // edit and merged back on save, so the textarea only shows the arbitrary
+  // provider parameters the backend forwards verbatim.
   const VISION_MODES = ['auto', 'on', 'off'];
 
-  function splitVisionMode(providerConfig) {
+  function splitProviderConfig(providerConfig) {
     let mode = 'auto';
+    let maxOutputTokens = '';
     let rest = providerConfig || '';
     const raw = rest.trim();
     if (raw) {
@@ -79,14 +82,18 @@
           if (typeof obj.vision_mode === 'string' && VISION_MODES.includes(obj.vision_mode.toLowerCase())) {
             mode = obj.vision_mode.toLowerCase();
           }
+          if (typeof obj.max_output_tokens === 'number' && Number.isFinite(obj.max_output_tokens) && obj.max_output_tokens > 0) {
+            maxOutputTokens = String(obj.max_output_tokens);
+          }
           delete obj.vision_mode;
+          delete obj.max_output_tokens;
           rest = Object.keys(obj).length ? JSON.stringify(obj, null, 2) : '';
         }
       } catch {
         // Leave malformed JSON untouched for the user to fix in the textarea.
       }
     }
-    return { mode, rest };
+    return { mode, maxOutputTokens, rest };
   }
 
   function composeProviderConfig() {
@@ -100,6 +107,12 @@
       obj.vision_mode = form.vision_mode;
     } else {
       delete obj.vision_mode;
+    }
+    const maxOutputTokens = Number.parseInt(form.max_output_tokens, 10);
+    if (Number.isFinite(maxOutputTokens) && maxOutputTokens > 0) {
+      obj.max_output_tokens = maxOutputTokens;
+    } else {
+      delete obj.max_output_tokens;
     }
     return Object.keys(obj).length ? JSON.stringify(obj) : '';
   }
@@ -121,7 +134,7 @@
     const prov = providers.find((p) => p.type === conn.provider_type);
     const models = prov?.cached_models?.length ? prov.cached_models : (prov?.models || []);
     const base = !!models.find((m) => m.id === conn.model)?.supports_vision;
-    const mode = splitVisionMode(conn.provider_config || '').mode;
+    const mode = splitProviderConfig(conn.provider_config || '').mode;
     return mode === 'on' ? true : mode === 'off' ? false : base;
   }
 
@@ -242,7 +255,7 @@
 
   function openEdit(conn) {
     editingConnection = conn;
-    const { mode, rest } = splitVisionMode(conn.provider_config || '');
+    const { mode, maxOutputTokens, rest } = splitProviderConfig(conn.provider_config || '');
     form = {
       name: conn.name,
       provider_type: conn.provider_type,
@@ -251,6 +264,7 @@
       base_url: conn.base_url || '',
       provider_config: rest,
       vision_mode: mode,
+      max_output_tokens: maxOutputTokens,
       is_default: conn.is_default,
       is_enabled: conn.is_enabled,
     };
@@ -498,6 +512,12 @@
       options={providers.map(p => ({ value: p.type, label: p.name }))}
       onchange={() => { form.model = ''; form.base_url = ''; }}
     />
+    {#if selectedProvider?.usage_note}
+      <div data-testid="llm-provider-usage-note" class="mt-2 flex items-start gap-2 rounded-md border p-2 text-xs" style="border-color: var(--ds-border); background: var(--ds-surface-sunken); color: var(--ds-text-subtle);">
+        <AlertTriangle size={14} class="mt-0.5 flex-shrink-0" />
+        <span>{selectedProvider.usage_note}</span>
+      </div>
+    {/if}
   </div>
 
   <!-- Base URL (only for local/custom) -->
@@ -622,6 +642,22 @@
     />
     <div class="text-xs mt-1" style="color: var(--ds-text-subtle);">
       {t('settings.adminOperations.llmConnections.visionHelp')}
+    </div>
+  </div>
+
+  <!-- Max output tokens override -->
+  <div>
+    <label for="llm-connection-max-output-tokens" class="block text-xs font-medium mb-1" style="color: var(--ds-text-subtle);">{t('settings.adminOperations.llmConnections.maxOutputTokens')}</label>
+    <Input
+      id="llm-connection-max-output-tokens"
+      type="number"
+      min="0"
+      bind:value={form.max_output_tokens}
+      placeholder={t('settings.adminOperations.llmConnections.maxOutputTokensPlaceholder')}
+      size="small"
+    />
+    <div class="text-xs mt-1" style="color: var(--ds-text-subtle);">
+      {t('settings.adminOperations.llmConnections.maxOutputTokensHelp')}
     </div>
   </div>
 

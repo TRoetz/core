@@ -5,8 +5,9 @@
   import { currentRoute, navigate } from '../router.js';
   import { api } from '../api.js';
   import { confirm } from '../composables/useConfirm.js';
-  import { ArrowLeft, Plus, Trash2, ChevronDown, ChevronUp, AlertTriangle } from '@lucide/svelte';
+  import { Plus, Trash2, ChevronDown, ChevronUp, AlertTriangle } from '@lucide/svelte';
   import Button from '../components/Button.svelte';
+  import BackButton from '../components/BackButton.svelte';
   import Checkbox from '../components/Checkbox.svelte';
   import Radio from '../components/Radio.svelte';
   import Input from '../components/Input.svelte';
@@ -386,9 +387,7 @@
 <div class="flex-1 min-h-0 overflow-y-auto p-6" style="background-color: var(--ds-surface);" data-testid="approval-set-detail-scroll">
   <div class="max-w-5xl mx-auto">
   <div class="mb-4">
-    <Button variant="ghost" icon={ArrowLeft} onclick={back}>
-      {t('approvalSets.backToList')}
-    </Button>
+    <BackButton onclick={back} label={t('approvalSets.backToList')} />
   </div>
 
   {#if loading}

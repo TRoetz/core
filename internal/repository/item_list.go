@@ -83,7 +83,11 @@ type ItemFilters struct {
 	ItemIDs                []int  // Multi-value item ID filter
 	TextQuery              string // LIKE search on title/description
 	ItemKeyQuery           string // Workspace key pattern match (e.g. "OK-40")
-	ItemID                 *int   // Filter by specific item ID
+	// SearchQuery is the smart-search form used by the `search` list filter: it
+	// matches title/description text OR a full KEY-NUMBER item key, so a query
+	// like "OK-40" finds the item whether it appears in prose or as a key.
+	SearchQuery string
+	ItemID      *int // Filter by specific item ID
 }
 
 func (f ItemFilters) hasScalarFilters() bool {
@@ -99,7 +103,7 @@ func (f ItemFilters) hasListFilters() bool {
 }
 
 func (f ItemFilters) hasTextFilters() bool {
-	return f.TextQuery != "" || f.ItemKeyQuery != ""
+	return f.TextQuery != "" || f.ItemKeyQuery != "" || f.SearchQuery != ""
 }
 
 func (f ItemFilters) isUnfiltered() bool {
@@ -610,14 +614,26 @@ func (r *ItemRepository) SearchContext(ctx context.Context, query string, worksp
 
 func itemSearchFilters(query string) ItemFilters {
 	query = strings.TrimSpace(query)
-	// Right-anchor: legacy personal-workspace keys may contain dashes, so the
-	// number is everything after the last one.
-	if lastDash := strings.LastIndex(query, "-"); lastDash > 0 {
-		if num, err := strconv.Atoi(query[lastDash+1:]); err == nil && num > 0 {
-			return ItemFilters{ItemKeyQuery: query}
-		}
+	if _, _, ok := splitItemKeyQuery(query); ok {
+		return ItemFilters{ItemKeyQuery: query}
 	}
 	return ItemFilters{TextQuery: query}
+}
+
+// splitItemKeyQuery parses a KEY-NUMBER reference. The split is right-anchored
+// because legacy personal-workspace keys may contain dashes, so the number is
+// everything after the last one.
+func splitItemKeyQuery(query string) (keyPart string, itemNumber int, ok bool) {
+	query = strings.TrimSpace(query)
+	lastDash := strings.LastIndex(query, "-")
+	if lastDash <= 0 {
+		return "", 0, false
+	}
+	num, err := strconv.Atoi(query[lastDash+1:])
+	if err != nil || num <= 0 {
+		return "", 0, false
+	}
+	return query[:lastDash], num, true
 }
 
 // buildWhereClause constructs the WHERE clause and arguments for item queries
@@ -778,26 +794,32 @@ func (r *ItemRepository) buildWhereClause(params ItemListParams) (whereClause st
 	}
 
 	if params.Filters.ItemKeyQuery != "" {
-		// Right-anchored KEY-NUMBER split: workspace keys may contain dashes
-		// (legacy personal-workspace keys), so only the number after the last
-		// dash is the item number.
-		query := strings.ToUpper(params.Filters.ItemKeyQuery)
-		if lastDash := strings.LastIndex(query, "-"); lastDash > 0 {
-			if num, err := strconv.Atoi(query[lastDash+1:]); err == nil && num > 0 {
-				keyPart := query[:lastDash]
-				if strings.Contains(keyPart, "-") {
-					// A multi-segment prefix is ambiguous with prose: queries like
-					// "release-2026-09-18" end in digits but are usually text
-					// (WI-1417). Match the key OR the full query as text.
-					whereClause += " AND ((LOWER(w.key) = LOWER(?) AND i.workspace_item_number = ?) OR (LOWER(i.title) LIKE LOWER(?) OR LOWER(i.description) LIKE LOWER(?)))"
-					pattern := "%" + params.Filters.ItemKeyQuery + "%"
-					args = append(args, keyPart, num, pattern, pattern)
-				} else {
-					whereClause += " AND (LOWER(w.key) = LOWER(?) AND i.workspace_item_number = ?)"
-					args = append(args, keyPart, num)
-				}
+		if keyPart, num, ok := splitItemKeyQuery(params.Filters.ItemKeyQuery); ok {
+			if strings.Contains(keyPart, "-") {
+				// A multi-segment prefix is ambiguous with prose: queries like
+				// "release-2026-09-18" end in digits but are usually text
+				// (WI-1417). Match the key OR the full query as text.
+				whereClause += " AND ((LOWER(w.key) = LOWER(?) AND i.workspace_item_number = ?) OR (LOWER(i.title) LIKE LOWER(?) OR LOWER(i.description) LIKE LOWER(?)))"
+				pattern := "%" + params.Filters.ItemKeyQuery + "%"
+				args = append(args, keyPart, num, pattern, pattern)
+			} else {
+				whereClause += " AND (LOWER(w.key) = LOWER(?) AND i.workspace_item_number = ?)"
+				args = append(args, keyPart, num)
 			}
 		}
+	}
+
+	// Smart search is additive: text matches keep working, and a query that
+	// resolves to a full item key also matches that item wherever it sits.
+	if params.Filters.SearchQuery != "" {
+		pattern := "%" + params.Filters.SearchQuery + "%"
+		clause := "(LOWER(i.title) LIKE LOWER(?) OR LOWER(i.description) LIKE LOWER(?))"
+		args = append(args, pattern, pattern)
+		if keyPart, num, ok := splitItemKeyQuery(params.Filters.SearchQuery); ok {
+			clause = "(LOWER(i.title) LIKE LOWER(?) OR LOWER(i.description) LIKE LOWER(?) OR (LOWER(w.key) = LOWER(?) AND i.workspace_item_number = ?))"
+			args = append(args, keyPart, num)
+		}
+		whereClause += " AND " + clause
 	}
 
 	if params.Filters.ItemID != nil {

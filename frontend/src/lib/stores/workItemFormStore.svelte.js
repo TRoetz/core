@@ -1,6 +1,12 @@
 // Centralized reactive state for the work-item create form.
+
+import { FOREGROUND_READ } from '../api/readScheduler.js';
 import { api } from '../api.js';
-import { defaultCustomFieldValue, isBooleanCustomFieldType } from '../utils/customFieldTypes.js';
+import {
+  defaultCustomFieldValue,
+  isBooleanCustomFieldType,
+  isCreateRenderableCustomFieldType,
+} from '../utils/customFieldTypes.js';
 import { dateInputToISOString } from '../utils/dateFormatter.js';
 import { isGenericSubtaskType, sortItemTypesByHierarchy } from '../utils/hierarchy.js';
 import {
@@ -503,6 +509,20 @@ class WorkItemFormStore {
   }
 
   /**
+   * Resolve a workspace's effective configuration without disturbing the
+   * active route scope. The shared cache only holds the route's workspace;
+   * activating it here for another workspace would fight the app shell's
+   * route hydration and can ping-pong forever when the create modal targets
+   * a workspace other than the one behind it.
+   */
+  #effectiveConfig(workspaceId, itemTypeId = null) {
+    if (Number(workspaceDataStore.workspaceId) === Number(workspaceId)) {
+      return workspaceDataStore.screenConfig(itemTypeId);
+    }
+    return api.workspaces.getEffectiveConfig(workspaceId, itemTypeId, FOREGROUND_READ);
+  }
+
+  /**
    * Load the workspace's effective configuration (resolved once per workspace
    * by the backend: assigned config set, else the global default) and project
    * the parts the create flow needs onto currentConfigSet.
@@ -510,10 +530,7 @@ class WorkItemFormStore {
   async loadConfigSetForWorkspace(workspaceId) {
     if (this.configSetLoadedForWorkspace === workspaceId) return;
     try {
-      if (Number(workspaceDataStore.workspaceId) !== Number(workspaceId)) {
-        await workspaceDataStore.initialize(workspaceId);
-      }
-      const config = await workspaceDataStore.screenConfig(null);
+      const config = await this.#effectiveConfig(workspaceId, null);
       this.currentConfigSet = config
         ? {
             priorities_detailed: config.priorities || [],
@@ -532,11 +549,10 @@ class WorkItemFormStore {
   }
 
   /**
-   * Resolve the create screen ID for an item type through the shared
-   * effective-config cache (resolved server-side per workspace + type).
+   * Resolve the create screen ID for an item type in the given workspace.
    */
-  async #resolveCreateScreenId(itemTypeId) {
-    const config = await workspaceDataStore.screenConfig(itemTypeId);
+  async #resolveCreateScreenId(workspaceId, itemTypeId) {
+    const config = await this.#effectiveConfig(workspaceId, itemTypeId);
     return config?.screens?.create ?? 1;
   }
 
@@ -548,7 +564,7 @@ class WorkItemFormStore {
     if (this.loadingScreenFields || this.screenFieldsLoadedForKey === key) return;
     try {
       this.loadingScreenFields = true;
-      const createScreenId = await this.#resolveCreateScreenId(itemTypeId);
+      const createScreenId = await this.#resolveCreateScreenId(workspaceId, itemTypeId);
       const fields = createScreenId ? await api.screens.getFields(createScreenId) : [];
       this.screenFields = fields || [];
 
@@ -560,8 +576,11 @@ class WorkItemFormStore {
         .filter((field) => field.field_type === 'custom')
         .map((field) => parseInt(field.field_identifier, 10));
 
-      const filteredCustomFields = this.allCustomFields.filter((field) =>
-        customFieldIds.includes(field.id)
+      // Linking fields need an existing item and cannot be filled during
+      // create, so keep them out of the rendered fields and the payload.
+      const filteredCustomFields = this.allCustomFields.filter(
+        (field) =>
+          customFieldIds.includes(field.id) && isCreateRenderableCustomFieldType(field.field_type)
       );
 
       // Keep values the user already entered for fields that remain configured
@@ -657,6 +676,11 @@ class WorkItemFormStore {
       this.#templatesInFlightKey = null;
       return;
     }
+    // Wait for the workspace's effective configuration first: the unfiltered
+    // global catalog can hold a type this workspace does not bind, and a
+    // request for its templates 404s before the config set filters it out.
+    if (this.configSetLoadedForWorkspace !== workspaceId) return;
+
     const key = `${workspaceId}:${itemTypeId}`;
     // Never cache resolved keys: templates can change while the modal is open.
     if (this.#templatesInFlightKey === key) return;
@@ -918,6 +942,9 @@ class WorkItemFormStore {
           const fieldId = parseInt(field.field_identifier, 10);
           const value = this.customFieldValues[fieldId];
           const fieldDef = this.allCustomFields.find((f) => f.id === fieldId);
+          // Linking fields are not renderable on create; ignore a legacy
+          // required flag rather than blocking submission forever.
+          if (!isCreateRenderableCustomFieldType(fieldDef?.field_type)) continue;
           if (isBooleanCustomFieldType(fieldDef?.field_type)) continue;
           if (this.#isEmptyValue(value)) {
             errors.push(`${fieldDef?.name || 'Custom field'} is required`);

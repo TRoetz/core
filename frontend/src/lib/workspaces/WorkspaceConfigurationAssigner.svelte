@@ -186,12 +186,9 @@
 </script>
 
 <div class="space-y-6">
-  <div>
-    <h3 class="text-lg font-medium mb-4" style="color: var(--ds-text);">{t('settings.configSets.title')}</h3>
-    <p class="text-sm mb-6" style="color: var(--ds-text-subtle);">
-      {t('settings.configSets.assignerDescription')}
-    </p>
-  </div>
+  <p class="text-sm" style="color: var(--ds-text-subtle);">
+    {t('settings.configSets.assignerDescription')}
+  </p>
 
   {#if loading}
     <Card rounded="xl" shadow padding="loose" class="text-center">

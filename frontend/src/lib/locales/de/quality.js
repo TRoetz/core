@@ -98,7 +98,7 @@ export default {
       "datacenter": "Vorgänge aus Jira Data Center importieren"
     },
     "mapping": {
-      "issueTypesDesc": "Vorgangstypen werden als Eintragstypen in Windshift erstellt",
+      "issueTypesDesc": "Ordnen Sie jeden Jira-Issuetyp einem neuen oder vorhandenen Windshift-Vorgangstyp zu",
       "versionsDesc": "Jira-Versionen werden als Arbeitsbereich-Meilensteine importiert."
     },
     "preview": {
@@ -351,7 +351,7 @@ export default {
     "itemCopiedAs": "Vorgang erfolgreich als {key} kopiert",
     "clickToViewCopied": "Klicken, um kopierten Vorgang anzuzeigen",
     "deleteWorkItem": "Vorgang löschen",
-    "deleteItemWithChildren": "Vorgang mit untergeordneten Einträgen löschen",
+    "deleteItemWithChildren": "Vorgang mit untergeordneten Vorgängen löschen",
     "itemHasChildren": "Dieser Vorgang hat {count} untergeordnete Vorgänge.",
     "itemHasChildrenSingular": "Dieser Vorgang hat 1 untergeordneten Vorgang.",
     "deleteAllOption": "Alle löschen ({count} Vorgänge)",

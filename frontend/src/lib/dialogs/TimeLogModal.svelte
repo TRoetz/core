@@ -15,6 +15,7 @@
   import Modal from './Modal.svelte';
   import DialogFooter from './DialogFooter.svelte';
   import { t } from '../stores/i18n.svelte.js';
+  import { customerDisplayName } from '../utils/customerLabel.js';
   import { getUserTimezone } from '../utils/dateFormatter.js';
   import { authStore } from '../stores/auth.svelte.js';
   import { dateKeyInZone, formatClockInZone } from '../utils/worklogTimezone.js';
@@ -95,7 +96,11 @@
       return {
         id: project.id,
         name: project.name,
-        subtitle: customer?.name || 'Unknown Customer',
+        subtitle: customerDisplayName(
+          project.customer_name ?? customer?.name,
+          project.customer_builtin_key ?? customer?.builtin_key,
+          t
+        ) || 'Unknown Customer',
         project
       };
     }));
