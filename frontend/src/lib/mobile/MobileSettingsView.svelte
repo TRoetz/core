@@ -1,7 +1,7 @@
 <script>
   import { ChevronRight } from '@lucide/svelte';
   import { api } from '../api.js';
-  import { authStore } from '../stores';
+  import { authStore } from '../stores/auth.svelte.js';
   import { errorToast } from '../stores/toasts.svelte.js';
   import { i18n, SUPPORTED_LOCALES, t } from '../stores/i18n.svelte.js';
   import { navigate } from '../router.js';

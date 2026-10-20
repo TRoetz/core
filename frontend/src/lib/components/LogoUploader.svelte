@@ -4,7 +4,7 @@
   import Button from './Button.svelte';
   import Label from './Label.svelte';
   import { t } from '../stores/i18n.svelte.js';
-  import { attachmentStatus } from '../stores';
+  import { attachmentStatus } from '../stores/attachmentStatus.svelte.js';
 
   let {
     currentLogoUrl = null,

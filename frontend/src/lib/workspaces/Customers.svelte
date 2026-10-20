@@ -19,7 +19,7 @@
   import CustomFieldRenderer from '../features/items/CustomFieldRenderer.svelte';
   import { t } from '../stores/i18n.svelte.js';
   import { realCustomers } from '../utils/customerLabel.js';
-  import { permissionStore, isSystemAdmin } from '../stores';
+  import { permissionStore, isSystemAdmin } from '../stores/permissions.svelte.js';
   import AlertBox from '../components/AlertBox.svelte';
 
   // Route-derived state

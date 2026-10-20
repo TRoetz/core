@@ -1,6 +1,7 @@
 <script>
   import { Inbox } from '@lucide/svelte';
-  import { homepageStore, workspacesStore } from '../../stores';
+  import { homepageStore } from '../../stores/homepageStore.svelte.js';
+  import { workspacesStore } from '../../stores/workspaces.svelte.js';
   import { notifications, notificationActions } from '../../stores/notifications.js';
   import { itemModalStore } from '../../stores/itemModalStore.svelte.js';
   import { itemIdFromActionUrl } from '../../utils/actionUrl.js';

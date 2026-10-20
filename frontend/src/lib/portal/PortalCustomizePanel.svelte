@@ -26,7 +26,7 @@
   import { api } from '../api.js';
   import { workspacesStore } from '../stores/workspaces.svelte.js';
   import { portalAuthStore } from '../stores/portalAuth.svelte.js';
-  import { authStore } from '../stores';
+  import { authStore } from '../stores/auth.svelte.js';
   import { loadPermissionProfile } from '../stores/permissionProfile.js';
   import { t } from '../stores/i18n.svelte.js';
   import { confirm } from '../composables/useConfirm.js';

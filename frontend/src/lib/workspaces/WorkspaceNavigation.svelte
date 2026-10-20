@@ -17,7 +17,9 @@
   import { workspaceViewItems, workspaceOnlyViews, testNavigationItems, visibleWorkspaceSettingsItems, workspaceSettingsViews, workspaceSettingsRoute, collectionSwitchUrl } from '../navigation/workspaceNavigation.js';
   import { viewSettingsStore } from '../stores/viewSettings.svelte.js';
   import { navigate, currentRoute } from '../router.js';
-  import { authStore, currentWorkspace, workspacePermissions } from '../stores';
+  import { authStore } from '../stores/auth.svelte.js';
+  import { currentWorkspace } from '../stores/workspaces.svelte.js';
+  import { workspacePermissions } from '../stores/workspacePermissions.svelte.js';
   import { moduleSettings } from '../stores/moduleSettings.js';
   import { api } from '../api.js';
   import DropdownMenu from '../layout/DropdownMenu.svelte';

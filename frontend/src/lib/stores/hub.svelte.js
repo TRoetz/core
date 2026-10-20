@@ -4,7 +4,7 @@
  */
 
 import { api } from '../api.js';
-import { authStore } from '../stores';
+import { authStore } from './auth.svelte.js';
 import { createFooterLinkHelpers } from './footerLinks.js';
 
 export { WINDSHIFT_GRADIENT } from '../utils/gradients.js';

@@ -3,7 +3,7 @@
   import { api } from '../api.js';
   import { navigate } from '../router.js';
   import { errorToast, infoToast } from '../stores/toasts.svelte.js';
-  import { workspacesStore } from '../stores';
+  import { workspacesStore } from '../stores/workspaces.svelte.js';
   import { formatRelativeCompact } from '../utils/dateFormatter.js';
   import LazyMilkdownEditor from '../editors/LazyMilkdownEditor.svelte';
   import MobileHeader from './MobileHeader.svelte';

@@ -13,7 +13,8 @@
   } from '../../stores/collectionContext.js';
   import { findOrphansByMissingParent, indexCollectionHierarchy, mergeAncestorContext } from './collectionHierarchy.js';
   import { useGradientStyles, loadWorkspaceGradient } from '../../stores/workspaceGradient.svelte.js';
-  import { workspaceDataStore, itemModalStore } from '../../stores/index.js';
+  import { workspaceDataStore } from '../../stores/workspaceDataStore.svelte.js';
+  import { itemModalStore } from '../../stores/itemModalStore.svelte.js';
   import { workspacePermissions } from '../../stores/workspacePermissions.svelte.js';
   import ViewHeader from '../../layout/ViewHeader.svelte';
   import StaticViewBackground from '../../layout/StaticViewBackground.svelte';

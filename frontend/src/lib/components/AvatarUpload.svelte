@@ -4,7 +4,7 @@
    * fallback tile. Categories require matching backend attachment support. */
   import { Camera, Trash2, Package } from '@lucide/svelte';
   import { api } from '../api.js';
-  import { attachmentStatus } from '../stores';
+  import { attachmentStatus } from '../stores/attachmentStatus.svelte.js';
   import { t } from '../stores/i18n.svelte.js';
   import { successToast, errorToast } from '../stores/toasts.svelte.js';
   import Button from './Button.svelte';

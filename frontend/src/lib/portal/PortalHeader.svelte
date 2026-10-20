@@ -15,7 +15,7 @@
     Sun,
     User,
   } from '@lucide/svelte';
-  import { authStore } from '../stores';
+  import { authStore } from '../stores/auth.svelte.js';
   import { portalCustomizationStore as portalStore } from '../stores/portal.svelte.js';
   import {
     portalApprovalsStore,

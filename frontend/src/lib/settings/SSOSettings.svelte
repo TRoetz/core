@@ -1,7 +1,8 @@
 <script>
   import { onMount } from 'svelte';
   import StateDisplay from '../components/StateDisplay.svelte';
-  import { ssoStore, capabilitiesStore } from '../stores';
+  import { ssoStore } from '../stores/sso.svelte.js';
+  import { capabilitiesStore } from '../stores/capabilities.svelte.js';
   import { api } from '../api.js';
   import { toHotkeyString } from '../utils/keyboardShortcuts.js';
   import {

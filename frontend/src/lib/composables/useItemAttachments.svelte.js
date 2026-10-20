@@ -1,6 +1,6 @@
 import { onDestroy } from 'svelte';
 import { api } from '../api.js';
-import { attachmentStatus } from '../stores';
+import { attachmentStatus } from '../stores/attachmentStatus.svelte.js';
 
 /**
  * Composable for managing item attachments

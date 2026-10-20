@@ -7,7 +7,8 @@
   import PersonalTaskDetail from '../personal/PersonalTaskDetail.svelte';
   import DropdownMenu from '../../layout/DropdownMenu.svelte';
   import { exportTasksToICS } from '../../utils/icsExport.js';
-  import { authStore, workspacesStore } from '../../stores';
+  import { authStore } from '../../stores/auth.svelte.js';
+  import { workspacesStore } from '../../stores/workspaces.svelte.js';
   import { getStatusStyleFromStatuses } from '../../utils/statusColors.js';
   import { t } from '../../stores/i18n.svelte.js';
   import { errorToast, infoToast } from '../../stores/toasts.svelte.js';

@@ -21,7 +21,9 @@
   import BacklogIterationSection from './BacklogIterationSection.svelte';
   import { sortBacklogIterations } from './backlogIterationOrder.js';
   import ItemPicker from '../../pickers/ItemPicker.svelte';
-  import { backlogStore, workspaceDataStore, itemModalStore } from '../../stores/index.js';
+  import { backlogStore } from '../../stores/backlogStore.svelte.js';
+  import { workspaceDataStore } from '../../stores/workspaceDataStore.svelte.js';
+  import { itemModalStore } from '../../stores/itemModalStore.svelte.js';
   import { useCollectionEventStream } from '../../composables/useCollectionEventStream.svelte.js';
   import { errorToast, successToast, warningToast } from '../../stores/toasts.svelte.js';
   import { getIncompleteIterationItems } from './iterationCompletion.js';

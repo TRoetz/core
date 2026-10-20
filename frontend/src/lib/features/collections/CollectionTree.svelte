@@ -20,12 +20,10 @@
   import EmptyState from '../../components/EmptyState.svelte';
   import TableHeaderBar from '../../components/TableHeaderBar.svelte';
   import { moduleSettings } from '../../stores/moduleSettings.js';
-  import {
-    collectionEditorOptions,
-    collectionFieldLinks,
-    itemTestCaseLinksStore,
-    workspaceDataStore,
-  } from '../../stores/index.js';
+  import { collectionEditorOptions } from '../../stores/collectionEditorOptions.svelte.js';
+  import { collectionFieldLinks } from '../../stores/collectionFieldLinks.svelte.js';
+  import { itemTestCaseLinksStore } from '../../stores/itemTestCaseLinksStore.svelte.js';
+  import { workspaceDataStore } from '../../stores/workspaceDataStore.svelte.js';
   import {
     getListColumnLabel,
     listGridMinWidth,

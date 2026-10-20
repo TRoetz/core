@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import Avatar from '../components/Avatar.svelte';
 	import { api } from '../api.js';
-	import { authStore } from '../stores';
+	import { authStore } from '../stores/auth.svelte.js';
 	import { Plus, Edit, Trash2, RotateCcw, Circle, CheckCircle, Key, Users, UserCheck, UserX, AlertTriangle, Send, Link } from '@lucide/svelte';
 	import CopyButton from '../components/CopyButton.svelte';
 	import Button from '../components/Button.svelte';

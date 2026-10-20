@@ -12,7 +12,8 @@
 	import ProfileCalendarTab from '../profile/ProfileCalendarTab.svelte';
 	import ProfileRegionalSettingsTab from '../profile/ProfileRegionalSettingsTab.svelte';
 	import ConnectedAccountsTab from '../settings/ConnectedAccountsTab.svelte';
-	import { attachmentStatus, authStore } from '../stores';
+	import { attachmentStatus } from '../stores/attachmentStatus.svelte.js';
+	import { authStore } from '../stores/auth.svelte.js';
 	import { t } from '../stores/i18n.svelte.js';
 
 	let user = $state(null);

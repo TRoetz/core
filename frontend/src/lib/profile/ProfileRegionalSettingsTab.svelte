@@ -7,7 +7,7 @@
   import FormField from '../components/FormField.svelte';
   import BasePicker from '../pickers/BasePicker.svelte';
   import TimezonePicker from '../pickers/TimezonePicker.svelte';
-  import { authStore } from '../stores';
+  import { authStore } from '../stores/auth.svelte.js';
   import { i18n, SUPPORTED_LOCALES, t } from '../stores/i18n.svelte.js';
 
   let { user = $bindable(null), userId = null } = $props();

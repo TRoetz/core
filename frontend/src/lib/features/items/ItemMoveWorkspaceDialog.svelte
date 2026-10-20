@@ -5,7 +5,8 @@
   import BasePicker from '../../pickers/BasePicker.svelte';
   import NativeSelect from '../../components/NativeSelect.svelte';
   import { api } from '../../api.js';
-  import { workspacePermissions, workspacesStore } from '../../stores';
+  import { workspacePermissions } from '../../stores/workspacePermissions.svelte.js';
+  import { workspacesStore } from '../../stores/workspaces.svelte.js';
   import { t } from '../../stores/i18n.svelte.js';
 
   let {

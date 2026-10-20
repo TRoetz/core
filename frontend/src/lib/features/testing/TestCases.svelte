@@ -26,7 +26,7 @@
   import { toHotkeyString, getShortcutDisplay, matchesShortcut, isTypingInField } from '../../utils/keyboardShortcuts.js';
   import { currentRoute, navigate } from '../../router.js';
   import { t } from '../../stores/i18n.svelte.js';
-  import { workspacePermissions } from '../../stores/index.js';
+  import { workspacePermissions } from '../../stores/workspacePermissions.svelte.js';
   import DescriptionText from '../../components/DescriptionText.svelte';
   import SearchInput from '../../components/SearchInput.svelte';
   import { useEventListener } from 'runed';

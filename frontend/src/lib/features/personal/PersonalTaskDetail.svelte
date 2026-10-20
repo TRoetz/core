@@ -1,6 +1,6 @@
 <script>
   import { api } from '../../api.js';
-  import { attachmentStatus } from '../../stores';
+  import { attachmentStatus } from '../../stores/attachmentStatus.svelte.js';
   import { workspaceDataStore } from '../../stores/workspaceDataStore.svelte.js';
   import Modal from '../../dialogs/Modal.svelte';
   import Comments from '../items/Comments.svelte';

@@ -26,7 +26,7 @@
   import { errorToast } from '../../stores/toasts.svelte.js';
   import { confirm } from '../../composables/useConfirm.js';
   import { toHotkeyString } from '../../utils/keyboardShortcuts.js';
-  import { permissionStore, isSystemAdmin } from '../../stores';
+  import { permissionStore, isSystemAdmin } from '../../stores/permissions.svelte.js';
   import { fetchAssetCategories, flattenCategories } from './shared/assetSetUtils.js';
 	import TextField from '../../components/TextField.svelte';
 	import SelectField from '../../components/SelectField.svelte';

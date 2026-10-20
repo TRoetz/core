@@ -2,7 +2,7 @@
   import { useResizeObserver } from 'runed';
   import { ChevronRight, FileText } from '@lucide/svelte';
   import { currentRoute, navigate } from '../../router.js';
-  import { authStore } from '../../stores';
+  import { authStore } from '../../stores/auth.svelte.js';
   import EmptyState from '../../components/EmptyState.svelte';
   import StateDisplay from '../../components/StateDisplay.svelte';
   import BackButton from '../../components/BackButton.svelte';

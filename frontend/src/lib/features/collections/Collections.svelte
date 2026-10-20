@@ -22,7 +22,9 @@
   import Modal from '../../dialogs/Modal.svelte';
   import WorkspacePicker from '../../pickers/WorkspacePicker.svelte';
   import { collectionCategoriesStore } from '../../stores/collectionCategories.js';
-  import { permissionStore, isSystemAdmin, authStore, workspaceDataStore } from '../../stores';
+  import { permissionStore, isSystemAdmin } from '../../stores/permissions.svelte.js';
+  import { authStore } from '../../stores/auth.svelte.js';
+  import { workspaceDataStore } from '../../stores/workspaceDataStore.svelte.js';
   import ColumnSelector from './ColumnSelector.svelte';
   import WorkItemListTable from './WorkItemListTable.svelte';
   import {

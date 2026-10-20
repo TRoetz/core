@@ -1,6 +1,6 @@
 <script>
   import { Trash2 } from '@lucide/svelte';
-  import { homepageStore } from '../stores';
+  import { homepageStore } from '../stores/homepageStore.svelte.js';
   import { t } from '../stores/i18n.svelte.js';
   import Button from '../components/Button.svelte';
   import GradientPicker from '../components/GradientPicker.svelte';

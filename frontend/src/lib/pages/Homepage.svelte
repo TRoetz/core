@@ -1,6 +1,9 @@
 <script>
   import { onMount, onDestroy, tick } from 'svelte';
-  import { authStore, homepageStore, permissionStore, isSystemAdmin, workspacesStore } from '../stores';
+  import { authStore } from '../stores/auth.svelte.js';
+  import { homepageStore } from '../stores/homepageStore.svelte.js';
+  import { permissionStore, isSystemAdmin } from '../stores/permissions.svelte.js';
+  import { workspacesStore } from '../stores/workspaces.svelte.js';
   import { t } from '../stores/i18n.svelte.js';
   import DashboardOnboarding from './DashboardOnboarding.svelte';
   import Text from '../components/Text.svelte';

@@ -1,7 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import { api } from '../../api.js';
-  import { attachmentStatus } from '../../stores';
+  import { attachmentStatus } from '../../stores/attachmentStatus.svelte.js';
   import Button from '../../components/Button.svelte';
   import DataTable from '../../components/DataTable.svelte';
   import TimeCustomerModal from '../../dialogs/TimeCustomerModal.svelte';
@@ -13,7 +13,7 @@
   import { t } from '../../stores/i18n.svelte.js';
   import { realCustomers } from '../../utils/customerLabel.js';
   import { errorToast } from '../../stores/toasts.svelte.js';
-  import { permissionStore, isSystemAdmin } from '../../stores';
+  import { permissionStore, isSystemAdmin } from '../../stores/permissions.svelte.js';
   import PageHeader from '../../layout/PageHeader.svelte';
   import { formatDateSimple } from '../../utils/dateFormatter.js';
   import { confirm } from '../../composables/useConfirm.js';

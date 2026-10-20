@@ -1,6 +1,8 @@
 <script>
   import { currentRoute, isWorkspaceRoute } from '../router.js';
-  import { permissionStore, uiStore, workspacesStore } from '../stores';
+  import { permissionStore } from '../stores/permissions.svelte.js';
+  import { uiStore } from '../stores/ui.svelte.js';
+  import { workspacesStore } from '../stores/workspaces.svelte.js';
   import { t } from '../stores/i18n.svelte.js';
   import { themeStore } from '../stores/theme.svelte.js';
   import { aiStore } from '../stores/aiStore.svelte.js';

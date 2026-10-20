@@ -1,6 +1,6 @@
 <script>
   import { CheckSquare } from '@lucide/svelte';
-  import { authStore } from '../stores';
+  import { authStore } from '../stores/auth.svelte.js';
   import { api } from '../api.js';
   import DueMark from './dashboard/DueMark.svelte';
   import WidgetState from './WidgetState.svelte';

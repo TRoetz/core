@@ -3,7 +3,7 @@
   import StateDisplay from '../../components/StateDisplay.svelte';
   import { Tag, Plus, Pencil, Trash2, Check, X } from '@lucide/svelte';
   import { api } from '../../api.js';
-  import { authStore } from '../../stores';
+  import { authStore } from '../../stores/auth.svelte.js';
   import { t } from '../../stores/i18n.svelte.js';
   import { errorToast, successToast } from '../../stores/toasts.svelte.js';
   import { confirm } from '../../composables/useConfirm.js';

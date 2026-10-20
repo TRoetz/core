@@ -18,7 +18,10 @@
   } from '../../utils/workItemListColumns.js';
   import { useGradientStyles } from '../../stores/workspaceGradient.svelte.js';
   import { workspacePermissions } from '../../stores/workspacePermissions.svelte.js';
-  import { collectionEditorOptions, collectionFieldLinks, itemModalStore, workspaceDataStore } from '../../stores/index.js';
+  import { collectionEditorOptions } from '../../stores/collectionEditorOptions.svelte.js';
+  import { collectionFieldLinks } from '../../stores/collectionFieldLinks.svelte.js';
+  import { itemModalStore } from '../../stores/itemModalStore.svelte.js';
+  import { workspaceDataStore } from '../../stores/workspaceDataStore.svelte.js';
   import { MoreHorizontal, ArrowUp, ArrowDown, ArrowUpDown } from '@lucide/svelte';
   import { draggable } from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
   import SearchInput from '../../components/SearchInput.svelte';

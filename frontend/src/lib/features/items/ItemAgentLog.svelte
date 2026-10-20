@@ -10,7 +10,7 @@
   import { formatAuthenticatedDateTime as formatDateTimeLocale } from '../../utils/authenticatedDateFormatter.js';
   import { formatCostUSD, hasMeteredUsage } from '../../utils/llmUsage.js';
   import { t } from '../../stores/i18n.svelte.js';
-  import { workspacePermissions } from '../../stores';
+  import { workspacePermissions } from '../../stores/workspacePermissions.svelte.js';
   import { confirm } from '../../composables/useConfirm.js';
 
   let { itemId, workspaceId } = $props();

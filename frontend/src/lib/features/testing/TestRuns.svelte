@@ -18,7 +18,7 @@
   import Lozenge from '../../components/Lozenge.svelte';
   import { getStatusLabel, getTestStatusColor } from '../../utils/statusColors.js';
   import { t } from '../../stores/i18n.svelte.js';
-  import { workspacePermissions } from '../../stores/index.js';
+  import { workspacePermissions } from '../../stores/workspacePermissions.svelte.js';
   import { errorToast, warningToast } from '../../stores/toasts.svelte.js';
   import { formatAuthenticatedDateTime } from '../../utils/authenticatedDateFormatter.js';
   import TestManagementHeader from './TestManagementHeader.svelte';

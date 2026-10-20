@@ -1,7 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import { currentRoute, initRouter, isMobileRoute, navigate } from './lib/router.js';
-  import { authStore } from './lib/stores';
+  import { authStore } from './lib/stores/auth.svelte.js';
   import { moduleSettings } from './lib/stores/moduleSettings.js';
   import { api } from './lib/api.js';
   import { APP_NAME } from './lib/constants.js';

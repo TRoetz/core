@@ -24,7 +24,7 @@
   import FormField from '../../components/FormField.svelte';
   import Input from '../../components/Input.svelte';
   import { t } from '../../stores/i18n.svelte.js';
-  import { authStore } from '../../stores';
+  import { authStore } from '../../stores/auth.svelte.js';
   import { successToast, errorToast } from '../../stores/toasts.svelte.js';
   import { confirm } from '../../composables/useConfirm.js';
   import { safeHref } from '../../utils/sanitize';

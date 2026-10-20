@@ -22,7 +22,7 @@
   import Textarea from '../../components/Textarea.svelte';
   import { getStatusLabel, getTestStatusColor } from '../../utils/statusColors.js';
   import { t } from '../../stores/i18n.svelte.js';
-  import { workspacePermissions } from '../../stores/index.js';
+  import { workspacePermissions } from '../../stores/workspacePermissions.svelte.js';
   import DescriptionText from '../../components/DescriptionText.svelte';
   import { loadTestRunDetail } from './testRunDetailData.js';
 import BDDExampleExecution from './BDDExampleExecution.svelte';

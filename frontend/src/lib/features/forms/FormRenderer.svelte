@@ -4,7 +4,7 @@
   import { ExternalLink, FileText, LogIn, Paperclip, RotateCcw } from '@lucide/svelte';
   import { api } from '../../api.js';
   import { t } from '../../stores/i18n.svelte.js';
-  import { authStore } from '../../stores';
+  import { authStore } from '../../stores/auth.svelte.js';
   import Label from '../../components/Label.svelte';
   import FileInput from '../../components/FileInput.svelte';
   import AlertBox from '../../components/AlertBox.svelte';

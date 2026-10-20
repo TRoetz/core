@@ -12,7 +12,8 @@
   import PageHeader from '../layout/PageHeader.svelte';
   import Lozenge from '../components/Lozenge.svelte';
   import { toHotkeyString, getShortcutDisplay } from '../utils/keyboardShortcuts.js';
-  import { workspacesStore, permissionStore, isSystemAdmin } from '../stores';
+  import { workspacesStore } from '../stores/workspaces.svelte.js';
+  import { permissionStore, isSystemAdmin } from '../stores/permissions.svelte.js';
   import { formatDateSimple } from '../utils/dateFormatter.js';
 
   // Props

@@ -3,7 +3,11 @@
   import { Plus } from '@lucide/svelte';
   import { currentRoute, navigate } from '../router.js';
   import { timerStore } from '../stores/timerStore.svelte.js';
-  import { workspacesStore, aiStore, homepageStore, authStore, workspacePermissions } from '../stores';
+  import { workspacesStore } from '../stores/workspaces.svelte.js';
+  import { aiStore } from '../stores/aiStore.svelte.js';
+  import { homepageStore } from '../stores/homepageStore.svelte.js';
+  import { authStore } from '../stores/auth.svelte.js';
+  import { workspacePermissions } from '../stores/workspacePermissions.svelte.js';
   import { startNotificationPoller, stopNotificationPoller } from '../stores/notifications.js';
   import { resetAuthenticatedShellState } from '../services/authenticatedShellBootstrap.js';
   import { registerMobileServiceWorker } from './pushClient.js';

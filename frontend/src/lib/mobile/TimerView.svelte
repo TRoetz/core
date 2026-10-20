@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { Square, Clock, Plus, ExternalLink, Pencil, Trash2, Command as CommandIcon } from '@lucide/svelte';
   import { timerStore } from '../stores/timerStore.svelte.js';
-  import { timeEntryStore } from '../stores';
+  import { timeEntryStore } from '../stores/timeEntryStore.svelte.js';
   import { confirm } from '../composables/useConfirm.js';
   import { t } from '../stores/i18n.svelte.js';
   import { formatItemKey } from '../utils/itemKey.js';

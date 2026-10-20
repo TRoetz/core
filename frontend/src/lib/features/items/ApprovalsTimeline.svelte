@@ -9,7 +9,7 @@
   import Badge from '../../components/Badge.svelte';
   import EmptyState from '../../components/EmptyState.svelte';
   import { formatAuthenticatedDateTime as formatDateTimeLocale } from '../../utils/authenticatedDateFormatter.js';
-  import { authStore } from '../../stores';
+  import { authStore } from '../../stores/auth.svelte.js';
   import { confirm } from '../../composables/useConfirm.js';
 
   let {

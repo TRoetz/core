@@ -4,7 +4,7 @@
   import MilkdownEditor from '../../editors/LazyMilkdownEditor.svelte';
   import ChatToolTrace from './ChatToolTrace.svelte';
   import { chatStore, preprocessItemKeys } from '../../stores/chatStore.svelte.js';
-  import { workspacePermissions } from '../../stores';
+  import { workspacePermissions } from '../../stores/workspacePermissions.svelte.js';
   import { currentRoute } from '../../router.js';
   import Button from '../../components/Button.svelte';
   import Select from '../../components/Select.svelte';

@@ -1,7 +1,7 @@
 <script>
   import { onMount, onDestroy, tick } from 'svelte';
   import { currentRoute } from '../router.js';
-  import { authStore } from '../stores';
+  import { authStore } from '../stores/auth.svelte.js';
   import { AlertCircle, Check } from '@lucide/svelte';
   import { t } from '../stores/i18n.svelte.js';
 

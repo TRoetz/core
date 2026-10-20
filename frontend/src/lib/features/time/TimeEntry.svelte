@@ -3,7 +3,8 @@
   import { Filter, Plus, Edit, Trash2 } from '@lucide/svelte';
   import AlertBox from '../../components/AlertBox.svelte';
   import { navigate } from '../../router.js';
-  import { timeEntryStore, permissionStore, isSystemAdmin } from '../../stores';
+  import { timeEntryStore } from '../../stores/timeEntryStore.svelte.js';
+  import { permissionStore, isSystemAdmin } from '../../stores/permissions.svelte.js';
   import Button from '../../components/Button.svelte';
   import Input from '../../components/Input.svelte';
   import BasePicker from '../../pickers/BasePicker.svelte';

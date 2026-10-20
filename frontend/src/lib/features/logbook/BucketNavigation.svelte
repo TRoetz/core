@@ -1,7 +1,7 @@
 <script>
   import { navigate } from '../../router.js';
   import { logbookStore } from '../../stores/logbook.svelte.js';
-  import { permissionStore } from '../../stores';
+  import { permissionStore } from '../../stores/permissions.svelte.js';
   import { t } from '../../stores/i18n.svelte.js';
   import { api } from '../../api.js';
   import { successToast, errorToast } from '../../stores/toasts.svelte.js';

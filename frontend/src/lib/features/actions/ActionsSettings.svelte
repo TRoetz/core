@@ -4,7 +4,7 @@
   import { t } from '../../stores/i18n.svelte.js';
   import { successToast, errorToast } from '../../stores/toasts.svelte.js';
   import { statusCategoriesStore } from '../../stores/statusCategories.svelte.js';
-  import { workspacePermissions } from '../../stores';
+  import { workspacePermissions } from '../../stores/workspacePermissions.svelte.js';
   import { navigate } from '../../router.js';
   import ActionsManager from './ActionsManager.svelte';
   import ActionFlowEditor from './ActionFlowEditor.svelte';

@@ -15,13 +15,10 @@
     navigate,
   } from '../router.js';
   import { hydrateCurrentWorkspaceFromSharedData } from '../services/authenticatedShellUI.js';
-  import {
-    authStore,
-    currentWorkspace,
-    uiStore,
-    workspaceDataStore,
-    workspacesStore,
-  } from '../stores';
+  import { authStore } from '../stores/auth.svelte.js';
+  import { currentWorkspace, workspacesStore } from '../stores/workspaces.svelte.js';
+  import { uiStore } from '../stores/ui.svelte.js';
+  import { workspaceDataStore } from '../stores/workspaceDataStore.svelte.js';
   import { aiStore } from '../stores/aiStore.svelte.js';
   import { terminalStore } from '../stores/terminalStore.svelte.js';
   import { clearWorkspaceGradient } from '../stores/workspaceGradient.svelte.js';

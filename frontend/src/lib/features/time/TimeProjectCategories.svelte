@@ -7,7 +7,7 @@
   import { toHotkeyString } from '../../utils/keyboardShortcuts.js';
   import { t } from '../../stores/i18n.svelte.js';
   import { errorToast } from '../../stores/toasts.svelte.js';
-  import { permissionStore, isSystemAdmin } from '../../stores';
+  import { permissionStore, isSystemAdmin } from '../../stores/permissions.svelte.js';
   import { confirm } from '../../composables/useConfirm.js';
   import DescriptionText from '../../components/DescriptionText.svelte';
   import EmptyState from '../../components/EmptyState.svelte';

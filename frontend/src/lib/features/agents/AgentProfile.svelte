@@ -18,7 +18,7 @@
   } from '@tabler/icons-svelte-runes';
   import { agentBindings, agentRuns, agentSkills, api } from '../../api.js';
   import { updateQueryParams } from '../../router.js';
-  import { workspacePermissions } from '../../stores';
+  import { workspacePermissions } from '../../stores/workspacePermissions.svelte.js';
   import PageHeader from '../../layout/PageHeader.svelte';
   import DropdownMenu from '../../layout/DropdownMenu.svelte';
   import AlertBox from '../../components/AlertBox.svelte';

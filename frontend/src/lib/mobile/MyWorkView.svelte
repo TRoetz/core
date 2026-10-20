@@ -1,6 +1,7 @@
 <script>
   import { Search, Sparkles, Command as CommandIcon } from '@lucide/svelte';
-  import { authStore, aiStore } from '../stores';
+  import { authStore } from '../stores/auth.svelte.js';
+  import { aiStore } from '../stores/aiStore.svelte.js';
   import { api } from '../api.js';
   import { navigate } from '../router.js';
   import { formatRelativeCompact } from '../utils/dateFormatter.js';

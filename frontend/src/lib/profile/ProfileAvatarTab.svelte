@@ -7,7 +7,7 @@
   import FileInput from '../components/FileInput.svelte';
   import Spinner from '../components/Spinner.svelte';
   import { confirm } from '../composables/useConfirm.js';
-  import { authStore } from '../stores';
+  import { authStore } from '../stores/auth.svelte.js';
   import { t } from '../stores/i18n.svelte.js';
 
   let { user = $bindable(null), userId = null } = $props();

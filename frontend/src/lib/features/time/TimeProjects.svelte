@@ -17,7 +17,7 @@
   import { t } from '../../stores/i18n.svelte.js';
   import { customerDisplayName, isNoCustomer } from '../../utils/customerLabel.js';
   import { errorToast } from '../../stores/toasts.svelte.js';
-  import { permissionStore, isSystemAdmin } from '../../stores';
+  import { permissionStore, isSystemAdmin } from '../../stores/permissions.svelte.js';
   import { confirm } from '../../composables/useConfirm.js';
 
   let activeTab = $state('projects');

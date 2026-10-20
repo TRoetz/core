@@ -1,7 +1,8 @@
 <script>
   import { onMount } from 'svelte';
   import { navigate } from '../router.js';
-  import { authStore, ssoStore } from '../stores';
+  import { authStore } from '../stores/auth.svelte.js';
+  import { ssoStore } from '../stores/sso.svelte.js';
   import { api } from '../api.js';
   import { authPolicy } from '../api/admin.js';
   import { Eye, EyeOff, Lock, User, AlertCircle, LogIn, Key } from '@lucide/svelte';

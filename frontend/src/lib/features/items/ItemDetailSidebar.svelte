@@ -31,7 +31,7 @@
   import CreateBranchModal from '../../dialogs/CreateBranchModal.svelte';
   import CreatePRFromBranchModal from '../../dialogs/CreatePRFromBranchModal.svelte';
   import { getShortcutDisplay } from '../../utils/keyboardShortcuts.js';
-  import { workspacePermissions } from '../../stores';
+  import { workspacePermissions } from '../../stores/workspacePermissions.svelte.js';
   import { workspaceDataStore } from '../../stores/workspaceDataStore.svelte.js';
   import { collectionEditorOptions } from '../../stores/collectionEditorOptions.svelte.js';
   import { t } from '../../stores/i18n.svelte.js';

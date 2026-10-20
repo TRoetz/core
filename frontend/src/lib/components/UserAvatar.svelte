@@ -1,5 +1,7 @@
 <script>
-  import { authStore, workspacesStore, attachmentStatus } from '../stores';
+  import { authStore } from '../stores/auth.svelte.js';
+  import { workspacesStore } from '../stores/workspaces.svelte.js';
+  import { attachmentStatus } from '../stores/attachmentStatus.svelte.js';
   import { navigate } from '../router.js';
   import DropdownMenu from '../layout/DropdownMenu.svelte';
   import { User, Home, Shield, Sun, Moon, Monitor, Download, Settings } from '@lucide/svelte';

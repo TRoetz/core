@@ -5,7 +5,7 @@
 	import { onMount } from 'svelte';
 	import { Lock, AlertTriangle } from '@lucide/svelte';
 	import { api } from '../api.js';
-	import { authStore } from '../stores';
+	import { authStore } from '../stores/auth.svelte.js';
 	import { currentRoute } from '../router.js';
 	import ConsentCard from '../components/ConsentCard.svelte';
 	import Spinner from '../components/Spinner.svelte';

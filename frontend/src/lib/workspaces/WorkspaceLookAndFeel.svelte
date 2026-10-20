@@ -3,7 +3,9 @@
   import { useDebounce } from 'runed';
   import { api } from '../api.js';
   import { navigate } from '../router.js';
-  import { workspacePermissions, currentWorkspace, attachmentStatus, workspacesStore } from '../stores';
+  import { workspacePermissions } from '../stores/workspacePermissions.svelte.js';
+  import { currentWorkspace, workspacesStore } from '../stores/workspaces.svelte.js';
+  import { attachmentStatus } from '../stores/attachmentStatus.svelte.js';
   import { workspaceDataStore } from '../stores/workspaceDataStore.svelte.js';
   import {
     workspaceGradientIndex,

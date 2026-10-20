@@ -1,7 +1,8 @@
 <script>
   import { api } from '../api.js';
   import { currentRoute, navigate, setNavigationInterceptor } from '../router.js';
-  import { workspacesStore, workspacePermissions } from '../stores';
+  import { workspacesStore } from '../stores/workspaces.svelte.js';
+  import { workspacePermissions } from '../stores/workspacePermissions.svelte.js';
   import { FileText } from '@lucide/svelte';
   import NativeSelect from '../components/NativeSelect.svelte';
   import CustomFieldRenderer from '../features/items/CustomFieldRenderer.svelte';

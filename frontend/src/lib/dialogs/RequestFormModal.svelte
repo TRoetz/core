@@ -1,7 +1,7 @@
 <script>
   import { api } from '../api.js';
   import StateDisplay from '../components/StateDisplay.svelte';
-  import { authStore } from '../stores';
+  import { authStore } from '../stores/auth.svelte.js';
   import { portalAuthStore } from '../stores/portalAuth.svelte.js';
   import { portalCustomizationStore as portalStore } from '../stores/portal.svelte.js';
   import { iconMap } from '../stores/portalPresentation.js';

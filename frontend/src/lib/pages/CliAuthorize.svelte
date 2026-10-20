@@ -8,7 +8,7 @@
 	import { onMount } from 'svelte';
 	import { Terminal, Shield, AlertTriangle } from '@lucide/svelte';
 	import { api } from '../api.js';
-	import { authStore } from '../stores';
+	import { authStore } from '../stores/auth.svelte.js';
 	import { currentRoute } from '../router.js';
 	import ConsentCard from '../components/ConsentCard.svelte';
 	import Button from '../components/Button.svelte';

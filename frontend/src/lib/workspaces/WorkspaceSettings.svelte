@@ -2,7 +2,8 @@
   import { onDestroy, onMount } from 'svelte';
   import { api } from '../api.js';
   import { navigate } from '../router.js';
-  import { workspacePermissions, workspacesStore, currentWorkspace } from '../stores';
+  import { workspacePermissions } from '../stores/workspacePermissions.svelte.js';
+  import { workspacesStore, currentWorkspace } from '../stores/workspaces.svelte.js';
   import { Trash2, AlertTriangle, Clock, Shield } from '@lucide/svelte';
   import { moduleSettings } from '../stores/moduleSettings.js';
   import { viewSettingsStore } from '../stores/viewSettings.svelte.js';

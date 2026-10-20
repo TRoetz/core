@@ -39,7 +39,11 @@
   import ItemKey from '../../components/ItemKey.svelte';
   import CollectionViewSwitcher from './CollectionViewSwitcher.svelte';
   import DropdownMenu from '../../layout/DropdownMenu.svelte';
-  import { backlogStore, workspaceDataStore, workspacesStore, workspacePermissions, itemModalStore } from '../../stores/index.js';
+  import { backlogStore } from '../../stores/backlogStore.svelte.js';
+  import { workspaceDataStore } from '../../stores/workspaceDataStore.svelte.js';
+  import { workspacesStore } from '../../stores/workspaces.svelte.js';
+  import { workspacePermissions } from '../../stores/workspacePermissions.svelte.js';
+  import { itemModalStore } from '../../stores/itemModalStore.svelte.js';
   import { useCollectionEventStream } from '../../composables/useCollectionEventStream.svelte.js';
   import { createDependencyLoader } from './dependencyLoader.svelte.js';
   import { useCollectionSearch } from '../../composables/useCollectionSearch.svelte.js';

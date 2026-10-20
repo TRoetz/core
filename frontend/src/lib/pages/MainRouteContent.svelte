@@ -2,7 +2,8 @@
   import Button from '../components/Button.svelte';
   import Spinner from '../components/Spinner.svelte';
   import PermissionGuard from '../layout/PermissionGuard.svelte';
-  import { authStore, workspacesStore } from '../stores';
+  import { authStore } from '../stores/auth.svelte.js';
+  import { workspacesStore } from '../stores/workspaces.svelte.js';
   import { t } from '../stores/i18n.svelte.js';
   import { moduleSettings } from '../stores/moduleSettings.js';
   import UnauthorizedAccess from './UnauthorizedAccess.svelte';

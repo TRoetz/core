@@ -14,7 +14,8 @@
   import { collectionCategoriesStore } from '../../stores/collectionCategories.js';
   import { formatDate } from '../../utils/dateFormatter.js';
   import { toHotkeyString } from '../../utils/keyboardShortcuts.js';
-  import { workspacesStore, authStore } from '../../stores';
+  import { workspacesStore } from '../../stores/workspaces.svelte.js';
+  import { authStore } from '../../stores/auth.svelte.js';
   import WorkspaceSelector from '../../workspaces/WorkspaceSelector.svelte';
   import ColorDot from '../../components/ColorDot.svelte';
   import Badge from '../../components/Badge.svelte';

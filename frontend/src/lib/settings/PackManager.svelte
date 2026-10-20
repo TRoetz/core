@@ -3,7 +3,7 @@
   import { t } from '../stores/i18n.svelte.js';
   import { errorToast, successToast } from '../stores/toasts.svelte.js';
   import { api } from '../api.js';
-  import { workspacesStore } from '../stores';
+  import { workspacesStore } from '../stores/workspaces.svelte.js';
   import { IconPackage } from '@tabler/icons-svelte-runes';
   import Button from '../components/Button.svelte';
   import EmptyState from '../components/EmptyState.svelte';

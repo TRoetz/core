@@ -9,7 +9,7 @@
     IconUserStar as AgentIcon,
   } from '@tabler/icons-svelte-runes';
   import { agentBindings, agentRuns } from '../../api.js';
-  import { workspacePermissions } from '../../stores';
+  import { workspacePermissions } from '../../stores/workspacePermissions.svelte.js';
   import { t } from '../../stores/i18n.svelte.js';
   import PageHeader from '../../layout/PageHeader.svelte';
   import Avatar from '../../components/Avatar.svelte';

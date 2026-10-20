@@ -7,7 +7,7 @@
   import DeleteItemDialog from '../../dialogs/DeleteItemDialog.svelte';
   import ItemDetail from '../items/ItemDetail.svelte';
   import PersonalTaskDetail from '../personal/PersonalTaskDetail.svelte';
-  import { authStore } from '../../stores';
+  import { authStore } from '../../stores/auth.svelte.js';
   import { t } from '../../stores/i18n.svelte.js';
   import { errorToast } from '../../stores/toasts.svelte.js';
   import Checkbox from '../../components/Checkbox.svelte';

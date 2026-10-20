@@ -1,7 +1,8 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
   import { api } from '../../api.js';
-  import { authStore, uiStore } from '../../stores';
+  import { authStore } from '../../stores/auth.svelte.js';
+  import { uiStore } from '../../stores/ui.svelte.js';
   import { ChevronLeft, ChevronRight, Calendar, Clock, Lightbulb, Maximize, Minimize, BookOpenCheck, FileEdit } from '@lucide/svelte';
   import EmptyState from '../../components/EmptyState.svelte';
   import Card from '../../components/Card.svelte';

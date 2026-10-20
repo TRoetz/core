@@ -4,7 +4,8 @@
   import { contextCommands } from '../utils/contextCommands.js';
   import { currentRoute } from '../router.js';
   import { toExternal } from '../runtime/contextPath.js';
-  import { permissionStore, workspacesStore, isSystemAdmin, currentWorkspace } from '../stores';
+  import { permissionStore, isSystemAdmin } from '../stores/permissions.svelte.js';
+  import { workspacesStore, currentWorkspace } from '../stores/workspaces.svelte.js';
   import { moduleSettings } from '../stores/moduleSettings.js';
   import { timerStore } from '../stores/timerStore.svelte.js';
   import { loadExtensions } from '../stores/extensions.svelte.js';

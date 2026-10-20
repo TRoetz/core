@@ -2,7 +2,7 @@
 	import { onMount, onDestroy, tick } from 'svelte';
 	import ColorDot from '../../components/ColorDot.svelte';
 	import { api } from '../../api.js';
-	import { authStore } from '../../stores';
+	import { authStore } from '../../stores/auth.svelte.js';
 	import { subscribeToNewNotifications } from '../../stores/notifications.js';
 	import { useEventListener } from 'runed';
 	import MilkdownEditor from '../../editors/LazyMilkdownEditor.svelte';

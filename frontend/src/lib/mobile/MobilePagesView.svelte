@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { ChevronRight, Command as CommandIcon, House, Search } from '@lucide/svelte';
   import { navigate } from '../router.js';
-  import { workspacesStore } from '../stores';
+  import { workspacesStore } from '../stores/workspaces.svelte.js';
   import { formatRelativeCompact } from '../utils/dateFormatter.js';
   import MobileHeader from './MobileHeader.svelte';
   import MobileListState from './MobileListState.svelte';

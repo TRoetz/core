@@ -1,7 +1,7 @@
 import { api } from '../api.js';
 import { confirm } from '../composables/useConfirm.js';
 import { navigate } from '../router.js';
-import { authStore } from '../stores';
+import { authStore } from './auth.svelte.js';
 import { portalAuthStore } from './portalAuth.svelte.js';
 import { errorToast } from './toasts.svelte.js';
 

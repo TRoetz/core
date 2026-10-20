@@ -4,7 +4,7 @@
   import { attachClosestEdge, extractClosestEdge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge';
   import { Plus, Edit, Trash2, Settings, Circle, Layout } from '@lucide/svelte';
   import { SYSTEM_FIELDS } from '../stores/fieldConfig.js';
-  import { screenEditorStore } from '../stores';
+  import { screenEditorStore } from '../stores/screenEditorStore.svelte.js';
   import { t } from '../stores/i18n.svelte.js';
   import { errorToast } from '../stores/toasts.svelte.js';
   import { confirm } from '../composables/useConfirm.js';

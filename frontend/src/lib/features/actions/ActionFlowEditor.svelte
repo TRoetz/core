@@ -39,7 +39,7 @@
   import UserPicker from '../../pickers/UserPicker.svelte';
   import RolePicker from '../../pickers/RolePicker.svelte';
   import { actionFlowStore } from '../../stores/actionFlowStore.svelte.js';
-  import { permissionStore } from '../../stores';
+  import { permissionStore } from '../../stores/permissions.svelte.js';
   import { agentRuns } from '../../stores/agentRuns.svelte.js';
   import { infoToast } from '../../stores/toasts.svelte.js';
 

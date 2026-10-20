@@ -9,7 +9,10 @@
     reloadCollection,
     scheduleCollectionReconciliation,
   } from '../../stores/collectionContext.js';
-  import { workspaceDataStore, workspacesStore, capabilitiesStore, itemModalStore } from '../../stores/index.js';
+  import { workspaceDataStore } from '../../stores/workspaceDataStore.svelte.js';
+  import { workspacesStore } from '../../stores/workspaces.svelte.js';
+  import { capabilitiesStore } from '../../stores/capabilities.svelte.js';
+  import { itemModalStore } from '../../stores/itemModalStore.svelte.js';
   import { useGradientStyles, loadWorkspaceGradient } from '../../stores/workspaceGradient.svelte.js';
   import { Plus, ChevronDown, ChevronRight, Home, MapPin, Settings } from '@lucide/svelte';
   import ItemTypeIcon from '../../components/ItemTypeIcon.svelte';

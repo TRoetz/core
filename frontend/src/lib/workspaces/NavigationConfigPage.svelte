@@ -15,7 +15,8 @@
     workspaceViewItems,
   } from '../navigation/workspaceNavigation.js';
   import { viewSettingsStore } from '../stores/viewSettings.svelte.js';
-  import { workspacePermissions, currentWorkspace } from '../stores';
+  import { workspacePermissions } from '../stores/workspacePermissions.svelte.js';
+  import { currentWorkspace } from '../stores/workspaces.svelte.js';
   import { moduleSettings } from '../stores/moduleSettings.js';
   import { api } from '../api.js';
   import { t } from '../stores/i18n.svelte.js';

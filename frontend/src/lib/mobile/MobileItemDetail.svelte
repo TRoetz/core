@@ -11,7 +11,7 @@
   import { usePullToRefresh } from '../composables/usePullToRefresh.svelte.js';
   import { formatDateOnly } from '../utils/dateFormatter.js';
   import { formatItemKey } from '../utils/itemKey.js';
-  import { workspacesStore } from '../stores';
+  import { workspacesStore } from '../stores/workspaces.svelte.js';
   import MobileHeader from './MobileHeader.svelte';
   import MobileItemRow from './MobileItemRow.svelte';
   import MobileOptionSheet from './MobileOptionSheet.svelte';

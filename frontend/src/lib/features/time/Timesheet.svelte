@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { ChevronLeft, ChevronRight, X } from '@lucide/svelte';
   import { api } from '../../api.js';
-  import { timeEntryStore } from '../../stores';
+  import { timeEntryStore } from '../../stores/timeEntryStore.svelte.js';
   import { BasePicker } from '../../pickers';
   import Button from '../../components/Button.svelte';
   import Checkbox from '../../components/Checkbox.svelte';

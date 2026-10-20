@@ -21,11 +21,16 @@ import { mobilePalette } from './mobilePalette.svelte.js';
 // network and navigation dependencies are isolated from this UI test.
 const mockAiStore = vi.hoisted(() => ({ chatAvailable: true }));
 
-vi.mock('../stores', async () => {
+vi.mock('../stores/auth.svelte.js', async () => {
   const { writable } = await import('svelte/store');
   return {
     authStore: writable({ currentUser: { id: 1 } }),
-    aiStore: mockAiStore,
+  };
+});
+vi.mock('../stores/aiStore.svelte.js', () => ({ aiStore: mockAiStore }));
+vi.mock('../stores/workspaces.svelte.js', async () => {
+  const { writable } = await import('svelte/store');
+  return {
     workspacesStore: writable({ personalWorkspace: null, regularWorkspaces: [] }),
   };
 });

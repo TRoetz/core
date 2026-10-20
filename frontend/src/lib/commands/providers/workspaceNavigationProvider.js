@@ -6,9 +6,9 @@ import {
   workspaceSettingsSubtitleKeys,
   workspaceViewItems,
 } from '../../navigation/workspaceNavigation.js';
-import { workspacePermissions } from '../../stores';
 import { t } from '../../stores/i18n.svelte.js';
 import { viewSettingsStore } from '../../stores/viewSettings.svelte.js';
+import { workspacePermissions } from '../../stores/workspacePermissions.svelte.js';
 import { BUCKET } from '../buckets.js';
 import { createCommand } from '../types.js';
 

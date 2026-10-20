@@ -1,6 +1,6 @@
 <script>
   import { api } from '../api.js';
-  import { authStore } from '../stores';
+  import { authStore } from '../stores/auth.svelte.js';
   import ScopedLabelCombobox from './ScopedLabelCombobox.svelte';
 
   let {

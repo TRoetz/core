@@ -3,7 +3,8 @@
   import { IconPhoneCheck, IconUsersGroup, IconUsers, IconStack2, IconBellRinging, IconClock } from '@tabler/icons-svelte-runes';
   import { api } from '../api.js';
   import { navigate } from '../router.js';
-  import { authStore, isSystemAdmin, permissionStore } from '../stores';
+  import { authStore } from '../stores/auth.svelte.js';
+  import { isSystemAdmin, permissionStore } from '../stores/permissions.svelte.js';
   import { t } from '../stores/i18n.svelte.js';
   import PageHeader from '../layout/PageHeader.svelte';
   import BackButton from '../components/BackButton.svelte';

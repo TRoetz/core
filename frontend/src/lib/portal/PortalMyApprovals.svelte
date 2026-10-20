@@ -7,7 +7,7 @@
   import PageHeader from '../layout/PageHeader.svelte';
   import { portalApprovalsStore } from '../stores/portalActivity.svelte.js';
   import { portalAuthStore } from '../stores/portalAuth.svelte.js';
-  import { authStore } from '../stores';
+  import { authStore } from '../stores/auth.svelte.js';
   import { formatDateTimeLocale } from '../utils/dateFormatter.js';
 
   // Resolve "is this customer in the active pool" so we know whether to show

@@ -4,8 +4,8 @@
  */
 
 import { api } from '../api.js';
-import { authStore } from '../stores';
 import { safeCssUrl } from '../utils/sanitize';
+import { authStore } from './auth.svelte.js';
 import { createFooterLinkHelpers } from './footerLinks.js';
 import {
   configurePortalActivityStore,

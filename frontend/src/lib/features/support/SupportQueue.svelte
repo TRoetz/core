@@ -4,7 +4,9 @@
   import { api } from '../../api.js';
   import { fetchV2Data } from '../../api/core.js';
   import { errorToast, successToast } from '../../stores/toasts.svelte.js';
-  import { authStore, collectionStore, workspaceDataStore } from '../../stores';
+  import { authStore } from '../../stores/auth.svelte.js';
+  import { collectionStore } from '../../stores/collectionContext.js';
+  import { workspaceDataStore } from '../../stores/workspaceDataStore.svelte.js';
   import { navigate } from '../../router.js';
   import { confirm } from '../../composables/useConfirm.js';
   import { useCollectionEventStream } from '../../composables/useCollectionEventStream.svelte.js';

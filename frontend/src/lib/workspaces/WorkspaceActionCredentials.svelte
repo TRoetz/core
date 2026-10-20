@@ -13,7 +13,7 @@
 <script>
   import { onMount } from 'svelte';
   import { api } from '../api.js';
-  import { workspacePermissions } from '../stores';
+  import { workspacePermissions } from '../stores/workspacePermissions.svelte.js';
   import { t } from '../stores/i18n.svelte.js';
   import { successToast, errorToast } from '../stores/toasts.svelte.js';
   import { confirm } from '../composables/useConfirm.js';

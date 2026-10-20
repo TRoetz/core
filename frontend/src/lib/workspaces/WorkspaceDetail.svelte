@@ -1,7 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import { currentRoute } from '../router.js';
-  import { currentWorkspace, workspacesStore } from '../stores';
+  import { currentWorkspace, workspacesStore } from '../stores/workspaces.svelte.js';
   import { workspaceDataStore } from '../stores/workspaceDataStore.svelte.js';
   import { CheckSquare } from '@lucide/svelte';
   import TodoList from '../features/items/TodoList.svelte';

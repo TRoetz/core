@@ -3,7 +3,7 @@
   import ColorDot from '../../components/ColorDot.svelte';
   import { api, fetchAPI } from '../../api.js';
   import { Sparkles, CalendarPlus, RotateCcw, CheckCircle, AlertCircle } from '@lucide/svelte';
-  import { authStore } from '../../stores';
+  import { authStore } from '../../stores/auth.svelte.js';
   import { navigate } from '../../router.js';
   import PageHeader from '../../layout/PageHeader.svelte';
   import Card from '../../components/Card.svelte';

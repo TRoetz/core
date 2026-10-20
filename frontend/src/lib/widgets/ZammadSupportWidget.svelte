@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { AlertTriangle, ExternalLink, RefreshCw, TicketCheck } from '@lucide/svelte';
   import { api } from '../api.js';
-  import { authStore } from '../stores';
+  import { authStore } from '../stores/auth.svelte.js';
   import { t } from '../stores/i18n.svelte.js';
   import { formatDateTimeLocale, getUserTimezone } from '../utils/dateFormatter.js';
   import { safeHref } from '../utils/sanitize';

@@ -1,6 +1,6 @@
 <script>
   import { Clock, Edit, MessageSquare, Eye } from '@lucide/svelte';
-  import { homepageStore } from '../../stores';
+  import { homepageStore } from '../../stores/homepageStore.svelte.js';
   import { itemModalStore } from '../../stores/itemModalStore.svelte.js';
   import DashboardItemRow from './DashboardItemRow.svelte';
   import { t } from '../../stores/i18n.svelte.js';

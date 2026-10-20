@@ -1,6 +1,7 @@
 <script>
 	import { currentRoute, navigate } from '../router.js';
-	import { authStore, securityStore } from '../stores';
+	import { authStore } from '../stores/auth.svelte.js';
+	import { securityStore } from '../stores/securityStore.svelte.js';
 	import { t } from '../stores/i18n.svelte.js';
 	import { User, Shield, Key, Smartphone, Plus, Trash2, Code, Copy, Terminal, AlertTriangle, X } from '@lucide/svelte';
 	import Button from '../components/Button.svelte';

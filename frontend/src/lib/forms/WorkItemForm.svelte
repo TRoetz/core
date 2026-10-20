@@ -2,7 +2,8 @@
   import { MoreHorizontal, Calendar, Flag, User, Users, Layers, ChevronDown, FileText, Briefcase, Hash, Clock } from '@lucide/svelte';
   import ItemTypeIcon from '../components/ItemTypeIcon.svelte';
   import { workItemFormStore } from '../stores/workItemFormStore.svelte.js';
-  import { workspacesStore, workspacePermissions } from '../stores';
+  import { workspacesStore } from '../stores/workspaces.svelte.js';
+  import { workspacePermissions } from '../stores/workspacePermissions.svelte.js';
   import { t } from '../stores/i18n.svelte.js';
   import { formatDateOnly, formatDueDate } from '../utils/dateFormatter.js';
   import MilkdownEditor from '../editors/LazyMilkdownEditor.svelte';

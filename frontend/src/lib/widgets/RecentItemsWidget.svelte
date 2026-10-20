@@ -1,7 +1,7 @@
 <script>
   import { Clock } from '@lucide/svelte';
   import { api } from '../api.js';
-  import { homepageStore } from '../stores';
+  import { homepageStore } from '../stores/homepageStore.svelte.js';
   import { formatRelativeCompact } from '../utils/dateFormatter.js';
   import WidgetState from './WidgetState.svelte';
   import ItemKey from '../components/ItemKey.svelte';

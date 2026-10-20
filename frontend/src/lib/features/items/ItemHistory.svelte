@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
   import StateDisplay from '../../components/StateDisplay.svelte';
 	import { api } from '../../api.js';
-	import { authStore } from '../../stores';
+	import { authStore } from '../../stores/auth.svelte.js';
 	import { formatHistoryTimestamp, formatRelativeTime, getUserTimezone } from '../../utils/dateFormatter.js';
 	import { Clock, User, Bot } from '@lucide/svelte';
 	import AlertBox from '../../components/AlertBox.svelte';

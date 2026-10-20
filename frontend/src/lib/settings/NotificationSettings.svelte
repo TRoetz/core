@@ -5,7 +5,7 @@
   import { authStore } from '../stores/auth.svelte.js';
   import { t } from '../stores/i18n.svelte.js';
   import { errorToast } from '../stores/toasts.svelte.js';
-  import { currentWorkspace } from '../stores';
+  import { currentWorkspace } from '../stores/workspaces.svelte.js';
   import { navigate } from '../router.js';
   import { confirm } from '../composables/useConfirm.js';
   import {

@@ -21,7 +21,7 @@
   import TestCasePicker from '../../pickers/TestCasePicker.svelte';
   import { getStatusLabel, getTestStatusColor } from '../../utils/statusColors.js';
   import { t } from '../../stores/i18n.svelte.js';
-  import { workspacePermissions } from '../../stores/index.js';
+  import { workspacePermissions } from '../../stores/workspacePermissions.svelte.js';
   import { errorToast, successToast } from '../../stores/toasts.svelte.js';
   import DescriptionText from '../../components/DescriptionText.svelte';
   import { formatDateSimple } from '../../utils/dateFormatter.js';

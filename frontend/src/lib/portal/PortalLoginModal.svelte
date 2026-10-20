@@ -4,7 +4,7 @@
   import { currentRoute } from '../router.js';
   import { portalCustomizationStore as portalStore } from '../stores/portal.svelte.js';
   import { portalAuthStore } from '../stores/portalAuth.svelte.js';
-  import { authStore } from '../stores';
+  import { authStore } from '../stores/auth.svelte.js';
   import { t } from '../stores/i18n.svelte.js';
   import { isWebAuthnSupported } from '../utils/webauthn-utils.js';
   import Button from '../components/Button.svelte';

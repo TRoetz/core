@@ -3,7 +3,7 @@
   import { api } from '../../api.js';
   import { navigate } from '../../router.js';
   import { ChevronDown, ChevronRight, Plus, Check, X, ExternalLink, CheckCircle2 } from '@lucide/svelte';
-  import { workspacesStore } from '../../stores';
+  import { workspacesStore } from '../../stores/workspaces.svelte.js';
   import Tooltip from '../../components/Tooltip.svelte';
   import Text from '../../components/Text.svelte';
   import Input from '../../components/Input.svelte';

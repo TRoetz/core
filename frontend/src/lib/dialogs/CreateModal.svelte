@@ -3,7 +3,11 @@
   import { useEventListener } from 'runed';
   import { navigate, currentRoute } from '../router.js';
   import { milestonesStore } from '../stores/milestones.js';
-  import { workspacesStore, shouldNavigateAfterCreate, workItemFormStore, permissionStore, isSystemAdmin, workspacePermissions } from '../stores';
+  import { workspacesStore } from '../stores/workspaces.svelte.js';
+  import { shouldNavigateAfterCreate } from '../stores/navigationConfig.svelte.js';
+  import { workItemFormStore } from '../stores/workItemFormStore.svelte.js';
+  import { permissionStore, isSystemAdmin } from '../stores/permissions.svelte.js';
+  import { workspacePermissions } from '../stores/workspacePermissions.svelte.js';
   import { api } from '../api.js';
   import { X, Target, Building, FolderOpen, ChevronRight, FileText } from '@lucide/svelte';
   import { t } from '../stores/i18n.svelte.js';

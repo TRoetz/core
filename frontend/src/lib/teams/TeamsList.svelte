@@ -4,7 +4,8 @@
   import { Package } from '@lucide/svelte';
   import { api } from '../api.js';
   import { navigate } from '../router.js';
-  import { authStore, isSystemAdmin, permissionStore } from '../stores';
+  import { authStore } from '../stores/auth.svelte.js';
+  import { isSystemAdmin, permissionStore } from '../stores/permissions.svelte.js';
   import { t } from '../stores/i18n.svelte.js';
   import { confirm } from '../composables/useConfirm.js';
   import { errorToast, successToast } from '../stores/toasts.svelte.js';

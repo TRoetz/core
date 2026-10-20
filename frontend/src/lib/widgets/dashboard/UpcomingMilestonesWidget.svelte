@@ -1,7 +1,7 @@
 <script>
   import { Target, CheckCircle, AlertCircle } from '@lucide/svelte';
   import Progress from '../../components/Progress.svelte';
-  import { homepageStore } from '../../stores';
+  import { homepageStore } from '../../stores/homepageStore.svelte.js';
   import { t } from '../../stores/i18n.svelte.js';
 
   let milestones = $derived(homepageStore.upcomingMilestones);

@@ -3,7 +3,7 @@
   import { Loader, Search } from '@lucide/svelte';
   import { api } from '../api.js';
   import { navigate } from '../router.js';
-  import { workspacesStore } from '../stores';
+  import { workspacesStore } from '../stores/workspaces.svelte.js';
   import { BUCKET_LABEL_KEYS } from '../commands/buckets.js';
   import { buildContext } from '../commands/context.js';
   import { buildCommands } from '../commands/buildCommands.js';

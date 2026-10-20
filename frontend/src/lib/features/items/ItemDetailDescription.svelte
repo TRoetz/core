@@ -8,7 +8,8 @@
   import AIActionsDropdown from './AIActionsDropdown.svelte';
   import { getShortcut, matchesShortcut, getDisplayString } from '../../utils/keyboardShortcuts.js';
   import { t } from '../../stores/i18n.svelte.js';
-  import { attachmentStatus, aiStore } from '../../stores';
+  import { attachmentStatus } from '../../stores/attachmentStatus.svelte.js';
+  import { aiStore } from '../../stores/aiStore.svelte.js';
   import { onClickOutside } from 'runed';
 
   // Get shortcut configurations

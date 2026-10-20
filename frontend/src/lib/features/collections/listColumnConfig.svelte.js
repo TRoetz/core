@@ -1,8 +1,8 @@
 import { untrack } from 'svelte';
 import { api } from '../../api.js';
+import { authStore } from '../../stores/auth.svelte.js';
 import { collectionStore } from '../../stores/collectionContext.js';
 import { t } from '../../stores/i18n.svelte.js';
-import { authStore } from '../../stores/index.js';
 import { errorToast } from '../../stores/toasts.svelte.js';
 import { viewSettingsStore } from '../../stores/viewSettings.svelte.js';
 import { workspacePermissions } from '../../stores/workspacePermissions.svelte.js';

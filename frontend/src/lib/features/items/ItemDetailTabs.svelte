@@ -28,7 +28,9 @@
   // Direct store access for the child-item rollup keeps the time-tab logic
   // co-located and avoids threading four extra props through ItemDetail and
   // ItemDetailContent for a feature that only lives in this tab.
-  import { itemDetailStore, workItemStalenessSettings, workspaceDataStore } from '../../stores';
+  import { itemDetailStore } from '../../stores/itemDetailStore.svelte.js';
+  import { workItemStalenessSettings } from '../../stores/workItemStalenessSettings.svelte.js';
+  import { workspaceDataStore } from '../../stores/workspaceDataStore.svelte.js';
 
   let {
     item,

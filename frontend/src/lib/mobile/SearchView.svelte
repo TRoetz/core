@@ -3,7 +3,7 @@
   import { ChevronLeft, Search, X } from '@lucide/svelte';
   import { api } from '../api.js';
   import { navigate } from '../router.js';
-  import { workspacesStore } from '../stores';
+  import { workspacesStore } from '../stores/workspaces.svelte.js';
   import { formatItemKey } from '../utils/itemKey.js';
   import MobileItemRow from './MobileItemRow.svelte';
   import Input from '../components/Input.svelte';

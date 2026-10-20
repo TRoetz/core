@@ -5,7 +5,8 @@
   import { api } from '../../api.js';
   import { navigate, currentRoute } from '../../router.js';
   import { publicBaseURL } from '../../runtime/contextPath.js';
-  import { workspacePermissions, itemDetailStore } from '../../stores';
+  import { workspacePermissions } from '../../stores/workspacePermissions.svelte.js';
+  import { itemDetailStore } from '../../stores/itemDetailStore.svelte.js';
   import { t } from '../../stores/i18n.svelte.js';
   import { getShortcut, matchesShortcut, isTypingInField } from '../../utils/keyboardShortcuts.js';
   import { Trash2, X, Copy, BookOpen, Search, GitBranch, GitMerge, Repeat, FolderInput } from '@lucide/svelte';
