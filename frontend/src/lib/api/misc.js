@@ -83,6 +83,16 @@ export const deleteComment = (commentId) =>
   fetchV2Data(`/comments/${commentId}`, {
     method: 'DELETE',
   });
+// Comment reactions (core#298): add returns the comment's grouped reactions.
+export const addCommentReaction = (commentId, reaction) =>
+  fetchV2Data(`/comments/${commentId}/reactions`, {
+    method: 'POST',
+    body: JSON.stringify({ reaction }),
+  });
+export const removeCommentReaction = (commentId, reaction) =>
+  fetchV2Data(`/comments/${commentId}/reactions/${encodeURIComponent(reaction)}`, {
+    method: 'DELETE',
+  });
 
 // Attachments
 export const attachments = {

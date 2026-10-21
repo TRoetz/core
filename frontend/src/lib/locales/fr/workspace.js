@@ -461,6 +461,15 @@ export default {
     newestFirst: 'Plus récents en premier',
     agentAuthored: 'Rédigé par un agent IA',
     agentOwnedBy: 'Agent IA détenu par {owner}',
+    addReaction: 'Ajouter une réaction',
+    reactionFailed: 'Impossible de mettre à jour la réaction',
+    reactedBy: '{reaction} par {names}',
+    reactionThumbsUp: 'Pouce levé',
+    reactionCheck: 'Terminé',
+    reactionEyes: 'Vu',
+    reactionHeart: 'Merci',
+    reactionLaugh: 'Rire',
+    reactionHooray: 'Bravo',
   },
 
   todo: {

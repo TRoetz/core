@@ -451,6 +451,9 @@ type commentApplication interface {
 	Create(services.CreateCommentParams) (*services.CreateCommentResult, error)
 	UpdateWithEffects(services.UpdateCommentParams) (*models.Comment, error)
 	DeleteWithEffects(services.DeleteCommentParams) error
+	AttachReactions([]models.Comment) error
+	AddReaction(commentID, userID int, reaction string) ([]models.CommentReaction, error)
+	RemoveReaction(commentID, userID int, reaction string) error
 }
 
 type commentAccess interface {
