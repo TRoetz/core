@@ -597,6 +597,7 @@
                 {#each listColumns as column (column.field_identifier)}
                   <div
                     class="min-w-0 overflow-hidden"
+                    data-testid={column.field_identifier === indentColumnId ? `tree-indent-${item.id}` : undefined}
                     style={column.field_identifier === indentColumnId ? `padding-left: ${getIndentLevel(item.level)}` : undefined}
                   >
                     <ListCellRenderer
