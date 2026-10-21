@@ -132,7 +132,7 @@
   let editingDiagram = $state(null);
 
   // Panel resizing state
-  let panelWidth = $state(320);
+  let panelWidth = $state(290);
   function updatePanelWidth(width) {
     panelWidth = width;
     document.documentElement.style.setProperty('--panel-width', `${width}px`);
@@ -445,12 +445,12 @@
         </div>
 
         <!-- Resizable Right Panel -->
-        <div class="flex-shrink-0 relative {isModal ? 'h-full' : ''}" style="width: var(--panel-width, 320px); min-width: 280px; max-width: 600px;">
+        <div class="flex-shrink-0 relative {isModal ? 'h-full' : ''}" style="width: var(--panel-width, 290px); min-width: 280px; max-width: 600px;">
           <SidebarResizeHandle
             width={panelWidth}
             minWidth={280}
             maxWidth={600}
-            defaultWidth={320}
+            defaultWidth={290}
             edge="left"
             label="Resize item details"
             title="Drag to resize, double-click to reset"

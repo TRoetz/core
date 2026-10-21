@@ -873,7 +873,7 @@
   onfocusout={handleEditorFocusOut}
 >
   {#if toolbarVisible}
-    <div class="milkdown-toolbar" tabindex="-1">
+    <div class="milkdown-toolbar" tabindex="-1" data-testid="milkdown-toolbar">
       <Tooltip content={t('editors.bold')} placement="bottom">
         {#snippet children()}
           <button type="button" class="toolbar-btn" tabindex="-1" onclick={toggleBold} aria-label={t('editors.bold')}>

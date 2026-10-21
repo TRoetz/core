@@ -30,7 +30,7 @@
   let testId = $derived(`sidebar-date-${fieldKey.replaceAll('_', '-')}`);
 </script>
 
-<div class="mb-3">
+<div class="mb-1">
   {#if editing}
     <div class="w-full py-1.5" use:clickOutside onclickOutside={onCancel}>
       <input

@@ -296,8 +296,9 @@
   .trigger {
     display: inline-flex;
     align-items: center;
+    height: 2rem;
     gap: 0.375rem;
-    padding: 0.25rem 0.5rem;
+    padding: 0 0.625rem;
     border: 1px solid var(--ds-border);
     background: transparent;
     color: var(--ds-text-subtle);

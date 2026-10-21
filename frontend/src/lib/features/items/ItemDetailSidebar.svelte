@@ -646,7 +646,7 @@
   onclickOutside={handleClickOutsideSidebar}
 >
   <!-- Panel Content -->
-  <div class="flex-1 px-4 py-4 overflow-y-auto">
+  <div class="flex-1 px-3 py-3 overflow-y-auto">
     <!-- Shared custom-field editor. Date fields save on change; every other
          free-form type defers to commit-on-blur. -->
     {#snippet customFieldEditor(fieldDef, screenField, currentValue, fieldEditable, commitOnBlur)}
@@ -676,7 +676,7 @@
       <ItemSLAPanel itemId={item.id} />
     {/if}
     <!-- DETAILS Section Header -->
-    <div class="flex items-center justify-between mb-4">
+    <div class="flex items-center justify-between mb-2">
       <Text variant="subtle" size="xs" weight="semibold" class="uppercase tracking-wider">{t('common.details')}</Text>
       <div class="flex items-center gap-1" data-testid="item-detail-actions">
         <DropdownMenu
@@ -692,7 +692,7 @@
     </div>
     <!-- Approvals Section -->
     {#if item?.id && showApprovalsSection}
-      <div class="mb-3" data-testid="approvals-sidebar">
+      <div class="mb-2" data-testid="approvals-sidebar">
         <button
           type="button"
           class="w-full flex items-center justify-between px-2 py-1.5 text-sm transition-colors rounded"
@@ -734,7 +734,7 @@
 
     <!-- Status Field -->
     {#if shouldShowSystemField('status')}
-    <div class="mb-3" data-testid="status-field">
+    <div class="mb-1" data-testid="status-field">
       <ItemPicker
         value={item?.status_id ?? null}
         items={statusOptions}
@@ -761,8 +761,8 @@
           >
             <div class="flex items-center gap-2">
               <Text variant="subtle" size="sm">{t('common.status')}</Text>
-              <kbd class="px-1.5 py-0.5 text-xs font-medium rounded border opacity-0 group-hover:opacity-70 transition-opacity"
-                   style="background-color: var(--ds-background-neutral-subtle); border-color: var(--ds-border); color: var(--ds-text-subtle);">
+              <kbd class="px-1.5 py-0.5 text-xs font-medium rounded opacity-0 group-hover:opacity-70 transition-opacity"
+                   style="background-color: var(--ds-background-neutral-subtle); box-shadow: inset 0 0 0 1px var(--ds-border); color: var(--ds-text-subtle);">
                 {getShortcutDisplay('itemDetail', 'focusStatus')}
               </kbd>
             </div>
@@ -800,7 +800,7 @@
     </div>
     {/if}
     {#snippet priorityField()}
-      <div class="mb-3" data-testid="priority-field">
+      <div class="mb-1" data-testid="priority-field">
         <ItemPicker
           value={item?.priority_id ?? null}
           items={priorities}
@@ -840,7 +840,7 @@
 
     {#snippet projectField()}
       {#if moduleSettings.time_tracking_enabled}
-        <div class="mb-3">
+        <div class="mb-1">
           <ItemPicker
             value={selectedProject?.id ?? null}
             items={projectItems}
@@ -892,7 +892,7 @@
     {/snippet}
 
     {#snippet assigneeField()}
-      <div class="mb-3">
+      <div class="mb-1">
         <UserPicker
           value={item.assignee_id ?? null}
           placeholder={t('items.selectAssignee')}
@@ -920,7 +920,7 @@
               <Text variant="subtle" size="sm">{t('common.assignee')}</Text>
               <div class="flex items-center gap-2">
                 {#if item.assignee_id && item.assignee_name}
-                  <Avatar src={item.assignee_avatar} name={item.assignee_name} size="xs" variant="teal" />
+                  <Avatar src={item.assignee_avatar} name={item.assignee_name} size="2xs" variant="teal" />
                   <span style="color: var(--ds-text);">{item.assignee_name}</span>
                 {:else}
                   <Text variant="subtle" size="sm">{t('items.unassigned')}</Text>
@@ -933,7 +933,7 @@
     {/snippet}
 
     {#snippet teamField()}
-      <div class="mb-3" data-testid="item-team-field">
+      <div class="mb-1" data-testid="item-team-field">
         <TeamPicker
           value={item.team_id ?? null}
           placeholder={t('items.selectTeam')}
@@ -976,7 +976,7 @@
     {#snippet milestoneField()}
       {@const itemMilestones = (item.milestones || []).map(m => m.id)}
       {@const selectedMilestones = (item.milestones || [])}
-      <div class="mb-3" data-testid="milestone-field">
+      <div class="mb-1" data-testid="milestone-field">
         <MilestoneCombobox
           multiple={true}
           value={itemMilestones}
@@ -1006,7 +1006,7 @@
                   {#each selectedMilestones as ms (ms.id)}
                     <span
                       class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs"
-                      style="background-color: {ms.category_color || '#9CA3AF'}1A; border: 1px solid {ms.category_color || '#9CA3AF'}; color: var(--ds-text);"
+                      style="background-color: {ms.category_color || '#9CA3AF'}1A; box-shadow: inset 0 0 0 1px {ms.category_color || '#9CA3AF'}; color: var(--ds-text);"
                     >
                       {ms.name}
                     </span>
@@ -1020,7 +1020,7 @@
     {/snippet}
 
     {#snippet iterationField()}
-      <div class="mb-3" data-testid="iteration-field">
+      <div class="mb-1" data-testid="iteration-field">
         <ItemPicker
           value={item?.iteration_id ?? null}
           items={iterations}
@@ -1064,7 +1064,7 @@
 
     {#snippet labelsField()}
       {#if item?.id}
-        <div class="mb-3" data-testid="labels-field">
+        <div class="mb-1" data-testid="labels-field">
           {#if editingLabels}
             <div class="px-2 py-1.5">
               <WorkspaceLabelCombobox
@@ -1088,7 +1088,7 @@
                 {#each (item?.labels || []) as label (label.id)}
                   <span
                     class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs"
-                    style="background-color: {label.color || '#3B82F6'}1A; color: var(--ds-text); border: 1px solid {label.color || '#3B82F6'};"
+                    style="background-color: {label.color || '#3B82F6'}1A; color: var(--ds-text); box-shadow: inset 0 0 0 1px {label.color || '#3B82F6'};"
                     data-testid="item-label"
                   >
                     <span
@@ -1111,7 +1111,7 @@
     {/snippet}
 
     {#snippet estimateField()}
-      <div class="mb-3" data-testid="item-estimate-field">
+      <div class="mb-1" data-testid="item-estimate-field">
         {#if editingEstimate}
           <div class="w-full flex items-center justify-between px-2 py-1.5 text-sm">
             <Text variant="subtle" size="sm">{t('items.estimate') || 'Estimate'}</Text>
@@ -1176,7 +1176,7 @@
 
     <!-- Recurrence Section -->
     {#if recurrenceRule}
-    <div class="mb-3">
+    <div class="mb-1">
       <div
         data-testid="item-recurrence-summary"
         class="hover-bg w-full flex items-center justify-between px-2 py-1.5 text-sm transition-colors rounded group"
@@ -1199,11 +1199,11 @@
 
     <!-- Scheduling Section (collapsible) -->
     {#if shouldShowSystemField('due_date') || shouldShowSystemField('start_date') || shouldShowSystemField('end_date') || hasDateCustomFields}
-      <div class="border-t my-4" style="border-color: var(--ds-border);"></div>
+      <div class="border-t my-3" style="border-color: var(--ds-border);"></div>
 
       <!-- Scheduling Header -->
       <button
-        class="flex items-center justify-between w-full mb-3"
+        class="flex items-center justify-between w-full mb-2"
         onclick={toggleScheduling}
         disabled={schedulingForcedOpen}
         style="cursor: {schedulingForcedOpen ? 'default' : 'pointer'};"
@@ -1268,7 +1268,7 @@
           {@const currentValue = isEditing ? editCustomFieldValues[screenField.field_identifier] : storedValue}
           {#if fieldDef}
             {@const fieldEditable = isCustomFieldEditable(fieldDef.id)}
-            <div class="mb-3" data-testid={`item-custom-field-${fieldDef.id}`}>
+            <div class="mb-1" data-testid={`item-custom-field-${fieldDef.id}`}>
               {#if isEditing}
                 {@render customFieldEditor(fieldDef, screenField, currentValue, fieldEditable, false)}
               {:else}
@@ -1301,10 +1301,10 @@
       {@const nonDateCustomFields = configuredCustomFields.filter(f => getCustomFieldDefinition(f.field_identifier)?.field_type !== 'date')}
       {#if nonDateCustomFields.length > 0}
         <!-- Divider before Custom Fields -->
-        <div class="border-t my-4" style="border-color: var(--ds-border);"></div>
+        <div class="border-t my-3" style="border-color: var(--ds-border);"></div>
 
         <!-- Custom Fields Header -->
-        <div class="flex items-center justify-between mb-3">
+        <div class="flex items-center justify-between mb-2">
           <Text variant="subtle" size="xs" weight="semibold" class="uppercase tracking-wider">{t('fields.title')}</Text>
         </div>
 
@@ -1316,7 +1316,7 @@
             {@const currentValue = isEditing ? editCustomFieldValues[screenField.field_identifier] : storedValue}
             {#if fieldDef}
               {@const fieldEditable = isCustomFieldEditable(fieldDef.id)}
-              <div class="mb-3" data-testid={`item-custom-field-${fieldDef.id}`}>
+              <div data-testid={`item-custom-field-${fieldDef.id}`}>
                 {#if fieldDef.field_type === 'linking'}
                   <div class="px-2 py-1.5">
                     <Text variant="subtle" size="sm" class="mb-1">{fieldDef.name}</Text>
@@ -1398,8 +1398,8 @@
         return v !== undefined && v !== null && v !== '';
       })}
       {#if visibleVirtualFields.length > 0}
-        <div class="border-t my-4" style="border-color: var(--ds-border);"></div>
-        <div class="flex items-center justify-between mb-3">
+        <div class="border-t my-3" style="border-color: var(--ds-border);"></div>
+        <div class="flex items-center justify-between mb-2">
           <Text variant="subtle" size="xs" weight="semibold" class="uppercase tracking-wider">{t('fields.requestFormFields')}</Text>
         </div>
         <div class="space-y-1">
