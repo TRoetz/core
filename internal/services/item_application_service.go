@@ -1748,7 +1748,27 @@ func (s *ItemApplicationService) requireWorkspaceMove(userID, itemID, destinatio
 	if err := s.require(userID, sourceWorkspaceID, models.PermissionItemEdit); err != nil {
 		return err
 	}
-	return s.require(userID, destinationWorkspaceID, models.PermissionItemCreate)
+	if err := s.require(userID, destinationWorkspaceID, models.PermissionItemCreate); err != nil {
+		return err
+	}
+	// Moving an item detaches its direct children, including children in other
+	// workspaces. Require item.edit in every child's workspace and refuse the
+	// whole operation otherwise, mirroring ReparentChildren.
+	children, err := s.items.GetChildren(itemID)
+	if err != nil {
+		return err
+	}
+	checked := map[int]bool{sourceWorkspaceID: true}
+	for _, child := range children {
+		if checked[child.WorkspaceID] {
+			continue
+		}
+		if err := s.require(userID, child.WorkspaceID, models.PermissionItemEdit); err != nil {
+			return err
+		}
+		checked[child.WorkspaceID] = true
+	}
+	return nil
 }
 
 func (s *ItemApplicationService) invalidateHierarchy(itemID int) {
