@@ -65625,6 +65625,10 @@
       "PostCommentsBatchPayload": {
         "additionalProperties": false,
         "properties": {
+          "include_reactions": {
+            "description": "The include reactions value.",
+            "type": "boolean"
+          },
           "item_ids": {
             "description": "The item ids value.",
             "items": {
@@ -103802,6 +103806,16 @@
               "minimum": 1,
               "type": "integer"
             }
+          },
+          {
+            "description": "Attach grouped emoji reactions to the returned comment. Values true and 1 enable; omitted or other values leave reactions out.",
+            "in": "query",
+            "name": "include_reactions",
+            "required": false,
+            "schema": {
+              "default": false,
+              "type": "boolean"
+            }
           }
         ],
         "responses": {
@@ -103856,6 +103870,16 @@
             "schema": {
               "minimum": 1,
               "type": "integer"
+            }
+          },
+          {
+            "description": "Attach grouped emoji reactions to the returned comment. Values true and 1 enable; omitted or other values leave reactions out.",
+            "in": "query",
+            "name": "include_reactions",
+            "required": false,
+            "schema": {
+              "default": false,
+              "type": "boolean"
             }
           }
         ],
@@ -108121,7 +108145,7 @@
     },
     "/items/{item_id}/comments": {
       "get": {
-        "description": "Returns an authorization-filtered comment feed with at most 200 entries. Opaque next_cursor and refresh_cursor values preserve the exclusive timestamp-and-ID boundary without exposing its representation; partial comment pages are never returned on failure.",
+        "description": "Returns an authorization-filtered comment feed with at most 200 entries. Opaque next_cursor and refresh_cursor values preserve the exclusive timestamp-and-ID boundary without exposing its representation; partial comment pages are never returned on failure. Grouped reactions are attached only when include_reactions is true.",
         "operationId": "getItemsItemIdComments",
         "parameters": [
           {
@@ -108154,6 +108178,16 @@
             "schema": {
               "minLength": 1,
               "type": "string"
+            }
+          },
+          {
+            "description": "Attach grouped emoji reactions to each comment. Values true and 1 enable; omitted or other values leave reactions out.",
+            "in": "query",
+            "name": "include_reactions",
+            "required": false,
+            "schema": {
+              "default": false,
+              "type": "boolean"
             }
           }
         ],

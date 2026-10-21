@@ -161,7 +161,7 @@
 		const version = ++reconciliationVersion;
 		let response;
 		try {
-			response = await loadAttributedComments(itemId, { limit: COMMENT_PAGE_SIZE });
+			response = await loadAttributedComments(itemId, { limit: COMMENT_PAGE_SIZE, include_reactions: true });
 		} catch (err) {
 			if (version !== reconciliationVersion) return;
 			// Navigation can unload the document while this request is in flight.
@@ -203,6 +203,7 @@
 		try {
 			response = await loadAttributedComments(itemId, {
 				limit: COMMENT_PAGE_SIZE,
+				include_reactions: true,
 				...(refreshCursor ? { cursor: refreshCursor } : {})
 			});
 		} catch (err) {
@@ -256,6 +257,7 @@
 				const isFirstPage = firstResponse === null;
 				const response = await loadAttributedComments(itemId, {
 					limit: Math.min(100, targetCount - fresh.length),
+					include_reactions: true,
 					...(cursor ? { cursor } : {})
 				});
 				if (version !== reconciliationVersion) return;
@@ -313,7 +315,8 @@
 		try {
 			const response = await loadAttributedComments(itemId, {
 				limit: COMMENT_PAGE_SIZE,
-				cursor: olderCursor
+				cursor: olderCursor,
+				include_reactions: true
 			});
 			comments = mergeCommentRows(comments, response?.comments || []);
 			hasMore = Boolean(response?.has_more);

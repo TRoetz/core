@@ -65,6 +65,8 @@ export const getComments = (itemId, params = {}) => {
   const searchParams = new URLSearchParams();
   if (params.limit) searchParams.set('page_size', params.limit);
   if (params.cursor) searchParams.set('cursor', params.cursor);
+  // Reactions are opt-in so feeds that do not render chips skip the extra read.
+  if (params.include_reactions) searchParams.set('include_reactions', 'true');
   const query = searchParams.toString();
   return fetchV2Data(`/items/${itemId}/comments${query ? `?${query}` : ''}`);
 };

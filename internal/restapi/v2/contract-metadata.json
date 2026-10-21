@@ -3788,6 +3788,16 @@
               "minimum": 1,
               "type": "integer"
             }
+          },
+          {
+            "Name": "include_reactions",
+            "In": "query",
+            "Description": "Attach grouped emoji reactions to the returned comment. Values true and 1 enable; omitted or other values leave reactions out.",
+            "Required": false,
+            "Schema": {
+              "default": false,
+              "type": "boolean"
+            }
           }
         ],
         "responses": {
@@ -3813,6 +3823,16 @@
             "Schema": {
               "minimum": 1,
               "type": "integer"
+            }
+          },
+          {
+            "Name": "include_reactions",
+            "In": "query",
+            "Description": "Attach grouped emoji reactions to the returned comment. Values true and 1 enable; omitted or other values leave reactions out.",
+            "Required": false,
+            "Schema": {
+              "default": false,
+              "type": "boolean"
             }
           }
         ],
@@ -5967,7 +5987,7 @@
     },
     "/items/{item_id}/comments": {
       "get": {
-        "description": "Returns an authorization-filtered comment feed with at most 200 entries. Opaque next_cursor and refresh_cursor values preserve the exclusive timestamp-and-ID boundary without exposing its representation; partial comment pages are never returned on failure.",
+        "description": "Returns an authorization-filtered comment feed with at most 200 entries. Opaque next_cursor and refresh_cursor values preserve the exclusive timestamp-and-ID boundary without exposing its representation; partial comment pages are never returned on failure. Grouped reactions are attached only when include_reactions is true.",
         "parameters": [
           {
             "Name": "item_id",
@@ -5999,6 +6019,16 @@
             "Schema": {
               "minLength": 1,
               "type": "string"
+            }
+          },
+          {
+            "Name": "include_reactions",
+            "In": "query",
+            "Description": "Attach grouped emoji reactions to each comment. Values true and 1 enable; omitted or other values leave reactions out.",
+            "Required": false,
+            "Schema": {
+              "default": false,
+              "type": "boolean"
             }
           }
         ],

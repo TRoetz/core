@@ -46,8 +46,9 @@ type commentCreateRequest struct {
 const maxCommentBatchItems = 500
 
 type commentBatchRequest struct {
-	ItemIDs  []int `json:"item_ids"`
-	PageSize int   `json:"page_size"`
+	ItemIDs          []int `json:"item_ids"`
+	PageSize         int   `json:"page_size"`
+	IncludeReactions bool  `json:"include_reactions,omitempty"`
 }
 
 type commentBatchEntry struct {
@@ -115,8 +116,10 @@ func commentsBatch(deps Deps) jsonOperation[commentBatchRequest, []commentBatchE
 		if err != nil {
 			return nil, internalError(err)
 		}
-		if err := attachBatchReactions(deps, pages); err != nil {
-			return nil, internalError(err)
+		if input.IncludeReactions {
+			if err := attachBatchReactions(deps, pages); err != nil {
+				return nil, internalError(err)
+			}
 		}
 		entries := make([]commentBatchEntry, 0, len(visible))
 		for _, itemID := range visible {
@@ -199,8 +202,12 @@ func listComments(deps Deps) readOperation[commentFeedDTO] {
 		if err := renderCommentHTML(page.Comments); err != nil {
 			return commentFeedDTO{}, internalError(err)
 		}
-		if err := deps.Comments.AttachReactions(page.Comments); err != nil {
-			return commentFeedDTO{}, internalError(err)
+		if includeReactions, err := optionalBoolQuery(r, "include_reactions"); err != nil {
+			return commentFeedDTO{}, err
+		} else if includeReactions {
+			if err := deps.Comments.AttachReactions(page.Comments); err != nil {
+				return commentFeedDTO{}, internalError(err)
+			}
 		}
 		var total *int
 		if options.Before == nil && options.Since == nil {
@@ -257,8 +264,12 @@ func getComment(deps Deps) readOperation[models.Comment] {
 			return models.Comment{}, err
 		}
 		body := []models.Comment{comment.Comment}
-		if err := deps.Comments.AttachReactions(body); err != nil {
-			return models.Comment{}, internalError(err)
+		if includeReactions, err := optionalBoolQuery(r, "include_reactions"); err != nil {
+			return models.Comment{}, err
+		} else if includeReactions {
+			if err := deps.Comments.AttachReactions(body); err != nil {
+				return models.Comment{}, internalError(err)
+			}
 		}
 		body[0].ContentHTML, err = markdown.Render(body[0].Content)
 		return body[0], commentError(err)
@@ -286,8 +297,12 @@ func updateComment(deps Deps) jsonOperation[commentPatchRequest, models.Comment]
 			return models.Comment{}, commentError(err)
 		}
 		body := []models.Comment{*updated}
-		if err := deps.Comments.AttachReactions(body); err != nil {
-			return models.Comment{}, internalError(err)
+		if includeReactions, err := optionalBoolQuery(r, "include_reactions"); err != nil {
+			return models.Comment{}, err
+		} else if includeReactions {
+			if err := deps.Comments.AttachReactions(body); err != nil {
+				return models.Comment{}, internalError(err)
+			}
 		}
 		body[0].ContentHTML, err = markdown.Render(body[0].Content)
 		return body[0], commentError(err)
