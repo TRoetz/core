@@ -115,6 +115,12 @@ type Engine struct {
 	reconcileCursors    map[string]int64
 	lastSafetyReconcile time.Time
 
+	// workKeys is the consumer set the last gate reported as having eligible
+	// deliveries, plus any consumer the same tick created deliveries for. It is
+	// guarded by mu and read by workers, so an idle engine claims nothing at all
+	// instead of probing every consumer once per tick.
+	workKeys []string
+
 	now    func() time.Time
 	jitter func(time.Duration) time.Duration
 	// leaseRenewed is a test observation hook set before engine startup.
@@ -281,7 +287,7 @@ func (e *Engine) reconcileLoop(ctx context.Context) {
 	ticker := time.NewTicker(e.config.PollInterval)
 	defer ticker.Stop()
 	for {
-		if _, err := e.reconcile(ctx); err != nil && ctx.Err() == nil {
+		if _, err := e.tick(ctx); err != nil && ctx.Err() == nil {
 			slog.Error("domain event reconciliation failed", "error", err)
 		}
 		select {
@@ -293,44 +299,110 @@ func (e *Engine) reconcileLoop(ctx context.Context) {
 	}
 }
 
-// reconcile creates missing deliveries. Per consumer it normally scans only
-// events past the in-memory cursor. Periodically it also re-checks events
-// recorded within ReconcileLookback so an event whose inserting transaction
-// committed after a cursor advanced past its (lower) id is still delivered,
-// without rescanning the full retained history.
-func (e *Engine) reconcile(ctx context.Context) (int64, error) {
-	keys, err := e.store.ActiveConsumerKeys(ctx)
+// tick pays one gate statement per tick, then only does the work the gate proved
+// exists: it creates deliveries for consumers whose cursor does not yet cover the
+// highest visible event id, and records the consumers with eligible deliveries so
+// workers claim for those only. An idle engine costs one statement per tick
+// instead of one statement per consumer plus a transaction per claim.
+//
+// Cursors advance only after an exhaustive scan, as before: a batch-sized scan has
+// not covered every event, so its cursor must not jump to the gate's highest id.
+func (e *Engine) tick(ctx context.Context) (int64, error) {
+	since, safety := e.safetyReconcileWindow()
+	gate, err := e.store.Gate(ctx, e.lowestCursor(), e.now())
 	if err != nil {
 		return 0, err
 	}
-	for key := range e.reconcileCursors {
-		if !slices.Contains(keys, key) {
-			delete(e.reconcileCursors, key)
-		}
+
+	// Scanning still covers every active consumer, as before, not only consumers
+	// with a handler in this process: deliveries for a handler registered later
+	// must still exist. The gate names the active set whenever any event is past
+	// the lowest cursor, so the only case the gate cannot name is a late-committed
+	// event whose id is below every cursor — which is what the safety scan is for.
+	// On a safety tick scan the consumers the engine already knows as well.
+	targets := gate.ScanKeys
+	if safety {
+		targets = unionKeys(targets, e.knownKeys())
 	}
-	since, safety := e.safetyReconcileWindow()
+	if len(gate.ScanKeys) > 0 {
+		// A named consumer means EXISTS was true, so ScanKeys is the full active
+		// set and cursors of consumers no longer active can be dropped.
+		e.pruneCursors(gate.ScanKeys)
+	}
+	e.setWorkKeys(gate.ScanKeys, gate.ClaimKeys)
+
 	var total int64
-	for _, key := range keys {
+	for _, key := range targets {
 		afterID := e.reconcileCursors[key]
 		if safety {
 			afterID = 0
+		} else if afterID >= gate.MaxEventID {
+			continue
 		}
 		for {
-			created, maxSeen, err := e.store.reconcileConsumer(ctx, key, afterID, since, int64(e.config.ReconcileBatch))
+			created, err := e.store.reconcileConsumer(ctx, key, afterID, since, int64(e.config.ReconcileBatch))
 			if err != nil {
 				return total, err
 			}
 			total += created
 			if created > 0 {
+				e.addWorkKey(key)
 				e.signalWorkers()
 			}
 			if created < int64(e.config.ReconcileBatch) {
-				e.reconcileCursors[key] = maxSeen
+				e.reconcileCursors[key] = gate.MaxEventID
 				break
 			}
 		}
 	}
 	return total, nil
+}
+
+// lowestCursor is the oldest uncovered point across the consumers the engine
+// knows. If no event is past it, no consumer can have new work, and nothing is
+// scanned.
+func (e *Engine) lowestCursor() int64 {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	lowest := int64(0)
+	for _, cursor := range e.reconcileCursors {
+		if cursor < lowest {
+			lowest = cursor
+		}
+	}
+	return lowest
+}
+
+func (e *Engine) knownKeys() []string {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	keys := make([]string, 0, len(e.reconcileCursors))
+	for key := range e.reconcileCursors {
+		keys = append(keys, key)
+	}
+	slices.Sort(keys)
+	return keys
+}
+
+func (e *Engine) pruneCursors(active []string) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	for key := range e.reconcileCursors {
+		if !slices.Contains(active, key) {
+			delete(e.reconcileCursors, key)
+		}
+	}
+}
+
+func unionKeys(a, b []string) []string {
+	out := slices.Clone(a)
+	for _, key := range b {
+		if !slices.Contains(out, key) {
+			out = append(out, key)
+		}
+	}
+	slices.Sort(out)
+	return out
 }
 
 // safetyReconcileWindow reports the lower recorded_at bound for the periodic
@@ -370,7 +442,7 @@ func (e *Engine) workerLoop(ctx context.Context) {
 }
 
 func (e *Engine) processOne(ctx context.Context) (bool, error) {
-	keys := e.handlerKeys()
+	keys := e.eligibleHandlerKeys()
 	for _, consumerKey := range keys {
 		delivery, err := e.store.Claim(ctx, consumerKey, e.owner, e.now(), e.config.LeaseDuration)
 		if err != nil {
@@ -464,19 +536,49 @@ func (e *Engine) retryDelay(attempt int) time.Duration {
 	return delay + jitter
 }
 
-func (e *Engine) handlerKeys() []string {
+// eligibleHandlerKeys returns the consumers the last gate reported as having an
+// eligible delivery, limited to consumers with a registered handler, in rotated
+// order so a busy consumer cannot starve the others. Rotation is unchanged.
+func (e *Engine) eligibleHandlerKeys() []string {
 	e.mu.Lock()
 	defer e.mu.Unlock()
-	keys := make([]string, 0, len(e.handlers))
-	for key := range e.handlers {
-		keys = append(keys, key)
+	keys := make([]string, 0, len(e.workKeys))
+	for _, key := range e.workKeys {
+		if _, exists := e.handlers[key]; exists {
+			keys = append(keys, key)
+		}
 	}
 	slices.Sort(keys)
+	return rotateKeys(keys, &e.nextHandler)
+}
+
+func (e *Engine) setWorkKeys(scan, claim []string) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	keys := slices.Clone(scan)
+	for _, key := range claim {
+		if !slices.Contains(keys, key) {
+			keys = append(keys, key)
+		}
+	}
+	slices.Sort(keys)
+	e.workKeys = keys
+}
+
+func (e *Engine) addWorkKey(key string) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	if !slices.Contains(e.workKeys, key) {
+		e.workKeys = append(e.workKeys, key)
+	}
+}
+
+func rotateKeys(keys []string, counter *int) []string {
 	if len(keys) == 0 {
 		return keys
 	}
-	start := e.nextHandler % len(keys)
-	e.nextHandler = (start + 1) % len(keys)
+	start := *counter % len(keys)
+	*counter = (*counter + 1) % len(keys)
 	if start == 0 {
 		return keys
 	}
