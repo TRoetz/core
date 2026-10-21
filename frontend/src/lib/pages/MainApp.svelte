@@ -12,8 +12,10 @@
     GLOBAL_COLLECTION_VIEWS,
     currentRoute,
     isWorkspaceRoute,
+    matchRoute,
     navigate,
   } from '../router.js';
+  import { toLogical } from '../runtime/contextPath.js';
   import { hydrateCurrentWorkspaceFromSharedData } from '../services/authenticatedShellUI.js';
   import { authStore } from '../stores/auth.svelte.js';
   import { currentWorkspace, workspacesStore } from '../stores/workspaces.svelte.js';
@@ -34,6 +36,8 @@
     CREATE_MODAL_WORKSPACE_VIEWS,
     MAIN_APP_COMPONENT_LOADERS,
     MAIN_APP_TEST_VIEWS,
+    prefetchIdleMainAppComponents,
+    prefetchMainAppForView,
     resolveEffectiveMainAppView,
   } from './mainAppRoutes.js';
   import {
@@ -69,6 +73,23 @@
       void recoverFromLazyLoadFailure();
     },
   });
+
+  // Warm the likely next routes once the browser is idle (WI-1761).
+  prefetchIdleMainAppComponents();
+
+  /** Hover/focus prefetch: load the route chunk behind a link before the
+   * click, so warm navigations resolve without ever showing a spinner. */
+  function prefetchRouteChunkFromLink(target) {
+    const anchor = target?.closest?.('a[href]');
+    if (!anchor) return;
+    try {
+      const url = new URL(anchor.href, window.location.href);
+      const { view } = matchRoute(toLogical(url.pathname)) ?? {};
+      if (view) prefetchMainAppForView(view);
+    } catch {
+      // Unparseable href — navigation itself will surface the problem.
+    }
+  }
 
   async function loadTerminalPanel() {
     if (TerminalPanelComponent || terminalLoading) return;
@@ -306,7 +327,13 @@
   });
 </script>
 
-<div class="desktop-app-shell h-dvh min-h-0 overflow-hidden flex flex-col" style="background-color: var(--ds-surface);">
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<div
+  class="desktop-app-shell h-dvh min-h-0 overflow-hidden flex flex-col"
+  style="background-color: var(--ds-surface);"
+  onpointerover={(event) => prefetchRouteChunkFromLink(event.target)}
+  onfocusin={(event) => prefetchRouteChunkFromLink(event.target)}
+>
   <EmailVerificationBanner
     show={showEmailVerificationBanner}
     ondismiss={() => showEmailVerificationBanner = false}

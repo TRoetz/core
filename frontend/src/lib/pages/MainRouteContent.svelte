@@ -1,5 +1,6 @@
 <script>
   import Button from '../components/Button.svelte';
+  import DelayedMount from '../components/DelayedMount.svelte';
   import Spinner from '../components/Spinner.svelte';
   import PermissionGuard from '../layout/PermissionGuard.svelte';
   import { authStore } from '../stores/auth.svelte.js';
@@ -31,12 +32,14 @@
 </script>
 
 {#snippet loadingState(message)}
-  <div class="flex items-center justify-center h-full">
-    <div class="text-center">
-      <Spinner class="mx-auto mb-4" />
-      <p class="text-ds-text-subtle">{message}</p>
+  <DelayedMount>
+    <div class="flex items-center justify-center h-full" data-testid="root-view-loading">
+      <div class="text-center">
+        <Spinner class="mx-auto mb-4" />
+        <p class="text-ds-text-subtle">{message}</p>
+      </div>
     </div>
-  </div>
+  </DelayedMount>
 {/snippet}
 
 {#snippet errorState(message, retryFn)}
