@@ -433,8 +433,10 @@ run_frontend_supply_chain_checks() {
     log_info "Verifying npm package signatures..."
     npm audit signatures --min-release-age=0
 
-    log_info "Running npm audit (high severity and above)..."
-    npm audit --audit-level=high
+    # Audit production dependencies only. Dev-only tools (vite, vitest, ...)
+    # never ship in the release artifact, so their advisories must not block it.
+    log_info "Running npm audit (high severity and above, production deps only)..."
+    npm audit --audit-level=high --omit=dev
 }
 
 run_go_vulnerability_check() {
