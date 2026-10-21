@@ -741,7 +741,14 @@ func (s *ItemApplicationService) DeleteInfo(userID, itemID int) (ItemDeleteInfo,
 	if err := s.require(userID, item.WorkspaceID, models.PermissionItemEdit); err != nil {
 		return ItemDeleteInfo{}, err
 	}
-	descendants, err := s.items.GetDescendantIDs(itemID)
+	// Cross-workspace children exist by design, so the descendant count must be
+	// scoped to workspaces the caller can view. The item's own workspace is
+	// always allowed: the caller was just authorized on the item there.
+	allowedWorkspaceIDs, err := s.allowedWorkspaceIDs(userID, item.WorkspaceID)
+	if err != nil {
+		return ItemDeleteInfo{}, err
+	}
+	descendants, err := s.items.GetDescendantIDsInWorkspaces(itemID, allowedWorkspaceIDs)
 	if err != nil {
 		return ItemDeleteInfo{}, err
 	}
@@ -1498,7 +1505,31 @@ func (s *ItemApplicationService) TimeRollup(ctx context.Context, userID, itemID,
 	if err := s.requireView(ctx, userID, itemID); err != nil {
 		return nil, err
 	}
-	return s.items.GetTimeRollup(itemID, maxDepth, 0)
+	workspaceID, err := s.items.GetWorkspaceIDCtx(ctx, itemID)
+	if err != nil {
+		return nil, err
+	}
+	allowedWorkspaceIDs, err := s.allowedWorkspaceIDs(userID, workspaceID)
+	if err != nil {
+		return nil, err
+	}
+	return s.items.GetTimeRollup(itemID, maxDepth, 0, allowedWorkspaceIDs)
+}
+
+// allowedWorkspaceIDs returns the caller's accessible workspaces plus
+// alwaysAllowed. The alwaysAllowed entries skip the permission lookup because
+// the caller was already authorized on an item there, possibly through an
+// approval pool rather than membership.
+func (s *ItemApplicationService) allowedWorkspaceIDs(userID int, alwaysAllowed ...int) ([]int, error) {
+	ids := append([]int(nil), alwaysAllowed...)
+	if s.perm == nil {
+		return ids, nil
+	}
+	accessible, err := s.perm.AccessibleWorkspaceIDs(userID)
+	if err != nil {
+		return nil, err
+	}
+	return append(ids, accessible...), nil
 }
 
 func (s *ItemApplicationService) StatusDurations(ctx context.Context, userID, itemID int) (*models.ItemStatusDurations, error) {
