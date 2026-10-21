@@ -571,6 +571,7 @@
                 <div class="flex items-center gap-1">
                   {#if item.hasChildren}
                     <button
+                      data-testid={`tree-expand-${item.id}`}
                       class="w-6 h-6 flex items-center justify-center rounded transition-colors cursor-pointer expand-btn"
                       onclick={(e) => { e.stopPropagation(); toggleExpanded(item.id); }}
                       aria-label={isExpanded(item.id) ? 'Collapse' : 'Expand'}
