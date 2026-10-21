@@ -2870,6 +2870,38 @@ var Catalog = []Migration{
 			ALTER TABLE sla_goal_targets DROP COLUMN IF EXISTS priority_id;
 		`,
 	},
+	{
+		Version:       "20261105_comment_reactions",
+		Name:          "React to comments with a fixed set of emoji (core#298)",
+		CheckSQLite:   sqliteTableCheck("comment_reactions"),
+		CheckPostgres: pgTableCheck("comment_reactions"),
+		SQLite: `
+			CREATE TABLE IF NOT EXISTS comment_reactions (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				comment_id INTEGER NOT NULL,
+				user_id INTEGER NOT NULL,
+				reaction TEXT NOT NULL,
+				created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+				FOREIGN KEY (comment_id) REFERENCES comments(id) ON DELETE CASCADE,
+				FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+				UNIQUE(comment_id, user_id, reaction)
+			);
+			CREATE INDEX IF NOT EXISTS idx_comment_reactions_user_id ON comment_reactions(user_id);
+		`,
+		Postgres: `
+			CREATE TABLE IF NOT EXISTS comment_reactions (
+				id SERIAL PRIMARY KEY,
+				comment_id INTEGER NOT NULL,
+				user_id INTEGER NOT NULL,
+				reaction TEXT NOT NULL,
+				created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+				FOREIGN KEY (comment_id) REFERENCES comments(id) ON DELETE CASCADE,
+				FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+				UNIQUE(comment_id, user_id, reaction)
+			);
+			CREATE INDEX IF NOT EXISTS idx_comment_reactions_user_id ON comment_reactions(user_id);
+		`,
+	},
 }
 
 // applyAssetReportsWorkspacePinned backfills form-mode asset reports that have

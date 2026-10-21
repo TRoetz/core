@@ -22,6 +22,7 @@
 	import { isExpectedBackgroundSyncError } from '../../utils/backgroundSync.js';
 	import { workspacePermissions } from '../../stores/workspacePermissions.svelte.js';
 	import CannedResponsePicker from '../support/CannedResponsePicker.svelte';
+	import CommentReactions from './CommentReactions.svelte';
 
 	const COMMENT_PAGE_SIZE = 25;
 
@@ -52,6 +53,12 @@
 	// comment.edit_others holders may moderate foreign comments (mirrors
 	// requireCommentEdit in the v2 API).
 	const canEditOthersComments = $derived(workspacePermissions.canEditOthersComments(workspaceId));
+	// Reacting needs the comment permission (mirrors requireCommentPermission in the v2 API).
+	const canReact = $derived(Boolean(authStore.currentUser) && (!workspaceId || workspacePermissions.canComment(workspaceId)));
+
+	function setReactions(commentId, reactions) {
+		comments = comments.map((c) => (c.id === commentId ? { ...c, reactions } : c));
+	}
 
 	// Get user's timezone
 	let timezone = $derived(getUserTimezone(authStore.currentUser));
@@ -649,6 +656,14 @@
 							<div class="comment-content text-sm" style="color: var(--ds-text);">
 								<MilkdownEditor content={comment.content} readonly={true} showToolbar={false} compact={true} {workspaceId} />
 							</div>
+							{#if comment.source !== 'approval'}
+								<CommentReactions
+									{comment}
+									{canReact}
+									onChange={(reactions) => setReactions(comment.id, reactions)}
+									onError={(message) => (error = message)}
+								/>
+							{/if}
 						{/if}
 					</div>
 				</div>

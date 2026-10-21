@@ -3832,6 +3832,83 @@
         ]
       }
     },
+    "/comments/{comment_id}/reactions": {
+      "post": {
+        "description": "Add comment reaction. The server validates resource ownership and command preconditions before persisting changes. Unknown JSON fields are rejected when the operation accepts a body.",
+        "parameters": [
+          {
+            "Name": "comment_id",
+            "In": "path",
+            "Description": "The comment identifier.",
+            "Required": true,
+            "Schema": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "400": {},
+          "401": {},
+          "403": {},
+          "404": {},
+          "413": {},
+          "415": {},
+          "429": {},
+          "500": {}
+        },
+        "summary": "Add comment reaction",
+        "tags": [
+          "Work items"
+        ]
+      }
+    },
+    "/comments/{comment_id}/reactions/{reaction}": {
+      "delete": {
+        "description": "Remove comment reaction. The server verifies resource ownership and deletion preconditions before removing the resource.",
+        "parameters": [
+          {
+            "Name": "comment_id",
+            "In": "path",
+            "Description": "The comment identifier.",
+            "Required": true,
+            "Schema": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "Name": "reaction",
+            "In": "path",
+            "Description": "The reaction key: thumbs_up, check, eyes, heart, laugh, or hooray.",
+            "Required": true,
+            "Schema": {
+              "enum": [
+                "thumbs_up",
+                "check",
+                "eyes",
+                "heart",
+                "laugh",
+                "hooray"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "400": {},
+          "401": {},
+          "403": {},
+          "404": {},
+          "429": {},
+          "500": {}
+        },
+        "summary": "Remove comment reaction",
+        "tags": [
+          "Work items"
+        ]
+      }
+    },
     "/condition-sets": {
       "get": {
         "description": "List condition sets. Results include only resources visible to the authenticated caller; collections use their documented stable order and bounds.",

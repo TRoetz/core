@@ -589,6 +589,15 @@ export default {
     newestFirst: 'Newest first',
     agentAuthored: 'Authored by an AI agent',
     agentOwnedBy: 'AI agent owned by {owner}',
+    addReaction: 'Add reaction',
+    reactionFailed: 'Failed to update reaction',
+    reactedBy: '{reaction} by {names}',
+    reactionThumbsUp: 'Thumbs up',
+    reactionCheck: 'Done',
+    reactionEyes: 'Seen',
+    reactionHeart: 'Thanks',
+    reactionLaugh: 'Laugh',
+    reactionHooray: 'Hooray',
   },
 
   todo: {

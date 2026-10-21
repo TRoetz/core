@@ -366,6 +366,15 @@ export default {
     internal: '内部',
     oldestFirst: '最早优先',
     newestFirst: '最新优先',
+    addReaction: '添加回应',
+    reactionFailed: '无法更新回应',
+    reactedBy: '{names} 回应了 {reaction}',
+    reactionThumbsUp: '赞',
+    reactionCheck: '已完成',
+    reactionEyes: '已查看',
+    reactionHeart: '感谢',
+    reactionLaugh: '大笑',
+    reactionHooray: '欢呼',
   },
 
   todo: {

@@ -7058,6 +7058,44 @@
                 "nullable": true,
                 "type": "integer"
               },
+              "reactions": {
+                "description": "The reactions value.",
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "count": {
+                      "description": "The count value.",
+                      "type": "integer"
+                    },
+                    "reaction": {
+                      "description": "The reaction value.",
+                      "type": "string"
+                    },
+                    "user_ids": {
+                      "description": "The user ids value.",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "type": "array"
+                    },
+                    "user_names": {
+                      "description": "The user names value.",
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "count",
+                    "reaction",
+                    "user_ids",
+                    "user_names"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
               "source": {
                 "description": "The source value.",
                 "type": "string"
@@ -13570,6 +13608,44 @@
                       "description": "The portal customer id value.",
                       "nullable": true,
                       "type": "integer"
+                    },
+                    "reactions": {
+                      "description": "The reactions value.",
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "count": {
+                            "description": "The count value.",
+                            "type": "integer"
+                          },
+                          "reaction": {
+                            "description": "The reaction value.",
+                            "type": "string"
+                          },
+                          "user_ids": {
+                            "description": "The user ids value.",
+                            "items": {
+                              "type": "integer"
+                            },
+                            "type": "array"
+                          },
+                          "user_names": {
+                            "description": "The user names value.",
+                            "items": {
+                              "type": "string"
+                            },
+                            "type": "array"
+                          }
+                        },
+                        "required": [
+                          "count",
+                          "reaction",
+                          "user_ids",
+                          "user_names"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
                     },
                     "source": {
                       "description": "The source value.",
@@ -53530,6 +53606,44 @@
                 "nullable": true,
                 "type": "integer"
               },
+              "reactions": {
+                "description": "The reactions value.",
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "count": {
+                      "description": "The count value.",
+                      "type": "integer"
+                    },
+                    "reaction": {
+                      "description": "The reaction value.",
+                      "type": "string"
+                    },
+                    "user_ids": {
+                      "description": "The user ids value.",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "type": "array"
+                    },
+                    "user_names": {
+                      "description": "The user names value.",
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "count",
+                    "reaction",
+                    "user_ids",
+                    "user_names"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
               "source": {
                 "description": "The source value.",
                 "type": "string"
@@ -65596,6 +65710,44 @@
                         "nullable": true,
                         "type": "integer"
                       },
+                      "reactions": {
+                        "description": "The reactions value.",
+                        "items": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "count": {
+                              "description": "The count value.",
+                              "type": "integer"
+                            },
+                            "reaction": {
+                              "description": "The reaction value.",
+                              "type": "string"
+                            },
+                            "user_ids": {
+                              "description": "The user ids value.",
+                              "items": {
+                                "type": "integer"
+                              },
+                              "type": "array"
+                            },
+                            "user_names": {
+                              "description": "The user names value.",
+                              "items": {
+                                "type": "string"
+                              },
+                              "type": "array"
+                            }
+                          },
+                          "required": [
+                            "count",
+                            "reaction",
+                            "user_ids",
+                            "user_names"
+                          ],
+                          "type": "object"
+                        },
+                        "type": "array"
+                      },
                       "source": {
                         "description": "The source value.",
                         "type": "string"
@@ -65632,6 +65784,65 @@
                 "comments",
                 "has_more",
                 "item_id"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "PostCommentsCommentIdReactionsPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "reaction": {
+            "description": "The reaction value.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reaction"
+        ],
+        "type": "object"
+      },
+      "PostCommentsCommentIdReactionsResult": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "count": {
+                  "description": "The count value.",
+                  "type": "integer"
+                },
+                "reaction": {
+                  "description": "The reaction value.",
+                  "type": "string"
+                },
+                "user_ids": {
+                  "description": "The user ids value.",
+                  "items": {
+                    "type": "integer"
+                  },
+                  "type": "array"
+                },
+                "user_names": {
+                  "description": "The user names value.",
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                }
+              },
+              "required": [
+                "count",
+                "reaction",
+                "user_ids",
+                "user_names"
               ],
               "type": "object"
             },
@@ -76011,6 +76222,44 @@
                 "description": "The portal customer id value.",
                 "nullable": true,
                 "type": "integer"
+              },
+              "reactions": {
+                "description": "The reactions value.",
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "count": {
+                      "description": "The count value.",
+                      "type": "integer"
+                    },
+                    "reaction": {
+                      "description": "The reaction value.",
+                      "type": "string"
+                    },
+                    "user_ids": {
+                      "description": "The user ids value.",
+                      "items": {
+                        "type": "integer"
+                      },
+                      "type": "array"
+                    },
+                    "user_names": {
+                      "description": "The user names value.",
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "count",
+                    "reaction",
+                    "user_ids",
+                    "user_names"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
               },
               "source": {
                 "description": "The source value.",
@@ -103662,6 +103911,152 @@
           }
         ],
         "summary": "Update comment",
+        "tags": [
+          "Work items"
+        ],
+        "x-required-scopes": [
+          "items:write"
+        ]
+      }
+    },
+    "/comments/{comment_id}/reactions": {
+      "post": {
+        "description": "Add comment reaction. The server validates resource ownership and command preconditions before persisting changes. Unknown JSON fields are rejected when the operation accepts a body.",
+        "operationId": "postCommentsCommentIdReactions",
+        "parameters": [
+          {
+            "description": "The comment identifier.",
+            "in": "path",
+            "name": "comment_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostCommentsCommentIdReactionsPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostCommentsCommentIdReactionsResult"
+                }
+              }
+            },
+            "description": "Add comment reaction response."
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationError"
+          },
+          "403": {
+            "$ref": "#/components/responses/PermissionError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLargeError"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaTypeError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Add comment reaction",
+        "tags": [
+          "Work items"
+        ],
+        "x-required-scopes": [
+          "items:write"
+        ]
+      }
+    },
+    "/comments/{comment_id}/reactions/{reaction}": {
+      "delete": {
+        "description": "Remove comment reaction. The server verifies resource ownership and deletion preconditions before removing the resource.",
+        "operationId": "deleteCommentsCommentIdReactionsReaction",
+        "parameters": [
+          {
+            "description": "The comment identifier.",
+            "in": "path",
+            "name": "comment_id",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "The reaction key: thumbs_up, check, eyes, heart, laugh, or hooray.",
+            "in": "path",
+            "name": "reaction",
+            "required": true,
+            "schema": {
+              "enum": [
+                "thumbs_up",
+                "check",
+                "eyes",
+                "heart",
+                "laugh",
+                "hooray"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Request completed successfully with no response body."
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationError"
+          },
+          "403": {
+            "$ref": "#/components/responses/PermissionError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Remove comment reaction",
         "tags": [
           "Work items"
         ],

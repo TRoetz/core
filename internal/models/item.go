@@ -245,6 +245,18 @@ type Comment struct {
 	IsAgent bool   `json:"is_agent,omitempty"`
 	// AgentOwnerName is permission-filtered by the comment-list handler.
 	AgentOwnerName string `json:"agent_owner_name,omitempty"`
+	// Reactions groups the emoji reactions on a human comment in the fixed
+	// order of services.CommentReactionKeys. Approval rows never carry any.
+	Reactions []CommentReaction `json:"reactions,omitempty" db:"-"`
+}
+
+// CommentReaction is one reaction key on a comment with the users who chose
+// it, oldest first.
+type CommentReaction struct {
+	Reaction  string   `json:"reaction"`
+	Count     int      `json:"count"`
+	UserIDs   []int    `json:"user_ids"`
+	UserNames []string `json:"user_names"`
 }
 
 // Mention represents an @mention in a comment or item description
