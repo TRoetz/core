@@ -143,6 +143,7 @@
 							type="button"
 							role="menuitem"
 							onclick={() => toggle(reaction.key)}
+							data-testid="comment-reaction-option"
 							data-reaction={reaction.key}
 							title={t(reaction.label)}
 							aria-label={t(reaction.label)}
