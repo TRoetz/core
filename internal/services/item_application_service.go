@@ -664,6 +664,15 @@ func (s *ItemApplicationService) Batch(ctx context.Context, userID int, ids []in
 			}
 			permissions[item.WorkspaceID] = allowed
 		}
+		if !allowed {
+			// The single-item read also grants view to an approver with an active
+			// pool membership on the item. Apply the same fallback here so batch
+			// hydration does not drop rows the single read returns.
+			allowed, err = s.canViewViaApproval(ctx, userID, item.ID)
+			if err != nil {
+				return nil, err
+			}
+		}
 		if allowed {
 			items = append(items, *item)
 		}
@@ -1894,6 +1903,12 @@ func (s *ItemApplicationService) canView(ctx context.Context, userID, itemID, wo
 	} else if !errors.Is(err, ErrItemForbidden) {
 		return false, err
 	}
+	return s.canViewViaApproval(ctx, userID, itemID)
+}
+
+// canViewViaApproval grants view to a user with an active pool membership on
+// the item, the approver-derived fallback the single-item read uses.
+func (s *ItemApplicationService) canViewViaApproval(ctx context.Context, userID, itemID int) (bool, error) {
 	if s.approvals == nil {
 		return false, nil
 	}
