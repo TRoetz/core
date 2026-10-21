@@ -97,14 +97,18 @@ func (s *ItemCRUDService) deleteSingleWithAuthorization(itemID int, metadata ite
 		if err != nil {
 			return err
 		}
-		if authorize != nil {
-			if err := authorize([]*models.Item{root}); err != nil {
-				return err
-			}
-		}
 		children, err = s.repo.FindChildrenForUpdateContext(ctx, tx, []int{itemID})
 		if err != nil {
 			return err
+		}
+		if authorize != nil {
+			// Deleting the parent detaches every direct child, including children
+			// in other workspaces. Authorize root and children together and refuse
+			// the whole operation if the actor lacks item.delete in any of them.
+			targets := append([]*models.Item{root}, children...)
+			if err := authorize(targets); err != nil {
+				return err
+			}
 		}
 		hasProtectedLinks, err := s.integrationLinkGuards.HasLinksForItemsTx(tx, []int{itemID})
 		if err != nil {
