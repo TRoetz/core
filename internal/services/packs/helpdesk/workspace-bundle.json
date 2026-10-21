@@ -32,7 +32,7 @@
           "is_active": true,
           "conditions": [
             { "phase": "start", "condition_type": "created" },
-            { "phase": "stop", "condition_type": "assignee_set" }
+            { "phase": "stop", "condition_type": "comment_by_agent" }
           ],
           "goals": [
             {
