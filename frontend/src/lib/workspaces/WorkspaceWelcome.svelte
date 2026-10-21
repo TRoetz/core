@@ -23,6 +23,7 @@
   import Trash2 from '@lucide/svelte/icons/trash-2';
   import { t } from '../stores/i18n.svelte.js';
   import { formatDateOnly } from '../utils/dateFormatter.js';
+  import { createId } from '../utils/uuid.js';
   import { errorToast } from '../stores/toasts.svelte.js';
   import { confirm } from '../composables/useConfirm.js';
   import { draggable, dropTargetForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
@@ -110,7 +111,7 @@
   function getDefaultSections() {
     return [
       {
-        id: crypto.randomUUID(),
+        id: createId(),
         title: t('workspaceDashboard.overview'),
         subtitle: t('workspaceDashboard.overviewDescription'),
         system_key: 'overview',
@@ -118,7 +119,7 @@
         widget_ids: []
       },
       {
-        id: crypto.randomUUID(),
+        id: createId(),
         title: t('workspaceDashboard.progress'),
         subtitle: t('workspaceDashboard.progressDescription'),
         system_key: 'progress',
@@ -135,10 +136,10 @@
 
     if (!section1Id || !section2Id) return [];
 
-    const widget1 = { id: crypto.randomUUID(), type: 'stats', section_id: section1Id, position: 0, width: 3, config: {} };
-    const widget2 = { id: crypto.randomUUID(), type: 'completion-chart', section_id: section2Id, position: 0, width: 2, config: {} };
-    const widget3 = { id: crypto.randomUUID(), type: 'created-chart', section_id: section2Id, position: 1, width: 1, config: {} };
-    const widget4 = { id: crypto.randomUUID(), type: 'milestone-progress', section_id: section2Id, position: 2, width: 3, config: {} };
+    const widget1 = { id: createId(), type: 'stats', section_id: section1Id, position: 0, width: 3, config: {} };
+    const widget2 = { id: createId(), type: 'completion-chart', section_id: section2Id, position: 0, width: 2, config: {} };
+    const widget3 = { id: createId(), type: 'created-chart', section_id: section2Id, position: 1, width: 1, config: {} };
+    const widget4 = { id: createId(), type: 'milestone-progress', section_id: section2Id, position: 2, width: 3, config: {} };
 
     // Update section widget_ids
     sections[0].widget_ids = [widget1.id];
@@ -444,7 +445,7 @@
   // Section management
   function addSection() {
     const newSection = {
-      id: crypto.randomUUID(),
+      id: createId(),
       title: t('dashboard.sections.new'),
       subtitle: '',
       display_order: sections.length,
@@ -519,7 +520,7 @@
   // Widget management
   function addWidgetToSection(sectionId, widgetType) {
     const newWidget = {
-      id: crypto.randomUUID(),
+      id: createId(),
       type: widgetType,
       section_id: sectionId,
       position: widgets.filter(w => w.section_id === sectionId).length,

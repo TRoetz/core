@@ -5,6 +5,7 @@
 
 import { hub } from '../api/hub.js';
 import { attachments } from '../api/misc.js';
+import { createId } from '../utils/uuid.js';
 import { authStore } from './auth.svelte.js';
 import { createFooterLinkHelpers } from './footerLinks.js';
 
@@ -218,7 +219,7 @@ async function saveCustomizations() {
 // Hub Sections Management
 function addSection() {
   const newSection = {
-    id: crypto.randomUUID(),
+    id: createId(),
     title: '',
     subtitle: '',
     display_order: hubSections.length,

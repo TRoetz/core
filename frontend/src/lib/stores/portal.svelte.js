@@ -12,6 +12,7 @@ import {
 import { attachments } from '../api/misc.js';
 import { portal } from '../api/portal.js';
 import { safeCssUrl } from '../utils/sanitize';
+import { createId } from '../utils/uuid.js';
 import { authStore } from './auth.svelte.js';
 import { createFooterLinkHelpers } from './footerLinks.js';
 import {
@@ -561,7 +562,7 @@ function getSectionRequestTypes(section, inCustomizeMode = false) {
 // Portal Sections Management
 function addSection() {
   const newSection = {
-    id: crypto.randomUUID(),
+    id: createId(),
     title: '',
     subtitle: '',
     display_order: portalSections.length,

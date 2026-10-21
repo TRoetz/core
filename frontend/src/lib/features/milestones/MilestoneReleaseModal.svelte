@@ -15,6 +15,7 @@
   import Tag from '@tabler/icons-svelte-runes/icons/tag';
   import Sparkles from '@tabler/icons-svelte-runes/icons/sparkles';
   import AlertBox from '../../components/AlertBox.svelte';
+  import { createId } from '../../utils/uuid.js';
   import { loadMilestoneReleaseConnections } from './milestoneReleaseData.js';
 	import TextField from '../../components/TextField.svelte';
 
@@ -194,7 +195,7 @@
         payload.repository_id = repositories.find(repo => repo.repository_name === selectedRepository)?.id;
       }
 
-      idempotencyKey ??= crypto.randomUUID();
+      idempotencyKey ??= createId();
       const updatedMilestone = await milestones.release(milestone.id, payload, idempotencyKey);
       successToast(
         releaseMode === 'attach'

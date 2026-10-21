@@ -19,6 +19,7 @@ import {
   formatRelativeTime as formatRelativeTimeValue,
 } from '../utils/dateFormatter.js';
 import { gradients } from '../utils/gradients.js';
+import { createId } from '../utils/uuid.js';
 import { t } from './i18n.svelte.js';
 import { errorToast } from './toasts.svelte.js';
 
@@ -270,7 +271,7 @@ class HomepageStore {
 
   addSection(title = t('dashboard.editor.newSection'), subtitle = '') {
     const newSection = {
-      id: crypto.randomUUID(),
+      id: createId(),
       title,
       subtitle,
       display_order: this.sections.length,
@@ -312,7 +313,7 @@ class HomepageStore {
 
   addWidgetToSection(sectionId, widgetType) {
     const newWidget = {
-      id: crypto.randomUUID(),
+      id: createId(),
       type: widgetType,
       section_id: sectionId,
       position: this.widgets.filter((w) => w.section_id === sectionId).length,

@@ -1,11 +1,12 @@
 // Broadcasts local work-item mutations so other tabs can refresh active
 // collection views. Polling still covers server-side changes.
 
+import { createId } from './uuid.js';
+
 const CHANNEL_NAME = 'windshift-work-items';
 
 /** Unique-per-tab id used to identify the origin of a broadcast. */
-export const tabId =
-  typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : String(Math.random());
+export const tabId = createId();
 
 let channel = null;
 let initialized = false;
