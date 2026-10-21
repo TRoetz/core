@@ -279,7 +279,14 @@ func (h *OnCallHandler) ListSchedules(w http.ResponseWriter, r *http.Request) {
 		respondInternalError(w, r, err)
 		return
 	}
-	schedules, err := h.onCallRepo.ListSchedulesForTeam(teamID, includeRoster)
+	// The list exposes schedule names, timezones, active state, and creator,
+	// so gate it on team view access like GetSchedule instead of returning
+	// metadata to any authenticated user.
+	if !includeRoster {
+		respondForbidden(w, r)
+		return
+	}
+	schedules, err := h.onCallRepo.ListSchedulesForTeam(teamID, true)
 	if err != nil {
 		respondInternalError(w, r, err)
 		return
@@ -288,11 +295,9 @@ func (h *OnCallHandler) ListSchedules(w http.ResponseWriter, r *http.Request) {
 	if schedules == nil {
 		schedules = []models.OnCallSchedule{}
 	}
-	if includeRoster {
-		now := time.Now()
-		for i := range schedules {
-			schedules[i].CurrentOnCall = h.onCallService.CurrentOnCallForSchedule(&schedules[i], now)
-		}
+	now := time.Now()
+	for i := range schedules {
+		schedules[i].CurrentOnCall = h.onCallService.CurrentOnCallForSchedule(&schedules[i], now)
 	}
 	respondJSONOK(w, schedules)
 }
