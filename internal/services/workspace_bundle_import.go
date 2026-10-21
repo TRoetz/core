@@ -586,9 +586,11 @@ func (s *WorkspaceBundleImportService) validateReferences(ctx context.Context, w
 			continue
 		}
 		seenEmails[strings.ToLower(email)] = true
-		if id, _ := s.lookupUserID(ctx, email); id == 0 {
+		if id, _ := s.lookupWorkspaceUserID(ctx, workspaceID, email); id == 0 {
+			// Report by path only: echoing the email would let an editor probe
+			// which addresses belong to accounts.
 			missing = append(missing, UnresolvedRef{
-				Kind: UnresolvedKindUser, Email: email,
+				Kind: UnresolvedKindUser,
 				Path: fmt.Sprintf("items/%s", item.Ref),
 			})
 		}
@@ -627,13 +629,29 @@ func (s *WorkspaceBundleImportService) lookupLinkTypeID(ctx context.Context, nam
 	return id, err
 }
 
-func (s *WorkspaceBundleImportService) lookupUserID(ctx context.Context, email string) (int, error) {
+// lookupWorkspaceUserID resolves an assignee email to a user who can view the
+// target workspace. Restricting the lookup to workspace members stops an editor
+// from assigning an arbitrary instance user as an imported item's assignee.
+func (s *WorkspaceBundleImportService) lookupWorkspaceUserID(ctx context.Context, workspaceID int, email string) (int, error) {
 	var id int
 	err := s.db.QueryRowContext(ctx, `SELECT id FROM users WHERE LOWER(email) = LOWER(?)`, email).Scan(&id)
 	if errors.Is(err, sql.ErrNoRows) {
 		return 0, nil
 	}
-	return id, err
+	if err != nil {
+		return 0, err
+	}
+	if s.permissions == nil {
+		return 0, nil
+	}
+	actionable, err := NewWorkspaceUserResolver(s.db, s.permissions).CanActInWorkspace(id, workspaceID)
+	if err != nil {
+		return 0, err
+	}
+	if !actionable {
+		return 0, nil
+	}
+	return id, nil
 }
 
 // ---- application ------------------------------------------------------------
@@ -850,8 +868,7 @@ func (s *WorkspaceBundleImportService) importItems(ctx context.Context, imp *wor
 			input.PriorityID = &priorityID
 		}
 		if item.AssigneeEmail != "" {
-			var userID int
-			if err := s.db.QueryRowContext(ctx, `SELECT id FROM users WHERE LOWER(email) = LOWER(?)`, item.AssigneeEmail).Scan(&userID); err == nil {
+			if userID, err := s.lookupWorkspaceUserID(ctx, imp.workspaceID, item.AssigneeEmail); err == nil && userID != 0 {
 				input.AssigneeID = &userID
 			}
 		}
