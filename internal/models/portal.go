@@ -75,11 +75,18 @@ type ChannelConfig struct {
 	EmailOAuthClientSecret string `json:"email_oauth_client_secret,omitempty"` // Encrypted client secret
 	EmailOAuthTenantID     string `json:"email_oauth_tenant_id,omitempty"`     // Microsoft tenant ID (or 'common')
 
+	// EmailOAuthMailbox is the monitored mailbox the admin enters for the OAuth
+	// flow. IMAP XOAUTH2 authenticates as this address, so it is known before
+	// the flow and cannot be derived from the token. Kept separate from
+	// EmailOAuthEmail so a pending address change survives reconnect: the
+	// verified EmailOAuthEmail marks the connection as live.
+	EmailOAuthMailbox string `json:"email_oauth_mailbox,omitempty"`
+
 	// OAuth Tokens (populated after successful OAuth flow)
 	EmailOAuthAccessToken   string     `json:"email_oauth_access_token,omitempty"`   // Encrypted OAuth access token
 	EmailOAuthRefreshToken  string     `json:"email_oauth_refresh_token,omitempty"`  // Encrypted OAuth refresh token
 	EmailOAuthExpiresAt     *time.Time `json:"email_oauth_expires_at,omitempty"`     // Token expiration time
-	EmailOAuthEmail         string     `json:"email_oauth_email,omitempty"`          // Connected email address
+	EmailOAuthEmail         string     `json:"email_oauth_email,omitempty"`          // Verified connected mailbox address
 	EmailWorkspaceID        int        `json:"email_workspace_id,omitempty"`         // Target workspace for items
 	EmailItemTypeID         *int       `json:"email_item_type_id,omitempty"`         // Item type to create
 	EmailDefaultPriorityID  *int       `json:"email_default_priority_id,omitempty"`  // Default priority for items

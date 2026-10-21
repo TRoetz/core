@@ -23,6 +23,7 @@
       oauth_tenant_id: 'common',
       oauth_connected: false,
       oauth_email: '',
+      oauth_mailbox: '',
       connected_oauth_provider_type: '',
       connected_oauth_client_id: '',
       connected_oauth_tenant_id: '',
@@ -59,6 +60,7 @@
     formData.oauth_connected && (
       formData.oauth_provider_type !== formData.connected_oauth_provider_type ||
       formData.oauth_client_id.trim() !== formData.connected_oauth_client_id.trim() ||
+      formData.oauth_mailbox.trim() !== formData.connected_oauth_mailbox.trim() ||
       (formData.oauth_provider_type === 'microsoft' &&
         formData.oauth_tenant_id.trim() !== formData.connected_oauth_tenant_id.trim())
     )
@@ -70,6 +72,11 @@
 
     if (!formData.oauth_client_id) {
       errorToast('Please enter OAuth client ID');
+      return;
+    }
+
+    if (!formData.oauth_mailbox?.trim()) {
+      errorToast(t('channel.oauthMailboxRequired'));
       return;
     }
 
@@ -108,6 +115,9 @@
       if (!formData.oauth_client_id?.trim()) {
         return { valid: false, message: t('channel.clientIdRequired') };
       }
+      if (!formData.oauth_mailbox?.trim()) {
+        return { valid: false, message: t('channel.oauthMailboxRequired') };
+      }
       if (!oauthIsConnected && !formData.oauth_client_secret?.trim()) {
         return { valid: false, message: t('channel.clientSecretRequired') };
       }
@@ -131,6 +141,7 @@
         email_oauth_provider_type: formData.oauth_provider_type,
         email_oauth_client_id: formData.oauth_client_id.trim(),
         email_oauth_client_secret: formData.oauth_client_secret || undefined,
+        email_oauth_mailbox: formData.oauth_mailbox.trim(),
         email_oauth_tenant_id: formData.oauth_provider_type === 'microsoft' ? formData.oauth_tenant_id.trim() : undefined
       };
     } else {
@@ -257,6 +268,20 @@
           </div>
         {/if}
 
+        <div>
+          <TextField
+            label={t('channel.oauthMailbox')}
+            required
+            labelColor="default"
+            placeholder="support@example.com"
+            dataTestid="channel-oauth-mailbox"
+            bind:value={formData.oauth_mailbox}
+          />
+          <DescriptionText>
+            {t('channel.oauthMailboxHelp')}
+          </DescriptionText>
+        </div>
+
         <!-- Connection Status -->
         {#if oauthIsConnected}
           <div class="p-4 rounded-lg border" style="background: var(--ds-background-success-subtle); border-color: var(--ds-border-success);">
@@ -284,7 +309,7 @@
                   {t('channel.saveAndConnect')}
                 </div>
               </div>
-              <Button variant="primary" onclick={startOAuthFlow} disabled={loading}>
+              <Button variant="primary" onclick={startOAuthFlow} disabled={loading} dataTestid="channel-oauth-connect">
                 {t('channel.connectMailbox')}
               </Button>
             </div>

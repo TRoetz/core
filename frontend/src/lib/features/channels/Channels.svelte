@@ -233,7 +233,7 @@
         'invalid_config': 'Invalid channel configuration',
         'unsupported_provider': 'Unsupported OAuth provider',
         'decrypt_failed': 'Could not decrypt the OAuth client secret',
-        'identity_failed': 'Could not read the connected mailbox identity',
+        'identity_failed': 'The mailbox address is missing or invalid. Enter it and connect again.',
         'authorization_failed': 'You no longer have permission to connect this channel',
         'config_changed': 'The channel changed while OAuth was open. Review the latest settings and reconnect.'
       };

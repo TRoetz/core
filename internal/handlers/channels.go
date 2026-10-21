@@ -1964,21 +1964,16 @@ func (h *ChannelHandler) GetEmailLog(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// Default OAuth scopes for email providers
+// Default OAuth scopes for email providers. The monitored mailbox address is
+// entered by the admin (EmailOAuthMailbox), so no identity/userinfo scopes are
+// requested and no separate Graph/Google resource token is needed.
 var defaultEmailOAuthScopes = map[string][]string{
 	"microsoft": {
 		"https://outlook.office365.com/IMAP.AccessAsUser.All",
-		"https://outlook.office365.com/SMTP.Send",
-		"openid",
-		"profile",
-		"email",
 		"offline_access",
 	},
 	"google": {
 		"https://mail.google.com/",
-		"openid",
-		"email",
-		"profile",
 	},
 }
 
@@ -2046,6 +2041,13 @@ func (h *ChannelHandler) StartChannelEmailOAuth(w http.ResponseWriter, r *http.R
 	}
 	if config.EmailOAuthClientSecret == "" {
 		respondValidationError(w, r, "OAuth client secret not configured")
+		return
+	}
+	// The monitored mailbox is entered by the admin and is what IMAP XOAUTH2
+	// authenticates as. Require it before starting so the callback never has to
+	// guess an identity from the token.
+	if _, ok := bareEmailAddress(config.EmailOAuthMailbox); !ok {
+		respondValidationError(w, r, "Enter the mailbox address to connect before starting OAuth")
 		return
 	}
 
@@ -2206,9 +2208,15 @@ func (h *ChannelHandler) ChannelEmailOAuthCallback(w http.ResponseWriter, r *htt
 	// Build redirect URI (must match the one used in StartOAuth)
 	redirectURI := fmt.Sprintf("%s/api/channels/inline-oauth/callback", h.baseURL)
 
-	// Exchange code for tokens
+	// Exchange code for tokens. The mailbox address is configuration the admin
+	// already saved, not a value discovered from the token.
 	var tokens *email.OAuthTokens
-	var userEmail string
+	userEmail, ok := bareEmailAddress(config.EmailOAuthMailbox)
+	if !ok {
+		slog.Error("email channel OAuth callback has no usable mailbox address", "channel_id", channelID)
+		http.Redirect(w, r, "/admin/channels?oauth_error=identity_failed", http.StatusFound)
+		return
+	}
 	scopes := defaultEmailOAuthScopes[config.EmailOAuthProviderType]
 
 	switch config.EmailOAuthProviderType {
@@ -2224,12 +2232,6 @@ func (h *ChannelHandler) ChannelEmailOAuthCallback(w http.ResponseWriter, r *htt
 			http.Redirect(w, r, "/admin/channels?oauth_error=exchange_failed", http.StatusFound)
 			return
 		}
-		userEmail, err = p.GetUserEmail(ctx, tokens.AccessToken)
-		if err != nil || strings.TrimSpace(userEmail) == "" {
-			slog.Error("failed to get Microsoft mailbox identity", "error", err)
-			http.Redirect(w, r, "/admin/channels?oauth_error=identity_failed", http.StatusFound)
-			return
-		}
 
 	case "google":
 		p := email.NewGoogleProvider(config.EmailOAuthClientID, clientSecret, scopes)
@@ -2237,12 +2239,6 @@ func (h *ChannelHandler) ChannelEmailOAuthCallback(w http.ResponseWriter, r *htt
 		if err != nil {
 			slog.Error("failed to exchange code", "error", err)
 			http.Redirect(w, r, "/admin/channels?oauth_error=exchange_failed", http.StatusFound)
-			return
-		}
-		userEmail, err = p.GetUserEmail(ctx, tokens.AccessToken)
-		if err != nil || strings.TrimSpace(userEmail) == "" {
-			slog.Error("failed to get Google mailbox identity", "error", err)
-			http.Redirect(w, r, "/admin/channels?oauth_error=identity_failed", http.StatusFound)
 			return
 		}
 

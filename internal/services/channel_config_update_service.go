@@ -463,13 +463,19 @@ func mergeChannelConfig(existingJSON string, incoming map[string]any) (map[strin
 	previousProvider, _ := merged["email_oauth_provider_type"].(string)
 	previousClientID, _ := merged["email_oauth_client_id"].(string)
 	previousTenantID, _ := merged["email_oauth_tenant_id"].(string)
+	previousMailbox := effectiveOAuthMailbox(merged)
 	for key, value := range incoming {
 		merged[key] = value
 	}
 	currentProvider, _ := merged["email_oauth_provider_type"].(string)
 	currentClientID, _ := merged["email_oauth_client_id"].(string)
 	currentTenantID, _ := merged["email_oauth_tenant_id"].(string)
-	if previousProvider != currentProvider || previousClientID != currentClientID || previousTenantID != currentTenantID {
+	currentMailbox := effectiveOAuthMailbox(merged)
+	// Changing any part of the OAuth identity — including the monitored mailbox
+	// — invalidates the stored credentials: a token for the old mailbox cannot
+	// authenticate the new one. The typed mailbox itself is kept so the admin
+	// does not retype it; the verified email is what marks the connection live.
+	if previousProvider != currentProvider || previousClientID != currentClientID || previousTenantID != currentTenantID || previousMailbox != currentMailbox {
 		for _, key := range []string{"email_oauth_access_token", "email_oauth_refresh_token", "email_oauth_expires_at", "email_oauth_email"} {
 			delete(merged, key)
 		}
@@ -480,6 +486,18 @@ func mergeChannelConfig(existingJSON string, incoming map[string]any) (map[strin
 		}
 	}
 	return merged, stored, nil
+}
+
+// effectiveOAuthMailbox is the monitored address a config currently represents:
+// the admin-entered mailbox, or the verified address on channels connected
+// before email_oauth_mailbox existed. Comparing the effective value keeps a
+// legacy reconnect from looking like an identity change.
+func effectiveOAuthMailbox(config map[string]any) string {
+	if mailbox, _ := config["email_oauth_mailbox"].(string); mailbox != "" {
+		return mailbox
+	}
+	email, _ := config["email_oauth_email"].(string)
+	return email
 }
 
 func (s *ChannelConfigUpdateService) encryptSecrets(config map[string]any) error {
@@ -922,7 +940,7 @@ func normalizeEmailAuthConfig(config map[string]any) {
 	method, _ := config["email_auth_method"].(string)
 	switch strings.ToLower(method) {
 	case "basic":
-		for _, key := range []string{"email_oauth_provider_type", "email_oauth_client_id", "email_oauth_client_secret", "email_oauth_tenant_id", "email_oauth_access_token", "email_oauth_refresh_token", "email_oauth_expires_at", "email_oauth_email"} {
+		for _, key := range []string{"email_oauth_provider_type", "email_oauth_client_id", "email_oauth_client_secret", "email_oauth_tenant_id", "email_oauth_mailbox", "email_oauth_access_token", "email_oauth_refresh_token", "email_oauth_expires_at", "email_oauth_email"} {
 			delete(config, key)
 		}
 	case "oauth":
