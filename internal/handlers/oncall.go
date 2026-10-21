@@ -513,6 +513,16 @@ func (h *OnCallHandler) SetLayerMembers(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	valid, err := h.teamOnCallUsersValid(schedule.TeamID, req.UserIDs)
+	if err != nil {
+		respondInternalError(w, r, err)
+		return
+	}
+	if !valid {
+		respondValidationError(w, r, "all layer members must be members of this team")
+		return
+	}
+
 	if err := h.onCallRepo.SetLayerMembers(layerID, req.UserIDs); err != nil {
 		respondInternalError(w, r, err)
 		return
@@ -545,6 +555,16 @@ func (h *OnCallHandler) CreateOverride(w http.ResponseWriter, r *http.Request) {
 		sanitize.Pair{Target: &req.StartTime, Policy: sanitize.ShortIdentifier},
 		sanitize.Pair{Target: &req.EndTime, Policy: sanitize.ShortIdentifier},
 	)
+
+	valid, err := h.teamOnCallUsersValid(schedule.TeamID, []int{req.UserID, req.OverrideUserID})
+	if err != nil {
+		respondInternalError(w, r, err)
+		return
+	}
+	if !valid {
+		respondValidationError(w, r, "override user is not a member of this team")
+		return
+	}
 
 	startTime, err := time.Parse(time.RFC3339, req.StartTime)
 	if err != nil {
@@ -842,6 +862,33 @@ func (h *OnCallHandler) GetPolicy(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respondJSONOK(w, policy)
+}
+
+// teamOnCallUsersValid reports whether every referenced user is a member or
+// admin of the team. Layer members and overrides decide who gets paged, so a
+// user outside the team would receive incident detail for a team they do not
+// belong to. Zero IDs are skipped so optional fields can be omitted.
+func (h *OnCallHandler) teamOnCallUsersValid(teamID int, userIDs []int) (bool, error) {
+	for _, userID := range userIDs {
+		if userID == 0 {
+			continue
+		}
+		member, err := h.teamRepo.IsTeamMember(teamID, userID)
+		if err != nil {
+			return false, err
+		}
+		if member {
+			continue
+		}
+		admin, err := h.teamRepo.IsTeamAdmin(teamID, userID)
+		if err != nil {
+			return false, err
+		}
+		if !admin {
+			return false, nil
+		}
+	}
+	return true, nil
 }
 
 // validateEscalationRuleTargets rejects rule targets that fall outside the
