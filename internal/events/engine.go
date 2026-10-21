@@ -324,11 +324,10 @@ func (e *Engine) tick(ctx context.Context) (int64, error) {
 	if safety {
 		targets = unionKeys(targets, e.knownKeys())
 	}
-	if len(gate.ScanKeys) > 0 {
-		// A named consumer means EXISTS was true, so ScanKeys is the full active
-		// set and cursors of consumers no longer active can be dropped.
-		e.pruneCursors(gate.ScanKeys)
-	}
+	// Cursors are kept only for consumers that still admit events, so an idle
+	// tick prunes a consumer that went inactive instead of holding its cursor
+	// until the next scan.
+	e.pruneCursors(gate.ActiveKeys)
 	e.setWorkKeys(gate.ScanKeys, gate.ClaimKeys)
 
 	var total int64

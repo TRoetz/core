@@ -411,15 +411,9 @@ func (s *Store) ActiveConsumerKeys(ctx context.Context) ([]string, error) {
 // reconcileConsumer creates pending deliveries for one active consumer for
 // events with an id greater than afterID. When since is non-zero it also
 // restricts the scan to events recorded at or after that time, which is how
-// the periodic safety rescan stays bounded (WI-1770). It returns the number of
-// created deliveries and the highest event id visible once the scan finished,
-// which callers may store as the next afterID only after a short (exhaustive)
-// scan.
-// reconcileConsumer creates pending deliveries for one active consumer for
-// events with an id greater than afterID, bounded by the lookback window when
-// one is given. The caller advances the cursor from the gate's highest visible
-// event id, so this statement no longer needs a second MAX(id) read per consumer
-// per tick.
+// the periodic safety rescan stays bounded (WI-1770). Callers advance the
+// cursor from the gate's highest visible event id once a scan is exhaustive, so
+// this statement does not read MAX(id) itself.
 func (s *Store) reconcileConsumer(
 	ctx context.Context,
 	consumerKey string,
@@ -454,6 +448,10 @@ type GateResult struct {
 	ScanKeys []string
 	// ClaimKeys are consumers with a delivery already eligible for claim.
 	ClaimKeys []string
+	// ActiveKeys are the consumers currently admitting events. The engine keeps
+	// cursors only for these, so a consumer that goes inactive is pruned even on
+	// a tick where nothing else is scanned.
+	ActiveKeys []string
 	// MaxEventID is the highest event id the reconciler can see. A consumer
 	// whose cursor already equals it is covered and is not scanned again.
 	MaxEventID int64
@@ -499,14 +497,19 @@ const gateSQL = `
 			  AND delivery.lease_expires_at <= ?
 		)
 	  )
+	UNION ALL
+	SELECT 4, consumer.consumer_key, CAST(NULL AS INTEGER)
+	FROM domain_event_consumers consumer
+	WHERE consumer.is_active = true
 `
 
 // Gate answers which consumers have work in one statement. Before this, an
 // idle engine probed every consumer and opened a transaction per probe, so an
 // empty queue still cost a statement per consumer per tick, plus one read per
 // consumer for MAX(id). The gate names only consumers that can have work: an
-// idle or inactive consumer is named by nothing, so the loop skips it. Claim
-// stays inside a transaction whenever a claim happens.
+// idle consumer is named for no scan, so the loop skips it. It still returns the
+// active set so idle ticks prune cursors. Claim stays inside a transaction
+// whenever a claim happens.
 func (s *Store) Gate(ctx context.Context, minCursor int64, now time.Time) (GateResult, error) {
 	var result GateResult
 	rows, err := s.db.QueryContext(ctx, gateSQL, minCursor, now.UTC(), now.UTC())
@@ -526,8 +529,10 @@ func (s *Store) Gate(ctx context.Context, minCursor int64, now time.Time) (GateR
 			result.MaxEventID = eventID.Int64
 		case 2:
 			result.ScanKeys = append(result.ScanKeys, consumerKey.String)
-		default:
+		case 3:
 			result.ClaimKeys = append(result.ClaimKeys, consumerKey.String)
+		case 4:
+			result.ActiveKeys = append(result.ActiveKeys, consumerKey.String)
 		}
 	}
 	if err := rows.Err(); err != nil {
@@ -535,6 +540,7 @@ func (s *Store) Gate(ctx context.Context, minCursor int64, now time.Time) (GateR
 	}
 	slices.Sort(result.ScanKeys)
 	slices.Sort(result.ClaimKeys)
+	slices.Sort(result.ActiveKeys)
 	return result, nil
 }
 
