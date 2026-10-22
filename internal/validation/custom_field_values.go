@@ -35,9 +35,11 @@ func ValidateAndNormalizeCustomFieldValues(db database.Database, cfv map[string]
 		}
 		switch def.FieldType {
 		case "select":
-			if err := validateSelectValue(fieldKey, def, raw); err != nil {
+			normalized, err := normalizeSelectValue(fieldKey, def, raw)
+			if err != nil {
 				return err
 			}
+			cfv[fieldKey] = normalized
 		case "multiselect":
 			normalized, err := validateAndDedupeMultiselect(fieldKey, def, raw)
 			if err != nil {
@@ -114,7 +116,7 @@ func normalizeMilestoneValue(db database.Database, fieldKey string, raw any, mul
 			if !ok {
 				return nil, &ValidationError{
 					Field:   "custom_field_values." + fieldKey,
-					Message: fmt.Sprintf("milestone id must be a number, got %T", value),
+					Message: fmt.Sprintf("milestone id must be an integer, got %v (%T)", value, value),
 				}
 			}
 			if seen[id] {
@@ -139,7 +141,7 @@ func normalizeMilestoneValue(db database.Database, fieldKey string, raw any, mul
 	if !ok {
 		return nil, &ValidationError{
 			Field:   "custom_field_values." + fieldKey,
-			Message: fmt.Sprintf("milestone id must be a number, got %T", raw),
+			Message: fmt.Sprintf("milestone id must be an integer, got %v (%T)", raw, raw),
 		}
 	}
 	if err := ensureMilestonesExist(db, fieldKey, []int{id}); err != nil {
@@ -356,30 +358,31 @@ func loadFieldsForCFV(db database.Database, cfv map[string]any) (map[string]*mod
 	return out, nil
 }
 
-// validateSelectValue accepts numeric or numeric-string values that match
-// a known option id on the field. Anything else is a ValidationError.
-func validateSelectValue(fieldKey string, def *models.CustomFieldDefinition, raw any) error {
+// normalizeSelectValue accepts an integer or numeric-string value that matches
+// a known option id on the field and returns the canonical integer id. Anything
+// else is a ValidationError.
+func normalizeSelectValue(fieldKey string, def *models.CustomFieldDefinition, raw any) (any, error) {
 	if raw == nil {
-		return nil
+		return nil, nil
 	}
 	id, ok := coerceOptionID(raw)
 	if !ok {
-		return &ValidationError{
+		return nil, &ValidationError{
 			Field:   "custom_field_values." + fieldKey,
-			Message: fmt.Sprintf("select option id must be a number, got %T", raw),
+			Message: fmt.Sprintf("select option id must be an integer, got %v (%T)", raw, raw),
 		}
 	}
 	allowed, err := optionIDSet(def)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if !allowed[id] {
-		return &ValidationError{
+		return nil, &ValidationError{
 			Field:   "custom_field_values." + fieldKey,
 			Message: fmt.Sprintf("option id %d is not in the field's option set", id),
 		}
 	}
-	return nil
+	return id, nil
 }
 
 // validateAndDedupeMultiselect validates option IDs and preserves first-seen order.
@@ -406,7 +409,7 @@ func validateAndDedupeMultiselect(fieldKey string, def *models.CustomFieldDefini
 		if !ok {
 			return nil, &ValidationError{
 				Field:   "custom_field_values." + fieldKey,
-				Message: fmt.Sprintf("multiselect option id must be a number, got %T", v),
+				Message: fmt.Sprintf("multiselect option id must be an integer, got %v (%T)", v, v),
 			}
 		}
 		if !allowed[id] {
@@ -438,11 +441,21 @@ func optionIDSet(def *models.CustomFieldDefinition) (map[int]bool, error) {
 	return set, nil
 }
 
-// coerceOptionID accepts JSON numbers, Go ints, and legacy numeric strings.
+// coerceOptionID accepts integral JSON numbers, Go ints, and legacy numeric
+// strings. Fractional, NaN, and infinite floats are rejected rather than
+// truncated so an invalid id can never match a real option.
 func coerceOptionID(v any) (int, bool) {
 	switch x := v.(type) {
 	case float64:
-		return int(x), true
+		if math.IsNaN(x) || math.IsInf(x, 0) {
+			return 0, false
+		}
+		id := int(x)
+		// Round-tripping catches fractional values and floats outside int range.
+		if float64(id) != x {
+			return 0, false
+		}
+		return id, true
 	case int:
 		return x, true
 	case int64:
