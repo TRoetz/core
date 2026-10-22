@@ -529,6 +529,7 @@ export default {
     milestoneLaneHint: 'Couloir de jalon',
     milestoneLaneUnassignedHint: 'Éléments sans jalon',
     milestoneLaneHiddenCompletedHint: 'Cartes sur des jalons terminés',
+    milestoneLaneOpenFromCompletedHint: 'Tickets ouverts sur des jalons terminés',
     milestoneLaneConfirmTitle: 'Supprimer des affectations de jalon ?',
     milestoneLaneConfirmAssign: 'Déplacer cette carte ne conserve que {milestone} et supprime {milestones}.',
     milestoneLaneConfirmUnassign: 'Déplacer cette carte vers Non affecté supprime {milestones}.',

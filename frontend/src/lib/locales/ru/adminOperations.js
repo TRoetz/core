@@ -306,6 +306,10 @@ export default {
     showCompletedMilestones: 'Показывать завершённые этапы',
     showCompletedMilestonesHint:
       'Карточки на скрытых завершённых этапах остаются видимыми в общей дорожке.',
+    showOpenFromCompletedMilestones: 'Показывать открытые задачи из завершённых этапов',
+    showOpenFromCompletedMilestonesHint:
+      'Собрать открытые задачи, всё ещё привязанные к завершённому или отменённому этапу, в отдельную дорожку, чтобы переназначить их на нужный этап.',
+    openFromCompletedMilestones: 'Открытые задачи в завершённых этапах',
     globalMilestones: 'Глобальные этапы',
     globalMilestonesSelected: 'Выбрано: {count}',
     globalMilestonesHint:

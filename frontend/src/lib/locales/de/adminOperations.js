@@ -185,6 +185,10 @@ export default withEnglishAdminOperations({
     showCompletedMilestones: 'Abgeschlossene Meilensteine anzeigen',
     showCompletedMilestonesHint:
       'Karten auf ausgeblendeten abgeschlossenen Meilensteinen bleiben in einer gemeinsamen Spur sichtbar.',
+    showOpenFromCompletedMilestones: 'Offene Vorgänge aus abgeschlossenen Meilensteinen anzeigen',
+    showOpenFromCompletedMilestonesHint:
+      'Offene Vorgänge, die noch einem abgeschlossenen oder stornierten Meilenstein zugewiesen sind, in einer eigenen Swimlane sammeln, damit sie dem richtigen Meilenstein zugeordnet werden können.',
+    openFromCompletedMilestones: 'Offene Vorgänge in abgeschlossenen Meilensteinen',
     globalMilestones: 'Globale Meilensteine',
     globalMilestonesSelected: '{count} ausgewählt',
     globalMilestonesHint:

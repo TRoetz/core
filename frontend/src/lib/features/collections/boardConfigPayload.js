@@ -7,7 +7,7 @@
 
 /**
  * @param {object|null} config loaded board configuration
- * @param {{globalMilestoneIds?: number[], showCompleted?: boolean}} [milestoneSwimlanes]
+ * @param {{globalMilestoneIds?: number[], showCompleted?: boolean, showOpenFromCompleted?: boolean}} [milestoneSwimlanes]
  */
 export function buildBoardConfigurationPayload(config, milestoneSwimlanes = {}) {
   const source = config ?? {};
@@ -42,6 +42,7 @@ export function buildBoardConfigurationPayload(config, milestoneSwimlanes = {}) 
       milestone_swimlanes: {
         global_milestone_ids: globalMilestoneIds,
         show_completed: milestoneSwimlanes.showCompleted !== false,
+        show_open_from_completed: milestoneSwimlanes.showOpenFromCompleted === true,
       },
     },
   };

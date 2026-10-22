@@ -893,6 +893,7 @@ export default {
     milestoneLaneHint: 'Milestone swimlane',
     milestoneLaneUnassignedHint: 'Items without a milestone',
     milestoneLaneHiddenCompletedHint: 'Cards on completed milestones',
+    milestoneLaneOpenFromCompletedHint: 'Open issues on completed milestones',
     milestoneLaneConfirmTitle: 'Remove milestone assignments?',
     milestoneLaneConfirmAssign: 'Moving this card keeps only {milestone} and removes {milestones}.',
     milestoneLaneConfirmUnassign: 'Moving this card to Unassigned removes {milestones}.',

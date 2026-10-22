@@ -304,6 +304,10 @@ export default {
     showCompletedMilestones: 'Afficher les jalons terminés',
     showCompletedMilestonesHint:
       'Les cartes des jalons terminés masqués restent visibles dans un couloir commun.',
+    showOpenFromCompletedMilestones: 'Afficher les tickets ouverts des jalons terminés',
+    showOpenFromCompletedMilestonesHint:
+      'Regrouper les tickets ouverts encore affectés à un jalon terminé ou annulé dans un couloir dédié afin de les réaffecter au bon jalon.',
+    openFromCompletedMilestones: 'Tickets ouverts sur des jalons terminés',
     globalMilestones: 'Jalons globaux',
     globalMilestonesSelected: '{count} sélectionné(s)',
     globalMilestonesHint:

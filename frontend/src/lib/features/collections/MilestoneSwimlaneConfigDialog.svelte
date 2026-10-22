@@ -12,6 +12,7 @@
     globalMilestones = [],
     selectedGlobalMilestoneIds = [],
     showCompleted = true,
+    showOpenFromCompleted = false,
     saving = false,
     onclose = null,
     onsave = null,
@@ -19,12 +20,14 @@
 
   let draftIds = $state([]);
   let draftShowCompleted = $state(true);
+  let draftShowOpenFromCompleted = $state(false);
   let wasOpen = false;
 
   $effect(() => {
     if (isOpen && !wasOpen) {
       draftIds = (selectedGlobalMilestoneIds || []).map(Number);
       draftShowCompleted = showCompleted !== false;
+      draftShowOpenFromCompleted = showOpenFromCompleted === true;
     }
     wasOpen = isOpen;
   });
@@ -33,6 +36,7 @@
 
   const hasChanges = $derived.by(() => {
     if (draftShowCompleted !== (showCompleted !== false)) return true;
+    if (draftShowOpenFromCompleted !== (showOpenFromCompleted === true)) return true;
     const current = new Set((selectedGlobalMilestoneIds || []).map(Number));
     if (current.size !== draftIds.length) return true;
     for (const id of draftIds) {
@@ -50,6 +54,7 @@
     onsave?.({
       globalMilestoneIds: [...draftIds],
       showCompleted: draftShowCompleted,
+      showOpenFromCompleted: draftShowOpenFromCompleted,
     });
   }
 </script>
@@ -73,7 +78,7 @@
 
   <div class="space-y-5 px-6 py-5">
     <div
-      class="rounded-lg border p-4"
+      class="space-y-4 rounded-lg border p-4"
       style="border-color: var(--ds-border); background-color: var(--ds-surface);"
     >
       <Checkbox
@@ -83,6 +88,14 @@
         label={t('boardControls.showCompletedMilestones')}
         hint={t('boardControls.showCompletedMilestonesHint')}
         dataTestid="milestone-swimlanes-show-completed"
+      />
+      <Checkbox
+        id="milestone-swimlanes-show-open-from-completed"
+        checked={draftShowOpenFromCompleted}
+        onchange={(checked) => (draftShowOpenFromCompleted = checked)}
+        label={t('boardControls.showOpenFromCompletedMilestones')}
+        hint={t('boardControls.showOpenFromCompletedMilestonesHint')}
+        dataTestid="milestone-swimlanes-show-open-from-completed"
       />
     </div>
 

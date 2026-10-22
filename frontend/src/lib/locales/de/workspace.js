@@ -433,6 +433,7 @@ export default {
     milestoneLaneHint: 'Meilenstein-Swimlane',
     milestoneLaneUnassignedHint: 'Vorgänge ohne Meilenstein',
     milestoneLaneHiddenCompletedHint: 'Karten auf abgeschlossenen Meilensteinen',
+    milestoneLaneOpenFromCompletedHint: 'Offene Vorgänge in abgeschlossenen Meilensteinen',
     milestoneLaneConfirmTitle: 'Meilensteinzuordnungen entfernen?',
     milestoneLaneConfirmAssign: 'Wenn diese Karte verschoben wird, bleibt nur {milestone} erhalten und {milestones} wird entfernt.',
     milestoneLaneConfirmUnassign: 'Wenn diese Karte nach „Nicht zugeordnet“ verschoben wird, wird {milestones} entfernt.',

@@ -320,6 +320,10 @@ export default {
     showCompletedMilestones: 'Show completed milestones',
     showCompletedMilestonesHint:
       'Cards on hidden completed milestones stay visible in a single completed-milestones lane.',
+    showOpenFromCompletedMilestones: 'Show open issues from completed milestones',
+    showOpenFromCompletedMilestonesHint:
+      'Collect open issues still assigned to a completed or cancelled milestone into a dedicated lane so they can be moved to the right milestone.',
+    openFromCompletedMilestones: 'Open issues on completed milestones',
     globalMilestones: 'Global milestones',
     globalMilestonesSelected: '{count} selected',
     globalMilestonesHint:

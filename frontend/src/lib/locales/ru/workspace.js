@@ -82,6 +82,7 @@ export default {
     milestoneLaneHint: 'Дорожка этапа',
     milestoneLaneUnassignedHint: 'Элементы без этапа',
     milestoneLaneHiddenCompletedHint: 'Карточки на завершённых этапах',
+    milestoneLaneOpenFromCompletedHint: 'Открытые задачи в завершённых этапах',
     milestoneLaneConfirmTitle: 'Удалить привязки к этапам?',
     milestoneLaneConfirmAssign: 'При перемещении этой карточки останется только «{milestone}», а «{milestones}» будет удалён.',
     milestoneLaneConfirmUnassign: 'При перемещении этой карточки в «Не назначено» будет удалён «{milestones}»',

@@ -6126,10 +6126,15 @@
                           "show_completed": {
                             "description": "The show completed value.",
                             "type": "boolean"
+                          },
+                          "show_open_from_completed": {
+                            "description": "The show open from completed value.",
+                            "type": "boolean"
                           }
                         },
                         "required": [
-                          "show_completed"
+                          "show_completed",
+                          "show_open_from_completed"
                         ],
                         "type": "object"
                       }
@@ -6529,10 +6534,15 @@
                       "show_completed": {
                         "description": "The show completed value.",
                         "type": "boolean"
+                      },
+                      "show_open_from_completed": {
+                        "description": "The show open from completed value.",
+                        "type": "boolean"
                       }
                     },
                     "required": [
-                      "show_completed"
+                      "show_completed",
+                      "show_open_from_completed"
                     ],
                     "type": "object"
                   }
@@ -33699,10 +33709,15 @@
                           "show_completed": {
                             "description": "The show completed value.",
                             "type": "boolean"
+                          },
+                          "show_open_from_completed": {
+                            "description": "The show open from completed value.",
+                            "type": "boolean"
                           }
                         },
                         "required": [
-                          "show_completed"
+                          "show_completed",
+                          "show_open_from_completed"
                         ],
                         "type": "object"
                       }
@@ -34102,10 +34117,15 @@
                       "show_completed": {
                         "description": "The show completed value.",
                         "type": "boolean"
+                      },
+                      "show_open_from_completed": {
+                        "description": "The show open from completed value.",
+                        "type": "boolean"
                       }
                     },
                     "required": [
-                      "show_completed"
+                      "show_completed",
+                      "show_open_from_completed"
                     ],
                     "type": "object"
                   }
@@ -94862,10 +94882,15 @@
                   "show_completed": {
                     "description": "The show completed value.",
                     "type": "boolean"
+                  },
+                  "show_open_from_completed": {
+                    "description": "The show open from completed value.",
+                    "type": "boolean"
                   }
                 },
                 "required": [
-                  "show_completed"
+                  "show_completed",
+                  "show_open_from_completed"
                 ],
                 "type": "object"
               }
@@ -95098,10 +95123,15 @@
                       "show_completed": {
                         "description": "The show completed value.",
                         "type": "boolean"
+                      },
+                      "show_open_from_completed": {
+                        "description": "The show open from completed value.",
+                        "type": "boolean"
                       }
                     },
                     "required": [
-                      "show_completed"
+                      "show_completed",
+                      "show_open_from_completed"
                     ],
                     "type": "object"
                   }
@@ -96336,10 +96366,15 @@
                   "show_completed": {
                     "description": "The show completed value.",
                     "type": "boolean"
+                  },
+                  "show_open_from_completed": {
+                    "description": "The show open from completed value.",
+                    "type": "boolean"
                   }
                 },
                 "required": [
-                  "show_completed"
+                  "show_completed",
+                  "show_open_from_completed"
                 ],
                 "type": "object"
               }
@@ -96572,10 +96607,15 @@
                       "show_completed": {
                         "description": "The show completed value.",
                         "type": "boolean"
+                      },
+                      "show_open_from_completed": {
+                        "description": "The show open from completed value.",
+                        "type": "boolean"
                       }
                     },
                     "required": [
-                      "show_completed"
+                      "show_completed",
+                      "show_open_from_completed"
                     ],
                     "type": "object"
                   }

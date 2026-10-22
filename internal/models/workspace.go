@@ -475,10 +475,12 @@ type BoardConfiguration struct {
 // MilestoneSwimlaneConfig controls which milestone lanes a board renders.
 // GlobalMilestoneIDs pins specific global milestones so their (possibly empty)
 // lanes stay available as drop targets; ShowCompleted keeps completed milestone
-// lanes visible.
+// lanes visible; ShowOpenFromCompleted collects open items still assigned to a
+// completed or canceled milestone into a dedicated rescue lane.
 type MilestoneSwimlaneConfig struct {
-	GlobalMilestoneIDs []int `json:"global_milestone_ids,omitempty"`
-	ShowCompleted      bool  `json:"show_completed"`
+	GlobalMilestoneIDs    []int `json:"global_milestone_ids,omitempty"`
+	ShowCompleted         bool  `json:"show_completed"`
+	ShowOpenFromCompleted bool  `json:"show_open_from_completed"`
 }
 
 // RoadmapConfig represents the configuration for a roadmap view

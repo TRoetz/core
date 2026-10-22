@@ -20,11 +20,13 @@
     boardStatusIdForItem,
     buildDisplayColumns,
     statusIdForBoardColumnMove,
+    statusIsCompleted,
   } from './boardColumns.js';
   import {
     BOARD_GROUP_BY_ITEM_TYPE,
     BOARD_GROUP_BY_MILESTONE,
     MILESTONE_HIDDEN_COMPLETED_KEY,
+    MILESTONE_OPEN_FROM_COMPLETED_KEY,
     boardGroupPreferenceStorageKey,
     buildBoardSwimlanes,
     legacyBoardGroupItemTypeStorageKey,
@@ -136,6 +138,9 @@
   );
   let pinnedGlobalMilestoneIds = $derived(milestoneSwimlaneConfig.global_milestone_ids ?? []);
   let showCompletedMilestones = $derived(milestoneSwimlaneConfig.show_completed !== false);
+  let showOpenFromCompletedMilestones = $derived(
+    milestoneSwimlaneConfig.show_open_from_completed === true
+  );
   let milestoneSwimlaneDialogOpen = $state(false);
   let savingMilestoneSwimlaneConfig = $state(false);
 
@@ -795,9 +800,14 @@
       return (item.parent_id ?? null) !== targetParentId;
     }
     if (target.dimension === BOARD_GROUP_BY_MILESTONE) {
-      // The hidden-completed aggregate lane is not a milestone assignment; a
-      // drop there keeps the card's milestone and only changes its column/rank.
-      if (target.key === MILESTONE_HIDDEN_COMPLETED_KEY) return false;
+      // Aggregate lanes are not milestone assignments; a drop there keeps the
+      // card's milestone and only changes its column/rank.
+      if (
+        target.key === MILESTONE_HIDDEN_COMPLETED_KEY ||
+        target.key === MILESTONE_OPEN_FROM_COMPLETED_KEY
+      ) {
+        return false;
+      }
       return milestoneLaneKeyForItem(item) !== target.key;
     }
     return false;
@@ -825,10 +835,11 @@
 
     if (boardGroupBy.dimension === BOARD_GROUP_BY_MILESTONE) {
       if (!lane || lane.dimension !== BOARD_GROUP_BY_MILESTONE) return filteredItems;
-      if (lane.key === MILESTONE_HIDDEN_COMPLETED_KEY) {
-        return (
-          boardSwimlanes.find((entry) => entry.key === MILESTONE_HIDDEN_COMPLETED_KEY)?.items ?? []
-        );
+      if (
+        lane.key === MILESTONE_HIDDEN_COMPLETED_KEY ||
+        lane.key === MILESTONE_OPEN_FROM_COMPLETED_KEY
+      ) {
+        return boardSwimlanes.find((entry) => entry.key === lane.key)?.items ?? [];
       }
       return filteredItems.filter((item) => milestoneLaneKeyForItem(item) === lane.key);
     }
@@ -1106,6 +1117,11 @@
   let validColumns = $derived(displayColumns.filter(col => col.status_ids?.length > 0));
   let rightmostBoardColumn = $derived(validColumns[validColumns.length - 1] ?? null);
   let rightmostBoardColumnStatusIds = $derived(new Set(rightmostBoardColumn?.status_ids || []));
+  // Statuses in completed categories. A card in one of these is treated as
+  // closed for the milestone rescue lane.
+  let completedStatusIds = $derived(
+    new Set(statuses.filter((status) => statusIsCompleted(status)).map((status) => Number(status.id)))
+  );
 
   function shouldLimitRightmostColumn(columnIndex, columnsForBoard = validColumns) {
     return Boolean(
@@ -1274,8 +1290,14 @@
       includeEmptyMilestones: true,
       globalMilestoneIds: pinnedGlobalMilestoneIds,
       showCompletedMilestones,
+      showOpenFromCompletedMilestones,
+      isItemOpen: (item) =>
+        !completedStatusIds.has(
+          Number(boardStatusIdForItem(item, validColumns, personalWorkspaceIds))
+        ),
       unassignedTitle: t('common.unassigned'),
       hiddenCompletedTitle: t('boardControls.completedMilestones'),
+      openFromCompletedTitle: t('boardControls.openFromCompletedMilestones'),
       allItemsTitle: t('collections.allItems'),
     })
   );
@@ -1935,7 +1957,11 @@
                     {:else if lane.dimension === BOARD_GROUP_BY_MILESTONE}
                       <Milestone
                         class="w-4 h-4 flex-shrink-0"
-                        style="color: {lane.isUnassigned || lane.isAggregate ? 'var(--ds-background-neutral-bold, #6b7280)' : (lane.milestone?.category_color || 'var(--ds-text-subtle)')};"
+                        style="color: {lane.isRescue
+                          ? 'var(--ds-text-warning)'
+                          : lane.isUnassigned || lane.isAggregate
+                            ? 'var(--ds-background-neutral-bold, #6b7280)'
+                            : (lane.milestone?.category_color || 'var(--ds-text-subtle)')};"
                       />
                     {/if}
                     <span class="min-w-0 flex-1 text-left">
@@ -1948,6 +1974,8 @@
                         <span class="block text-xs font-normal truncate" style="color: var(--ds-text-subtle);">
                           {#if lane.isUnassigned}
                             {t('collections.milestoneLaneUnassignedHint')}
+                          {:else if lane.isRescue}
+                            {t('collections.milestoneLaneOpenFromCompletedHint')}
                           {:else if lane.isAggregate}
                             {t('collections.milestoneLaneHiddenCompletedHint')}
                           {:else if lane.milestone?.target_date}
@@ -2154,6 +2182,7 @@
   globalMilestones={globalMilestonesForConfig}
   selectedGlobalMilestoneIds={pinnedGlobalMilestoneIds}
   showCompleted={showCompletedMilestones}
+  showOpenFromCompleted={showOpenFromCompletedMilestones}
   saving={savingMilestoneSwimlaneConfig}
   onclose={() => (milestoneSwimlaneDialogOpen = false)}
   onsave={saveMilestoneSwimlaneConfig}

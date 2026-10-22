@@ -18,7 +18,17 @@ export const BOARD_GROUP_BY_MILESTONE = 'milestone';
 // configuration. The lane keeps those cards visible instead of dropping them.
 export const MILESTONE_HIDDEN_COMPLETED_KEY = 'milestone-completed-hidden';
 
+// Lane key for open cards whose primary milestone is completed or cancelled.
+// Surfaces work that is likely assigned to the wrong milestone so it can be
+// moved to the right one.
+export const MILESTONE_OPEN_FROM_COMPLETED_KEY = 'milestone-open-from-completed';
+
 const INACTIVE_MILESTONE_STATUSES = new Set(['completed', 'cancelled']);
+
+// Default for the milestone rescue lane when the caller does not supply a
+// status-aware predicate: every card counts as open.
+/** @type {(item: object) => boolean} */
+const defaultIsItemOpen = () => true;
 
 export function boardGroupPreferenceStorageKey(scope) {
   return `board-group-by-${scope}`;
@@ -178,14 +188,35 @@ function hiddenCompletedLane(items, title) {
   };
 }
 
+function openFromCompletedLane(items, title) {
+  return {
+    id: MILESTONE_OPEN_FROM_COMPLETED_KEY,
+    key: MILESTONE_OPEN_FROM_COMPLETED_KEY,
+    dimension: BOARD_GROUP_BY_MILESTONE,
+    title,
+    parent: null,
+    milestone: null,
+    items,
+    isDefault: false,
+    isUnassigned: false,
+    isAggregate: true,
+    isRescue: true,
+    itemCount: items.length,
+    parentIsVisible: false,
+  };
+}
+
 function milestoneLanes({
   filteredItems,
   milestones,
   includeEmptyMilestones,
   globalMilestoneIds = [],
   showCompletedMilestones = true,
+  showOpenFromCompletedMilestones = false,
+  isItemOpen = defaultIsItemOpen,
   unassignedTitle,
   hiddenCompletedTitle,
+  openFromCompletedTitle,
 }) {
   const orderedMilestones = sortMilestonesForLanes(milestones);
   const referenceById = new Map(
@@ -208,6 +239,27 @@ function milestoneLanes({
       if (milestone?.id != null && !embeddedById.has(milestone.id)) {
         embeddedById.set(milestone.id, milestone);
       }
+    }
+  }
+
+  // Open cards on a completed or cancelled milestone are likely mis-assigned.
+  // Pull them into a dedicated rescue lane so they can be moved to the right
+  // milestone instead of hiding inside a finished lane or the aggregate.
+  const rescueItems = [];
+  if (showOpenFromCompletedMilestones) {
+    for (const [key, laneItems] of [...bucket]) {
+      if (key === SWIMLANE_NONE_KEY) continue;
+      const id = Number(String(key).split('-').pop());
+      if (!Number.isFinite(id)) continue;
+      const milestone = referenceById.get(id) || embeddedById.get(id);
+      if (!milestone || isMilestoneSwimlaneActive(milestone)) continue;
+      const remaining = [];
+      for (const item of laneItems) {
+        if (isItemOpen(item)) rescueItems.push(item);
+        else remaining.push(item);
+      }
+      if (remaining.length > 0) bucket.set(key, remaining);
+      else bucket.delete(key);
     }
   }
 
@@ -284,7 +336,11 @@ function milestoneLanes({
   });
 
   const unassignedItems = bucket.get(SWIMLANE_NONE_KEY) ?? [];
-  const result = [...lanes, ...fallback];
+  const result = [];
+  if (rescueItems.length > 0) {
+    result.push(openFromCompletedLane(rescueItems, openFromCompletedTitle));
+  }
+  result.push(...lanes, ...fallback);
   if (hiddenCompletedItems.length > 0) {
     result.push(hiddenCompletedLane(hiddenCompletedItems, hiddenCompletedTitle));
   }
@@ -315,8 +371,11 @@ function compareLaneDates(a, b) {
  * @param {boolean} [options.includeEmptyMilestones]
  * @param {number[]} [options.globalMilestoneIds] pinned global milestones that keep an empty lane
  * @param {boolean} [options.showCompletedMilestones] render completed milestone lanes
+ * @param {boolean} [options.showOpenFromCompletedMilestones] collect open items on completed milestones into a rescue lane
+ * @param {(item: object) => boolean} [options.isItemOpen] whether a card is still open
  * @param {string} [options.unassignedTitle]
  * @param {string} [options.hiddenCompletedTitle] title of the aggregate lane for hidden completed milestones
+ * @param {string} [options.openFromCompletedTitle] title of the rescue lane for open items on completed milestones
  * @param {string} [options.allItemsTitle]
  */
 export function buildBoardSwimlanes({
@@ -330,8 +389,11 @@ export function buildBoardSwimlanes({
   includeEmptyMilestones = true,
   globalMilestoneIds = [],
   showCompletedMilestones = true,
+  showOpenFromCompletedMilestones = false,
+  isItemOpen = defaultIsItemOpen,
   unassignedTitle = 'Unassigned',
   hiddenCompletedTitle = 'Completed milestones',
+  openFromCompletedTitle = 'Open from completed milestones',
   allItemsTitle = 'All items',
 }) {
   if (!groupBy) {
@@ -359,8 +421,11 @@ export function buildBoardSwimlanes({
       includeEmptyMilestones,
       globalMilestoneIds,
       showCompletedMilestones,
+      showOpenFromCompletedMilestones,
+      isItemOpen,
       unassignedTitle,
       hiddenCompletedTitle,
+      openFromCompletedTitle,
     });
   }
 

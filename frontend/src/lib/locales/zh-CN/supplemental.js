@@ -733,6 +733,9 @@ export default {
     "configureMilestonesDescription": "选择全局里程碑和已完成里程碑",
     "showCompletedMilestones": "显示已完成的里程碑",
     "showCompletedMilestonesHint": "已隐藏的已完成里程碑上的卡片仍会显示在统一的已完成里程碑泳道中。",
+    "showOpenFromCompletedMilestones": "显示已完成里程碑中的未解决事项",
+    "showOpenFromCompletedMilestonesHint": "将仍分配给已完成或已取消里程碑的未解决事项集中到专用泳道，以便将其移到正确的里程碑。",
+    "openFromCompletedMilestones": "已完成里程碑中的未解决事项",
     "globalMilestones": "全局里程碑",
     "globalMilestonesSelected": "已选择 {count} 个",
     "globalMilestonesHint": "全局里程碑在所有工作区之间共享；只有选中的里程碑会保留空泳道。带有卡片的里程碑始终显示。",
@@ -771,6 +774,7 @@ export default {
       "saveError": "无法保存公开共享设置。"
     },
     "milestoneLaneHiddenCompletedHint": "已完成里程碑上的卡片",
+    "milestoneLaneOpenFromCompletedHint": "已完成里程碑中的未解决事项",
     "transition_failed": "状态转换失败。董事会已经刷新。",
     "manual_sort_unavailable_title": "无法手动排序",
     "manual_sort_unavailable": "切换到排名模式以手动排列卡片。",
