@@ -66,6 +66,16 @@ type ChannelConfigUpdateService struct {
 
 var channelSlugPattern = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{1,62}[a-z0-9]$`)
 
+// channelSecretFields are stored encrypted and scrubbed from read responses.
+// A partial update treats an omitted or blank value as "keep the stored
+// ciphertext" so a form that echoes back an unedited secret cannot delete it.
+// JSON null is the explicit way to clear one.
+var channelSecretFields = []string{"smtp_password", "imap_password", "webhook_secret", "email_oauth_client_secret"}
+
+func isChannelSecretField(key string) bool {
+	return slices.Contains(channelSecretFields, key)
+}
+
 func NewChannelConfigUpdateService(channels *ChannelService, permission *PermissionService) *ChannelConfigUpdateService {
 	return &ChannelConfigUpdateService{channels: channels, permission: permission}
 }
@@ -465,6 +475,15 @@ func mergeChannelConfig(existingJSON string, incoming map[string]any) (map[strin
 	previousTenantID, _ := merged["email_oauth_tenant_id"].(string)
 	previousMailbox := effectiveOAuthMailbox(merged)
 	for key, value := range incoming {
+		if isChannelSecretField(key) {
+			if value == nil {
+				delete(merged, key)
+				continue
+			}
+			if secret, ok := value.(string); ok && secret == "" {
+				continue
+			}
+		}
 		merged[key] = value
 	}
 	currentProvider, _ := merged["email_oauth_provider_type"].(string)
@@ -480,7 +499,9 @@ func mergeChannelConfig(existingJSON string, incoming map[string]any) (map[strin
 			delete(merged, key)
 		}
 		if previousProvider != currentProvider || previousClientID != currentClientID {
-			if _, supplied := incoming["email_oauth_client_secret"]; !supplied {
+			// A blank secret is not a new credential, so an identity change
+			// still discards the secret that belonged to the old client.
+			if secret, _ := incoming["email_oauth_client_secret"].(string); secret == "" {
 				delete(merged, "email_oauth_client_secret")
 			}
 		}
@@ -501,7 +522,7 @@ func effectiveOAuthMailbox(config map[string]any) string {
 }
 
 func (s *ChannelConfigUpdateService) encryptSecrets(config map[string]any) error {
-	for _, key := range []string{"smtp_password", "imap_password", "webhook_secret", "email_oauth_client_secret"} {
+	for _, key := range channelSecretFields {
 		value, ok := config[key]
 		if !ok {
 			continue

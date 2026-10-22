@@ -95,7 +95,9 @@
       smtp_host: formData.host,
       smtp_port: formData.port || 587,
       smtp_username: plaintext ? '' : formData.username || '',
-      smtp_password: plaintext ? '' : formData.password || undefined,
+      // Plaintext relays reject stored credentials, so signal an explicit
+      // clear. Blank passwords otherwise mean "keep the saved secret".
+      smtp_password: plaintext ? null : formData.password || undefined,
       smtp_from_email: formData.from_email,
       smtp_from_name: formData.from_name || '',
       smtp_encryption: formData.encryption || 'tls',
