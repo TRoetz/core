@@ -175,10 +175,17 @@
   $effect(() => {
     const wsId = detailWorkspaceId;
     if (!wsId || !Array.isArray(milestones)) return;
+    // While an item switch is in flight the store keeps the previous item's
+    // references, so `item.workspace_id` can already be the new workspace
+    // while `milestones` still belong to the old one. Priming that foreign
+    // list as complete would poison the scoped option cache and leave the
+    // picker empty. Only seed options once the loaded references match the
+    // item's workspace; the scoped snapshot fetches them alongside iterations.
+    if (Number(workspace?.id) !== Number(wsId)) return;
     const isActiveWorkspace = Number(workspaceDataStore.workspaceId) === Number(wsId);
     const complete =
       isActiveWorkspace && workspaceDataStore.planningCompleteness?.milestones === true;
-    const isPersonal = workspaceDataStore.workspace?.is_personal === true;
+    const isPersonal = workspace?.is_personal === true;
     untrack(() =>
       collectionEditorOptions.prime(
         wsId,
