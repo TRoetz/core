@@ -27,9 +27,17 @@
     unassignedLabel = '',
     children = null,
     multiple = false,
+    // When false, never offer inline creation. Configuration surfaces use this
+    // so building a selection cannot create a milestone as a side effect.
+    allowCreate = null,
+    // When true, list terminal milestones too and drop the footer toggle.
+    includeCompleted = false,
     // (value) => string | null. Labels a selected milestone that is not in the
     // loaded options yet; forwarded to ItemPicker's trigger rendering.
     resolveMissingLabel = null,
+    // E2E instrumentation, forwarded to the underlying ItemPicker.
+    searchTestid = undefined,
+    optionTestid = null,
     onOpen = null,
     onSelect = () => {},
     onCancel = () => {}
@@ -73,7 +81,11 @@
     )
   );
   const canCreate = $derived(
-    hasWorkspaceContext ? canCreateWorkspace || canCreateGlobal : canCreateGlobal
+    allowCreate === false
+      ? false
+      : hasWorkspaceContext
+        ? canCreateWorkspace || canCreateGlobal
+        : canCreateGlobal
   );
 
   let showCreateDialog = $state(false);
@@ -216,8 +228,9 @@
   }
 
   // Terminal milestones hidden by default; surfaced via the footer toggle.
+  // Callers that need every milestone listed opt out with includeCompleted.
   const hasCompletedMilestones = $derived(
-    milestones.some((m) => TERMINAL_STATUSES.has(m.status))
+    !includeCompleted && milestones.some((m) => TERMINAL_STATUSES.has(m.status))
   );
 
   // The currently-selected value(s) must always stay visible so the trigger
@@ -235,7 +248,7 @@
   });
 
   const visibleMilestones = $derived.by(() => {
-    if (showCompleted) return milestones;
+    if (includeCompleted || showCompleted) return milestones;
     return milestones.filter(
       (m) => !TERMINAL_STATUSES.has(m.status) || selectedIds.has(m.id)
     );
@@ -301,6 +314,8 @@
     onCreate={openCreateDialog}
     onSelect={handleSelectMulti}
     {resolveMissingLabel}
+    {searchTestid}
+    {optionTestid}
     onOpen={() => onOpen?.()}
     onCancel={() => onCancel()}
   >
@@ -352,6 +367,8 @@
     onCreate={openCreateDialog}
     onSelect={handleSelectSingle}
     {resolveMissingLabel}
+    {searchTestid}
+    {optionTestid}
     onOpen={() => onOpen?.()}
     onCancel={() => onCancel()}
   >

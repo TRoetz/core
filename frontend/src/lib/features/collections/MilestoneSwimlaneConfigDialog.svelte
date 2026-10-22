@@ -1,11 +1,11 @@
 <script>
   import Checkbox from '../../components/Checkbox.svelte';
+  import MilestoneCombobox from '../../pickers/MilestoneCombobox.svelte';
   import DialogFooter from '../../dialogs/DialogFooter.svelte';
   import Modal from '../../dialogs/Modal.svelte';
   import ModalHeader from '../../dialogs/ModalHeader.svelte';
   import Milestone from '@lucide/svelte/icons/milestone';
   import { t } from '../../stores/i18n.svelte.js';
-  import { formatDateOnly } from '../../utils/dateFormatter.js';
 
   let {
     isOpen = false,
@@ -17,36 +17,29 @@
     onsave = null,
   } = $props();
 
-  let draftIds = $state(new Set());
+  let draftIds = $state([]);
   let draftShowCompleted = $state(true);
   let wasOpen = false;
 
   $effect(() => {
     if (isOpen && !wasOpen) {
-      draftIds = new Set((selectedGlobalMilestoneIds || []).map(Number));
+      draftIds = (selectedGlobalMilestoneIds || []).map(Number);
       draftShowCompleted = showCompleted !== false;
     }
     wasOpen = isOpen;
   });
 
-  const selectedCount = $derived(draftIds.size);
+  const selectedCount = $derived(draftIds.length);
 
   const hasChanges = $derived.by(() => {
     if (draftShowCompleted !== (showCompleted !== false)) return true;
     const current = new Set((selectedGlobalMilestoneIds || []).map(Number));
-    if (current.size !== draftIds.size) return true;
+    if (current.size !== draftIds.length) return true;
     for (const id of draftIds) {
       if (!current.has(id)) return true;
     }
     return false;
   });
-
-  function toggle(id) {
-    const next = new Set(draftIds);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    draftIds = next;
-  }
 
   function close() {
     if (!saving) onclose?.();
@@ -59,11 +52,6 @@
       showCompleted: draftShowCompleted,
     });
   }
-
-  const isInactive = (milestone) => {
-    const status = String(milestone?.status || '').toLowerCase();
-    return status === 'completed' || status === 'cancelled';
-  };
 </script>
 
 <Modal
@@ -119,29 +107,18 @@
           {t('boardControls.noGlobalMilestones')}
         </p>
       {:else}
-        <div
-          class="max-h-64 space-y-0.5 overflow-y-auto rounded-md border p-1"
-          style="border-color: var(--ds-border);"
-          data-testid="milestone-swimlanes-global-list"
-        >
-          {#each globalMilestones as milestone (milestone.id)}
-            <div class="flex items-center gap-2">
-              <Checkbox
-                checked={draftIds.has(Number(milestone.id))}
-                onchange={() => toggle(Number(milestone.id))}
-                label={milestone.name}
-                hint={milestone.target_date ? formatDateOnly(milestone.target_date) : null}
-                class="min-w-0 flex-1"
-                dataTestid={`milestone-swimlanes-global-${milestone.id}`}
-              />
-              {#if isInactive(milestone)}
-                <span class="shrink-0 text-xs" style="color: var(--ds-text-subtle);">
-                  {milestone.status}
-                </span>
-              {/if}
-            </div>
-          {/each}
-        </div>
+        <MilestoneCombobox
+          bind:value={draftIds}
+          multiple={true}
+          milestones={globalMilestones}
+          workspaceId={null}
+          allowCreate={false}
+          includeCompleted={true}
+          placeholder={t('pickers.selectMilestones')}
+          searchTestid="milestone-swimlanes-search"
+          optionTestid={(option) => `milestone-swimlanes-global-${option.value}`}
+          class="w-full"
+        />
       {/if}
     </div>
   </div>
