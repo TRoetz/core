@@ -112,7 +112,7 @@ func normalizeMilestoneValue(db database.Database, fieldKey string, raw any, mul
 			if s, ok := value.(string); ok && strings.TrimSpace(s) == "" {
 				continue
 			}
-			id, ok := coerceOptionID(value)
+			id, ok := CoerceOptionID(value)
 			if !ok {
 				return nil, &ValidationError{
 					Field:   "custom_field_values." + fieldKey,
@@ -137,7 +137,7 @@ func normalizeMilestoneValue(db database.Database, fieldKey string, raw any, mul
 	if s, ok := raw.(string); ok && strings.TrimSpace(s) == "" {
 		return nil, nil
 	}
-	id, ok := coerceOptionID(raw)
+	id, ok := CoerceOptionID(raw)
 	if !ok {
 		return nil, &ValidationError{
 			Field:   "custom_field_values." + fieldKey,
@@ -365,7 +365,7 @@ func normalizeSelectValue(fieldKey string, def *models.CustomFieldDefinition, ra
 	if raw == nil {
 		return nil, nil
 	}
-	id, ok := coerceOptionID(raw)
+	id, ok := CoerceOptionID(raw)
 	if !ok {
 		return nil, &ValidationError{
 			Field:   "custom_field_values." + fieldKey,
@@ -405,7 +405,7 @@ func validateAndDedupeMultiselect(fieldKey string, def *models.CustomFieldDefini
 	seen := make(map[int]bool, len(values))
 	out := make([]int, 0, len(values))
 	for _, v := range values {
-		id, ok := coerceOptionID(v)
+		id, ok := CoerceOptionID(v)
 		if !ok {
 			return nil, &ValidationError{
 				Field:   "custom_field_values." + fieldKey,
@@ -441,10 +441,11 @@ func optionIDSet(def *models.CustomFieldDefinition) (map[int]bool, error) {
 	return set, nil
 }
 
-// coerceOptionID accepts integral JSON numbers, Go ints, and legacy numeric
-// strings. Fractional, NaN, and infinite floats are rejected rather than
-// truncated so an invalid id can never match a real option.
-func coerceOptionID(v any) (int, bool) {
+// CoerceOptionID accepts integral JSON numbers, Go ints, and legacy numeric
+// strings as a select/multiselect/milestone option id. Fractional, NaN, and
+// infinite floats are rejected rather than truncated so an invalid id can never
+// match a real option.
+func CoerceOptionID(v any) (int, bool) {
 	switch x := v.(type) {
 	case float64:
 		if math.IsNaN(x) || math.IsInf(x, 0) {

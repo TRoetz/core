@@ -611,10 +611,10 @@ func validateAssetFieldValue(f models.AssetTypeField, v any) error {
 
 // assetFieldOptionAllowed reports whether the given value matches any
 // option in the field's declared option whitelist. It accepts either
-// an option ID (as a JSON number or numeric string) or an option label
-// (legacy string values). Returns true when no options are declared
-// (the field accepts any value) or when the stored options JSON is
-// malformed (fail-open — better to accept than to block legitimate
+// an option ID (as an integral JSON number or numeric string) or an
+// option label (legacy string values). Returns true when no options are
+// declared (the field accepts any value) or when the stored options JSON
+// is malformed (fail-open — better to accept than to block legitimate
 // writes against a misconfigured field).
 func assetFieldOptionAllowed(f models.AssetTypeField, value any) bool {
 	if value == nil || f.Options == "" {
@@ -630,29 +630,17 @@ func assetFieldOptionAllowed(f models.AssetTypeField, value any) bool {
 		allowedIDs[item.ID] = struct{}{}
 		allowedLabels[item.Label] = struct{}{}
 	}
-	switch v := value.(type) {
-	case int:
-		_, ok := allowedIDs[v]
-		return ok
-	case int64:
-		_, ok := allowedIDs[int(v)]
-		return ok
-	case float64:
-		_, ok := allowedIDs[int(v)]
-		return ok
-	case string:
-		if _, ok := allowedLabels[v]; ok {
+	if label, ok := value.(string); ok {
+		if _, ok := allowedLabels[label]; ok {
 			return true
 		}
-		// Also accept numeric strings that match an option ID.
-		if id, err := strconv.Atoi(v); err == nil {
-			_, ok := allowedIDs[id]
-			return ok
-		}
-		return false
-	default:
+	}
+	id, ok := validation.CoerceOptionID(value)
+	if !ok {
 		return false
 	}
+	_, ok = allowedIDs[id]
+	return ok
 }
 
 // customFieldValuePresent reports whether the values map carries a
