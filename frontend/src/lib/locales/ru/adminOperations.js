@@ -299,6 +299,8 @@ export default {
     addingGroup: 'Добавление группы…',
   },
   boardControls: {
+    milestoneSwimlanes: 'Дорожки этапов',
+    milestoneSwimlanesDescription: 'Группировать карточки по этапам',
     groupBy: 'Группировать',
     groupByValue: 'Группировка: {name}',
     sortBy: 'Сортировать',

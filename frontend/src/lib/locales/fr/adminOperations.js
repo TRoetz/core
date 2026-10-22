@@ -297,6 +297,8 @@ export default {
     addingGroup: 'Ajout du groupe…',
   },
   boardControls: {
+    milestoneSwimlanes: 'Couloirs de jalons',
+    milestoneSwimlanesDescription: 'Grouper les cartes par jalon',
     groupBy: 'Regrouper par',
     groupByValue: 'Regrouper par : {name}',
     sortBy: 'Trier par',

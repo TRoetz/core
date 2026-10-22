@@ -57,11 +57,15 @@ type CollectionUpdate struct {
 	IsPrivate      bool
 	PublicSlugSet  bool
 	PublicSlug     *string
+	// PublicMilestoneSwimlanesSet distinguishes an omitted patch field from false.
+	PublicMilestoneSwimlanesSet bool
+	PublicMilestoneSwimlanes    bool
 }
 
 type CollectionSharingUpdate struct {
-	IsPublic   bool
-	PublicSlug *string
+	IsPublic                 bool
+	PublicSlug               *string
+	PublicMilestoneSwimlanes *bool
 }
 
 type CollectionCategoryPatch struct {
@@ -323,6 +327,9 @@ func (s *CollectionApplicationService) Update(actor AuditActor, id int, update C
 	if update.PublicSlugSet {
 		collection.PublicSlug = update.PublicSlug
 	}
+	if update.PublicMilestoneSwimlanesSet {
+		collection.PublicMilestoneSwimlanes = update.PublicMilestoneSwimlanes
+	}
 	// Private overrides public sharing: a collection marked private must never
 	// stay anonymously readable at its public slug.
 	if collection.IsPrivate {
@@ -398,10 +405,14 @@ func (s *CollectionApplicationService) UpdateSharing(actor AuditActor, id int, u
 	if s.beforePublicSharingWrite != nil {
 		s.beforePublicSharingWrite()
 	}
+	publicMilestoneSwimlanes := collection.PublicMilestoneSwimlanes
+	if update.PublicMilestoneSwimlanes != nil {
+		publicMilestoneSwimlanes = *update.PublicMilestoneSwimlanes
+	}
 	// Publishing is conditional on the authorized scope still being current, so
 	// a query edit between authorization and this write cannot make an
 	// unauthorized scope anonymously readable.
-	updated, err := s.repository.UpdatePublicSharing(id, update.IsPublic, update.PublicSlug, collection.QLQuery, collection.WorkspaceID)
+	updated, err := s.repository.UpdatePublicSharing(id, update.IsPublic, update.PublicSlug, publicMilestoneSwimlanes, collection.QLQuery, collection.WorkspaceID)
 	if err != nil {
 		if database.IsUniqueConstraintError(err) {
 			return nil, ErrCollectionConflict

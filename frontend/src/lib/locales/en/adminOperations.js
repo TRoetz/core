@@ -313,6 +313,8 @@ export default {
     groupOutsideColumn: 'Group items only outside {column}',
     hiddenCount: '{count} hidden',
     useAsSwimlanes: 'Use these items as swimlanes',
+    milestoneSwimlanes: 'Milestone swimlanes',
+    milestoneSwimlanesDescription: 'Group cards by milestone',
   },
   systemImport: {
     title: 'System Import',

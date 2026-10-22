@@ -178,6 +178,8 @@ export default withEnglishAdminOperations({
     deleted: 'Vorgefertigte Antwort gelöscht',
   },
   boardControls: {
+    milestoneSwimlanes: 'Meilenstein-Swimlanes',
+    milestoneSwimlanesDescription: 'Karten nach Meilenstein gruppieren',
     groupBy: 'Gruppieren nach',
     groupByValue: 'Gruppieren nach: {name}',
     sortBy: 'Sortieren nach',

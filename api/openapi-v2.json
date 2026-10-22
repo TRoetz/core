@@ -6643,6 +6643,10 @@
                 "description": "The name value.",
                 "type": "string"
               },
+              "public_milestone_swimlanes": {
+                "description": "The public milestone swimlanes value.",
+                "type": "boolean"
+              },
               "public_slug": {
                 "description": "The public slug value.",
                 "nullable": true,
@@ -6669,6 +6673,7 @@
               "is_private",
               "is_public",
               "name",
+              "public_milestone_swimlanes",
               "ql_query",
               "updated_at"
             ],
@@ -6954,6 +6959,10 @@
                   "description": "The name value.",
                   "type": "string"
                 },
+                "public_milestone_swimlanes": {
+                  "description": "The public milestone swimlanes value.",
+                  "type": "boolean"
+                },
                 "public_slug": {
                   "description": "The public slug value.",
                   "nullable": true,
@@ -6980,6 +6989,7 @@
                 "is_private",
                 "is_public",
                 "name",
+                "public_milestone_swimlanes",
                 "ql_query",
                 "updated_at"
               ],
@@ -53235,6 +53245,11 @@
             "nullable": true,
             "type": "string"
           },
+          "public_milestone_swimlanes": {
+            "description": "The public milestone swimlanes value.",
+            "nullable": true,
+            "type": "boolean"
+          },
           "public_slug": {
             "description": "The public slug value.",
             "nullable": true,
@@ -53314,6 +53329,10 @@
                 "description": "The name value.",
                 "type": "string"
               },
+              "public_milestone_swimlanes": {
+                "description": "The public milestone swimlanes value.",
+                "type": "boolean"
+              },
               "public_slug": {
                 "description": "The public slug value.",
                 "nullable": true,
@@ -53340,6 +53359,7 @@
               "is_private",
               "is_public",
               "name",
+              "public_milestone_swimlanes",
               "ql_query",
               "updated_at"
             ],
@@ -53356,6 +53376,11 @@
         "properties": {
           "is_public": {
             "description": "The is public value.",
+            "nullable": true,
+            "type": "boolean"
+          },
+          "public_milestone_swimlanes": {
+            "description": "The public milestone swimlanes value.",
             "nullable": true,
             "type": "boolean"
           },
@@ -53428,6 +53453,10 @@
                 "description": "The name value.",
                 "type": "string"
               },
+              "public_milestone_swimlanes": {
+                "description": "The public milestone swimlanes value.",
+                "type": "boolean"
+              },
               "public_slug": {
                 "description": "The public slug value.",
                 "nullable": true,
@@ -53454,6 +53483,7 @@
               "is_private",
               "is_public",
               "name",
+              "public_milestone_swimlanes",
               "ql_query",
               "updated_at"
             ],
@@ -65493,6 +65523,10 @@
             "description": "The name value.",
             "type": "string"
           },
+          "public_milestone_swimlanes": {
+            "description": "The public milestone swimlanes value.",
+            "type": "boolean"
+          },
           "public_slug": {
             "description": "The public slug value.",
             "nullable": true,
@@ -65519,6 +65553,7 @@
           "is_private",
           "is_public",
           "name",
+          "public_milestone_swimlanes",
           "ql_query",
           "updated_at"
         ],
@@ -65585,6 +65620,10 @@
                 "description": "The name value.",
                 "type": "string"
               },
+              "public_milestone_swimlanes": {
+                "description": "The public milestone swimlanes value.",
+                "type": "boolean"
+              },
               "public_slug": {
                 "description": "The public slug value.",
                 "nullable": true,
@@ -65611,6 +65650,7 @@
               "is_private",
               "is_public",
               "name",
+              "public_milestone_swimlanes",
               "ql_query",
               "updated_at"
             ],

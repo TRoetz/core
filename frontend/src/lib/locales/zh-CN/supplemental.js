@@ -749,6 +749,8 @@ export default {
       "copyLink": "复制公开链接",
       "copied": "已复制！",
       "openBoard": "打开看板",
+      "milestoneSwimlanes": "按里程碑分组卡片",
+      "milestoneSwimlanesHint": "公开访客将看到里程碑泳道，但无法切换分组或拖动卡片。",
       "scopeNote": "集合查询必须包含 workspaceKey 范围。您必须是所有引用工作区的管理员。",
       "save": "保存共享",
       "disable": "停用共享",
