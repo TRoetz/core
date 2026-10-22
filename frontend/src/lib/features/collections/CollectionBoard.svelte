@@ -3,6 +3,7 @@
   import { useEventListener } from 'runed';
   import { t } from '../../stores/i18n.svelte.js';
   import { items as itemsApi } from '../../api/items.js';
+  import { collections as collectionsApi } from '../../api/collections.js';
   import { workspaces as workspacesApi } from '../../api/workspaces.js';
   import { iterations as iterationsApi } from '../../api/milestones.js';
   import { navigate } from '../../router.js';
@@ -23,6 +24,7 @@
   import {
     BOARD_GROUP_BY_ITEM_TYPE,
     BOARD_GROUP_BY_MILESTONE,
+    MILESTONE_HIDDEN_COMPLETED_KEY,
     boardGroupPreferenceStorageKey,
     buildBoardSwimlanes,
     legacyBoardGroupItemTypeStorageKey,
@@ -30,6 +32,7 @@
     resolveStoredBoardGroupBy,
     serializeBoardGroupBy,
   } from './boardSwimlanes.js';
+  import { buildBoardConfigurationPayload } from './boardConfigPayload.js';
   import {
     milestoneAssignableToWorkspace,
     milestoneDropRemovals,
@@ -63,6 +66,7 @@
   import BoardItemCard from './BoardItemCard.svelte';
   import ItemKey from '../../components/ItemKey.svelte';
   import CollectionViewSwitcher from './CollectionViewSwitcher.svelte';
+  import MilestoneSwimlaneConfigDialog from './MilestoneSwimlaneConfigDialog.svelte';
   import DropdownMenu from '../../layout/DropdownMenu.svelte';
   import { backlogStore } from '../../stores/backlogStore.svelte.js';
   import { workspaceDataStore } from '../../stores/workspaceDataStore.svelte.js';
@@ -121,6 +125,19 @@
   let transitions = $state([]);
   let boardConfig = $state(null);
   let cardFields = $derived((boardConfig?.card_fields || []).slice().sort((a, b) => a.display_order - b.display_order));
+  // Milestone-swimlane preferences live on the board configuration so they are
+  // shared by every viewer and survive reloads. Missing config means the
+  // pre-configuration defaults: no pinned global milestones, completed shown.
+  let milestoneSwimlaneConfig = $derived(
+    boardConfig?.view_settings?.milestone_swimlanes ?? {
+      global_milestone_ids: [],
+      show_completed: true,
+    }
+  );
+  let pinnedGlobalMilestoneIds = $derived(milestoneSwimlaneConfig.global_milestone_ids ?? []);
+  let showCompletedMilestones = $derived(milestoneSwimlaneConfig.show_completed !== false);
+  let milestoneSwimlaneDialogOpen = $state(false);
+  let savingMilestoneSwimlaneConfig = $state(false);
 
   let loading = $state(true);
   let currentCollectionName = $derived(collectionStore.collectionName);
@@ -545,8 +562,8 @@
     swimlaneCollapsed = {};
     try {
       boardGroupBy = resolveStoredBoardGroupBy(
-        localStorage.getItem(boardGroupPreferenceStorageKey()),
-        localStorage.getItem(legacyBoardGroupItemTypeStorageKey()),
+        localStorage.getItem(boardGroupStorageKey()),
+        localStorage.getItem(legacyGroupByItemTypeStorageKey()),
         []
       );
       const savedExcludeRightmost = localStorage.getItem(excludeRightmostSwimlaneParentsStorageKey());
@@ -591,6 +608,35 @@
         console.error('Failed to load board configuration:', error);
       }
       boardConfig = null;
+    }
+  }
+
+  async function saveMilestoneSwimlaneConfig(next) {
+    savingMilestoneSwimlaneConfig = true;
+    try {
+      const payload = buildBoardConfigurationPayload(boardConfig, next);
+      if (boardConfig?.id) {
+        await collectionsApi.updateBoardConfiguration(
+          collectionId,
+          boardConfig.id,
+          payload,
+          workspaceId
+        );
+      } else {
+        await collectionsApi.createBoardConfiguration(collectionId, workspaceId, payload);
+      }
+      collectionStore.invalidateBoardConfiguration(workspaceId, collectionId);
+      await loadBoardConfig();
+      // Lane membership changed; drop stale collapse state so the new lanes
+      // render expanded.
+      swimlaneCollapsed = {};
+      milestoneSwimlaneDialogOpen = false;
+      successToast(t('boardControls.milestoneSwimlanesSaved'));
+    } catch (error) {
+      console.error('Failed to save milestone swimlane configuration:', error);
+      warningToast(error?.message || t('dialogs.alerts.failedToSave', { error: error?.message ?? '' }));
+    } finally {
+      savingMilestoneSwimlaneConfig = false;
     }
   }
 
@@ -670,6 +716,15 @@
   let milestoneLanesReferenceById = $derived(
     new Map(milestoneLanesReference.map((milestone) => [Number(milestone.id), milestone]))
   );
+  // Global milestones available to pin as always-present lanes. Workspace
+  // boards read the catalog; cross-workspace boards fall back to the milestones
+  // embedded in the loaded cards.
+  let globalMilestonesForConfig = $derived(
+    milestoneLanesReference
+      .filter((milestone) => milestone.is_global)
+      .slice()
+      .sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')))
+  );
   let boardGroupingActive = $derived(Boolean(boardGroupBy));
 
   function getItemsByStatus(statusId, itemSubset = filteredItems) {
@@ -740,6 +795,9 @@
       return (item.parent_id ?? null) !== targetParentId;
     }
     if (target.dimension === BOARD_GROUP_BY_MILESTONE) {
+      // The hidden-completed aggregate lane is not a milestone assignment; a
+      // drop there keeps the card's milestone and only changes its column/rank.
+      if (target.key === MILESTONE_HIDDEN_COMPLETED_KEY) return false;
       return milestoneLaneKeyForItem(item) !== target.key;
     }
     return false;
@@ -767,6 +825,11 @@
 
     if (boardGroupBy.dimension === BOARD_GROUP_BY_MILESTONE) {
       if (!lane || lane.dimension !== BOARD_GROUP_BY_MILESTONE) return filteredItems;
+      if (lane.key === MILESTONE_HIDDEN_COMPLETED_KEY) {
+        return (
+          boardSwimlanes.find((entry) => entry.key === MILESTONE_HIDDEN_COMPLETED_KEY)?.items ?? []
+        );
+      }
       return filteredItems.filter((item) => milestoneLaneKeyForItem(item) === lane.key);
     }
 
@@ -1128,7 +1191,7 @@
       testid: 'board-sort-rank',
       title: t('boardControls.rankMode'),
       subtitle: t('boardControls.rankModeDescription'),
-      badge: sortMode === 'rank' ? t('common.selected') : '',
+      selected: sortMode === 'rank',
       onClick: () => setSortMode('rank')
     },
     {
@@ -1136,7 +1199,7 @@
       testid: 'board-sort-bubble',
       title: t('boardControls.bubbleMode'),
       subtitle: t('boardControls.bubbleModeDescription'),
-      badge: sortMode === 'bubble' ? t('common.selected') : '',
+      selected: sortMode === 'bubble',
       onClick: () => setSortMode('bubble')
     }
   ]);
@@ -1150,7 +1213,7 @@
         testid: 'board-group-by-none',
         title: t('boardControls.noSwimlanes'),
         subtitle: t('boardControls.noSwimlanesDescription'),
-        badge: boardGroupBy ? '' : t('common.selected'),
+        selected: !boardGroupBy,
         onClick: () => setBoardGroupBy(null)
       },
       {
@@ -1158,7 +1221,7 @@
         testid: 'board-group-by-milestone',
         title: t('boardControls.milestoneSwimlanes'),
         subtitle: t('boardControls.milestoneSwimlanesDescription'),
-        badge: boardGroupBy?.dimension === BOARD_GROUP_BY_MILESTONE ? t('common.selected') : '',
+        selected: boardGroupBy?.dimension === BOARD_GROUP_BY_MILESTONE,
         onClick: () => setBoardGroupBy({ dimension: BOARD_GROUP_BY_MILESTONE })
       },
       ...(boardGroupBy?.dimension === BOARD_GROUP_BY_ITEM_TYPE ? [
@@ -1183,12 +1246,18 @@
         title: type.name,
         subtitle: t('boardControls.useAsSwimlanes'),
         itemType: type,
-        badge:
-          boardGroupBy?.dimension === BOARD_GROUP_BY_ITEM_TYPE && boardGroupBy.itemTypeId === type.id
-            ? t('common.selected')
-            : '',
+        selected:
+          boardGroupBy?.dimension === BOARD_GROUP_BY_ITEM_TYPE && boardGroupBy.itemTypeId === type.id,
         onClick: () => setBoardGroupBy({ dimension: BOARD_GROUP_BY_ITEM_TYPE, itemTypeId: type.id })
-      }))
+      })),
+      { id: 'group-config-divider', type: 'divider' },
+      {
+        id: 'group-milestone-config',
+        testid: 'board-group-by-configure',
+        title: t('boardControls.configureMilestones'),
+        subtitle: t('boardControls.configureMilestonesDescription'),
+        onClick: () => { milestoneSwimlaneDialogOpen = true; }
+      }
     ];
   });
 
@@ -1203,7 +1272,10 @@
       rightmostStatusIds: rightmostBoardColumnStatusIds,
       excludeRightmostSwimlaneParents,
       includeEmptyMilestones: true,
+      globalMilestoneIds: pinnedGlobalMilestoneIds,
+      showCompletedMilestones,
       unassignedTitle: t('common.unassigned'),
+      hiddenCompletedTitle: t('boardControls.completedMilestones'),
       allItemsTitle: t('collections.allItems'),
     })
   );
@@ -1863,7 +1935,7 @@
                     {:else if lane.dimension === BOARD_GROUP_BY_MILESTONE}
                       <Milestone
                         class="w-4 h-4 flex-shrink-0"
-                        style="color: {lane.isUnassigned ? 'var(--ds-background-neutral-bold, #6b7280)' : (lane.milestone?.category_color || 'var(--ds-text-subtle)')};"
+                        style="color: {lane.isUnassigned || lane.isAggregate ? 'var(--ds-background-neutral-bold, #6b7280)' : (lane.milestone?.category_color || 'var(--ds-text-subtle)')};"
                       />
                     {/if}
                     <span class="min-w-0 flex-1 text-left">
@@ -1876,6 +1948,8 @@
                         <span class="block text-xs font-normal truncate" style="color: var(--ds-text-subtle);">
                           {#if lane.isUnassigned}
                             {t('collections.milestoneLaneUnassignedHint')}
+                          {:else if lane.isAggregate}
+                            {t('collections.milestoneLaneHiddenCompletedHint')}
                           {:else if lane.milestone?.target_date}
                             {formatDateOnly(lane.milestone.target_date)}
                           {:else}
@@ -2074,6 +2148,16 @@
     onupdate={reloadCollection}
   />
 {/if}
+
+<MilestoneSwimlaneConfigDialog
+  isOpen={milestoneSwimlaneDialogOpen}
+  globalMilestones={globalMilestonesForConfig}
+  selectedGlobalMilestoneIds={pinnedGlobalMilestoneIds}
+  showCompleted={showCompletedMilestones}
+  saving={savingMilestoneSwimlaneConfig}
+  onclose={() => (milestoneSwimlaneDialogOpen = false)}
+  onsave={saveMilestoneSwimlaneConfig}
+/>
 
 <style>
   /* Collapsed board column: write the column name vertically so the narrow

@@ -14,6 +14,10 @@ export const BOARD_GROUP_BY_NONE = 'none';
 export const BOARD_GROUP_BY_ITEM_TYPE = 'item-type';
 export const BOARD_GROUP_BY_MILESTONE = 'milestone';
 
+// Lane key for cards whose completed milestone lane is hidden by the board
+// configuration. The lane keeps those cards visible instead of dropping them.
+export const MILESTONE_HIDDEN_COMPLETED_KEY = 'milestone-completed-hidden';
+
 const INACTIVE_MILESTONE_STATUSES = new Set(['completed', 'cancelled']);
 
 export function boardGroupPreferenceStorageKey(scope) {
@@ -157,11 +161,37 @@ function itemTypeLanes({
   return [...lanes, unassignedLane(unassignedTitle, unassignedItems, BOARD_GROUP_BY_ITEM_TYPE)];
 }
 
-function milestoneLanes({ filteredItems, milestones, includeEmptyMilestones, unassignedTitle }) {
+function hiddenCompletedLane(items, title) {
+  return {
+    id: MILESTONE_HIDDEN_COMPLETED_KEY,
+    key: MILESTONE_HIDDEN_COMPLETED_KEY,
+    dimension: BOARD_GROUP_BY_MILESTONE,
+    title,
+    parent: null,
+    milestone: null,
+    items,
+    isDefault: false,
+    isUnassigned: false,
+    isAggregate: true,
+    itemCount: items.length,
+    parentIsVisible: false,
+  };
+}
+
+function milestoneLanes({
+  filteredItems,
+  milestones,
+  includeEmptyMilestones,
+  globalMilestoneIds = [],
+  showCompletedMilestones = true,
+  unassignedTitle,
+  hiddenCompletedTitle,
+}) {
   const orderedMilestones = sortMilestonesForLanes(milestones);
   const referenceById = new Map(
     orderedMilestones.map((milestone) => [Number(milestone.id), milestone])
   );
+  const pinnedGlobalIds = new Set((globalMilestoneIds || []).map(Number));
 
   // Bucket by primary lane once; every lane filter below is a Map lookup.
   const bucket = new Map();
@@ -183,15 +213,24 @@ function milestoneLanes({ filteredItems, milestones, includeEmptyMilestones, una
 
   const lanes = [];
   const emittedIds = new Set();
+  // Cards whose completed lane is hidden still have to render somewhere; they
+  // collect into one aggregate lane instead of disappearing from the board.
+  const hiddenCompletedItems = [];
 
   for (const milestone of orderedMilestones) {
     const key = `milestone-${milestone.id}`;
     const laneItems = bucket.get(key) ?? [];
-    if (
-      laneItems.length === 0 &&
-      !(includeEmptyMilestones && isMilestoneSwimlaneActive(milestone))
-    ) {
+    const active = isMilestoneSwimlaneActive(milestone);
+    if (!active && !showCompletedMilestones) {
+      hiddenCompletedItems.push(...laneItems);
+      emittedIds.add(milestone.id);
       continue;
+    }
+    if (laneItems.length === 0) {
+      if (!includeEmptyMilestones || !active) continue;
+      // Global milestones are shared across every workspace, so an empty lane
+      // is only offered when the board explicitly pinned that milestone.
+      if (milestone.is_global && !pinnedGlobalIds.has(Number(milestone.id))) continue;
     }
     emittedIds.add(milestone.id);
     lanes.push({
@@ -218,6 +257,11 @@ function milestoneLanes({ filteredItems, milestones, includeEmptyMilestones, una
     if (!Number.isFinite(id) || emittedIds.has(id)) continue;
     const milestone = referenceById.get(id) ||
       embeddedById.get(id) || { id, name: `Milestone #${id}` };
+    if (!isMilestoneSwimlaneActive(milestone) && !showCompletedMilestones) {
+      hiddenCompletedItems.push(...laneItems);
+      emittedIds.add(id);
+      continue;
+    }
     emittedIds.add(id);
     fallback.push({
       id: key,
@@ -240,11 +284,12 @@ function milestoneLanes({ filteredItems, milestones, includeEmptyMilestones, una
   });
 
   const unassignedItems = bucket.get(SWIMLANE_NONE_KEY) ?? [];
-  return [
-    ...lanes,
-    ...fallback,
-    unassignedLane(unassignedTitle, unassignedItems, BOARD_GROUP_BY_MILESTONE),
-  ];
+  const result = [...lanes, ...fallback];
+  if (hiddenCompletedItems.length > 0) {
+    result.push(hiddenCompletedLane(hiddenCompletedItems, hiddenCompletedTitle));
+  }
+  result.push(unassignedLane(unassignedTitle, unassignedItems, BOARD_GROUP_BY_MILESTONE));
+  return result;
 }
 
 function compareLaneDates(a, b) {
@@ -268,7 +313,10 @@ function compareLaneDates(a, b) {
  * @param {Set<number>} [options.rightmostStatusIds]
  * @param {boolean} [options.excludeRightmostSwimlaneParents]
  * @param {boolean} [options.includeEmptyMilestones]
+ * @param {number[]} [options.globalMilestoneIds] pinned global milestones that keep an empty lane
+ * @param {boolean} [options.showCompletedMilestones] render completed milestone lanes
  * @param {string} [options.unassignedTitle]
+ * @param {string} [options.hiddenCompletedTitle] title of the aggregate lane for hidden completed milestones
  * @param {string} [options.allItemsTitle]
  */
 export function buildBoardSwimlanes({
@@ -280,7 +328,10 @@ export function buildBoardSwimlanes({
   rightmostStatusIds = new Set(),
   excludeRightmostSwimlaneParents = false,
   includeEmptyMilestones = true,
+  globalMilestoneIds = [],
+  showCompletedMilestones = true,
   unassignedTitle = 'Unassigned',
+  hiddenCompletedTitle = 'Completed milestones',
   allItemsTitle = 'All items',
 }) {
   if (!groupBy) {
@@ -306,7 +357,10 @@ export function buildBoardSwimlanes({
       filteredItems,
       milestones,
       includeEmptyMilestones,
+      globalMilestoneIds,
+      showCompletedMilestones,
       unassignedTitle,
+      hiddenCompletedTitle,
     });
   }
 

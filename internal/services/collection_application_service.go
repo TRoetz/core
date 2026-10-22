@@ -958,6 +958,9 @@ func mergeViewSettings(current, update *models.ViewSettings) *models.ViewSetting
 	if update.EnabledViews != nil {
 		merged.EnabledViews = update.EnabledViews
 	}
+	if update.MilestoneSwimlanes != nil {
+		merged.MilestoneSwimlanes = update.MilestoneSwimlanes
+	}
 	return &merged
 }
 
@@ -969,9 +972,12 @@ func mergeViewSettings(current, update *models.ViewSettings) *models.ViewSetting
 // needed.
 func (s *CollectionApplicationService) applyEffectiveViewSettings(config *models.BoardConfiguration) error {
 	normalizeStoredViewSettings(config.ViewSettings)
-	allViews := func() *models.ViewSettings {
-		views := slices.Clone(models.BoardViewIDs)
-		return &models.ViewSettings{EnabledViews: &views}
+	// Milestone-swimlane preferences share the board-options JSON but are
+	// independent of the enabled-views inherit/reset state: a collection's own
+	// value wins, otherwise the workspace default is inherited.
+	var ownMilestones *models.MilestoneSwimlaneConfig
+	if config.ViewSettings != nil {
+		ownMilestones = config.ViewSettings.MilestoneSwimlanes
 	}
 	workspaceID := config.WorkspaceID
 	if workspaceID == nil && config.CollectionID != nil {
@@ -992,6 +998,17 @@ func (s *CollectionApplicationService) applyEffectiveViewSettings(config *models
 		normalizeStoredViewSettings(row.ViewSettings)
 		return row, nil
 	}()
+	resolvedMilestones := ownMilestones
+	if resolvedMilestones == nil && wsErr == nil && wsConfig.ViewSettings != nil {
+		resolvedMilestones = wsConfig.ViewSettings.MilestoneSwimlanes
+	}
+	settingsWith := func(views *[]string) *models.ViewSettings {
+		return &models.ViewSettings{EnabledViews: views, MilestoneSwimlanes: resolvedMilestones}
+	}
+	allViews := func() *models.ViewSettings {
+		views := slices.Clone(models.BoardViewIDs)
+		return settingsWith(&views)
+	}
 	if config.CollectionID != nil && config.ViewSettings.HasEnabledViewsOverride() {
 		// The collection override speaks only for the collection-scoped
 		// views; workspace-only nav ids always inherit from the workspace
@@ -1000,10 +1017,11 @@ func (s *CollectionApplicationService) applyEffectiveViewSettings(config *models
 		if wsErr == nil && wsConfig.ViewSettings.HasEnabledViewsOverride() {
 			views = mergeNavIDs(views, *wsConfig.ViewSettings.EnabledViews)
 		}
-		config.ViewSettings = &models.ViewSettings{EnabledViews: &views}
+		config.ViewSettings = settingsWith(&views)
 		return nil
 	}
 	if config.ViewSettings.HasEnabledViewsOverride() {
+		config.ViewSettings.MilestoneSwimlanes = resolvedMilestones
 		return nil
 	}
 	config.ViewSettingsInherited = true
@@ -1016,7 +1034,7 @@ func (s *CollectionApplicationService) applyEffectiveViewSettings(config *models
 	}
 	if wsConfig.ViewSettings.HasEnabledViewsOverride() {
 		views := slices.Clone(*wsConfig.ViewSettings.EnabledViews)
-		config.ViewSettings = &models.ViewSettings{EnabledViews: &views}
+		config.ViewSettings = settingsWith(&views)
 		return nil
 	}
 	config.ViewSettings = allViews()

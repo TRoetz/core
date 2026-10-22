@@ -6110,6 +6110,28 @@
                         },
                         "nullable": true,
                         "type": "array"
+                      },
+                      "milestone_swimlanes": {
+                        "additionalProperties": false,
+                        "description": "The milestone swimlanes value.",
+                        "nullable": true,
+                        "properties": {
+                          "global_milestone_ids": {
+                            "description": "The global milestone ids value.",
+                            "items": {
+                              "type": "integer"
+                            },
+                            "type": "array"
+                          },
+                          "show_completed": {
+                            "description": "The show completed value.",
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "show_completed"
+                        ],
+                        "type": "object"
                       }
                     },
                     "type": "object"
@@ -6491,6 +6513,28 @@
                     },
                     "nullable": true,
                     "type": "array"
+                  },
+                  "milestone_swimlanes": {
+                    "additionalProperties": false,
+                    "description": "The milestone swimlanes value.",
+                    "nullable": true,
+                    "properties": {
+                      "global_milestone_ids": {
+                        "description": "The global milestone ids value.",
+                        "items": {
+                          "type": "integer"
+                        },
+                        "type": "array"
+                      },
+                      "show_completed": {
+                        "description": "The show completed value.",
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "show_completed"
+                    ],
+                    "type": "object"
                   }
                 },
                 "type": "object"
@@ -33639,6 +33683,28 @@
                         },
                         "nullable": true,
                         "type": "array"
+                      },
+                      "milestone_swimlanes": {
+                        "additionalProperties": false,
+                        "description": "The milestone swimlanes value.",
+                        "nullable": true,
+                        "properties": {
+                          "global_milestone_ids": {
+                            "description": "The global milestone ids value.",
+                            "items": {
+                              "type": "integer"
+                            },
+                            "type": "array"
+                          },
+                          "show_completed": {
+                            "description": "The show completed value.",
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "show_completed"
+                        ],
+                        "type": "object"
                       }
                     },
                     "type": "object"
@@ -34020,6 +34086,28 @@
                     },
                     "nullable": true,
                     "type": "array"
+                  },
+                  "milestone_swimlanes": {
+                    "additionalProperties": false,
+                    "description": "The milestone swimlanes value.",
+                    "nullable": true,
+                    "properties": {
+                      "global_milestone_ids": {
+                        "description": "The global milestone ids value.",
+                        "items": {
+                          "type": "integer"
+                        },
+                        "type": "array"
+                      },
+                      "show_completed": {
+                        "description": "The show completed value.",
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "show_completed"
+                    ],
+                    "type": "object"
                   }
                 },
                 "type": "object"
@@ -94758,6 +94846,28 @@
                 },
                 "nullable": true,
                 "type": "array"
+              },
+              "milestone_swimlanes": {
+                "additionalProperties": false,
+                "description": "The milestone swimlanes value.",
+                "nullable": true,
+                "properties": {
+                  "global_milestone_ids": {
+                    "description": "The global milestone ids value.",
+                    "items": {
+                      "type": "integer"
+                    },
+                    "type": "array"
+                  },
+                  "show_completed": {
+                    "description": "The show completed value.",
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "show_completed"
+                ],
+                "type": "object"
               }
             },
             "type": "object"
@@ -94972,6 +95082,28 @@
                     },
                     "nullable": true,
                     "type": "array"
+                  },
+                  "milestone_swimlanes": {
+                    "additionalProperties": false,
+                    "description": "The milestone swimlanes value.",
+                    "nullable": true,
+                    "properties": {
+                      "global_milestone_ids": {
+                        "description": "The global milestone ids value.",
+                        "items": {
+                          "type": "integer"
+                        },
+                        "type": "array"
+                      },
+                      "show_completed": {
+                        "description": "The show completed value.",
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "show_completed"
+                    ],
+                    "type": "object"
                   }
                 },
                 "type": "object"
@@ -96188,6 +96320,28 @@
                 },
                 "nullable": true,
                 "type": "array"
+              },
+              "milestone_swimlanes": {
+                "additionalProperties": false,
+                "description": "The milestone swimlanes value.",
+                "nullable": true,
+                "properties": {
+                  "global_milestone_ids": {
+                    "description": "The global milestone ids value.",
+                    "items": {
+                      "type": "integer"
+                    },
+                    "type": "array"
+                  },
+                  "show_completed": {
+                    "description": "The show completed value.",
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "show_completed"
+                ],
+                "type": "object"
               }
             },
             "type": "object"
@@ -96402,6 +96556,28 @@
                     },
                     "nullable": true,
                     "type": "array"
+                  },
+                  "milestone_swimlanes": {
+                    "additionalProperties": false,
+                    "description": "The milestone swimlanes value.",
+                    "nullable": true,
+                    "properties": {
+                      "global_milestone_ids": {
+                        "description": "The global milestone ids value.",
+                        "items": {
+                          "type": "integer"
+                        },
+                        "type": "array"
+                      },
+                      "show_completed": {
+                        "description": "The show completed value.",
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "show_completed"
+                    ],
+                    "type": "object"
                   }
                 },
                 "type": "object"
