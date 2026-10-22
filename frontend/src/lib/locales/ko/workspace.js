@@ -83,7 +83,7 @@ export default {
       "failedToLoadCustomer": "고객을 불러오지 못했습니다",
       "submissions": "제출 내역",
       "channels": "채널",
-      "noSubmissions": "아직 제출 내역이 없습니다",
+      "noSubmissions": "표시할 제출 내역이 없습니다",
       "noChannels": "아직 채널이 없습니다"
     }
   },

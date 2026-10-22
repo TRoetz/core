@@ -104,7 +104,7 @@ export default {
       failedToLoadCustomer: 'Failed to load customer',
       submissions: 'Submissions',
       channels: 'Channels',
-      noSubmissions: 'No submissions yet',
+      noSubmissions: 'No visible submissions',
       noChannels: 'No channels yet',
     },
   },

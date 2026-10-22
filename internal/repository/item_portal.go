@@ -459,10 +459,25 @@ type PortalCustomerSubmission struct {
 	CreatedAt           string
 }
 
-// ListPortalCustomerSubmissions returns all items created by the given portal
+// ListPortalCustomerSubmissions returns items created by the given portal
 // customer, newest-first, hydrated with workspace name/key and status
 // name/color (falling back to empty string / neutral color for NULLs).
-func (r *ItemRepository) ListPortalCustomerSubmissions(customerID int) ([]PortalCustomerSubmission, error) {
+//
+// When workspaceIDs is non-nil the result is limited to those workspaces so a
+// caller never sees a submission filed in a workspace it cannot view. A
+// non-nil empty slice matches nothing.
+func (r *ItemRepository) ListPortalCustomerSubmissions(customerID int, workspaceIDs []int) ([]PortalCustomerSubmission, error) {
+	args := []any{customerID}
+	workspaceClause := ""
+	if workspaceIDs != nil {
+		if len(workspaceIDs) == 0 {
+			return []PortalCustomerSubmission{}, nil
+		}
+		placeholders, wsArgs := inPlaceholders(workspaceIDs)
+		workspaceClause = " AND i.workspace_id IN (" + placeholders + ")"
+		args = append(args, wsArgs...)
+	}
+
 	rows, err := r.db.Query(`
 		SELECT
 			i.id, i.workspace_id, i.workspace_item_number, i.title, i.description,
@@ -474,9 +489,9 @@ func (r *ItemRepository) ListPortalCustomerSubmissions(customerID int) ([]Portal
 		JOIN workspaces w ON i.workspace_id = w.id
 		LEFT JOIN statuses s ON i.status_id = s.id
 		LEFT JOIN status_categories sc ON s.category_id = sc.id
-		WHERE i.creator_portal_customer_id = ? AND `+portalMergedDuplicateVisible+`
+		WHERE i.creator_portal_customer_id = ? AND `+portalMergedDuplicateVisible+workspaceClause+`
 		ORDER BY i.created_at DESC
-	`, customerID)
+	`, args...)
 	if err != nil {
 		return nil, fmt.Errorf("list portal customer submissions: %w", err)
 	}

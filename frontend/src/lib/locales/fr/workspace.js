@@ -82,7 +82,7 @@ export default {
       failedToLoadCustomer: 'Échec du chargement du client',
       submissions: 'Soumissions',
       channels: 'Canaux',
-      noSubmissions: 'Aucune soumission pour le moment',
+      noSubmissions: 'Aucune soumission visible',
       noChannels: 'Aucun canal pour le moment',
     },
   },

@@ -12,7 +12,7 @@ export default {
       fields: { name: 'Имя', email: 'Электронная почта', phone: 'Телефон', customerOrganisation: 'Организация заказчика' },
       placeholders: { name: 'Введите имя заказчика', email: 'customer@example.com', phone: '+7 (999) 123-45-67' },
       metadata: { created: 'Создан:', updated: 'Обновлён:', linkedUser: 'Связанный пользователь:' },
-      contacts: 'Контакты', backToCustomers: 'Вернуться к заказчикам', failedToLoadCustomer: 'Не удалось загрузить заказчика', submissions: 'Запросы', channels: 'Каналы', noSubmissions: 'Запросов пока нет', noChannels: 'Каналов пока нет',
+      contacts: 'Контакты', backToCustomers: 'Вернуться к заказчикам', failedToLoadCustomer: 'Не удалось загрузить заказчика', submissions: 'Запросы', channels: 'Каналы', noSubmissions: 'Нет видимых запросов', noChannels: 'Каналов пока нет',
     },
   },
 

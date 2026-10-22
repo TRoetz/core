@@ -228,7 +228,6 @@
   }
 
   function submissionHref(submission) {
-    if (!submission?.can_view || !submission?.workspace_id || !submission?.id) return null;
     return itemUrl({ workspaceId: submission.workspace_id, itemId: submission.id });
   }
 
@@ -483,12 +482,12 @@
                     {submission.title || submission.subject || `Submission #${submission.id}`}
                   </div>
                   <div class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs" style="color: var(--ds-text-subtle);">
-                    {#if submission.can_view && submission.workspace_key && submission.workspace_item_number}
+                    {#if submission.workspace_key && submission.workspace_item_number}
                       <span class="font-medium" style="color: var(--ds-text);">
                         {submission.workspace_key}-{submission.workspace_item_number}
                       </span>
                     {/if}
-                    {#if submission.can_view && submission.workspace_name}
+                    {#if submission.workspace_name}
                       <span>{submission.workspace_name}</span>
                     {/if}
                     {#if submission.status_name}
@@ -510,7 +509,7 @@
         {:else}
           <div class="p-8 text-center" style="color: var(--ds-text-subtle);">
             <Send class="w-12 h-12 mx-auto mb-3 opacity-50" />
-            <p>{t('workspaces.customers.noSubmissions') || 'No submissions yet'}</p>
+            <p>{t('workspaces.customers.noSubmissions') || 'No visible submissions'}</p>
           </div>
         {/if}
 

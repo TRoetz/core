@@ -81,7 +81,7 @@ export default {
       failedToLoadCustomer: 'فشل تحميل العميل',
       submissions: 'الطلبات المقدمة',
       channels: 'القنوات',
-      noSubmissions: 'لا توجد طلبات مقدمة بعد',
+      noSubmissions: 'لا توجد طلبات مقدمة مرئية',
       noChannels: 'لا توجد قنوات بعد',
     },
   },

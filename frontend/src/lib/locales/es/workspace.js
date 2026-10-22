@@ -81,7 +81,7 @@ export default {
       failedToLoadCustomer: 'Error al cargar el cliente',
       submissions: 'Envíos',
       channels: 'Canales',
-      noSubmissions: 'No hay envíos aún',
+      noSubmissions: 'No hay envíos visibles',
       noChannels: 'No hay canales aún',
     },
   },

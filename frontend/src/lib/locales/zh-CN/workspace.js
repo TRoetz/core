@@ -81,7 +81,7 @@ export default {
       failedToLoadCustomer: '加载客户失败',
       submissions: '提交',
       channels: '渠道',
-      noSubmissions: '暂无提交',
+      noSubmissions: '没有可见的提交',
       noChannels: '暂无渠道',
     },
   },
