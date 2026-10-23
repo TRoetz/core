@@ -1,7 +1,7 @@
 <script>
   import { getSource, getWidgetDataContext } from '../context.js';
   import { itemSpec, assetSpec, sourceKey } from '../querySpec.js';
-  import { groupCount, groupSum } from '../aggregate.js';
+  import { groupRows } from '../aggregate.js';
   import SourceBoundary from './SourceBoundary.svelte';
 
   /**
@@ -16,6 +16,7 @@
    *     metric?: 'count'|'sum',
    *     field?: string,
    *     group_limit?: number,
+   *     link_mode?: 'fanout'|'primary',
    *     entity?: 'item'|'asset'
    *   }
    * }}
@@ -44,10 +45,13 @@
   const buckets = $derived.by(() => {
     const rows = source?.rows ?? [];
     if (rows.length === 0) return [];
-    const options = { limit: props.group_limit ?? 8 };
-    return (props.metric ?? 'count') === 'sum'
-      ? groupSum(rows, props.group_by, props.field, options)
-      : groupCount(rows, props.group_by, options);
+    return groupRows(rows, {
+      groupBy: props.group_by,
+      metric: props.metric ?? 'count',
+      field: props.field,
+      mode: props.link_mode ?? 'fanout',
+      limit: props.group_limit ?? 8,
+    });
   });
 
   const total = $derived(buckets.reduce((sum, bucket) => sum + bucket.value, 0));

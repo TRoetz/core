@@ -102,17 +102,19 @@ type ItemRow struct {
 	StoryPoint *float64   `json:"story_points,omitempty"`
 }
 
-// AssetRow is the normalized shape for an asset.
+// AssetRow is the normalized shape for an asset. LinkedItems is present only
+// when the slot requested a projection.
 type AssetRow struct {
-	ID        int        `json:"id"`
-	Key       string     `json:"key,omitempty"`
-	Title     string     `json:"title"`
-	Status    string     `json:"status,omitempty"`
-	Type      string     `json:"type,omitempty"`
-	Category  string     `json:"category,omitempty"`
-	Set       string     `json:"set,omitempty"`
-	CreatedAt *time.Time `json:"created_at,omitempty"`
-	UpdatedAt *time.Time `json:"updated_at,omitempty"`
+	ID          int              `json:"id"`
+	Key         string           `json:"key,omitempty"`
+	Title       string           `json:"title"`
+	Status      string           `json:"status,omitempty"`
+	Type        string           `json:"type,omitempty"`
+	Category    string           `json:"category,omitempty"`
+	Set         string           `json:"set,omitempty"`
+	CreatedAt   *time.Time       `json:"created_at,omitempty"`
+	UpdatedAt   *time.Time       `json:"updated_at,omitempty"`
+	LinkedItems []map[string]any `json:"linked_items,omitempty"`
 }
 
 // NormalizeSlot validates a slot and applies defaults.

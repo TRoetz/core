@@ -103,3 +103,59 @@ function finalize(buckets, limit) {
   entries.sort((a, b) => b.value - a.value || a.label.localeCompare(b.label));
   return limit > 0 ? entries.slice(0, limit) : entries;
 }
+
+/**
+ * Group rows by a plain field or by a field reached through the linked-item
+ * projection.
+ *
+ * `groupBy` is either a field path ("status") or a linked path
+ * ("linked_items.creator"). Linked grouping is multi-valued, so `mode` decides
+ * whether a row counts once per link ("fanout") or once in total ("primary").
+ */
+export function groupRows(rows, options = {}) {
+  const {
+    groupBy,
+    metric = 'count',
+    field = '',
+    mode = 'fanout',
+    limit = 0,
+    unknownLabel = 'Unknown',
+  } = options;
+  const linkedPrefix = 'linked_items.';
+  if (typeof groupBy === 'string' && groupBy.startsWith(linkedPrefix)) {
+    return groupLinkedRows(rows, groupBy.slice(linkedPrefix.length), {
+      metric,
+      field,
+      mode,
+      limit,
+      unknownLabel,
+    });
+  }
+  return metric === 'sum'
+    ? groupSum(rows, groupBy, field, { limit, unknownLabel })
+    : groupCount(rows, groupBy, { limit, unknownLabel });
+}
+
+function groupLinkedRows(rows, valueField, { metric, field, mode, limit, unknownLabel }) {
+  const buckets = new Map();
+  const add = (label, row) => {
+    const increment = metric === 'sum' ? numericValue(row, field) : 1;
+    buckets.set(label, (buckets.get(label) ?? 0) + increment);
+  };
+
+  for (const row of rows ?? []) {
+    const links = Array.isArray(row?.linked_items) ? row.linked_items : [];
+    if (links.length === 0) {
+      add(unknownLabel, row);
+      continue;
+    }
+    if (mode === 'primary') {
+      add(groupLabel(links[0], valueField, unknownLabel), row);
+      continue;
+    }
+    for (const link of links) {
+      add(groupLabel(link, valueField, unknownLabel), row);
+    }
+  }
+  return finalize(buckets, limit);
+}

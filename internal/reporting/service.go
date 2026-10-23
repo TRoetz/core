@@ -21,14 +21,28 @@ type AssetLister interface {
 	ListAssets(userID, setID int, filter repository.AssetListFilter, ql string) ([]models.Asset, int, error)
 }
 
+// LinkProjector projects items linked to assets. It is optional: without it,
+// a slot that asks for a projection resolves without linked items rather than
+// failing.
+type LinkProjector interface {
+	ProjectLinkedItems(ctx context.Context, assetIDs, accessibleWorkspaceIDs []int, fields []string) (map[int][]map[string]any, bool, error)
+}
+
 // Service resolves widget query slots into normalized rows.
 type Service struct {
 	items  ItemLister
 	assets AssetLister
+	links  LinkProjector
 }
 
 func NewService(items ItemLister, assets AssetLister) *Service {
 	return &Service{items: items, assets: assets}
+}
+
+// WithLinks enables item projections through asset links.
+func (s *Service) WithLinks(links LinkProjector) *Service {
+	s.links = links
+	return s
 }
 
 // Request is one dashboard's worth of slot resolution.
@@ -38,7 +52,10 @@ type Request struct {
 	// workspace the viewer can read; the item service intersects with the
 	// viewer's accessible workspaces either way.
 	WorkspaceID int
-	Slots       []Slot
+	// AccessibleWorkspaceIDs bounds link projections. A linked item outside
+	// this set is invisible even when the asset itself is readable.
+	AccessibleWorkspaceIDs []int
+	Slots                  []Slot
 }
 
 type groupKey struct {
@@ -160,7 +177,42 @@ func (s *Service) resolveAssets(ctx context.Context, request Request, slots []Sl
 	for i := range assets {
 		rows = append(rows, assetRow(&assets[i]))
 	}
-	return buildResults(slots, rows, total), nil
+
+	projected := false
+	if projection := slots[0].Projection; projection != nil && projection.Entity == "item" && s.links != nil {
+		projectCtx, cancel := context.WithTimeout(ctx, SlotTimeout)
+		defer cancel()
+		links, truncated, err := s.projectLinkedItems(projectCtx, rows, request.AccessibleWorkspaceIDs, projection.Fields)
+		if err != nil {
+			return nil, err
+		}
+		for i := range rows {
+			rows[i].LinkedItems = links[rows[i].ID]
+		}
+		projected = truncated
+	}
+
+	results := buildResults(slots, rows, total)
+	if projected {
+		for i := range results {
+			results[i].result.Truncated = true
+		}
+	}
+	return results, nil
+}
+
+// projectLinkedItems attaches the requested item fields to each asset row. An
+// asset with no visible links simply gets none.
+func (s *Service) projectLinkedItems(ctx context.Context, rows []AssetRow, accessibleWorkspaceIDs []int, fields []string) (links map[int][]map[string]any, truncated bool, err error) {
+	assetIDs := make([]int, 0, len(rows))
+	for _, row := range rows {
+		assetIDs = append(assetIDs, row.ID)
+	}
+	links, truncated, err = s.links.ProjectLinkedItems(ctx, assetIDs, accessibleWorkspaceIDs, fields)
+	if err != nil {
+		return nil, false, err
+	}
+	return links, truncated, nil
 }
 
 // buildResults slices one fetch down to each slot's limit. Truncation is

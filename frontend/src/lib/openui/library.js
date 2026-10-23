@@ -184,6 +184,12 @@ const BarChartDef = defineComponent({
       .optional()
       .describe('Maximum bars. Defaults to 10.'),
     entity,
+    link_mode: z
+      .enum(['fanout', 'primary'])
+      .optional()
+      .describe(
+        'Only for group_by fields on linked_items: count a row once per link (fanout) or once in total (primary). Defaults to fanout.'
+      ),
   }),
   component: BarChart,
 });
@@ -216,6 +222,10 @@ const ProgressListDef = defineComponent({
     field: z.string().optional(),
     group_limit: z.number().int().min(1).max(50).optional(),
     entity,
+    link_mode: z
+      .enum(['fanout', 'primary'])
+      .optional()
+      .describe('Only for group_by fields on linked_items. Defaults to fanout.'),
   }),
   component: ProgressList,
 });

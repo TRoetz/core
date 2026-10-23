@@ -120,11 +120,22 @@ func (h *CustomWidgetDataHandler) ResolveCustomWidgetData(w http.ResponseWriter,
 		slots = append(slots, slot)
 	}
 
-	results := h.data.Resolve(r.Context(), reporting.Request{
-		UserID:      user.ID,
-		WorkspaceID: workspaceID,
-		Slots:       slots,
-	})
+	// Link projections are the only path that needs the workspace set, so it is
+	// only fetched when a slot actually asks for one.
+	request2 := reporting.Request{UserID: user.ID, WorkspaceID: workspaceID, Slots: slots}
+	for _, slot := range slots {
+		if slot.Projection != nil {
+			accessible, err := h.permissionService.AccessibleWorkspaceIDs(user.ID)
+			if err != nil {
+				respondInternalError(w, r, err)
+				return
+			}
+			request2.AccessibleWorkspaceIDs = accessible
+			break
+		}
+	}
+
+	results := h.data.Resolve(r.Context(), request2)
 	respondJSONOK(w, map[string]any{"results": results})
 }
 
