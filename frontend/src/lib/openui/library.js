@@ -171,7 +171,7 @@ const ItemListDef = defineComponent({
 const BarChartDef = defineComponent({
   name: 'BarChart',
   description:
-    'Counts or sums grouped by a field. Aggregation runs in the browser over up to the row limit, so always set a sort.',
+    'Counts or sums grouped by a field. Aggregation runs in the browser over up to the row limit; set sort only when the request asks for an order.',
   props: z.object({
     query,
     group_by: z.string().describe('Field to group by, for example "status" or "assignee".'),
@@ -200,7 +200,7 @@ const BarChartDef = defineComponent({
 const LineChartDef = defineComponent({
   name: 'LineChart',
   description:
-    'A trend over time. Buckets rows by a date field in the browser, so always set a sort and a generous limit.',
+    'A trend over time. Buckets rows by a date field in the browser; set sort only when the request asks for an order, and give it a generous limit.',
   props: z.object({
     query,
     field: z.string().optional().describe('Date field to bucket on. Defaults to "created_at".'),
