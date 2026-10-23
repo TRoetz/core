@@ -109,19 +109,21 @@ type Result struct {
 // ItemRow is the normalized shape a widget component sees for an item. It
 // deliberately excludes descriptions, comments, and attachments.
 type ItemRow struct {
-	ID         int        `json:"id"`
-	Key        string     `json:"key,omitempty"`
-	Title      string     `json:"title"`
-	Status     string     `json:"status,omitempty"`
-	Type       string     `json:"type,omitempty"`
-	Priority   string     `json:"priority,omitempty"`
-	Assignee   string     `json:"assignee,omitempty"`
-	Workspace  string     `json:"workspace,omitempty"`
-	CreatedAt  *time.Time `json:"created_at,omitempty"`
-	UpdatedAt  *time.Time `json:"updated_at,omitempty"`
-	DueDate    *time.Time `json:"due_date,omitempty"`
-	Completed  *time.Time `json:"completed_at,omitempty"`
-	StoryPoint *float64   `json:"story_points,omitempty"`
+	ID        int    `json:"id"`
+	Key       string `json:"key,omitempty"`
+	Title     string `json:"title"`
+	Status    string `json:"status,omitempty"`
+	Type      string `json:"type,omitempty"`
+	Priority  string `json:"priority,omitempty"`
+	Assignee  string `json:"assignee,omitempty"`
+	Workspace string `json:"workspace,omitempty"`
+	// WorkspaceID lets the renderer build a deep link to the item.
+	WorkspaceID int        `json:"workspace_id,omitempty"`
+	CreatedAt   *time.Time `json:"created_at,omitempty"`
+	UpdatedAt   *time.Time `json:"updated_at,omitempty"`
+	DueDate     *time.Time `json:"due_date,omitempty"`
+	Completed   *time.Time `json:"completed_at,omitempty"`
+	StoryPoint  *float64   `json:"story_points,omitempty"`
 }
 
 // AssetRow is the normalized shape for an asset. LinkedItems is present only

@@ -147,7 +147,8 @@ const MetricRowDef = defineComponent({
 
 const ItemsTableDef = defineComponent({
   name: 'ItemsTable',
-  description: 'A table of items or assets matching a query.',
+  description:
+    'A table of items or assets matching a query. The key and title columns link to the item.',
   props: z.object({
     query,
     columns: z

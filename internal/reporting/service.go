@@ -246,18 +246,19 @@ func buildResults[T any](slots []Slot, rows []T, total int) []slotResult {
 
 func itemRow(item *models.Item) ItemRow {
 	row := ItemRow{
-		ID:        item.ID,
-		Key:       item.Key,
-		Title:     item.Title,
-		Status:    item.StatusName,
-		Type:      item.ItemTypeName,
-		Priority:  item.PriorityName,
-		Assignee:  item.AssigneeName,
-		Workspace: item.WorkspaceName,
-		CreatedAt: &item.CreatedAt,
-		UpdatedAt: &item.UpdatedAt,
-		DueDate:   item.DueDate,
-		Completed: item.CompletedAt,
+		ID:          item.ID,
+		Key:         item.Key,
+		Title:       item.Title,
+		Status:      item.StatusName,
+		Type:        item.ItemTypeName,
+		Priority:    item.PriorityName,
+		Assignee:    item.AssigneeName,
+		Workspace:   item.WorkspaceName,
+		WorkspaceID: item.WorkspaceID,
+		CreatedAt:   &item.CreatedAt,
+		UpdatedAt:   &item.UpdatedAt,
+		DueDate:     item.DueDate,
+		Completed:   item.CompletedAt,
 	}
 	if item.StoryPoints != nil {
 		points := *item.StoryPoints
