@@ -91,9 +91,11 @@ program passes to its data components.
 
 ## Rules
 
-1. Always set `sort` on `BarChart`, `LineChart`, and `ProgressList`. Aggregation
-   runs in the browser over at most `limit` rows, and without a sort the sampled
-   numbers change between reloads.
+1. **Do not invent an order, and do not add conditions.** Set `sort` only when
+   the request asks for one ("oldest first", "most recently updated"). A query
+   with no sort is already deterministic, so adding one silently changes what
+   the user asked for. The same applies to filters: use exactly the conditions
+   the user gave.
 2. Aggregation is client-side. `limit` caps the sample: use 100 for a table and
    1000 only for a chart, and narrow the query (a workspace, a status, a date
    window) so the sample is representative.
@@ -112,7 +114,7 @@ program passes to its data components.
 
 ## Examples
 
-Open work assigned to the viewer:
+"My open work" — no order was requested, so nothing sets a sort:
 
 ```
 root = Card([
@@ -121,12 +123,26 @@ root = Card([
     Metric("Open", "assignee = currentUser() AND status_completed = false"),
     Metric("Overdue", "assignee = currentUser() AND dueDate < 0d")
   ]),
-  ItemsTable("assignee = currentUser() AND status_completed = false", "key,title,priority,dueDate", "-updated_at", 10)
+  ItemsTable("assignee = currentUser() AND status_completed = false", "key,title,priority,dueDate", "", 10)
 ])
 ```
 
 ```
-{"item": {"ql": "assignee = currentUser() AND status_completed = false", "sort": "-updated_at", "limit": 10}}
+{"item": {"ql": "assignee = currentUser() AND status_completed = false", "limit": 10}}
+```
+
+"Unassigned items older than 30 days, oldest first" — the order was requested,
+so the table carries it:
+
+```
+root = Card([
+  Title("Unassigned over 30 days"),
+  ItemsTable("assignee IS NULL AND status_completed = false AND createdAt <= -30d", "key,title,priority,createdAt", "createdAt", 10)
+])
+```
+
+```
+{"item": {"ql": "assignee IS NULL AND status_completed = false AND createdAt <= -30d", "sort": "createdAt", "limit": 10}}
 ```
 
 Throughput by status over the last month:
@@ -134,12 +150,12 @@ Throughput by status over the last month:
 ```
 root = Card([
   Title("Completed last 30 days"),
-  ProgressList("statusCompleted = true AND completed_at >= -30d", "assignee", "-updated_at", 1000)
+  ProgressList("statusCompleted = true AND completed_at >= -30d", "assignee", "", 1000)
 ])
 ```
 
 ```
-{"item": {"ql": "statusCompleted = true AND completed_at >= -30d", "sort": "-updated_at", "limit": 1000}}
+{"item": {"ql": "statusCompleted = true AND completed_at >= -30d", "limit": 1000}}
 ```
 
 Assets per ticket author:
@@ -147,10 +163,10 @@ Assets per ticket author:
 ```
 root = Card([
   Title("Assets by ticket author"),
-  BarChart("", "linked_items.creator", "-updated_at", 1000, "count", "", 10)
+  BarChart("", "linked_items.creator", "", 1000, "count", "", 10)
 ])
 ```
 
 ```
-{"item": {"ql": "", "sort": "-updated_at", "limit": 1000}}
+{"item": {"ql": "", "limit": 1000}}
 ```

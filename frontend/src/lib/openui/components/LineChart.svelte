@@ -1,5 +1,4 @@
 <script>
-  import { t } from '../../stores/i18n.svelte.js';
   import Chart from '../../widgets/Chart.svelte';
   import { getSource, getWidgetDataContext } from '../context.js';
   import { itemSpec, assetSpec, sourceKey } from '../querySpec.js';
@@ -69,9 +68,3 @@
     <Chart type="line" {series} {categories} minHeight={160} showYAxis={false} />
   {/snippet}
 </SourceBoundary>
-
-{#if !props.sort}
-  <p class="mt-2 text-xs" style="color: var(--ds-text-subtle);" data-testid="openui-unsorted-warning">
-    {t('dashboard.customWidgets.unsorted')}
-  </p>
-{/if}

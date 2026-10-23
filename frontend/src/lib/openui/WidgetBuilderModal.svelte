@@ -37,7 +37,10 @@
   let saving = $state(false);
   let generating = $state(false);
   let name = $state('');
-  let description = $state('');
+  // The user's words. Never overwritten by a generated draft: the model's
+  // description is widget metadata, not a replacement for the request.
+  let prompt = $state('');
+  let widgetDescription = $state('');
   let program = $state('');
   /** @type {{
    *   item?: { ql?: string, sort?: string, limit?: number },
@@ -92,7 +95,8 @@
 
   function reset() {
     name = '';
-    description = '';
+    prompt = '';
+    widgetDescription = '';
     program = '';
     queries = {};
     error = '';
@@ -105,7 +109,8 @@
     try {
       const widget = await customWidgets.get(id);
       name = widget.name ?? '';
-      description = widget.description ?? '';
+      prompt = widget.description ?? '';
+      widgetDescription = widget.description ?? '';
       program = widget.program ?? '';
       queries = widget.queries ?? {};
     } catch {
@@ -155,6 +160,48 @@
     return slots;
   }
 
+  /** Slots already in flight, keyed by source key, so parallel components share one request. */
+  const pendingSources = new Map();
+
+  function toSlot(spec, key) {
+    if (spec.entity === 'links') return { key, entity: 'links', links: spec.links };
+    const slot = { key, entity: spec.entity, ql: spec.ql ?? '', sort: spec.sort ?? '', limit: spec.limit ?? 0 };
+    if (spec.entity === 'asset') slot.asset_set_id = spec.asset_set_id;
+    return slot;
+  }
+
+  /**
+   * Resolve one spec on demand. The prefetch only covers the stored queries, so
+   * a component whose props produce a different spec (a different limit, say)
+   * would otherwise sit on a skeleton forever.
+   */
+  function requestSource(spec, key) {
+    if (!key || sources[key] || pendingSources.has(key)) return;
+    sources = { ...sources, [key]: { status: 'loading' } };
+    const request = customWidgets
+      .data({ workspace_id: workspaceId ?? undefined, slots: [toSlot(spec, key)] })
+      .then((response) => {
+        sources = {
+          ...sources,
+          [key]: response?.results?.[key] ?? {
+            status: 'error',
+            error: { code: 'missing', message: t('dashboard.customWidgets.sourceError') },
+          },
+        };
+      })
+      .catch(() => {
+        sources = {
+          ...sources,
+          [key]: {
+            status: 'error',
+            error: { code: 'unavailable', message: t('dashboard.customWidgets.sourceError') },
+          },
+        };
+      })
+      .finally(() => pendingSources.delete(key));
+    pendingSources.set(key, request);
+  }
+
   async function refreshPreview() {
     const slots = slotsFromQueries();
     if (slots.length === 0) {
@@ -175,13 +222,13 @@
     error = '';
     try {
       const draft = await customWidgets.generate({
-        prompt: description || name || 'a useful dashboard widget',
+        prompt: prompt || name || 'a useful dashboard widget',
         current_program: program,
         current_queries: queries,
         workspace_id: workspaceId ?? undefined,
       });
       name = draft.name ?? name;
-      description = draft.description ?? description;
+      widgetDescription = draft.description ?? widgetDescription;
       program = draft.program ?? '';
       queries = draft.queries ?? {};
       previewVersion += 1;
@@ -218,7 +265,7 @@
     error = '';
     const payload = {
       name,
-      description,
+      description: widgetDescription || prompt,
       program,
       queries,
       workspace_id: workspaceId ?? null,
@@ -263,7 +310,7 @@
       />
       <TextareaField
         label={t('dashboard.widgetBuilder.promptLabel')}
-        bind:value={description}
+        bind:value={prompt}
         rows={2}
         placeholder={t('dashboard.widgetBuilder.promptPlaceholder')}
         dataTestid="widget-builder-prompt"
@@ -287,7 +334,7 @@
               class="rounded-full px-2.5 py-1 text-xs"
               style="background-color: var(--ds-surface-raised); color: var(--ds-text-subtle);"
               onclick={() => {
-                description = example;
+                prompt = example;
               }}
             >
               {example}
@@ -300,13 +347,6 @@
         </p>
       {/if}
 
-      <TextareaField
-        label={t('dashboard.widgetBuilder.programLabel')}
-        bind:value={program}
-        rows={10}
-        spellcheck={false}
-        dataTestid="widget-builder-program"
-      />
       {#if parseErrors.length > 0}
         <ul class="space-y-1 text-xs" style="color: var(--ds-danger, #dc2626);" data-testid="widget-builder-parse-errors">
           {#each parseErrors.slice(0, 5) as parseError (parseError.code + (parseError.path ?? ''))}
@@ -354,7 +394,7 @@
         {#if loading}
           <p class="text-sm" style="color: var(--ds-text-subtle);">{t('dashboard.widgetBuilder.loading')}</p>
         {:else if program}
-          <CustomWidgetRenderer {program} {sources} {workspaceId} />
+          <CustomWidgetRenderer {program} {sources} {workspaceId} {requestSource} />
         {:else}
           <p class="text-sm" style="color: var(--ds-text-subtle);">
             {t('dashboard.widgetBuilder.previewEmpty')}
