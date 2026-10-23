@@ -16,7 +16,6 @@
   import Avatar from '../../components/Avatar.svelte';
   import Input from '../../components/Input.svelte';
   import Text from '../../components/Text.svelte';
-  import TruncatedFieldValue from '../../components/TruncatedFieldValue.svelte';
   import DropdownMenu from '../../layout/DropdownMenu.svelte';
   import ItemPicker from '../../pickers/ItemPicker.svelte';
   import UserPicker from '../../pickers/UserPicker.svelte';
@@ -45,11 +44,8 @@
   import { workspaceDataStore } from '../../stores/workspaceDataStore.svelte.js';
   import { collectionEditorOptions } from '../../stores/collectionEditorOptions.svelte.js';
   import { t } from '../../stores/i18n.svelte.js';
-  import { formatDateOnly, formatCustomFieldDate } from '../../utils/dateFormatter.js';
+  import { formatDateOnly } from '../../utils/dateFormatter.js';
   import { parseDuration, durationToString } from '../../utils/timeUtils.js';
-  import { resolveOptionLabel, resolveOptionLabels } from '../../utils/optionUtils.js';
-  import { booleanCustomFieldChecked, isBooleanCustomFieldType } from '../../utils/customFieldTypes.js';
-  import { customFieldLinkHref } from '../../utils/customFieldLinks.js';
   import { isSystemFieldConfigured, systemFieldIdentifiers } from '../../utils/screenFields.js';
   import { isExternalRequest } from '../../utils/requestOrigin.js';
   import StatusBadge from '../../components/StatusBadge.svelte';
@@ -371,41 +367,6 @@
     return customFieldDefinitions.find(field => field.id === parseInt(fieldId));
   }
 
-  function formatCustomFieldValue(fieldDef, value) {
-    if (isBooleanCustomFieldType(fieldDef.field_type)) {
-      return booleanCustomFieldChecked(value) ? t('common.yes') : t('common.no');
-    }
-    if (fieldDef.field_type === 'select') {
-      return resolveOptionLabel(fieldDef.options, value);
-    }
-    if (fieldDef.field_type === 'multiselect') {
-      return resolveOptionLabels(fieldDef.options, Array.isArray(value) ? value : []).join(', ');
-    }
-    if (fieldDef.field_type === 'date') {
-      return formatCustomFieldDate(value);
-    }
-    if (fieldDef.field_type === 'milestone' || fieldDef.field_type === 'multi_milestone') {
-      const entries = fieldDef.field_type === 'multi_milestone'
-        ? (Array.isArray(value) ? value : [])
-        : (value === null || value === undefined || value === '' ? [] : [value]);
-      return entries.map((entry) => {
-        const id = entry && typeof entry === 'object' ? entry.id : entry;
-        const milestone = milestones?.find((m) => m.id === parseInt(id, 10));
-        return milestone ? milestone.name : id;
-      }).join(', ');
-    }
-    if (fieldDef.field_type === 'user' && typeof value === 'object') {
-      return value.name || t('common.selected');
-    }
-    if (Array.isArray(value)) {
-      return value.map(v => typeof v === 'object' ? v.title || v.name || v.label || v.value : v).join(', ');
-    }
-    if (typeof value === 'object') {
-      return value.title || value.name || value.label || value.value || JSON.stringify(value);
-    }
-    return value;
-  }
-
   function formatVirtualFieldValue(field, value) {
     if (field.virtual_field_type === 'checkbox') {
       return value ? t('common.yes') : t('common.no');
@@ -664,15 +625,23 @@
 >
   <!-- Panel Content -->
   <div class="flex-1 px-3 py-3 overflow-y-auto">
-    <!-- Shared custom-field editor. Date fields save on change; every other
-         free-form type defers to commit-on-blur. -->
-    {#snippet customFieldEditor(fieldDef, screenField, currentValue, fieldEditable, commitOnBlur)}
+    {#snippet customFieldLabel(name)}
+      <Text variant="subtle" size="sm">{name}</Text>
+    {/snippet}
+
+    <!-- One renderer per custom field: it owns the row chrome and the
+         display→editor swap. Pickers and dates save on change; free-form text
+         types stage keystrokes and save on commit (Enter/blur). -->
+    {#snippet customFieldRow(fieldDef, screenField, currentValue, fieldEditable)}
+      {@const isEditing = editingCustomFields[screenField.field_identifier]}
       <CustomFieldRenderer
         field={fieldDef}
         value={currentValue}
-        readonly={!fieldEditable}
-        autoOpenPickers={true}
+        label={customFieldLabel}
+        rowTestIdPrefix="item-custom-field"
+        readonly={!isEditing}
         disabled={!canEdit || !fieldEditable}
+        onStartEdit={() => startEditingCustomField(screenField.field_identifier)}
         {milestones}
         {iterations}
         itemId={item?.id}
@@ -683,7 +652,7 @@
             onsaveField?.({ field: `custom_field_${screenField.field_identifier}` });
           }
         }}
-        onCommit={commitOnBlur
+        onCommit={DEFERRED_SAVE_CUSTOM_FIELD_TYPES.has(fieldDef.field_type)
           ? (val) => onsaveField?.({ field: `custom_field_${screenField.field_identifier}`, value: val })
           : null}
         onCancel={() => oncancelEdit?.({ field: `custom_field_${screenField.field_identifier}` })}
@@ -1285,26 +1254,8 @@
           {@const currentValue = isEditing ? editCustomFieldValues[screenField.field_identifier] : storedValue}
           {#if fieldDef}
             {@const fieldEditable = isCustomFieldEditable(fieldDef.id)}
-            <div class="mb-1" data-testid={`item-custom-field-${fieldDef.id}`}>
-              {#if isEditing}
-                {@render customFieldEditor(fieldDef, screenField, currentValue, fieldEditable, false)}
-              {:else}
-                <button
-                  onclick={() => startEditingCustomField(screenField.field_identifier)}
-                  data-testid={`item-custom-field-edit-${fieldDef.id}`}
-                  class="hover-bg w-full flex items-center justify-between px-2 py-1.5 text-sm transition-colors rounded group"
-                  disabled={!canEdit || !fieldEditable}
-                >
-                  <Text variant="subtle" size="sm">{fieldDef.name}</Text>
-                  <span style="color: {currentValue ? 'var(--ds-text)' : 'var(--ds-text-subtle)'};">
-                    {#if currentValue !== null && currentValue !== undefined && currentValue !== ''}
-                      {formatCustomFieldDate(currentValue)}
-                    {:else}
-                      {t('common.none')}
-                    {/if}
-                  </span>
-                </button>
-              {/if}
+            <div class="mb-1">
+              {@render customFieldRow(fieldDef, screenField, currentValue, fieldEditable)}
             </div>
           {/if}
         {/each}
@@ -1333,76 +1284,20 @@
             {@const currentValue = isEditing ? editCustomFieldValues[screenField.field_identifier] : storedValue}
             {#if fieldDef}
               {@const fieldEditable = isCustomFieldEditable(fieldDef.id)}
-              <div data-testid={`item-custom-field-${fieldDef.id}`}>
-                {#if fieldDef.field_type === 'linking'}
-                  <div class="px-2 py-1.5">
-                    <Text variant="subtle" size="sm" class="mb-1">{fieldDef.name}</Text>
-                    <CustomFieldRenderer
-                      field={fieldDef}
-                      value={currentValue}
-                      readonly={!canEdit || !fieldEditable}
-                      disabled={!canEdit || !fieldEditable}
-                      itemId={item?.id}
-                    />
-                  </div>
-                {:else if isEditing}
-                  {@render customFieldEditor(fieldDef, screenField, currentValue, fieldEditable, true)}
-                {:else}
-                  {@const hasValue = Array.isArray(currentValue)
-                    ? currentValue.length > 0
-                    : currentValue !== null && currentValue !== undefined && currentValue !== ''}
-                  {@const displayValue = hasValue ? formatCustomFieldValue(fieldDef, currentValue) : t('common.none')}
-                  {@const valueHref = customFieldLinkHref(fieldDef.field_type, currentValue)}
-                  <!-- Unified read-only row: label left, value right. The row owns
-                       padding and hover; the value renderer adds no chrome. -->
-                  <div
-                    class="hover-bg group flex w-full min-w-0 items-center justify-between gap-2 rounded px-2 py-1.5 text-sm transition-colors"
-                  >
-                    <button
-                      type="button"
-                      onclick={() => startEditingCustomField(screenField.field_identifier)}
-                      data-testid={valueHref
-                        ? `item-custom-field-edit-${fieldDef.id}`
-                        : `item-custom-field-label-${fieldDef.id}`}
-                      class="max-w-[45%] shrink-0 truncate rounded-sm text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-default"
-                      style="outline-color: var(--ds-border-focused);"
-                      disabled={!canEdit || !fieldEditable}
-                    >
-                      <Text variant="subtle" size="sm">{fieldDef.name}</Text>
-                    </button>
-
-                    <div class="min-w-0 flex-1 text-right">
-                      {#if ['user', 'multi_user', 'asset'].includes(fieldDef.field_type)}
-                        <CustomFieldRenderer
-                          field={fieldDef}
-                          value={currentValue}
-                          readonly={true}
-                          disabled={!canEdit || !fieldEditable}
-                          bare={true}
-                          displayAlignment="end"
-                          truncateDisplay={true}
-                          displayTestId={`item-custom-field-display-${fieldDef.id}`}
-                          {milestones}
-                          {iterations}
-                          itemId={item?.id}
-                          onStartEdit={() => startEditingCustomField(screenField.field_identifier)}
-                        />
-                      {:else}
-                        <TruncatedFieldValue
-                          value={displayValue}
-                          href={valueHref}
-                          onactivate={valueHref ? null : () => startEditingCustomField(screenField.field_identifier)}
-                          disabled={!canEdit || !fieldEditable}
-                          subtle={!hasValue}
-                          testId={valueHref
-                            ? `item-custom-field-value-${fieldDef.id}`
-                            : `item-custom-field-edit-${fieldDef.id}`}
-                        />
-                      {/if}
-                    </div>
-                  </div>
-                {/if}
-              </div>
+              {#if fieldDef.field_type === 'linking'}
+                <div class="px-2 py-1.5" data-testid={`item-custom-field-${fieldDef.id}`}>
+                  <Text variant="subtle" size="sm" class="mb-1">{fieldDef.name}</Text>
+                  <CustomFieldRenderer
+                    field={fieldDef}
+                    value={currentValue}
+                    readonly={!canEdit || !fieldEditable}
+                    disabled={!canEdit || !fieldEditable}
+                    itemId={item?.id}
+                  />
+                </div>
+              {:else}
+                {@render customFieldRow(fieldDef, screenField, currentValue, fieldEditable)}
+              {/if}
             {/if}
           {/each}
         </div>

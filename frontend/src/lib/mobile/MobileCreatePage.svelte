@@ -1098,7 +1098,6 @@
       onChange={(val) => customFieldValues[entry.fieldDef.id] = val}
       {milestones}
       {iterations}
-      autoOpenPickers={false}
     />
   </div>
 {/snippet}

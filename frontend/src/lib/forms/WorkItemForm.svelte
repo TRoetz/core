@@ -623,7 +623,6 @@
             milestones={store.milestones}
             iterations={store.iterations}
             isDarkMode={false}
-            autoOpenPickers={false}
           />
         </div>
       {/each}

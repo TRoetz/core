@@ -1010,7 +1010,6 @@
                 }}
                 value={assetFormData.custom_field_values[field.custom_field_id]}
                 readonly={false}
-                autoOpenPickers={false}
                 onChange={(val) => assetFormData.custom_field_values[field.custom_field_id] = val}
                 required={field.is_required}
               />
