@@ -387,6 +387,23 @@ class HomepageStore {
     );
   }
 
+  /**
+   * Update the cached title of every card bound to a custom widget. The title
+   * is cached in config so the card header renders before the definition loads.
+   */
+  setCustomWidgetTitle(customWidgetId, title) {
+    if (!customWidgetId || !title) return;
+    let changed = false;
+    this.widgets = this.widgets.map((w) => {
+      if (w.type !== 'custom-widget' || Number(w.config?.customWidgetId) !== Number(customWidgetId))
+        return w;
+      if (w.config?.title === title) return w;
+      changed = true;
+      return { ...w, config: { ...(w.config ?? {}), title } };
+    });
+    if (changed) this.debouncedSaveLayout();
+  }
+
   updateWidgetConfig(widgetId, configChanges) {
     this.widgets = this.widgets.map((w) =>
       w.id === widgetId ? { ...w, config: { ...(w.config ?? {}), ...configChanges } } : w

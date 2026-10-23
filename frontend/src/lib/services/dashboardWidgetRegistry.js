@@ -252,3 +252,20 @@ export function buildDefaultDashboardLayout() {
 
   return { grid_columns: DASHBOARD_GRID_COLUMNS, sections, widgets };
 }
+
+/**
+ * Resolve the header title for a dashboard widget. A custom widget is named by
+ * its author, so its cached name wins over the generic catalog label.
+ *
+ * @param {{ type?: string, config?: Record<string, any> }} widget
+ * @param {(key: string) => string} translate
+ * @returns {string}
+ */
+export function getDashboardWidgetTitle(widget, translate) {
+  const type = widget?.type ?? '';
+  if (type === 'custom-widget' && widget?.config?.title) {
+    return widget.config.title;
+  }
+  const metadata = getDashboardWidgetMetadata(type);
+  return metadata ? translate(metadata.nameKey) : type;
+}

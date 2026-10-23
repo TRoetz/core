@@ -5,7 +5,7 @@
   import { itemModalStore } from '../../stores/itemModalStore.svelte.js';
   import { t } from '../../stores/i18n.svelte.js';
 
-  let { config = {}, isEditing = false, refreshKey = 0, onedit = null } = $props();
+  let { config = {}, refreshKey = 0 } = $props();
 
   const widgetId = $derived(Number(config?.customWidgetId) || 0);
 
@@ -155,17 +155,6 @@
     {t('dashboard.customWidgets.sourceError')}
   </p>
 {:else if widget && Renderer}
-  {#if isEditing && onedit}
-    <button
-      type="button"
-      class="mb-2 rounded px-2 py-1 text-xs"
-      style="background-color: var(--ds-surface-raised); color: var(--ds-text-subtle);"
-      onclick={onedit}
-      data-testid="custom-widget-edit"
-    >
-      {t('common.edit')}
-    </button>
-  {/if}
   <Renderer
     program={widget.program}
     {sources}
