@@ -343,7 +343,9 @@
         </div>
       {:else}
         <p class="text-xs" style="color: var(--ds-text-subtle);" data-testid="widget-builder-ai-unavailable">
-          {t('dashboard.widgetBuilder.aiUnavailable')}
+          {isEditing
+            ? t('dashboard.widgetBuilder.aiUnavailableEditing')
+            : t('dashboard.widgetBuilder.aiUnavailable')}
         </p>
       {/if}
 
