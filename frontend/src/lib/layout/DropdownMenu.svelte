@@ -218,7 +218,10 @@
             class="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
             style="background-color: {triggerIconBgColor};"
           >
-            <TriggerIconComp class="w-3.5 h-3.5 text-white" />
+            <TriggerIconComp
+              class="w-3.5 h-3.5"
+              style="color: {getTextColorForBackground(triggerIconBgColor)}"
+            />
           </div>
         {:else}
           {@const TriggerIconComp = triggerIcon}

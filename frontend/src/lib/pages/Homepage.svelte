@@ -25,6 +25,7 @@
     getDashboardSectionDisplay,
     getDashboardSectionSaveValues,
     getDashboardWidgetMetadata,
+    getDashboardWidgetTitle,
   } from '../services/dashboardWidgetRegistry.js';
 
   import WidgetWrapper from '../widgets/WidgetWrapper.svelte';
@@ -45,6 +46,7 @@
   import SavedSearchWidget from '../widgets/dashboard/SavedSearchWidget.svelte';
   import CustomWidgetWidget from '../widgets/dashboard/CustomWidgetWidget.svelte';
   import WidgetBuilderModal from '../openui/WidgetBuilderModal.svelte';
+  import { aiStore } from '../stores/aiStore.svelte.js';
 
   let greeting = $derived(homepageStore.greeting);
   let greetingText = $derived(greeting ? t(greeting) : '');
@@ -274,6 +276,9 @@
             // A custom widget needs a definition first, so the builder decides
             // what to add once it saves.
             if (data.widgetType === 'custom-widget') {
+              // The catalog hides this type when generation is unavailable; a
+              // stale drag must not add an empty card.
+              if (!aiStore.available || !aiStore.isFeatureEnabled('custom_widget')) return;
               builderSectionId = sectionId;
               builderWidgetId = null;
               builderOpen = true;
@@ -301,6 +306,8 @@
   function handleWidgetSaved(widget) {
     if (!widget) return;
     if (builderWidgetId) {
+      // Renaming in the builder must move the card header too.
+      homepageStore.setCustomWidgetTitle(widget.id, widget.name);
       builderRefresh += 1;
       return;
     }
@@ -309,9 +316,25 @@
     }
   }
 
-  function getWidgetTitle(type) {
-    const metadata = getDashboardWidgetMetadata(type);
-    return metadata ? t(metadata.nameKey) : type;
+  function getWidgetTitle(widget) {
+    return getDashboardWidgetTitle(widget, t);
+  }
+
+  function openBuilderFor(widget) {
+    builderWidgetId = Number(widget?.config?.customWidgetId) || null;
+    builderSectionId = null;
+    builderOpen = true;
+  }
+
+  function widgetMenuItems(widget) {
+    if (widget?.type !== 'custom-widget' || !widget.config?.customWidgetId) return [];
+    return [
+      {
+        title: t('dashboard.widgetBuilder.editTitle'),
+        testid: 'widget-menu-edit',
+        onClick: () => openBuilderFor(widget),
+      },
+    ];
   }
 
   function getSectionWidgets(sectionId) {
@@ -527,7 +550,7 @@
                   {#each sectionWidgets as widget (widget.id)}
                     {@const resizeBounds = homepageStore.getWidgetResizeBounds(widget.id)}
                     <WidgetWrapper
-                      title={getWidgetTitle(widget.type)}
+                      title={getWidgetTitle(widget)}
                       widgetId={widget.id}
                       widgetType={widget.type}
                       width={widget.width}
@@ -538,6 +561,7 @@
                       onremove={() => removeWidget(widget.id)}
                       onwidthchange={(newWidth) => updateWidgetWidth(widget.id, newWidth)}
                       onconfigchange={(changes) => updateWidgetConfig(widget.id, changes)}
+                      extraMenuItems={widgetMenuItems(widget)}
                     >
                       {#if widget.type === 'daily-briefing'}
                         <DailyBriefingWidget />
@@ -565,16 +589,7 @@
                           onconfigchange={(changes) => updateWidgetConfig(widget.id, changes)}
                         />
                       {:else if widget.type === 'custom-widget'}
-                        <CustomWidgetWidget
-                          config={widget.config ?? {}}
-                          refreshKey={builderRefresh}
-                          isEditing={isCustomizeMode || isEditMode}
-                          onedit={() => {
-                            builderWidgetId = Number(widget.config?.customWidgetId) || null;
-                            builderSectionId = null;
-                            builderOpen = true;
-                          }}
-                        />
+                        <CustomWidgetWidget config={widget.config ?? {}} refreshKey={builderRefresh} />
                       {:else if widget.type === 'saved-search'}
                         <SavedSearchWidget
                           config={widget.config ?? {}}
