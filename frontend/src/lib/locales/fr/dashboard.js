@@ -108,6 +108,7 @@ export default {
       unavailable: "Ce widget n'est plus disponible",
       notConfigured: "Ce widget n'a pas encore ete configure",
       noLinks: "Aucun lien entre ces elements et ces actifs",
+      unsorted: "Ajoutez un tri pour que ces chiffres restent identiques a chaque chargement",
       canvasUnavailable: "Ce graphique necessite un canvas, indisponible ici",
       renderedNodes: "Dessine {shown} sur {total} noeuds",
     },

@@ -108,6 +108,7 @@ export default {
       unavailable: "Dieses Widget ist nicht mehr verfuegbar",
       notConfigured: "Dieses Widget wurde noch nicht eingerichtet",
       noLinks: "Keine Verknuepfungen zwischen diesen Elementen und Assets",
+      unsorted: "Sortierung angeben, damit diese Zahlen bei jedem Laden gleich bleiben",
       canvasUnavailable: "Dieses Diagramm benoetigt ein Canvas, das hier nicht verfuegbar ist",
       renderedNodes: "Zeichnet {shown} von {total} Knoten",
     },

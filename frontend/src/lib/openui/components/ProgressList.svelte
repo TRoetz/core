@@ -1,4 +1,5 @@
 <script>
+  import { t } from '../../stores/i18n.svelte.js';
   import { getSource, getWidgetDataContext } from '../context.js';
   import { itemSpec, assetSpec, sourceKey } from '../querySpec.js';
   import { groupRows } from '../aggregate.js';
@@ -77,3 +78,9 @@
     </ul>
   {/snippet}
 </SourceBoundary>
+
+{#if !props.sort}
+  <p class="mt-2 text-xs" style="color: var(--ds-text-subtle);" data-testid="openui-unsorted-warning">
+    {t('dashboard.customWidgets.unsorted')}
+  </p>
+{/if}
