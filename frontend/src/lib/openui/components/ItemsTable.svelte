@@ -1,4 +1,6 @@
 <script>
+  import ItemKey from '../../components/ItemKey.svelte';
+  import Link from '../../components/Link.svelte';
   import { getSource, getWidgetDataContext } from '../context.js';
   import { itemSpec, assetSpec, sourceKey, fieldValue, formatValue, parseColumns } from '../querySpec.js';
   import SourceBoundary from './SourceBoundary.svelte';
@@ -34,6 +36,26 @@
     if (source) return;
     context?.requestSource?.(spec, sourceKey(spec));
   });
+  /**
+   * Deep link to the row's item. Only items have one, and only when the server
+   * sent the workspace; anything else stays plain text.
+   */
+  function itemHref(row) {
+    if (entity !== 'item') return null;
+    // Coerced, so only digits can ever reach the path.
+    const id = Number(row?.id);
+    const workspaceId = Number(row?.workspace_id);
+    if (!Number.isInteger(id) || id <= 0) return null;
+    if (!Number.isInteger(workspaceId) || workspaceId <= 0) return null;
+    return `/workspaces/${workspaceId}/items/${id}`;
+  }
+
+  function openRow(event, row) {
+    if (!context?.openItem) return;
+    event?.preventDefault?.();
+    context.openItem(Number(row.id));
+  }
+
   const columns = $derived(
     parseColumns(props.columns ?? (entity === 'asset' ? 'key,title,status,type' : 'key,title,status,assignee,due_date'))
   );
@@ -55,7 +77,20 @@
             <tr style="border-top: 1px solid var(--ds-border);">
               {#each columns as column (column)}
                 <td class="px-2 py-1" style="color: var(--ds-text);">
-                  {formatValue(fieldValue(row, column))}
+                  {#if itemHref(row) && column === 'key'}
+                    <ItemKey
+                      itemKey={row.key ?? String(row.id)}
+                      href={itemHref(row)}
+                      onClick={(event) => openRow(event, row)}
+                      size="compact"
+                    />
+                  {:else if itemHref(row) && column === 'title'}
+                    <Link href={itemHref(row)} onClick={(event) => openRow(event, row)} class="hover:underline">
+                      {row.title}
+                    </Link>
+                  {:else}
+                    {formatValue(fieldValue(row, column))}
+                  {/if}
                 </td>
               {/each}
             </tr>
