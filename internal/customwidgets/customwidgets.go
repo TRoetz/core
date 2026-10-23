@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"sort"
 	"strings"
 
 	"windshift/internal/cql"
@@ -70,6 +71,17 @@ var (
 	sortRe      = regexp.MustCompile(`^-?[A-Za-z0-9_.,]+$`)
 	fieldRe     = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_.]*$`)
 )
+
+// ComponentNames returns the allow-listed component names, sorted. Callers use
+// it to keep the prompt and the renderer library in step with this list.
+func ComponentNames() []string {
+	names := make([]string, 0, len(componentNames))
+	for name := range componentNames {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
+}
 
 // ValidationError is a user-facing validation failure.
 type ValidationError struct {

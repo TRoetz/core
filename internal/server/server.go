@@ -911,6 +911,9 @@ func (s *Server) initialize() error {
 		slog.Info("LLM fallback service not configured")
 	}
 	llmManager := llm.NewConnectionManager(s.db, scmProviderHandler.GetEncryption(), fallbackLLMClient)
+	// Widget generation uses the shared prompt store and connection manager, so
+	// it follows the same per-feature AI configuration as the other features.
+	customWidgetGenerateHandler := handlers.NewCustomWidgetGenerateHandler(llmManager, promptStore)
 	llmModelCache := llm.NewModelCache(s.db)
 	llmManager.SetModelCache(llmModelCache) // freshest vision-capability resolution
 	llmModelRefresher := llm.NewModelRefresher(llmModelCache)
@@ -1784,7 +1787,8 @@ func (s *Server) initialize() error {
 			WorkItemStaleness: workItemStalenessHandler,
 		},
 		Widgets: routes.WidgetHandlers{
-			Custom: customWidgetHandler,
+			Custom:   customWidgetHandler,
+			Generate: customWidgetGenerateHandler,
 		},
 		Misc: routes.MiscHandlers{
 			Homepage:      homepageHandler,

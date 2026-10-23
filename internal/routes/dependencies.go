@@ -220,7 +220,8 @@ type PageHandlers struct {
 
 // WidgetHandlers groups custom dashboard widget handlers.
 type WidgetHandlers struct {
-	Custom *handlers.CustomWidgetHandler
+	Custom   *handlers.CustomWidgetHandler
+	Generate *handlers.CustomWidgetGenerateHandler
 }
 
 // MiscHandlers groups miscellaneous handlers.
