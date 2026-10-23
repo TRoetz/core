@@ -19,6 +19,10 @@ export default {
       },
     },
     widgetCatalog: {
+      customWidget: {
+        name: 'Свой виджет',
+        description: 'Виджет, который вы создаёте с помощью ИИ или программы OpenUI',
+      },
       dailyBriefing: {
         name: 'Сводка дня',
         description: 'Сформированная ИИ сводка важных событий на сегодня',
@@ -86,12 +90,22 @@ export default {
         name: 'Навигация',
         description: 'Быстрый доступ к рабочим пространствам',
       },
+      custom: {
+        name: 'Свои',
+        description: 'Создайте собственный виджет по описанию',
+      },
       background: {
         name: 'Фон',
         description: 'Градиенты и готовые изображения для вашей панели',
       },
       tipLabel: 'Совет',
       tip: 'Перетащите отсюда виджеты в любой раздел панели.',
+    },
+    customWidgets: {
+      sourceError: "Не удалось загрузить данные этого виджета",
+      truncated: 'На основе {shown} из {total} строк',
+      renderError: "Не удалось отобразить этот виджет",
+      unavailable: "Этот виджет больше недоступен",
     },
     editor: {
       newSection: 'Новый раздел',

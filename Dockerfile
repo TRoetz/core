@@ -8,8 +8,11 @@ WORKDIR /build
 # Copy package files first for better layer caching
 COPY frontend/package*.json frontend/.npmrc ./
 
-# Install dependencies (npm ci is faster and more reliable for CI)
-RUN npm ci
+# Install dependencies (npm ci is faster and more reliable for CI).
+# The OpenUI packages ship a telemetry postinstall; frontend/.npmrc already sets
+# ignore-scripts=true, and these env vars keep it disabled if scripts are ever
+# re-enabled.
+RUN OPENUI_TELEMETRY_DISABLED=1 DO_NOT_TRACK=1 npm ci
 
 # Build-time version metadata for the static UI. These are passed by
 # release.sh / CI so the About page and footer do not fall back to "dev".

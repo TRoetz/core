@@ -7,6 +7,7 @@ export const dashboardWidgetCategories = {
   WORK: 'work',
   SUPPORT: 'support',
   NAVIGATION: 'navigation',
+  CUSTOM: 'custom',
 };
 
 export const DASHBOARD_GRID_COLUMNS = 12;
@@ -123,6 +124,17 @@ export const dashboardWidgetRegistry = [
     category: dashboardWidgetCategories.SUPPORT,
     icon: 'LifeBuoy',
     defaultWidth: 4,
+    minWidth: 3,
+  },
+
+  // User-authored widgets rendered from an OpenUI program
+  {
+    type: 'custom-widget',
+    nameKey: 'dashboard.widgetCatalog.customWidget.name',
+    descriptionKey: 'dashboard.widgetCatalog.customWidget.description',
+    category: dashboardWidgetCategories.CUSTOM,
+    icon: 'Sparkles',
+    defaultWidth: 6,
     minWidth: 3,
   },
 ];

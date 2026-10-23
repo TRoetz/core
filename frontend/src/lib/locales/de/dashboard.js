@@ -19,6 +19,10 @@ export default {
       },
     },
     widgetCatalog: {
+      customWidget: {
+        name: 'Eigenes Widget',
+        description: 'Ein Widget, das du mit KI oder einem OpenUI-Programm erstellst',
+      },
       dailyBriefing: {
         name: 'Täglicher Überblick',
         description: 'KI-generierte Zusammenfassung dessen, was heute für Sie wichtig ist',
@@ -86,12 +90,22 @@ export default {
         name: 'Navigation',
         description: 'Schnellzugriff auf Arbeitsbereiche',
       },
+      custom: {
+        name: 'Eigene',
+        description: 'Erstelle dein eigenes Widget aus einer Beschreibung',
+      },
       background: {
         name: 'Hintergrund',
         description: 'Verläufe und Vorschaubilder für dein Dashboard',
       },
       tipLabel: 'Tipp',
       tip: 'Ziehen Sie Widgets von hier in einen beliebigen Bereich Ihres Dashboards.',
+    },
+    customWidgets: {
+      sourceError: "Die Daten dieses Widgets konnten nicht geladen werden",
+      truncated: 'Basiert auf {shown} von {total} Zeilen',
+      renderError: "Dieses Widget konnte nicht gerendert werden",
+      unavailable: "Dieses Widget ist nicht mehr verfuegbar",
     },
     editor: {
       newSection: 'Neuer Bereich',

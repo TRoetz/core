@@ -19,6 +19,10 @@ export default {
       },
     },
     widgetCatalog: {
+      customWidget: {
+        name: 'Custom Widget',
+        description: 'A widget you build with AI or by writing an OpenUI program',
+      },
       dailyBriefing: {
         name: 'Daily Briefing',
         description: 'AI-generated summary of what matters to you today',
@@ -86,12 +90,22 @@ export default {
         name: 'Navigation',
         description: 'Quick access to workspaces',
       },
+      custom: {
+        name: 'Custom',
+        description: 'Build your own widget from a description',
+      },
       background: {
         name: 'Background',
         description: 'Gradients and preset images for your dashboard',
       },
       tipLabel: 'Tip',
       tip: 'Drag widgets from here into any section on your dashboard.',
+    },
+    customWidgets: {
+      sourceError: "This widget's data could not be loaded",
+      truncated: 'Based on {shown} of {total} rows',
+      renderError: "This widget could not be rendered",
+      unavailable: "This widget is no longer available",
     },
     editor: {
       newSection: 'New Section',

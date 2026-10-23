@@ -19,6 +19,10 @@ export default {
       },
     },
     widgetCatalog: {
+      customWidget: {
+        name: 'Widget personnalise',
+        description: 'Un widget que vous creez avec l IA ou en ecrivant un programme OpenUI',
+      },
       dailyBriefing: {
         name: 'Briefing quotidien',
         description: 'Résumé généré par IA de ce qui importe pour vous aujourd’hui',
@@ -86,12 +90,22 @@ export default {
         name: 'Navigation',
         description: 'Accès rapide aux espaces de travail',
       },
+      custom: {
+        name: 'Personnalise',
+        description: 'Creez votre propre widget a partir d une description',
+      },
       background: {
         name: 'Arrière-plan',
         description: 'Dégradés et images prédéfinies pour votre tableau de bord',
       },
       tipLabel: 'Conseil',
       tip: 'Faites glisser des widgets d’ici vers n’importe quelle section de votre tableau de bord.',
+    },
+    customWidgets: {
+      sourceError: "Les donnees de ce widget n ont pas pu etre chargees",
+      truncated: 'Base sur {shown} sur {total} lignes',
+      renderError: "Ce widget n a pas pu etre rendu",
+      unavailable: "Ce widget n'est plus disponible",
     },
     editor: {
       newSection: 'Nouvelle section',

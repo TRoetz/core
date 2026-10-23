@@ -19,6 +19,10 @@ export default {
       },
     },
     widgetCatalog: {
+      customWidget: {
+        name: '自定义组件',
+        description: '通过 AI 或编写 OpenUI 程序创建的组件',
+      },
       dailyBriefing: {
         name: '每日简报',
         description: '由 AI 生成的今日重点摘要',
@@ -86,12 +90,22 @@ export default {
         name: '导航',
         description: '快速访问工作区',
       },
+      custom: {
+        name: '自定义',
+        description: '根据描述构建你自己的组件',
+      },
       background: {
         name: '背景',
         description: '用于仪表板的渐变和预设图片',
       },
       tipLabel: '提示',
       tip: '将小部件从这里拖到面板中的任意分区。',
+    },
+    customWidgets: {
+      sourceError: "无法加载此组件的数据",
+      truncated: '基于 {total} 行中的 {shown} 行',
+      renderError: "无法渲染此组件",
+      unavailable: "此组件已不可用",
     },
     editor: {
       newSection: '新建分区',
