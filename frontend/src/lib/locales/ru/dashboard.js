@@ -106,6 +106,7 @@ export default {
       truncated: 'На основе {shown} из {total} строк',
       renderError: "Не удалось отобразить этот виджет",
       unavailable: "Этот виджет больше недоступен",
+      notConfigured: "Этот виджет ещё не настроен",
     },
     editor: {
       newSection: 'Новый раздел',

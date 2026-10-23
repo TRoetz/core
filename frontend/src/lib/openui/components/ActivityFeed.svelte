@@ -21,6 +21,11 @@
       : itemSpec({ query: props.query, sort: props.sort ?? '-updated_at', limit: props.limit })
   );
   const source = $derived(getSource(sourceKey(spec)));
+
+  $effect(() => {
+    if (source) return;
+    context?.requestSource?.(spec, sourceKey(spec));
+  });
 </script>
 
 <SourceBoundary {source}>

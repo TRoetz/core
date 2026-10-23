@@ -106,6 +106,7 @@ export default {
       truncated: 'Basiert auf {shown} von {total} Zeilen',
       renderError: "Dieses Widget konnte nicht gerendert werden",
       unavailable: "Dieses Widget ist nicht mehr verfuegbar",
+      notConfigured: "Dieses Widget wurde noch nicht eingerichtet",
     },
     editor: {
       newSection: 'Neuer Bereich',

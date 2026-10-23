@@ -229,6 +229,12 @@ func NormalizeQueries(raw json.RawMessage) (json.RawMessage, error) {
 	return normalized, nil
 }
 
+// ValidateSlot validates one query slot in place, applying limit and mode
+// defaults. asset marks slots that must carry an asset set.
+func ValidateSlot(name string, slot *QuerySlot, asset bool) error {
+	return validateSlot(name, slot, asset)
+}
+
 func validateSlot(name string, slot *QuerySlot, asset bool) error {
 	if err := validateQL(name, slot.QL); err != nil {
 		return err

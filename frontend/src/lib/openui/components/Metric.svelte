@@ -37,6 +37,13 @@
   const key = $derived(sourceKey(spec));
   const source = $derived(getSource(key));
 
+  // Prefetching covers the stored slots; this covers a spec the prefetch did
+  // not know about, so the component never hangs waiting for data.
+  $effect(() => {
+    if (source) return;
+    context?.requestSource?.(spec, key);
+  });
+
   const value = $derived.by(() => {
     if (!source || source.status !== 'ready') return null;
     if ((props.aggregate ?? 'count') === 'count') {

@@ -36,6 +36,11 @@
   );
   const source = $derived(getSource(sourceKey(spec)));
 
+  $effect(() => {
+    if (source) return;
+    context?.requestSource?.(spec, sourceKey(spec));
+  });
+
   const buckets = $derived.by(() => {
     const rows = source?.rows ?? [];
     if (rows.length === 0) return [];

@@ -43,6 +43,7 @@
   import PersonalTasksWidget from '../widgets/dashboard/PersonalTasksWidget.svelte';
   import SupportOverviewWidget from '../widgets/SupportOverviewWidget.svelte';
   import SavedSearchWidget from '../widgets/dashboard/SavedSearchWidget.svelte';
+  import CustomWidgetWidget from '../widgets/dashboard/CustomWidgetWidget.svelte';
 
   let greeting = $derived(homepageStore.greeting);
   let greetingText = $derived(greeting ? t(greeting) : '');
@@ -537,6 +538,8 @@
                           config={widget.config ?? {}}
                           onconfigchange={(changes) => updateWidgetConfig(widget.id, changes)}
                         />
+                      {:else if widget.type === 'custom-widget'}
+                        <CustomWidgetWidget config={widget.config ?? {}} />
                       {:else if widget.type === 'saved-search'}
                         <SavedSearchWidget
                           config={widget.config ?? {}}

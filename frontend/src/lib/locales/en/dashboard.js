@@ -106,6 +106,7 @@ export default {
       truncated: 'Based on {shown} of {total} rows',
       renderError: "This widget could not be rendered",
       unavailable: "This widget is no longer available",
+      notConfigured: "This widget has not been set up yet",
     },
     editor: {
       newSection: 'New Section',

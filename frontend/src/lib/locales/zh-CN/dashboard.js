@@ -106,6 +106,7 @@ export default {
       truncated: '基于 {total} 行中的 {shown} 行',
       renderError: "无法渲染此组件",
       unavailable: "此组件已不可用",
+      notConfigured: "此组件尚未设置",
     },
     editor: {
       newSection: '新建分区',

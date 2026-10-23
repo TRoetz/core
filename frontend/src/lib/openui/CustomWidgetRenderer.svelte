@@ -14,6 +14,7 @@
    *   sources?: Record<string, import('./context.js').SourceResult>,
    *   assetSetId?: number|null,
    *   workspaceId?: number|null,
+   *   requestSource?: ((spec: object, key: string) => void) | null,
    *   openItem?: ((itemId: number) => void) | null,
    *   onParseErrors?: ((errors: Array<object>) => void) | null
    * }}
@@ -23,6 +24,7 @@
     sources = {},
     assetSetId = null,
     workspaceId = null,
+    requestSource = null,
     openItem = null,
     onParseErrors = null,
   } = $props();
@@ -36,6 +38,9 @@
     },
     get workspaceId() {
       return workspaceId;
+    },
+    get requestSource() {
+      return requestSource;
     },
     get openItem() {
       return openItem;

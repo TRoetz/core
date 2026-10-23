@@ -84,7 +84,7 @@ func (h *CustomWidgetHandler) GetCustomWidget(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	allowed, err := h.canRead(user.ID, widget)
+	allowed, err := canReadCustomWidget(h.permissionService, user.ID, widget)
 	if err != nil {
 		respondInternalError(w, r, err)
 		return
@@ -172,7 +172,7 @@ func (h *CustomWidgetHandler) UpdateCustomWidget(w http.ResponseWriter, r *http.
 	}
 	// Read access first: a widget the caller cannot see answers 404, while a
 	// readable workspace widget they cannot edit answers 403.
-	readable, err := h.canRead(user.ID, existing)
+	readable, err := canReadCustomWidget(h.permissionService, user.ID, existing)
 	if err != nil {
 		respondInternalError(w, r, err)
 		return
@@ -181,7 +181,7 @@ func (h *CustomWidgetHandler) UpdateCustomWidget(w http.ResponseWriter, r *http.
 		respondNotFound(w, r, "Custom widget")
 		return
 	}
-	allowed, err := h.canWrite(user.ID, existing)
+	allowed, err := canWriteCustomWidget(h.permissionService, user.ID, existing)
 	if err != nil {
 		respondInternalError(w, r, err)
 		return
@@ -247,7 +247,7 @@ func (h *CustomWidgetHandler) DeleteCustomWidget(w http.ResponseWriter, r *http.
 		respondInternalError(w, r, err)
 		return
 	}
-	readable, err := h.canRead(user.ID, existing)
+	readable, err := canReadCustomWidget(h.permissionService, user.ID, existing)
 	if err != nil {
 		respondInternalError(w, r, err)
 		return
@@ -256,7 +256,7 @@ func (h *CustomWidgetHandler) DeleteCustomWidget(w http.ResponseWriter, r *http.
 		respondNotFound(w, r, "Custom widget")
 		return
 	}
-	allowed, err := h.canWrite(user.ID, existing)
+	allowed, err := canWriteCustomWidget(h.permissionService, user.ID, existing)
 	if err != nil {
 		respondInternalError(w, r, err)
 		return
@@ -346,16 +346,18 @@ func (h *CustomWidgetHandler) buildWidget(ownerUserID int, request customWidgetR
 	return widget, nil
 }
 
-func (h *CustomWidgetHandler) canRead(userID int, widget *models.CustomWidget) (bool, error) {
+// canReadCustomWidget reports whether the viewer may see a widget. Shared with
+// the data handler so both agree on visibility.
+func canReadCustomWidget(permissionService *services.PermissionService, userID int, widget *models.CustomWidget) (bool, error) {
 	if widget.WorkspaceID == nil {
 		return widget.OwnerUserID != nil && *widget.OwnerUserID == userID, nil
 	}
-	return h.permissionService.HasWorkspacePermission(userID, *widget.WorkspaceID, models.PermissionItemView)
+	return permissionService.HasWorkspacePermission(userID, *widget.WorkspaceID, models.PermissionItemView)
 }
 
-func (h *CustomWidgetHandler) canWrite(userID int, widget *models.CustomWidget) (bool, error) {
+func canWriteCustomWidget(permissionService *services.PermissionService, userID int, widget *models.CustomWidget) (bool, error) {
 	if widget.WorkspaceID == nil {
 		return widget.OwnerUserID != nil && *widget.OwnerUserID == userID, nil
 	}
-	return h.permissionService.HasWorkspacePermission(userID, *widget.WorkspaceID, models.PermissionItemEdit)
+	return permissionService.HasWorkspacePermission(userID, *widget.WorkspaceID, models.PermissionItemEdit)
 }

@@ -29,6 +29,11 @@
       : itemSpec({ query: props.query, sort: props.sort, limit: props.limit })
   );
   const source = $derived(getSource(sourceKey(spec)));
+
+  $effect(() => {
+    if (source) return;
+    context?.requestSource?.(spec, sourceKey(spec));
+  });
   const columns = $derived(
     parseColumns(props.columns ?? (entity === 'asset' ? 'key,title,status,type' : 'key,title,status,assignee,due_date'))
   );

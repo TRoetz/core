@@ -106,6 +106,7 @@ export default {
       truncated: 'Base sur {shown} sur {total} lignes',
       renderError: "Ce widget n a pas pu etre rendu",
       unavailable: "Ce widget n'est plus disponible",
+      notConfigured: "Ce widget n'a pas encore ete configure",
     },
     editor: {
       newSection: 'Nouvelle section',

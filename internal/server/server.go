@@ -45,6 +45,7 @@ import (
 	"windshift/internal/objecttranslation"
 	"windshift/internal/plugins"
 	"windshift/internal/portalwebauthn"
+	"windshift/internal/reporting"
 	"windshift/internal/repository"
 	"windshift/internal/restapi"
 	v1 "windshift/internal/restapi/v1"
@@ -1935,6 +1936,15 @@ func (s *Server) initialize() error {
 	itemDetailApplication := services.NewItemDetailApplicationService(s.db, itemApplication, itemLinkService, permService).
 		WithContextReaders(screenHandler, requestTypeHandler, actionApplication).
 		WithStoryPointRollups(repository.NewItemRepository(s.db))
+	// Custom widget data resolution needs the item application service, which is
+	// built after RegisterAll, so this one route is registered here instead.
+	customWidgetDataHandler := handlers.NewCustomWidgetDataHandler(
+		repository.NewCustomWidgetRepository(s.db),
+		permService,
+		reporting.NewService(itemApplication, assetApplication),
+	)
+	routeDeps.API.HandleH("POST /custom-widgets/data",
+		routeDeps.AuthMiddleware.RequireAuth(http.HandlerFunc(customWidgetDataHandler.ResolveCustomWidgetData)))
 	catalogMutations := services.NewCatalogMutationService(s.db, permService, workflowService)
 	governanceApplication := services.NewGovernanceApplicationService(s.db, permService, approvalSetService, approvalService)
 	if err := v2.RegisterRoutes(v2.Deps{
