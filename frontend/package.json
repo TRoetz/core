@@ -20,7 +20,7 @@
     "format:check": "biome format .",
     "lint": "biome lint .",
     "lint:fix": "biome lint --write .",
-    "check": "biome check . && node scripts/check-shortcuts.js && node scripts/check-i18n.js && node scripts/check-hardcoded-i18n.js && node scripts/check-design-tokens.js && node scripts/check-hmr-boundaries.js",
+    "check": "biome check . && node scripts/check-shortcuts.js && node scripts/check-i18n.js && node scripts/check-hardcoded-i18n.js && node scripts/check-design-tokens.js && node scripts/check-hmr-boundaries.js && node scripts/check-openui-components.mjs",
     "check:entry-assets": "node scripts/check-entry-assets.js",
     "check:fix": "biome check --write .",
     "test": "vitest",
@@ -30,7 +30,7 @@
     "typecheck": "svelte-check --threshold error",
     "tauri:dev": "cd ../../desktop && ./build.sh && cargo tauri dev",
     "tauri:build": "cd ../../desktop && ./build.sh --all",
-    "check:hmr-boundaries": "node scripts/check-hmr-boundaries.js"
+    "check:hmr-boundaries": "node scripts/check-hmr-boundaries.js && node scripts/check-openui-components.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",
@@ -71,6 +71,7 @@
     "@milkdown/kit": "^7.18.0",
     "@milkdown/plugin-listener": "^7.18.0",
     "@milkdown/theme-nord": "^7.18.0",
+    "@openuidev/svelte-lang": "^0.4.2",
     "@tabler/icons-svelte-runes": "^3.40.0",
     "@tauri-apps/api": "^2.11.1",
     "@tauri-apps/plugin-dialog": "^2.2.0",
@@ -86,7 +87,8 @@
     "react-dom": "^18.3.1",
     "runed": "^0.37.0",
     "shiki": "^4.0.2",
-    "tauri-pty": "^0.2.1"
+    "tauri-pty": "^0.2.1",
+    "zod": "^4.6.7"
   },
   "overrides": {
     "sass": "^1.83.0",

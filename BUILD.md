@@ -41,6 +41,11 @@ go build -o ws
 cd ../..
 ```
 
+`frontend/.npmrc` sets `ignore-scripts=true`, so package install scripts never
+run. The OpenUI packages ship a telemetry postinstall; keep
+`OPENUI_TELEMETRY_DISABLED=1` and `DO_NOT_TRACK=1` set in any environment that
+re-enables install scripts (CI, Docker, or an explicit `npm rebuild`).
+
 ## Build Output
 
 ### Development Builds (Makefile)

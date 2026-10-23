@@ -43,6 +43,8 @@
   import PersonalTasksWidget from '../widgets/dashboard/PersonalTasksWidget.svelte';
   import SupportOverviewWidget from '../widgets/SupportOverviewWidget.svelte';
   import SavedSearchWidget from '../widgets/dashboard/SavedSearchWidget.svelte';
+  import CustomWidgetWidget from '../widgets/dashboard/CustomWidgetWidget.svelte';
+  import WidgetBuilderModal from '../openui/WidgetBuilderModal.svelte';
 
   let greeting = $derived(homepageStore.greeting);
   let greetingText = $derived(greeting ? t(greeting) : '');
@@ -269,6 +271,14 @@
           dropZoneStates = new Map(dropZoneStates);
           const data = source.data;
           if (data.type === 'dashboard-widget-type') {
+            // A custom widget needs a definition first, so the builder decides
+            // what to add once it saves.
+            if (data.widgetType === 'custom-widget') {
+              builderSectionId = sectionId;
+              builderWidgetId = null;
+              builderOpen = true;
+              return;
+            }
             homepageStore.addWidgetToSection(sectionId, data.widgetType);
           }
         },
@@ -280,6 +290,23 @@
   function cleanupDragAndDrop() {
     dragCleanups.forEach((cleanup) => cleanup());
     dragCleanups = [];
+  }
+
+  let builderOpen = $state(false);
+  let builderWidgetId = $state(null);
+  let builderSectionId = $state(null);
+  // Bumped after an edit so the card reloads its definition.
+  let builderRefresh = $state(0);
+
+  function handleWidgetSaved(widget) {
+    if (!widget) return;
+    if (builderWidgetId) {
+      builderRefresh += 1;
+      return;
+    }
+    if (builderSectionId) {
+      homepageStore.addCustomWidgetToSection(builderSectionId, widget.id, widget.name);
+    }
   }
 
   function getWidgetTitle(type) {
@@ -537,6 +564,17 @@
                           config={widget.config ?? {}}
                           onconfigchange={(changes) => updateWidgetConfig(widget.id, changes)}
                         />
+                      {:else if widget.type === 'custom-widget'}
+                        <CustomWidgetWidget
+                          config={widget.config ?? {}}
+                          refreshKey={builderRefresh}
+                          isEditing={isCustomizeMode || isEditMode}
+                          onedit={() => {
+                            builderWidgetId = Number(widget.config?.customWidgetId) || null;
+                            builderSectionId = null;
+                            builderOpen = true;
+                          }}
+                        />
                       {:else if widget.type === 'saved-search'}
                         <SavedSearchWidget
                           config={widget.config ?? {}}
@@ -572,3 +610,14 @@
   {/if}
   </div>
 </div>
+
+<WidgetBuilderModal
+  bind:isOpen={builderOpen}
+  widgetId={builderWidgetId}
+  workspaceId={null}
+  onclose={() => {
+    builderWidgetId = null;
+    builderSectionId = null;
+  }}
+  onsaved={handleWidgetSaved}
+/>

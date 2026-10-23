@@ -2910,6 +2910,52 @@ var Catalog = []Migration{
 		SQLite:        "ALTER TABLE collections ADD COLUMN public_milestone_swimlanes BOOLEAN NOT NULL DEFAULT false",
 		Postgres:      "ALTER TABLE collections ADD COLUMN IF NOT EXISTS public_milestone_swimlanes BOOLEAN NOT NULL DEFAULT false",
 	},
+	{
+		Version:       "20261107_custom_widgets",
+		Name:          "Store user-authored OpenUI dashboard widgets",
+		CheckSQLite:   sqliteTableCheck("custom_widgets"),
+		CheckPostgres: pgTableCheck("custom_widgets"),
+		SQLite: `
+			CREATE TABLE IF NOT EXISTS custom_widgets (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				workspace_id INTEGER,
+				owner_user_id INTEGER,
+				name TEXT NOT NULL,
+				description TEXT NOT NULL DEFAULT '',
+				program TEXT NOT NULL,
+				lang_version TEXT NOT NULL DEFAULT '',
+				library_version TEXT NOT NULL DEFAULT '',
+				queries TEXT NOT NULL DEFAULT '{}',
+				visibility TEXT NOT NULL DEFAULT 'private',
+				created_by INTEGER NOT NULL,
+				created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+				updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+				FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE,
+				FOREIGN KEY (owner_user_id) REFERENCES users(id) ON DELETE CASCADE
+			);
+			CREATE INDEX IF NOT EXISTS idx_custom_widgets_owner ON custom_widgets(owner_user_id);
+			CREATE INDEX IF NOT EXISTS idx_custom_widgets_workspace ON custom_widgets(workspace_id);
+		`,
+		Postgres: `
+			CREATE TABLE IF NOT EXISTS custom_widgets (
+				id SERIAL PRIMARY KEY,
+				workspace_id INTEGER REFERENCES workspaces(id) ON DELETE CASCADE,
+				owner_user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+				name TEXT NOT NULL,
+				description TEXT NOT NULL DEFAULT '',
+				program TEXT NOT NULL,
+				lang_version TEXT NOT NULL DEFAULT '',
+				library_version TEXT NOT NULL DEFAULT '',
+				queries TEXT NOT NULL DEFAULT '{}',
+				visibility TEXT NOT NULL DEFAULT 'private',
+				created_by INTEGER NOT NULL,
+				created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+				updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE INDEX IF NOT EXISTS idx_custom_widgets_owner ON custom_widgets(owner_user_id);
+			CREATE INDEX IF NOT EXISTS idx_custom_widgets_workspace ON custom_widgets(workspace_id);
+		`,
+	},
 }
 
 // applyAssetReportsWorkspacePinned backfills form-mode asset reports that have

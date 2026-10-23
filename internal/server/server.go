@@ -45,6 +45,7 @@ import (
 	"windshift/internal/objecttranslation"
 	"windshift/internal/plugins"
 	"windshift/internal/portalwebauthn"
+	"windshift/internal/reporting"
 	"windshift/internal/repository"
 	"windshift/internal/restapi"
 	v1 "windshift/internal/restapi/v1"
@@ -834,6 +835,7 @@ func (s *Server) initialize() error {
 	objectTranslationHandler := handlers.NewObjectTranslationHandler(objectTranslationService)
 	userPreferencesService := services.NewUserPreferencesService(repository.NewUserPreferencesRepository(s.db), repository.NewThemeRepository(s.db), permService)
 	userPreferencesHandler := handlers.NewUserPreferencesHandler(userPreferencesService)
+	customWidgetHandler := handlers.NewCustomWidgetHandler(repository.NewCustomWidgetRepository(s.db), permService)
 	homepageHandler := handlers.NewHomepageHandler(
 		repository.NewWorkspaceRepository(s.db),
 		repository.NewItemRepository(s.db),
@@ -909,6 +911,9 @@ func (s *Server) initialize() error {
 		slog.Info("LLM fallback service not configured")
 	}
 	llmManager := llm.NewConnectionManager(s.db, scmProviderHandler.GetEncryption(), fallbackLLMClient)
+	// Widget generation uses the shared prompt store and connection manager, so
+	// it follows the same per-feature AI configuration as the other features.
+	customWidgetGenerateHandler := handlers.NewCustomWidgetGenerateHandler(llmManager, promptStore)
 	llmModelCache := llm.NewModelCache(s.db)
 	llmManager.SetModelCache(llmModelCache) // freshest vision-capability resolution
 	llmModelRefresher := llm.NewModelRefresher(llmModelCache)
@@ -1781,6 +1786,10 @@ func (s *Server) initialize() error {
 			LLMConnection:     llmConnHandler,
 			WorkItemStaleness: workItemStalenessHandler,
 		},
+		Widgets: routes.WidgetHandlers{
+			Custom:   customWidgetHandler,
+			Generate: customWidgetGenerateHandler,
+		},
 		Misc: routes.MiscHandlers{
 			Homepage:      homepageHandler,
 			Review:        reviewHandler,
@@ -1931,6 +1940,17 @@ func (s *Server) initialize() error {
 	itemDetailApplication := services.NewItemDetailApplicationService(s.db, itemApplication, itemLinkService, permService).
 		WithContextReaders(screenHandler, requestTypeHandler, actionApplication).
 		WithStoryPointRollups(repository.NewItemRepository(s.db))
+	// Custom widget data resolution needs the item application service, which is
+	// built after RegisterAll, so this one route is registered here instead.
+	customWidgetDataHandler := handlers.NewCustomWidgetDataHandler(
+		repository.NewCustomWidgetRepository(s.db),
+		permService,
+		reporting.NewService(itemApplication, assetApplication).
+			WithLinks(repository.NewItemLinkRepository(s.db)).
+			WithEdges(repository.NewItemLinkRepository(s.db), repository.NewItemRepository(s.db)),
+	)
+	routeDeps.API.HandleH("POST /custom-widgets/data",
+		routeDeps.AuthMiddleware.RequireAuth(http.HandlerFunc(customWidgetDataHandler.ResolveCustomWidgetData)))
 	catalogMutations := services.NewCatalogMutationService(s.db, permService, workflowService)
 	governanceApplication := services.NewGovernanceApplicationService(s.db, permService, approvalSetService, approvalService)
 	if err := v2.RegisterRoutes(v2.Deps{

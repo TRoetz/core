@@ -52,6 +52,7 @@ var validDashboardWidgetTypes = map[string]bool{
 	"personal-tasks":      true,
 	"saved-search":        true,
 	"support-overview":    true,
+	"custom-widget":       true,
 }
 
 const (

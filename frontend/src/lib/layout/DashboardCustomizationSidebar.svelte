@@ -65,6 +65,12 @@
       icon: Compass,
     },
     {
+      id: dashboardWidgetCategories.CUSTOM,
+      name: t('dashboard.customization.custom.name'),
+      description: t('dashboard.customization.custom.description'),
+      icon: Sparkles,
+    },
+    {
       id: 'background',
       name: t('dashboard.customization.background.name'),
       description: t('dashboard.customization.background.description'),
