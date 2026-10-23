@@ -448,6 +448,7 @@ export default {
     chart: {
       items: 'éléments',
       noDataAvailable: 'Aucune donnée disponible',
+      otherSlices: 'Autres ({count} de plus)',
     },
     completionChart: {
       title: 'Graphique de réalisation',

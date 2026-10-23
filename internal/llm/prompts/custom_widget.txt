@@ -42,6 +42,7 @@ Data:
 - `ItemList(query?, sort?, limit?, entity?)`
 - `BarChart(query?, group_by, sort?, limit?, metric?, field?, group_limit?, entity?, link_mode?)`
 - `LineChart(query?, field?, bucket?, sort?, limit?, metric?, entity?)` — `bucket`: day|week|month, `field` is the date field (default `created_at`)
+- `PieChart(query?, group_by, sort?, limit?, metric?, field?, group_limit?, donut?, entity?, link_mode?)` — share-of-total pie; use it only when the request says pie or donut, otherwise `BarChart` compares better
 - `ProgressList(query?, group_by, sort?, limit?, metric?, field?, group_limit?, entity?, link_mode?)` — share-of-total bars
 - `ActivityFeed(query?, sort?, limit?, entity?)`
 
@@ -104,12 +105,16 @@ program passes to its data components.
    example `BarChart("", "linked_items.creator", "-updated_at", 1000)`. Set
    `link_mode` to `primary` when a row should count once in total rather than
    once per link.
-5. Use `BipartiteList` for item-to-asset relationships. `NetworkGraph` and
+5. `PieChart` is for requests that name a pie or donut. It groups the same way
+   as `BarChart`, and a long tail collapses into a single "Other" slice, so set
+   `group_limit` to the number of slices the user should see (8 by default).
+   Do not substitute it for `BarChart` when the request only asks for a chart.
+6. Use `BipartiteList` for item-to-asset relationships. `NetworkGraph` and
    `Matrix` are for when the user explicitly asks for a picture; both are
    unreadable above a few hundred nodes.
-6. There is no HTML, image, iframe, or mutation component. Do not try to fetch
+7. There is no HTML, image, iframe, or mutation component. Do not try to fetch
    anything: data components declare a query and the host resolves it.
-7. Give the widget a name a person would recognise in a widget list, and a
+8. Give the widget a name a person would recognise in a widget list, and a
    description that says what it answers.
 
 ## Examples
@@ -169,4 +174,18 @@ root = Card([
 
 ```
 {"item": {"ql": "", "limit": 1000}}
+```
+
+Items per status as a pie — the request asked for a pie, so it is not
+substituted with a bar chart:
+
+```
+root = Card([
+  Title("Items by status"),
+  PieChart("status_completed = false", "status", "", 1000, "count", "", 8)
+])
+```
+
+```
+{"item": {"ql": "status_completed = false", "limit": 1000}}
 ```

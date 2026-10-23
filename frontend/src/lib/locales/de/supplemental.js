@@ -409,7 +409,8 @@ export default {
   },
   "widgets": {
     "chart": {
-      "noDataAvailable": "Keine Daten verfügbar"
+      "noDataAvailable": "Keine Daten verfügbar",
+      "otherSlices": "Sonstige ({count} weitere)",
     },
     "completionChart": {
       "title": "Vervollständigungsdiagramm"

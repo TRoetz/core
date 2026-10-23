@@ -440,7 +440,8 @@ export default {
     "fullWidth": "전체 너비",
     "chart": {
       "items": "작업",
-      "noDataAvailable": "사용 가능한 데이터가 없습니다"
+      "noDataAvailable": "사용 가능한 데이터가 없습니다",
+      "otherSlices": "기타 ({count}개 더)",
     },
     "completionChart": {
       "title": "완료 차트",

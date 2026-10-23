@@ -435,7 +435,8 @@ export default {
   },
   "widgets": {
     "chart": {
-      "noDataAvailable": "无可用数据"
+      "noDataAvailable": "无可用数据",
+      "otherSlices": "其他（另有 {count} 项）",
     },
     "completionChart": {
       "title": "完成图表"

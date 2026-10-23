@@ -28,6 +28,7 @@ import Matrix from './components/Matrix.svelte';
 import Metric from './components/Metric.svelte';
 import MetricRow from './components/MetricRow.svelte';
 import NetworkGraph from './components/NetworkGraph.svelte';
+import PieChart from './components/PieChart.svelte';
 import ProgressList from './components/ProgressList.svelte';
 import Section from './components/Section.svelte';
 import Stack from './components/Stack.svelte';
@@ -214,6 +215,34 @@ const LineChartDef = defineComponent({
   component: LineChart,
 });
 
+const PieChartDef = defineComponent({
+  name: 'PieChart',
+  description:
+    'A share-of-total pie with one slice per value of group_by. Only use it when the request explicitly asks for a pie or donut; BarChart is easier to compare.',
+  props: z.object({
+    query,
+    group_by: z.string().describe('Field to group by, for example "status" or "priority".'),
+    sort,
+    limit,
+    metric: z.enum(['count', 'sum']).optional().describe('Defaults to count.'),
+    field: z.string().optional().describe('Numeric field to sum when metric is "sum".'),
+    group_limit: z
+      .number()
+      .int()
+      .min(1)
+      .max(20)
+      .optional()
+      .describe('Maximum slices. Defaults to 8.'),
+    donut: z.boolean().optional().describe('Draw a donut with the total in the centre.'),
+    entity,
+    link_mode: z
+      .enum(['fanout', 'primary'])
+      .optional()
+      .describe('Only for group_by fields on linked_items. Defaults to fanout.'),
+  }),
+  component: PieChart,
+});
+
 const ProgressListDef = defineComponent({
   name: 'ProgressList',
   description: 'Share-of-total bars, one row per distinct value of group_by.',
@@ -331,6 +360,7 @@ const contentDefs = [
   ItemListDef,
   BarChartDef,
   LineChartDef,
+  PieChartDef,
   ProgressListDef,
   ActivityFeedDef,
   BipartiteListDef,
@@ -400,6 +430,7 @@ export const widgetLibrary = createLibrary({
         'ItemList',
         'BarChart',
         'LineChart',
+        'PieChart',
         'ProgressList',
         'ActivityFeed',
       ],
@@ -428,6 +459,7 @@ export const componentNames = [
   'Metric',
   'MetricRow',
   'NetworkGraph',
+  'PieChart',
   'ProgressList',
   'Section',
   'Stack',

@@ -456,6 +456,7 @@ export default {
     chart: {
       items: 'items',
       noDataAvailable: 'No data available',
+      otherSlices: 'Other ({count} more)',
     },
     completionChart: {
       title: 'Completion Chart',

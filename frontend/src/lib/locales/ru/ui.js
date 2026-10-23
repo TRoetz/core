@@ -373,7 +373,11 @@ export default {
     narrowWidth: 'Узкий (1/3 ширины)',
     mediumWidth: 'Средний (2/3 ширины)',
     fullWidth: 'Полная ширина',
-    chart: { items: 'элементы', noDataAvailable: 'Нет данных' },
+    chart: {
+      items: 'элементы',
+      noDataAvailable: 'Нет данных',
+      otherSlices: 'Прочие ({count} ещё)',
+    },
     completionChart: { title: 'График завершения', emptyMessage: 'Нет данных о завершении' },
     createdChart: { title: 'График создания', emptyMessage: 'Нет данных о создании' },
     recentItems: {
