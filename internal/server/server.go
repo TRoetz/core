@@ -863,7 +863,7 @@ func (s *Server) initialize() error {
 
 	permissionMiddleware := middleware.NewPermissionMiddleware(s.db, permService)
 
-	setupHandler := handlers.NewSetupHandler(s.db, sessionManager, authMiddleware)
+	setupHandler := handlers.NewSetupHandler(s.db, sessionManager, authMiddleware, ipExtractor)
 
 	ssoHandler := handlers.NewSSOHandler(s.db, sessionManager, permService, emailVerificationService, s.pluginManager, cfg.Auth.SessionSecret, baseURL, cfg.AllowedHosts, cfg.DisableCSRF, ipExtractor, cfg.UseProxy, additionalProxyList)
 
@@ -1888,6 +1888,7 @@ func (s *Server) initialize() error {
 		PackProvisioner:                packApplyService,
 		AI:                             aiHandler,
 		AIRateLimiter:                  s.aiRateLimiter,
+		IPExtractor:                    ipExtractor,
 	}, v1.RegisterRoutes)
 	v2CSRF := middleware.NewDisabledCSRFValidator()
 	if !cfg.DisableCSRF {
