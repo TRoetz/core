@@ -311,6 +311,27 @@ class HomepageStore {
 
   // === Widget management ===
 
+  /**
+   * Add a custom-widget card bound to a saved widget definition. The title is
+   * cached in config so the card header renders before the definition loads.
+   */
+  addCustomWidgetToSection(sectionId, customWidgetId, title = '') {
+    const newWidget = {
+      id: createId(),
+      type: 'custom-widget',
+      section_id: sectionId,
+      position: this.widgets.filter((w) => w.section_id === sectionId).length,
+      width: getDashboardWidgetDefaultWidth('custom-widget'),
+      config: { customWidgetId, title },
+    };
+    this.widgets = [...this.widgets, newWidget];
+    this.sections = this.sections.map((s) =>
+      s.id === sectionId ? { ...s, widget_ids: [...s.widget_ids, newWidget.id] } : s
+    );
+    this.debouncedSaveLayout();
+    return newWidget.id;
+  }
+
   addWidgetToSection(sectionId, widgetType) {
     const newWidget = {
       id: createId(),
