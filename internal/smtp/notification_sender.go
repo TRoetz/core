@@ -146,13 +146,36 @@ func encodeHeaderWord(s string) string {
 
 // encodeMailbox formats a "Name <addr>" mailbox header value safely. The
 // address is sanitized but not QEncoded (it has to stay RFC 5322 addr-spec).
+//
+// The display name must be a valid RFC 5322 phrase: an encoded-word or a
+// quoted-string. An unquoted name containing specials (",", ";", "<", "@",
+// ...) turns the header into an address list, so a portal customer named
+// "Lastname, Firstname" made receivers split the To header into a broken
+// "Lastname" mailbox and the real address.
 func encodeMailbox(name, addr string) string {
 	addr = sanitizeHeader(addr)
 	if name == "" {
 		return addr
 	}
-	return fmt.Sprintf("%s <%s>", encodeHeaderWord(name), addr)
+	return fmt.Sprintf("%s <%s>", encodePhrase(name), addr)
 }
+
+// encodePhrase renders a display name as an RFC 5322 phrase. Non-ASCII names
+// become an encoded-word; everything else is quoted so specials cannot
+// terminate the phrase early.
+func encodePhrase(name string) string {
+	name = sanitizeHeader(name)
+	if name == "" {
+		return name
+	}
+	if encoded := encodeHeaderWord(name); strings.HasPrefix(encoded, "=?") {
+		return encoded
+	}
+	return `"` + phraseQuoter.Replace(name) + `"`
+}
+
+// phraseQuoter escapes the quoted-string characters of RFC 5322 section 3.2.4.
+var phraseQuoter = strings.NewReplacer(`\`, `\\`, `"`, `\"`)
 
 // normalizeEnvelopeAddress accepts only a bare addr-spec for SMTP MAIL/RCPT
 // commands. Header sanitization alone is insufficient at this layer: display
