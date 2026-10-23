@@ -273,14 +273,6 @@ func (s *Service) PreviousImports(projectKeys []string) ([]PreviousImport, error
 	return imports, rows.Err()
 }
 
-func (s *Service) HasImportHistory(connectionID string) (bool, error) {
-	var count int
-	if err := s.db.QueryRow(`SELECT COUNT(*) FROM jira_import_jobs WHERE connection_id = ?`, connectionID).Scan(&count); err != nil {
-		return false, err
-	}
-	return count > 0, nil
-}
-
 func (s *Service) Creator(jobID string) (int, error) {
 	var createdBy sql.NullInt64
 	if err := s.db.QueryRow(`SELECT created_by FROM jira_import_jobs WHERE id = ?`, jobID).Scan(&createdBy); err != nil {

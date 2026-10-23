@@ -2956,6 +2956,14 @@ var Catalog = []Migration{
 			CREATE INDEX IF NOT EXISTS idx_custom_widgets_workspace ON custom_widgets(workspace_id);
 		`,
 	},
+	{
+		Version:       "20261108_jira_connection_soft_delete",
+		Name:          "Retain Jira import connections referenced by history when removed",
+		CheckSQLite:   sqliteColumnCheck("jira_import_connections", "deleted_at"),
+		CheckPostgres: pgColumnCheck("jira_import_connections", "deleted_at"),
+		SQLite:        `ALTER TABLE jira_import_connections ADD COLUMN deleted_at DATETIME;`,
+		Postgres:      `ALTER TABLE jira_import_connections ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;`,
+	},
 }
 
 // applyAssetReportsWorkspacePinned backfills form-mode asset reports that have

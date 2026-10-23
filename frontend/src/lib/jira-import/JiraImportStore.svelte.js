@@ -229,6 +229,18 @@ export const jiraImport = {
     }
   },
 
+  // Replace the stored credentials of a saved connection. Reloads the list so
+  // the row reflects the instance name returned by the re-verification.
+  async updateSavedConnection(connectionId, credentials) {
+    try {
+      const connection = await jiraImportApi.updateConnection(connectionId, credentials);
+      await this.loadSavedConnections();
+      return { success: true, connection };
+    } catch (err) {
+      return { success: false, error: err.message || 'Failed to update connection' };
+    }
+  },
+
   async deleteImportedData(jobId, confirmation) {
     try {
       await jiraImportApi.deleteImportedData(jobId, confirmation);

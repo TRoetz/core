@@ -341,8 +341,14 @@ export default {
     noConnections: 'No saved connections yet. Start an import to connect Jira Cloud.',
     lastUsed: 'Last used',
     deleteConnection: 'Delete connection',
-    deleteConnectionMessage: 'Delete this connection? This action cannot be undone.',
+    deleteConnectionMessage:
+      'Remove this connection? Imported data and import history are kept. This action cannot be undone.',
     connectionDeleted: 'Connection deleted',
+    updateToken: 'Update token',
+    updateTokenTitle: 'Update Jira connection',
+    updateTokenDescription:
+      'Replace the stored credentials. Windshift verifies the new token with Jira before saving.',
+    connectionUpdated: 'Connection updated',
     importHistory: 'Import history',
     importHistoryDescription: 'Status and results of previous imports',
     noImports: 'No imports yet. Start an import to see its history here.',

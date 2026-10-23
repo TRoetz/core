@@ -604,6 +604,7 @@ const (
 
 	// Jira Integration
 	ActionJiraConnect          = "jira.connect"
+	ActionJiraConnectionUpdate = "jira.connection.update"
 	ActionJiraDisconnect       = "jira.disconnect"
 	ActionJiraImport           = "jira.import"
 	ActionJiraImportDeleteData = "jira.import.delete_data"

@@ -11,7 +11,10 @@ CREATE TABLE IF NOT EXISTS jira_import_connections (
     deployment_type TEXT DEFAULT 'cloud',
     created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    last_used_at TIMESTAMPTZ
+    last_used_at TIMESTAMPTZ,
+    -- Set when the operator removes the connection. The row is retained as
+    -- provenance for import jobs; credentials are cleared at the same time.
+    deleted_at TIMESTAMPTZ
 );
 
 CREATE INDEX IF NOT EXISTS idx_jira_connections_created_by ON jira_import_connections(created_by);

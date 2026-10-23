@@ -58,7 +58,7 @@ func (r *JiraImportJobRepository) WithLockedConnection(
 ) error {
 	return database.WithTx(r.db, func(tx database.Tx) error {
 		lockResult, err := tx.ExecWrite(`
-			UPDATE jira_import_connections SET id = id WHERE id = ?
+			UPDATE jira_import_connections SET id = id WHERE id = ? AND deleted_at IS NULL
 		`, connectionID)
 		if err != nil {
 			return fmt.Errorf("lock Jira import connection: %w", err)

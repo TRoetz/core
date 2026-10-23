@@ -319,6 +319,12 @@ export const jiraImport = {
     fetchAPI(`/admin/jira-import/connections/${connectionId}`, {
       method: 'DELETE',
     }),
+  // Replace the stored credentials of an existing connection
+  updateConnection: (connectionId, data) =>
+    fetchAPI(`/admin/jira-import/connections/${connectionId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
   // Start import
   startImport: (data) =>
     fetchAPI('/admin/jira-import/start', {
