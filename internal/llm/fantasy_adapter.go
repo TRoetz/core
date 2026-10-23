@@ -164,7 +164,7 @@ func providerConfigSDKOptions(raw, protocol string) []sdkoption.RequestOption {
 		"model": true, "messages": true, "input": true, "temperature": true,
 		"top_p": true, "max_tokens": true, "max_completion_tokens": true,
 		"max_output_tokens": true, "tools": true, "tool_choice": true,
-		"response_format": true, "text": true, "reasoning": true,
+		"response_format": true, "text": true,
 		"include": true, "store": true,
 	}
 	if protocol == APIContractResponses {
@@ -172,6 +172,14 @@ func providerConfigSDKOptions(raw, protocol string) []sdkoption.RequestOption {
 		generated["parallel_tool_calls"] = true
 	}
 	var options []sdkoption.RequestOption
+	// The normalized reasoning_level is translated to the Chat Completions
+	// field. A provider-native reasoning field supplied by the operator wins and
+	// is forwarded verbatim by the generic loop below.
+	if protocol == APIContractChatCompletions && !ProviderConfigHasReasoningOverride(raw) {
+		if level := ProviderConfigReasoningLevel(raw); level != "" {
+			options = append(options, sdkoption.WithJSONSet("reasoning_effort", level))
+		}
+	}
 	for key, rawValue := range config {
 		if reservedProviderConfigKeys[key] || generated[key] {
 			continue
@@ -526,13 +534,10 @@ func (c *fantasyClient) callProviderOptions(req CompletionRequest) fantasy.Provi
 				break
 			}
 		}
-		if reasoning := ProviderConfigResponsesReasoning(c.providerConfig); reasoning != nil {
-			if reasoning.Effort != "" {
-				effort := openai.ReasoningEffort(reasoning.Effort)
+		if !ProviderConfigHasReasoningOverride(c.providerConfig) {
+			if level := ProviderConfigReasoningLevel(c.providerConfig); level != "" {
+				effort := openai.ReasoningEffort(level)
 				options.ReasoningEffort = &effort
-			}
-			if reasoning.Summary != "" {
-				options.ReasoningSummary = &reasoning.Summary
 			}
 		}
 		applyResponsesProviderConfig(options, c.providerConfig)
@@ -540,18 +545,19 @@ func (c *fantasyClient) callProviderOptions(req CompletionRequest) fantasy.Provi
 	}
 	if c.protocol == APIContractAnthropic {
 		options := &anthropic.ProviderOptions{}
-		reasoning := ProviderConfigResponsesReasoning(c.providerConfig)
-		switch {
-		case reasoning != nil && reasoning.BudgetTokens > 0:
-			options.Thinking = &anthropic.ThinkingProviderOption{BudgetTokens: reasoning.BudgetTokens}
-		case reasoning != nil && reasoning.Effort != "":
-			effort := anthropic.Effort(reasoning.Effort)
-			options.Effort = &effort
-		case req.CodingAgent:
-			effort := anthropic.EffortHigh
-			options.Effort = &effort
+		// A provider-native reasoning field supplied by the operator wins over
+		// the normalized reasoning_level and is forwarded verbatim via ExtraBody.
+		options.ExtraBody = providerConfigReasoningOverrideBody(c.providerConfig)
+		if options.ExtraBody == nil {
+			if level := ProviderConfigReasoningLevel(c.providerConfig); level != "" {
+				effort := anthropic.Effort(level)
+				options.Effort = &effort
+			} else if req.CodingAgent {
+				effort := anthropic.EffortHigh
+				options.Effort = &effort
+			}
 		}
-		if options.Effort != nil || options.Thinking != nil {
+		if options.Effort != nil || options.ExtraBody != nil {
 			sendReasoning := true
 			options.SendReasoning = &sendReasoning
 		}
