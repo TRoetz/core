@@ -107,6 +107,9 @@ export default {
       renderError: "无法渲染此组件",
       unavailable: "此组件已不可用",
       notConfigured: "此组件尚未设置",
+      noLinks: "这些工作项与资产之间没有关联",
+      canvasUnavailable: "此图表需要 canvas，当前环境不可用",
+      renderedNodes: "正在绘制 {total} 个节点中的 {shown} 个",
     },
     editor: {
       newSection: '新建分区',

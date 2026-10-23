@@ -107,6 +107,9 @@ export default {
       renderError: "This widget could not be rendered",
       unavailable: "This widget is no longer available",
       notConfigured: "This widget has not been set up yet",
+      noLinks: "No links between these items and assets",
+      canvasUnavailable: "This chart needs a canvas, which is not available here",
+      renderedNodes: "Drawing {shown} of {total} nodes",
     },
     editor: {
       newSection: 'New Section',

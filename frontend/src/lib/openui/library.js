@@ -16,6 +16,7 @@ import { z } from 'zod/v4';
 import ActivityFeed from './components/ActivityFeed.svelte';
 import Badge from './components/Badge.svelte';
 import BarChart from './components/BarChart.svelte';
+import BipartiteList from './components/BipartiteList.svelte';
 import Card from './components/Card.svelte';
 import Divider from './components/Divider.svelte';
 import EmptyState from './components/EmptyState.svelte';
@@ -23,8 +24,10 @@ import ItemList from './components/ItemList.svelte';
 import ItemsTable from './components/ItemsTable.svelte';
 import LineChart from './components/LineChart.svelte';
 import LinkButton from './components/LinkButton.svelte';
+import Matrix from './components/Matrix.svelte';
 import Metric from './components/Metric.svelte';
 import MetricRow from './components/MetricRow.svelte';
+import NetworkGraph from './components/NetworkGraph.svelte';
 import ProgressList from './components/ProgressList.svelte';
 import Section from './components/Section.svelte';
 import Stack from './components/Stack.svelte';
@@ -237,6 +240,80 @@ const ActivityFeedDef = defineComponent({
   component: ActivityFeed,
 });
 
+// The graph components all read the same bipartite edge slot: an item seed
+// set, an asset seed set, and the links between them. The edge cap and the
+// render cap are separate, because the data can be complete while the drawing
+// is sampled.
+const graphSeedProps = {
+  item_query: z.string().optional().describe('CQL filter for the item side of the graph.'),
+  asset_query: z.string().optional().describe('CQL filter for the asset side of the graph.'),
+  item_sort: z
+    .string()
+    .optional()
+    .describe('Sort field for the item side, "-" prefixed for descending.'),
+  item_limit: z
+    .number()
+    .int()
+    .min(1)
+    .max(1000)
+    .optional()
+    .describe('Maximum items on the item side. Defaults to 1000.'),
+  asset_sort: z
+    .string()
+    .optional()
+    .describe('Sort field for the asset side, "-" prefixed for descending.'),
+  asset_limit: z
+    .number()
+    .int()
+    .min(1)
+    .max(1000)
+    .optional()
+    .describe('Maximum assets on the asset side. Defaults to 1000.'),
+  max_edges: z
+    .number()
+    .int()
+    .min(1)
+    .max(10000)
+    .optional()
+    .describe('Maximum edges to resolve. Defaults to 10000.'),
+};
+
+const renderedNodesProp = {
+  rendered_nodes: z
+    .number()
+    .int()
+    .min(10)
+    .max(1000)
+    .optional()
+    .describe(
+      'Maximum nodes drawn per side. Defaults to 200; the data can be complete while the drawing is sampled.'
+    ),
+};
+
+const BipartiteListDef = defineComponent({
+  name: 'BipartiteList',
+  description:
+    'A readable list of item-to-asset links. Use this unless the user explicitly asks for a chart; it stays usable at any size.',
+  props: z.object(graphSeedProps),
+  component: BipartiteList,
+});
+
+const NetworkGraphDef = defineComponent({
+  name: 'NetworkGraph',
+  description:
+    'Items in one column, assets in another, links drawn between them. Draws at most rendered_nodes per side.',
+  props: z.object({ ...graphSeedProps, ...renderedNodesProp }),
+  component: NetworkGraph,
+});
+
+const MatrixDef = defineComponent({
+  name: 'Matrix',
+  description:
+    'An item-by-asset matrix where a filled cell is a link. Best when both sides are large; draws at most rendered_nodes per side.',
+  props: z.object({ ...graphSeedProps, ...renderedNodesProp }),
+  component: Matrix,
+});
+
 // Containers are declared in nesting order: Stack holds content, Card holds
 // content plus Stack, Section holds all of them. Ordering avoids recursive
 // schemas, which the prompt generator does not support.
@@ -255,6 +332,9 @@ const contentDefs = [
   LineChartDef,
   ProgressListDef,
   ActivityFeedDef,
+  BipartiteListDef,
+  NetworkGraphDef,
+  MatrixDef,
 ];
 const contentChildren = contentDefs.map((definition) => definition.ref);
 
@@ -304,6 +384,13 @@ export const widgetLibrary = createLibrary({
     },
     { name: 'Content', components: ['Title', 'Text', 'Badge', 'EmptyState', 'LinkButton'] },
     {
+      name: 'Graph',
+      components: ['BipartiteList', 'NetworkGraph', 'Matrix'],
+      notes: [
+        'Graph components take item_query and asset_query and return the links between those two sets. Prefer BipartiteList; a graph at more than a few hundred nodes is not readable.',
+      ],
+    },
+    {
       name: 'Data',
       components: [
         'Metric',
@@ -328,6 +415,7 @@ export const componentNames = [
   'ActivityFeed',
   'Badge',
   'BarChart',
+  'BipartiteList',
   'Card',
   'Divider',
   'EmptyState',
@@ -335,8 +423,10 @@ export const componentNames = [
   'ItemsTable',
   'LineChart',
   'LinkButton',
+  'Matrix',
   'Metric',
   'MetricRow',
+  'NetworkGraph',
   'ProgressList',
   'Section',
   'Stack',

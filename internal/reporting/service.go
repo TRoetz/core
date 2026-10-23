@@ -30,9 +30,11 @@ type LinkProjector interface {
 
 // Service resolves widget query slots into normalized rows.
 type Service struct {
-	items  ItemLister
-	assets AssetLister
-	links  LinkProjector
+	items          ItemLister
+	assets         AssetLister
+	links          LinkProjector
+	edgeLinks      LinkEdgeLister
+	itemReferences ItemReferenceLister
 }
 
 func NewService(items ItemLister, assets AssetLister) *Service {
@@ -74,9 +76,14 @@ type slotResult struct {
 // Resolve runs every slot and returns results keyed by slot key. Identical
 // slots are fetched once and sliced per slot limit.
 func (s *Service) Resolve(ctx context.Context, request Request) map[string]Result {
+	results := make(map[string]Result, len(request.Slots))
 	groups := make(map[groupKey][]Slot, len(request.Slots))
 	order := make([]groupKey, 0, len(request.Slots))
 	for _, slot := range request.Slots {
+		if slot.Entity == EntityLinks {
+			results[slot.Key] = s.resolveLinks(ctx, request, slot)
+			continue
+		}
 		key := groupKey{
 			entity:     slot.Entity,
 			ql:         slot.QL,
@@ -90,7 +97,6 @@ func (s *Service) Resolve(ctx context.Context, request Request) map[string]Resul
 		groups[key] = append(groups[key], slot)
 	}
 
-	results := make(map[string]Result, len(request.Slots))
 	for _, key := range order {
 		slots := groups[key]
 		fetchLimit := 0

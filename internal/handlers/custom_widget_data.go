@@ -45,6 +45,22 @@ type customWidgetDataSlotInput struct {
 	Limit          int                             `json:"limit"`
 	AssetSetID     int                             `json:"asset_set_id"`
 	LinkProjection *customWidgetDataLinkProjection `json:"link_projection"`
+	Links          *customWidgetDataLinksInput     `json:"links"`
+}
+
+// customWidgetDataLinksInput is the bipartite edge request: two seed sets plus
+// an edge cap.
+type customWidgetDataLinksInput struct {
+	Item     *customWidgetDataQueryPart `json:"item"`
+	Asset    *customWidgetDataQueryPart `json:"asset"`
+	MaxEdges int                        `json:"max_edges"`
+}
+
+type customWidgetDataQueryPart struct {
+	QL         string `json:"ql"`
+	Sort       string `json:"sort"`
+	Limit      int    `json:"limit"`
+	AssetSetID int    `json:"asset_set_id"`
 }
 
 type customWidgetDataLinkProjection struct {
@@ -107,6 +123,7 @@ func (h *CustomWidgetDataHandler) ResolveCustomWidgetData(w http.ResponseWriter,
 			Limit:      raw.Limit,
 			AssetSetID: raw.AssetSetID,
 			Projection: toProjection(raw.LinkProjection),
+			Links:      toLinksSpec(raw.Links),
 		})
 		if err != nil {
 			respondValidationError(w, r, err.Error())
@@ -137,6 +154,24 @@ func (h *CustomWidgetDataHandler) ResolveCustomWidgetData(w http.ResponseWriter,
 
 	results := h.data.Resolve(r.Context(), request2)
 	respondJSONOK(w, map[string]any{"results": results})
+}
+
+func toLinksSpec(raw *customWidgetDataLinksInput) *reporting.LinksSpec {
+	if raw == nil {
+		return nil
+	}
+	return &reporting.LinksSpec{
+		Item:     toQueryPart(raw.Item),
+		Asset:    toQueryPart(raw.Asset),
+		MaxEdges: raw.MaxEdges,
+	}
+}
+
+func toQueryPart(raw *customWidgetDataQueryPart) *reporting.QueryPart {
+	if raw == nil {
+		return nil
+	}
+	return &reporting.QueryPart{QL: raw.QL, Sort: raw.Sort, Limit: raw.Limit, AssetSetID: raw.AssetSetID}
 }
 
 func toProjection(raw *customWidgetDataLinkProjection) *reporting.Projection {

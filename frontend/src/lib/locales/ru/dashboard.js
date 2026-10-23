@@ -107,6 +107,9 @@ export default {
       renderError: "Не удалось отобразить этот виджет",
       unavailable: "Этот виджет больше недоступен",
       notConfigured: "Этот виджет ещё не настроен",
+      noLinks: "Нет связей между этими элементами и активами",
+      canvasUnavailable: "Для этого графика нужен canvas, который здесь недоступен",
+      renderedNodes: "Отображено {shown} из {total} узлов",
     },
     editor: {
       newSection: 'Новый раздел',

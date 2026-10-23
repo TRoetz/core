@@ -107,6 +107,9 @@ export default {
       renderError: "Ce widget n a pas pu etre rendu",
       unavailable: "Ce widget n'est plus disponible",
       notConfigured: "Ce widget n'a pas encore ete configure",
+      noLinks: "Aucun lien entre ces elements et ces actifs",
+      canvasUnavailable: "Ce graphique necessite un canvas, indisponible ici",
+      renderedNodes: "Dessine {shown} sur {total} noeuds",
     },
     editor: {
       newSection: 'Nouvelle section',

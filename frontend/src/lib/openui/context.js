@@ -16,6 +16,7 @@ const WIDGET_DATA_KEY = Symbol('windshift-openui-widget-data');
  * @property {number} [total]
  * @property {boolean} [truncated]
  * @property {{ code?: string, message?: string }} [error]
+ * @property {object} [graph] bipartite nodes/edges for an edge slot
  */
 
 /**

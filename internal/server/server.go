@@ -1942,7 +1942,8 @@ func (s *Server) initialize() error {
 		repository.NewCustomWidgetRepository(s.db),
 		permService,
 		reporting.NewService(itemApplication, assetApplication).
-			WithLinks(repository.NewItemLinkRepository(s.db)),
+			WithLinks(repository.NewItemLinkRepository(s.db)).
+			WithEdges(repository.NewItemLinkRepository(s.db), repository.NewItemRepository(s.db)),
 	)
 	routeDeps.API.HandleH("POST /custom-widgets/data",
 		routeDeps.AuthMiddleware.RequireAuth(http.HandlerFunc(customWidgetDataHandler.ResolveCustomWidgetData)))

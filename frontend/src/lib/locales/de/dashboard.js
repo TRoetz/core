@@ -107,6 +107,9 @@ export default {
       renderError: "Dieses Widget konnte nicht gerendert werden",
       unavailable: "Dieses Widget ist nicht mehr verfuegbar",
       notConfigured: "Dieses Widget wurde noch nicht eingerichtet",
+      noLinks: "Keine Verknuepfungen zwischen diesen Elementen und Assets",
+      canvasUnavailable: "Dieses Diagramm benoetigt ein Canvas, das hier nicht verfuegbar ist",
+      renderedNodes: "Zeichnet {shown} von {total} Knoten",
     },
     editor: {
       newSection: 'Neuer Bereich',

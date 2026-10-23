@@ -1,7 +1,7 @@
 <script>
   import { customWidgets } from '../../api/customWidgets.js';
   import { loadCustomWidgetRenderer } from '../../openui/render.js';
-  import { assetSpec, itemSpec, sourceKey } from '../../openui/querySpec.js';
+  import { assetSpec, itemSpec, linksSpec, sourceKey } from '../../openui/querySpec.js';
   import { itemModalStore } from '../../stores/itemModalStore.svelte.js';
   import { t } from '../../stores/i18n.svelte.js';
 
@@ -51,6 +51,20 @@
         asset_set_id: queries.asset.asset_set_id,
       });
     }
+    if (queries?.links) {
+      const links = queries.links;
+      const spec = linksSpec({
+        itemQuery: links.item?.ql,
+        itemSort: links.item?.sort,
+        itemLimit: links.item?.limit,
+        assetQuery: links.asset?.ql,
+        assetSort: links.asset?.sort,
+        assetLimit: links.asset?.limit,
+        assetSetId: links.asset?.asset_set_id,
+        maxEdges: links.max_edges,
+      });
+      slots.push({ key: sourceKey(spec), entity: 'links', links });
+    }
     return slots;
   }
 
@@ -81,6 +95,7 @@
   }
 
   function toSlot(spec, key) {
+    if (spec.entity === 'links') return { key, entity: 'links', links: spec.links };
     const slot = { key, entity: spec.entity, ql: spec.ql ?? '', sort: spec.sort ?? '', limit: spec.limit ?? 0 };
     if (spec.entity === 'asset') slot.asset_set_id = spec.asset_set_id;
     return slot;

@@ -22,6 +22,9 @@ type Entity string
 const (
 	EntityItem  Entity = "item"
 	EntityAsset Entity = "asset"
+	// EntityLinks is the bipartite edge slot: an item seed set, an asset seed
+	// set, and the links between them.
+	EntityLinks Entity = "links"
 )
 
 const (
@@ -49,6 +52,23 @@ type Slot struct {
 	Limit      int
 	AssetSetID int
 	Projection *Projection
+	// Links is set when Entity is EntityLinks.
+	Links *LinksSpec
+}
+
+// QueryPart is one seed set of an edge slot.
+type QueryPart struct {
+	QL         string
+	Sort       string
+	Limit      int
+	AssetSetID int
+}
+
+// LinksSpec is the bipartite edge request.
+type LinksSpec struct {
+	Item     *QueryPart
+	Asset    *QueryPart
+	MaxEdges int
 }
 
 // Projection requests fields from the entity linked to a row.
@@ -75,11 +95,13 @@ type SourceError struct {
 	Message string `json:"message"`
 }
 
-// Result is the resolved outcome for one slot.
+// Result is the resolved outcome for one slot. Row slots fill Rows/Total;
+// edge slots fill Graph instead.
 type Result struct {
 	Status    string       `json:"status"`
 	Rows      any          `json:"rows,omitempty"`
 	Total     int          `json:"total,omitempty"`
+	Graph     *GraphResult `json:"graph,omitempty"`
 	Truncated bool         `json:"truncated,omitempty"`
 	Error     *SourceError `json:"error,omitempty"`
 }
@@ -144,8 +166,13 @@ func NormalizeSlot(slot Slot) (Slot, error) {
 		if err := customwidgets.ValidateSlot("asset", &querySlot, true); err != nil {
 			return slot, err
 		}
+	case EntityLinks:
+		if _, err := normalizeLinks(slot.Links); err != nil {
+			return slot, err
+		}
+		return slot, nil
 	default:
-		return slot, invalid("slot entity must be item or asset")
+		return slot, invalid("slot entity must be item, asset, or links")
 	}
 
 	slot.QL = querySlot.QL
@@ -160,6 +187,43 @@ func NormalizeSlot(slot Slot) (Slot, error) {
 		}
 	}
 	return slot, nil
+}
+
+// normalizeLinks validates an edge slot and applies its defaults.
+func normalizeLinks(links *LinksSpec) (*LinksSpec, error) {
+	if links == nil || links.Item == nil || links.Asset == nil {
+		return nil, invalid("links requires both an item and an asset seed")
+	}
+	if err := validateSeed("links.item", links.Item, false); err != nil {
+		return nil, err
+	}
+	if err := validateSeed("links.asset", links.Asset, true); err != nil {
+		return nil, err
+	}
+	if links.MaxEdges < 0 || links.MaxEdges > MaxEdges {
+		return nil, invalid("links.max_edges must be between 0 and %d", MaxEdges)
+	}
+	if links.MaxEdges == 0 {
+		links.MaxEdges = MaxEdges
+	}
+	return links, nil
+}
+
+func validateSeed(name string, part *QueryPart, asset bool) error {
+	// Seed limits default to and are capped by the node cap, not by the row cap
+	// the other slots use.
+	if part.Limit <= 0 || part.Limit > MaxNodesPerSide {
+		part.Limit = MaxNodesPerSide
+	}
+	slot := customwidgets.QuerySlot{QL: part.QL, Sort: part.Sort, Limit: part.Limit}
+	if asset {
+		slot.AssetSetID = part.AssetSetID
+	}
+	if err := customwidgets.ValidateSlot(name, &slot, asset); err != nil {
+		return err
+	}
+	part.QL, part.Sort, part.Limit = slot.QL, slot.Sort, slot.Limit
+	return nil
 }
 
 // SplitSort turns a "-field" sort into its field and direction.

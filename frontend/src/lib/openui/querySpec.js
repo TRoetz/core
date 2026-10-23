@@ -60,6 +60,35 @@ export function assetSpec({
   };
 }
 
+/**
+ * Build a bipartite edge slot: an item seed set, an asset seed set, and the
+ * links between them.
+ */
+export function linksSpec({
+  itemQuery = '',
+  itemSort = '',
+  itemLimit = MAX_LIMIT,
+  assetQuery = '',
+  assetSort = '',
+  assetLimit = MAX_LIMIT,
+  assetSetId = undefined,
+  maxEdges = undefined,
+} = {}) {
+  return {
+    entity: 'links',
+    links: prune({
+      item: prune({ ql: itemQuery, sort: itemSort, limit: itemLimit }),
+      asset: prune({
+        ql: assetQuery,
+        sort: assetSort,
+        limit: assetLimit,
+        asset_set_id: assetSetId,
+      }),
+      max_edges: maxEdges,
+    }),
+  };
+}
+
 /** Stable cache key for a spec, independent of property order. */
 export function sourceKey(spec) {
   return JSON.stringify(sortKeys(prune(spec)));
