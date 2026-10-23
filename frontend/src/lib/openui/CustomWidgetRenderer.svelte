@@ -3,6 +3,7 @@
   import { t } from '../stores/i18n.svelte.js';
   import { setWidgetDataContext } from './context.js';
   import { widgetLibrary } from './library.js';
+  import { stripDuplicateTitle } from './programTitle.js';
 
   /**
    * Renders one widget program. The data context is set here so every
@@ -11,6 +12,7 @@
    *
    * @type {{
    *   program?: string,
+   *   tileTitle?: string,
    *   sources?: Record<string, import('./context.js').SourceResult>,
    *   assetSetId?: number|null,
    *   workspaceId?: number|null,
@@ -21,6 +23,7 @@
    */
   let {
     program = '',
+    tileTitle = '',
     sources = {},
     assetSetId = null,
     workspaceId = null,
@@ -28,6 +31,10 @@
     openItem = null,
     onParseErrors = null,
   } = $props();
+
+  // The tile heading already shows the widget name, so drop a leading Title
+  // that repeats it. Programs saved before the prompt said so still carry one.
+  const response = $derived(stripDuplicateTitle(program, tileTitle));
 
   setWidgetDataContext({
     get sources() {
@@ -55,7 +62,7 @@
 </script>
 
 <svelte:boundary>
-  <Renderer response={program} library={widgetLibrary} onParseResult={handleParseResult} />
+  <Renderer response={response} library={widgetLibrary} onParseResult={handleParseResult} />
 
   {#snippet failed(error)}
     <div

@@ -589,7 +589,11 @@
                           onconfigchange={(changes) => updateWidgetConfig(widget.id, changes)}
                         />
                       {:else if widget.type === 'custom-widget'}
-                        <CustomWidgetWidget config={widget.config ?? {}} refreshKey={builderRefresh} />
+                        <CustomWidgetWidget
+                          config={widget.config ?? {}}
+                          refreshKey={builderRefresh}
+                          title={getWidgetTitle(widget)}
+                        />
                       {:else if widget.type === 'saved-search'}
                         <SavedSearchWidget
                           config={widget.config ?? {}}

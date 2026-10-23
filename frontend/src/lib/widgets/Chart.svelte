@@ -107,9 +107,10 @@
     return pad.top + ch - ((value - dMin) / vRange) * ch;
   });
 
-  // Grid lines with smart integer-step dedup when max <= 5
+  // Grid lines with smart integer-step dedup when max <= 5. A pie has no value
+  // axis, so it draws none.
   const gridLines = $derived.by(() => {
-    if (type === 'horizontal-bar') return [];
+    if (type === 'horizontal-bar' || type === 'pie') return [];
     if (dMax <= 5 && dMin === 0) {
       const steps = dMax + 1;
       return Array.from({ length: steps }, (_, i) => ({
@@ -129,9 +130,10 @@
     });
   });
 
-  // X-axis labels with max count + always-include-last
+  // X-axis labels with max count + always-include-last. A pie labels its
+  // slices instead.
   const xLabels = $derived.by(() => {
-    if (type === 'horizontal-bar') return [];
+    if (type === 'horizontal-bar' || type === 'pie') return [];
     const n = categories.length;
     if (n <= maxXLabels) return categories.map((l, i) => ({ x: getX(i), label: l }));
     const step = Math.ceil(n / (maxXLabels - 1));

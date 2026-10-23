@@ -396,7 +396,7 @@
         {#if loading}
           <p class="text-sm" style="color: var(--ds-text-subtle);">{t('dashboard.widgetBuilder.loading')}</p>
         {:else if program}
-          <CustomWidgetRenderer {program} {sources} {workspaceId} {requestSource} />
+          <CustomWidgetRenderer {program} tileTitle={name} {sources} {workspaceId} {requestSource} />
         {:else}
           <p class="text-sm" style="color: var(--ds-text-subtle);">
             {t('dashboard.widgetBuilder.previewEmpty')}

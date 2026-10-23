@@ -5,7 +5,7 @@
   import { itemModalStore } from '../../stores/itemModalStore.svelte.js';
   import { t } from '../../stores/i18n.svelte.js';
 
-  let { config = {}, refreshKey = 0 } = $props();
+  let { config = {}, refreshKey = 0, title = '' } = $props();
 
   const widgetId = $derived(Number(config?.customWidgetId) || 0);
 
@@ -157,6 +157,7 @@
 {:else if widget && Renderer}
   <Renderer
     program={widget.program}
+    tileTitle={title || widget.name || ''}
     {sources}
     assetSetId={assetSetIdFromQueries(widget.queries)}
     {requestSource}
