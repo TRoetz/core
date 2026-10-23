@@ -834,6 +834,7 @@ func (s *Server) initialize() error {
 	objectTranslationHandler := handlers.NewObjectTranslationHandler(objectTranslationService)
 	userPreferencesService := services.NewUserPreferencesService(repository.NewUserPreferencesRepository(s.db), repository.NewThemeRepository(s.db), permService)
 	userPreferencesHandler := handlers.NewUserPreferencesHandler(userPreferencesService)
+	customWidgetHandler := handlers.NewCustomWidgetHandler(repository.NewCustomWidgetRepository(s.db), permService)
 	homepageHandler := handlers.NewHomepageHandler(
 		repository.NewWorkspaceRepository(s.db),
 		repository.NewItemRepository(s.db),
@@ -1780,6 +1781,9 @@ func (s *Server) initialize() error {
 			AI:                aiHandler,
 			LLMConnection:     llmConnHandler,
 			WorkItemStaleness: workItemStalenessHandler,
+		},
+		Widgets: routes.WidgetHandlers{
+			Custom: customWidgetHandler,
 		},
 		Misc: routes.MiscHandlers{
 			Homepage:      homepageHandler,
