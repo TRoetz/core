@@ -340,10 +340,10 @@ export default {
     savedConnectionsDescription: 'Manage Jira Cloud connections used to import data.',
     noConnections: 'No saved connections yet. Start an import to connect Jira Cloud.',
     lastUsed: 'Last used',
-    deleteConnection: 'Delete connection',
+    deleteConnection: 'Remove connection',
     deleteConnectionMessage:
       'Remove this connection? Imported data and import history are kept. This action cannot be undone.',
-    connectionDeleted: 'Connection deleted',
+    connectionDeleted: 'Connection removed',
     updateToken: 'Update token',
     updateTokenTitle: 'Update Jira connection',
     updateTokenDescription:

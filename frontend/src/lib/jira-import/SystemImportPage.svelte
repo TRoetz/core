@@ -82,9 +82,9 @@
 
   async function deleteConnection(connectionId) {
     const confirmed = await confirm({
-      title: t('common.delete'),
+      title: t('systemImport.deleteConnection'),
       message: t('systemImport.deleteConnectionMessage'),
-      confirmText: t('common.delete'),
+      confirmText: t('systemImport.deleteConnection'),
       cancelText: t('common.cancel'),
       variant: 'danger'
     });
