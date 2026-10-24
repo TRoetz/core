@@ -36,6 +36,8 @@
     canDrag = true,
     dndAction = () => {},
     refreshToken = 0,
+    focused = false,
+    registerElement = null,
     onopen = null,
   } = $props();
 
@@ -82,6 +84,16 @@
 
   const avatarVariants = ['blue', 'teal', 'purple', 'green', 'orange'];
 
+  let rootElement = $state(null);
+
+  // Let the board own a card-element registry for roving keyboard focus.
+  $effect(() => {
+    const element = rootElement;
+    if (!element || !registerElement) return;
+    const registration = registerElement(element, item.id);
+    return () => registration?.destroy?.();
+  });
+
   function avatarVariant(userId) {
     return avatarVariants[Math.abs(Number(userId) || 0) % avatarVariants.length];
   }
@@ -99,6 +111,7 @@
 
 <div
   use:dndAction={dndConfig}
+  bind:this={rootElement}
   class="board-card relative rounded-[4px] border px-3 py-2.5"
   style={cardStyle}
   data-testid={`board-item-${item.id}`}
@@ -107,7 +120,7 @@
   data-swimlane-dimension={swimlaneDimension}
   data-swimlane-key={swimlaneKey}
   role="button"
-  tabindex="0"
+  tabindex={focused ? 0 : -1}
   onclick={open}
   onkeydown={handleKeydown}
 >

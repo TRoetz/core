@@ -1415,6 +1415,159 @@
     })
   );
 
+  // --- Keyboard navigation (WI-97) ---------------------------------------
+  // Roving focus: one card is tabbable at a time; arrows move within and
+  // across columns, Enter opens the card, c quick-adds, / focuses search and
+  // m opens the card's move menu.
+  let focusedItemId = $state(null);
+  const boardCardElements = new Map();
+
+  function registerBoardCardElement(element, itemId) {
+    boardCardElements.set(itemId, element);
+    return {
+      destroy() {
+        boardCardElements.delete(itemId);
+      },
+    };
+  }
+
+  // Rendered column model per lane, used for both navigation and the default
+  // tab stop. Collapsed columns render no cards, so they are skipped.
+  let keyboardNavLanes = $derived(
+    boardSwimlanes.map((lane) => ({
+      lane,
+      columns: validColumns
+        .map((column, columnIndex) => ({
+          column,
+          columnIndex,
+          items: isColumnCollapsed(column.id)
+            ? []
+            : getDisplayItemsByColumn(column, columnIndex, validColumns, lane.items),
+        }))
+        .filter((entry) => !isColumnCollapsed(entry.column.id)),
+    }))
+  );
+
+  let firstRenderedItemId = $derived.by(() => {
+    for (const lane of keyboardNavLanes) {
+      for (const entry of lane.columns) {
+        if (entry.items.length > 0) return entry.items[0].id;
+      }
+    }
+    return null;
+  });
+
+  let tabbableItemId = $derived(
+    focusedItemId != null && itemsById.has(focusedItemId) ? focusedItemId : firstRenderedItemId
+  );
+
+  function locateFocusedCard(itemId) {
+    for (const lane of keyboardNavLanes) {
+      for (let columnIndex = 0; columnIndex < lane.columns.length; columnIndex++) {
+        const entry = lane.columns[columnIndex];
+        const itemIndex = entry.items.findIndex((item) => item.id === itemId);
+        if (itemIndex >= 0) return { lane, columnIndex, itemIndex };
+      }
+    }
+    return null;
+  }
+
+  function neighborItemId(itemId, key) {
+    const location = locateFocusedCard(itemId);
+    if (!location) return null;
+    const { lane, columnIndex, itemIndex } = location;
+    if (key === 'ArrowUp' || key === 'ArrowDown') {
+      const delta = key === 'ArrowUp' ? -1 : 1;
+      return lane.columns[columnIndex].items[itemIndex + delta]?.id ?? null;
+    }
+    const targetColumn = lane.columns[columnIndex + (key === 'ArrowLeft' ? -1 : 1)];
+    if (!targetColumn || targetColumn.items.length === 0) return null;
+    return targetColumn.items[Math.min(itemIndex, targetColumn.items.length - 1)]?.id ?? null;
+  }
+
+  function openQuickAddForFocusedCard(itemId) {
+    const location = locateFocusedCard(itemId);
+    if (!location) return;
+    const { lane, columnIndex } = location;
+    const column = lane.columns[columnIndex].column;
+    const laneQuickAddTypes = quickAddTypesFor(lane.lane.parent ?? null);
+    if (laneQuickAddTypes.length === 0 || quickAddWorkspacesForLane(lane.lane).length === 0) return;
+    const quickAddKey = `${lane.lane.id}-${column.id}`;
+    initQuickAdd(column.id, column.status_ids[0], quickAddKey, lane.lane.parent ?? null, lane.lane);
+  }
+
+  function handleBoardCardKeydown(event) {
+    const target = event.target;
+    if (!(target instanceof HTMLElement) || !target.matches('[data-item-card]')) return;
+    const itemId = Number(target.dataset.itemId);
+    if (!Number.isFinite(itemId)) return;
+
+    if (
+      event.key === 'ArrowUp' ||
+      event.key === 'ArrowDown' ||
+      event.key === 'ArrowLeft' ||
+      event.key === 'ArrowRight'
+    ) {
+      const nextId = neighborItemId(itemId, event.key);
+      if (nextId != null) {
+        event.preventDefault();
+        focusedItemId = nextId;
+      }
+      return;
+    }
+    if (event.key === 'c' || event.key === 'C') {
+      event.preventDefault();
+      openQuickAddForFocusedCard(itemId);
+      return;
+    }
+    if (event.key === 'm' || event.key === 'M') {
+      const trigger = document.querySelector(`[data-testid="board-card-move-menu-${itemId}"]`);
+      if (trigger instanceof HTMLElement) {
+        event.preventDefault();
+        trigger.click();
+      }
+    }
+  }
+
+  function handleBoardGlobalKeydown(event) {
+    if (event.key !== '/' || event.metaKey || event.ctrlKey || event.altKey) return;
+    const target = event.target;
+    if (
+      target instanceof HTMLElement &&
+      (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)
+    ) {
+      return;
+    }
+    const searchInput = document.querySelector('[data-testid="board-search-input"]');
+    if (searchInput instanceof HTMLInputElement) {
+      event.preventDefault();
+      searchInput.focus();
+    }
+  }
+
+  useEventListener(() => window, 'keydown', handleBoardGlobalKeydown);
+
+  // Card keydown lives on the scrolling canvas so it never fires for the
+  // chrome above it; bound programmatically to keep the layout div role-free.
+  $effect(() => {
+    const element = boardScrollElement;
+    if (!element) return;
+    const handler = (event) => handleBoardCardKeydown(event);
+    element.addEventListener('keydown', handler);
+    return () => element.removeEventListener('keydown', handler);
+  });
+
+  // Move DOM focus when the roving target changes, but never steal it back
+  // from a card the user already focused.
+  $effect(() => {
+    const itemId = focusedItemId;
+    if (itemId == null) return;
+    const element = boardCardElements.get(itemId);
+    if (element && document.activeElement !== element) {
+      element.focus();
+    }
+  });
+
   // Calculate total visible items across all display columns
   let totalVisibleItems = $derived.by(() => {
     return boardSwimlanes.reduce((laneTotal, lane) => {
@@ -2007,6 +2160,13 @@
         bind:this={boardScrollElement}
         class="min-h-0 min-w-0 max-w-full flex-1 w-full overflow-auto overscroll-contain"
         data-testid="board-scroll-container"
+        onfocusin={(event) => {
+          const target = event.target;
+          if (target instanceof HTMLElement && target.matches('[data-item-card]')) {
+            const id = Number(target.dataset.itemId);
+            if (Number.isFinite(id)) focusedItemId = id;
+          }
+        }}
       >
       <div class="px-6 py-6 min-w-fit">
 
@@ -2238,7 +2398,9 @@
                                 dndAction={registerBoardCard}
                                 canDrag={canDragCard}
                                 refreshToken={slaRefreshToken}
+                                focused={tabbableItemId === item.id}
                                 onopen={openItem}
+                                registerElement={registerBoardCardElement}
                               />
                             {/each}
                           </div>
