@@ -1987,7 +1987,7 @@
             placeholder={t('common.search')}
             dataTestid="board-search-input"
           />
-          <SubFilterBar {workspaceId} showCompletionToggle={false} />
+          <SubFilterBar {workspaceId} {collectionId} showCompletionToggle={false} />
           <DropdownMenu
             items={completedVisibilityMenuItems}
             triggerIcon={Eye}

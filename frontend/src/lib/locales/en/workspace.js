@@ -697,6 +697,18 @@ export default {
 
     // Filters and query
     filters: 'Filters',
+    savedFilters: 'Saved filters',
+    saveCurrentFilter: 'Save current filters',
+    filterNamePlaceholder: 'Filter name',
+    noSavedFilters: 'No saved filters yet',
+    pinFilter: 'Pin',
+    unpinFilter: 'Unpin',
+    deleteFilter: 'Delete',
+    filterNameRequired: 'Enter a name for this filter',
+    filterNameTaken: 'A saved filter with that name already exists',
+    noActiveFilters: 'Add at least one filter before saving',
+    filterSaved: 'Filter saved',
+    filterDeleted: 'Filter deleted',
     expandSidebar: 'Expand sidebar',
     collapseSidebar: 'Collapse sidebar',
     workspaces: 'Workspaces',

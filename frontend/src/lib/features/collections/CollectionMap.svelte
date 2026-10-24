@@ -741,7 +741,7 @@
 
       <!-- Controls Bar -->
       <div class="flex items-center mt-4">
-        <SubFilterBar {workspaceId} />
+        <SubFilterBar {workspaceId} {collectionId} />
       </div>
 
       <!-- Hierarchy Breadcrumbs -->

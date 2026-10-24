@@ -76,6 +76,18 @@ export default {
   },
 
   collections: {
+    savedFilters: 'Сохранённые фильтры',
+    saveCurrentFilter: 'Сохранить текущие фильтры',
+    filterNamePlaceholder: 'Название фильтра',
+    noSavedFilters: 'Сохранённых фильтров пока нет',
+    pinFilter: 'Закрепить',
+    unpinFilter: 'Открепить',
+    deleteFilter: 'Удалить',
+    filterNameRequired: 'Введите название фильтра',
+    filterNameTaken: 'Сохранённый фильтр с таким названием уже существует',
+    noActiveFilters: 'Добавьте хотя бы один фильтр перед сохранением',
+    filterSaved: 'Фильтр сохранён',
+    filterDeleted: 'Фильтр удалён',
     itemTypeLaneHint: 'Дорожка «{type}»',
     itemTypeLaneUnassignedHint: 'Элементы без родителя «{type}»',
     itemTypeLaneUnassignedVisibleHint: 'Элементы без видимого родителя «{type}»',

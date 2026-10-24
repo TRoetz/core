@@ -275,7 +275,7 @@
             placeholder={t('common.search')}
             dataTestid="list-search-input"
           />
-          <SubFilterBar {workspaceId} />
+          <SubFilterBar {workspaceId} {collectionId} />
         </div>
 
         <div class="flex items-center gap-2">
