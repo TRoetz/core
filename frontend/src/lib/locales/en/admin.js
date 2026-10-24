@@ -598,6 +598,17 @@ export default {
       callbackUrlHelp: 'Configure this URL as the redirect/callback URL in your identity provider',
       scopes: 'Scopes',
       scopesHelp: 'Space-separated list of OIDC scopes',
+      nameClaimsHelp:
+        'Some providers (for example Microsoft Entra ID) only include the display name by default. Add given_name and family_name as optional claims so Windshift receives the structured name instead of parsing the display name.',
+      attributeMapping: 'Attribute mapping',
+      attributeMappingHelp:
+        'Optional. Override the claim each field is read from when your provider uses non-standard claim names. Leave a field blank to use the default claim shown in the placeholder.',
+      attributeEmail: 'Email claim',
+      attributeEmailVerified: 'Email verified claim',
+      attributeName: 'Full name claim',
+      attributeGivenName: 'First name claim',
+      attributeFamilyName: 'Last name claim',
+      attributeUsername: 'Username claim',
       enabled: 'Enabled',
       disabled: 'Disabled',
       default: 'Default',

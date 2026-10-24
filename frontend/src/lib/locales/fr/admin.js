@@ -549,6 +549,17 @@ export default {
       callbackUrlHelp: 'Configurez cette URL comme URL de redirection dans votre fournisseur d\'identité',
       scopes: 'Portées (Scopes)',
       scopesHelp: 'Liste des portées OIDC séparées par des espaces',
+      nameClaimsHelp:
+        "Certains fournisseurs (par exemple Microsoft Entra ID) n'incluent que le nom d'affichage par défaut. Ajoutez given_name et family_name comme revendications facultatives afin que Windshift reçoive le nom structuré au lieu d'analyser le nom d'affichage.",
+      attributeMapping: 'Mappage des attributs',
+      attributeMappingHelp:
+        "Facultatif. Remplacez la revendication lue pour chaque champ lorsque votre fournisseur utilise des noms de revendication non standard. Laissez un champ vide pour utiliser la revendication par défaut indiquée dans l'espace réservé.",
+      attributeEmail: 'Revendication e-mail',
+      attributeEmailVerified: 'Revendication e-mail vérifié',
+      attributeName: 'Revendication nom complet',
+      attributeGivenName: 'Revendication prénom',
+      attributeFamilyName: 'Revendication nom de famille',
+      attributeUsername: "Revendication nom d'utilisateur",
       enabled: 'Activé',
       disabled: 'Désactivé',
       default: 'Par défaut',
