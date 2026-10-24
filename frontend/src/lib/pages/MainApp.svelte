@@ -132,6 +132,15 @@
   useEventListener(() => (isResizingTerminal ? document : null), 'mousemove', onTerminalMouseMove);
   useEventListener(() => (isResizingTerminal ? document : null), 'mouseup', onTerminalMouseUp);
 
+  let lastDisplayCacheUserID = null;
+  $effect(() => {
+    const userID = $authStore.user?.id ?? null;
+    if (lastDisplayCacheUserID !== null && userID !== lastDisplayCacheUserID) {
+      workspaceDataStore.resetUserDisplayCache();
+    }
+    lastDisplayCacheUserID = userID;
+  });
+
   $effect(() => {
     if (!isResizingTerminal) return;
     document.body.style.cursor = 'col-resize';
