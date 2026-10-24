@@ -80,6 +80,7 @@
   import { itemModalStore } from '../../stores/itemModalStore.svelte.js';
   import { useCollectionEventStream } from '../../composables/useCollectionEventStream.svelte.js';
   import { createDependencyLoader } from './dependencyLoader.svelte.js';
+  import { loadedVisibleItemIDs, visibleAssigneeIDs } from './boardHydration.js';
   import { useCollectionSearch } from '../../composables/useCollectionSearch.svelte.js';
   import { invalidateSLAState } from '../sla/slaState.js';
   import { agentRuns } from '../../stores/agentRuns.svelte.js';
@@ -122,9 +123,22 @@
   let items = $derived(search.items);
   let itemsById = $derived(new Map(items.map((item) => [item.id, item])));
 
-  // Hydrate only the assignees the visible cards reference.
+  // Optional card reads stay scoped to cards near the viewport.
+  let visibleBoardItemIds = $state(new Set());
+
+  function handleCardVisibility(itemId, visible) {
+    const next = new Set(visibleBoardItemIds);
+    if (visible) {
+      if (next.has(itemId)) return;
+      next.add(itemId);
+    } else if (!next.delete(itemId)) {
+      return;
+    }
+    visibleBoardItemIds = next;
+  }
+
   $effect(() => {
-    const ids = items.map((item) => item.assignee_id).filter(Boolean);
+    const ids = visibleAssigneeIDs(visibleBoardItemIds, itemsById);
     if (ids.length > 0) void workspaceDataStore.hydrateUsers(ids);
   });
   let transitions = $state([]);
@@ -564,6 +578,7 @@
     if (view === setupViewSignature) return;
     setupViewSignature = view;
     dependencyLoader.reset();
+    visibleBoardItemIds = new Set();
     allIterations = [];
     iterationFilterId = null;
     boardGroupBy = null;
@@ -595,12 +610,14 @@
     }
   });
 
-  // Preload dependency links when the loaded item set changes. Overlapping
-  // waves join pending ids; each successful chunk commits independently.
+  // Load dependency links only for cards near the viewport. Overlapping waves
+  // join pending ids; each successful chunk commits independently.
   $effect(() => {
-    if (collectionStore.items.length > 0 && !collectionStore.loading) {
+    if (collectionStore.loading) return;
+    const ids = loadedVisibleItemIDs(visibleBoardItemIds, itemsById);
+    if (ids.length > 0) {
       // Avoid subscribing this effect to cache writes.
-      untrack(() => dependencyLoader.ensure(collectionStore.items.map((item) => item.id)));
+      untrack(() => dependencyLoader.ensure(ids));
     }
   });
 
@@ -2622,6 +2639,8 @@
                                 refreshToken={slaRefreshToken}
                                 focused={tabbableItemId === item.id}
                                 selected={selectedIdSet.has(item.id)}
+                                visible={visibleBoardItemIds.has(item.id)}
+                                onvisibilitychange={handleCardVisibility}
                                 onselect={toggleSelected}
                                 onshiftselect={selectRangeTo}
                                 onopen={openItem}

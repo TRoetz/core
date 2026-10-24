@@ -41,6 +41,8 @@
     refreshToken = 0,
     focused = false,
     selected = false,
+    visible = true,
+    onvisibilitychange = null,
     registerElement = null,
     onselect = null,
     onshiftselect = null,
@@ -98,6 +100,36 @@
     if (!element || !registerElement) return;
     const registration = registerElement(element, item.id);
     return () => registration?.destroy?.();
+  });
+
+  // Optional card reads (assignee hydration, dependencies, SLA) are owned by
+  // the board and only run for cards near the viewport.
+  $effect(() => {
+    const element = rootElement;
+    if (!element || !onvisibilitychange) return;
+    if (typeof IntersectionObserver === 'undefined') {
+      onvisibilitychange(item.id, true);
+      return () => onvisibilitychange(item.id, false);
+    }
+
+    let lastVisible = null;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.target !== element) continue;
+          const nextVisible = entry.isIntersecting;
+          if (nextVisible === lastVisible) continue;
+          lastVisible = nextVisible;
+          onvisibilitychange(item.id, nextVisible);
+        }
+      },
+      { rootMargin: '200px', threshold: 0 }
+    );
+    observer.observe(element);
+    return () => {
+      observer.disconnect();
+      if (lastVisible !== false) onvisibilitychange(item.id, false);
+    };
   });
 
   function avatarVariant(userId) {
@@ -250,7 +282,9 @@
         <DependencySummary {item} links={dependencyLinks} />
         {#if showsSLA}
           <span class="inline-flex shrink-0" data-testid={`board-card-sla-${item.id}`}>
-            <SLABadge itemId={item.id} workspaceId={item.workspace_id} {refreshToken} />
+            {#if visible}
+              <SLABadge itemId={item.id} workspaceId={item.workspace_id} {refreshToken} />
+            {/if}
           </span>
         {/if}
         <span class="flex-1"></span>
