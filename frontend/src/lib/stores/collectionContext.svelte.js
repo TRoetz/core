@@ -111,6 +111,9 @@ class CollectionStore {
   // The rightmost cap is retained as a specialized view of that partition.
   boardDeferred = $state(null);
   rightmostCap = $state(null);
+  // Iteration that the "current_iteration" completed-visibility preset scopes
+  // completed work to. The board sets it once its iteration catalog loads.
+  boardCompletedIterationId = $state(null);
 
   // View search is a separate server-scoped result set, shared by the board
   // and list views. Keeping it apart prevents a search from changing the
@@ -158,6 +161,20 @@ class CollectionStore {
     this.clearSearch();
     if (this.#wsId || this.#colId) {
       await this.load(this.#wsId, this.#colId, this.#currentView);
+    }
+  }
+
+  /**
+   * Scopes the "current_iteration" completed-visibility preset to an
+   * iteration. The board calls this once its iteration catalog resolves; a
+   * change re-runs the partition fetch so completed work matches the preset.
+   */
+  setBoardCompletedIteration(id) {
+    const next = id == null ? null : Number(id);
+    if (next === this.boardCompletedIterationId) return;
+    this.boardCompletedIterationId = next;
+    if (BOARD_VIEWS.has(this.#currentView) && (this.#wsId || this.#colId)) {
+      this.load(this.#wsId, this.#colId, this.#currentView);
     }
   }
 
@@ -285,6 +302,7 @@ class CollectionStore {
       this.boardBackgroundLoading = false;
       this.boardDeferred = null;
       this.rightmostCap = null;
+      this.boardCompletedIterationId = null;
       this.backlogPagination = null;
       this.backlogHasMore = false;
       this.backlogLoadingMore = false;
@@ -483,13 +501,40 @@ class CollectionStore {
       }
 
       const cappedStatusIds = rightmostCapStatusIds(config, statuses);
+      const completedStatusIds = statuses
+        .filter((status) => status.is_completed)
+        .map((status) => status.id);
+      const visibility = config?.view_settings?.completed_visibility ?? '';
+
+      // Explicit presets take precedence over the legacy cap/retention pair.
+      if (visibility === 'none') {
+        // Keep completed statuses out of the main fetch without a second
+        // request; the board renders no completed work at all.
+        return completedStatusIds.length
+          ? { statusIds: completedStatusIds, limit: 0, capped: false, hidden: true }
+          : null;
+      }
+      if (
+        visibility === 'all' ||
+        visibility === 'last_day' ||
+        visibility === 'last_week' ||
+        visibility === 'current_iteration'
+      ) {
+        if (completedStatusIds.length === 0) return null;
+        const activityDays = visibility === 'last_day' ? 1 : visibility === 'last_week' ? 7 : null;
+        return {
+          statusIds: completedStatusIds,
+          limit: DEFAULT_PAGE_SIZE,
+          capped: false,
+          completedActivityDays: activityDays,
+          iterationId: visibility === 'current_iteration' ? this.boardCompletedIterationId : null,
+        };
+      }
+
       if (cappedStatusIds?.length) {
         return { statusIds: cappedStatusIds, limit: RIGHTMOST_COLUMN_LIMIT, capped: true };
       }
 
-      const completedStatusIds = statuses
-        .filter((status) => status.is_completed)
-        .map((status) => status.id);
       const retentionDays = Number(config?.completed_item_retention_days);
       const completedActivityDays =
         Number.isInteger(retentionDays) && retentionDays >= 1 && retentionDays <= 3650
@@ -716,7 +761,7 @@ class CollectionStore {
   }
 
   #fetchBoardDeferredItems(wsId, colId, boardPartition, collection, limitOverride = null) {
-    if (!boardPartition?.statusIds?.length) return Promise.resolve(null);
+    if (!boardPartition?.statusIds?.length || boardPartition.hidden) return Promise.resolve(null);
     const limit = boardPartition.capped
       ? RIGHTMOST_COLUMN_LIMIT
       : Math.max(DEFAULT_PAGE_SIZE, limitOverride ?? boardPartition.limit ?? 0);
@@ -728,6 +773,7 @@ class CollectionStore {
       requestOptions: FOREGROUND_READ,
       status_id: boardPartition.statusIds.join(','),
       completed_activity_days: boardPartition.completedActivityDays || undefined,
+      iteration_id: boardPartition.iterationId || undefined,
       ...(boardPartition.capped
         ? { order_by: 'last_active_at', sort_direction: 'desc' }
         : this.#itemSortOptions()),
@@ -879,6 +925,7 @@ class CollectionStore {
           ? {
               status_id: deferred.statusIds.join(','),
               completed_activity_days: deferred.completedActivityDays || undefined,
+              iteration_id: deferred.iterationId || undefined,
             }
           : this.#boardExclusionFilter()),
       });

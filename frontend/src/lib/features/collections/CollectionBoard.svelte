@@ -49,6 +49,7 @@
   import ChevronRight from '@lucide/svelte/icons/chevron-right';
   import MoreHorizontal from '@lucide/svelte/icons/more-horizontal';
   import Layers from '@lucide/svelte/icons/layers';
+  import Eye from '@lucide/svelte/icons/eye';
   import Milestone from '@lucide/svelte/icons/milestone';
   import ArrowDownUp from '@lucide/svelte/icons/arrow-down-up';
   import ItemPicker from '../../pickers/ItemPicker.svelte';
@@ -143,6 +144,7 @@
   );
   let milestoneSwimlaneDialogOpen = $state(false);
   let savingMilestoneSwimlaneConfig = $state(false);
+  let savingCompletedVisibility = $state(false);
 
   let loading = $state(true);
   let currentCollectionName = $derived(collectionStore.collectionName);
@@ -645,6 +647,37 @@
     }
   }
 
+  async function saveCompletedVisibility(visibility) {
+    if (visibility === completedVisibilityPreset) return;
+    savingCompletedVisibility = true;
+    try {
+      const payload = buildBoardConfigurationPayload(boardConfig, {
+        globalMilestoneIds: pinnedGlobalMilestoneIds,
+        showCompleted: showCompletedMilestones,
+        showOpenFromCompleted: showOpenFromCompletedMilestones,
+        completedVisibility: visibility,
+      });
+      if (boardConfig?.id) {
+        await collectionsApi.updateBoardConfiguration(
+          collectionId,
+          boardConfig.id,
+          payload,
+          workspaceId
+        );
+      } else {
+        await collectionsApi.createBoardConfiguration(collectionId, workspaceId, payload);
+      }
+      collectionStore.invalidateBoardConfiguration(workspaceId, collectionId);
+      await loadBoardConfig();
+      successToast(t('boardControls.completedVisibilitySaved'));
+    } catch (error) {
+      console.error('Failed to save completed visibility:', error);
+      warningToast(error?.message || t('dialogs.alerts.failedToSave', { error: error?.message ?? '' }));
+    } finally {
+      savingCompletedVisibility = false;
+    }
+  }
+
   // Scoped SSE invalidations (WI-1624): any frame runs the existing delta fetch,
   // and a reconnect reconciles. No polling fallback.
   useCollectionEventStream(
@@ -695,6 +728,14 @@
 
   // Iteration filter derived values
   let activeLocalIteration = $derived(allIterations.find(i => !i.is_global && i.status === 'active'));
+
+  // The "current_iteration" completed preset scopes the deferred completed
+  // fetch to the board's active iteration once the catalog resolves.
+  $effect(() => {
+    const visibility = boardConfig?.view_settings?.completed_visibility ?? '';
+    if (visibility !== 'current_iteration') return;
+    collectionStore.setBoardCompletedIteration(activeLocalIteration?.id ?? null);
+  });
 
   let iterationFilterOptions = $derived.by(() => {
     const seen = new Set();
@@ -1200,6 +1241,78 @@
       item => item.item_type_id === boardGroupBy.itemTypeId && isExcludedRightmostSwimlaneParent(item)
     ).length;
   });
+
+  // Completed-work visibility. Explicit presets live in view_settings; a board
+  // saved before presets existed is mapped back onto the closest preset so the
+  // menu reflects what the board actually does.
+  let completedVisibilityPreset = $derived.by(() => {
+    const explicit = boardConfig?.view_settings?.completed_visibility ?? '';
+    if (explicit) return explicit;
+    if (boardConfig?.show_rightmost_column_last_50) return 'latest_50';
+    const days = Number(boardConfig?.completed_item_retention_days);
+    if (Number.isInteger(days) && days >= 1) return 'custom';
+    return 'all';
+  });
+  let completedVisibilityLabel = $derived.by(() => {
+    switch (completedVisibilityPreset) {
+      case 'last_day':
+        return t('boardControls.completedLastDay');
+      case 'last_week':
+        return t('boardControls.completedLastWeek');
+      case 'current_iteration':
+        return t('boardControls.completedCurrentIteration');
+      case 'none':
+        return t('boardControls.completedNone');
+      case 'latest_50':
+        return t('boardControls.completedLatestFifty');
+      case 'custom':
+        return t('boardControls.completedCustom');
+      default:
+        return t('boardControls.completedAll');
+    }
+  });
+  let completedVisibilityMenuItems = $derived([
+    {
+      id: 'completed-all',
+      testid: 'board-completed-all',
+      title: t('boardControls.completedAll'),
+      subtitle: t('boardControls.completedAllDescription'),
+      selected: completedVisibilityPreset === 'all',
+      onClick: () => saveCompletedVisibility('all'),
+    },
+    {
+      id: 'completed-last-day',
+      testid: 'board-completed-last-day',
+      title: t('boardControls.completedLastDay'),
+      subtitle: t('boardControls.completedLastDayDescription'),
+      selected: completedVisibilityPreset === 'last_day',
+      onClick: () => saveCompletedVisibility('last_day'),
+    },
+    {
+      id: 'completed-last-week',
+      testid: 'board-completed-last-week',
+      title: t('boardControls.completedLastWeek'),
+      subtitle: t('boardControls.completedLastWeekDescription'),
+      selected: completedVisibilityPreset === 'last_week',
+      onClick: () => saveCompletedVisibility('last_week'),
+    },
+    {
+      id: 'completed-current-iteration',
+      testid: 'board-completed-current-iteration',
+      title: t('boardControls.completedCurrentIteration'),
+      subtitle: t('boardControls.completedCurrentIterationDescription'),
+      selected: completedVisibilityPreset === 'current_iteration',
+      onClick: () => saveCompletedVisibility('current_iteration'),
+    },
+    {
+      id: 'completed-none',
+      testid: 'board-completed-none',
+      title: t('boardControls.completedNone'),
+      subtitle: t('boardControls.completedNoneDescription'),
+      selected: completedVisibilityPreset === 'none',
+      onClick: () => saveCompletedVisibility('none'),
+    },
+  ]);
 
   let sortByMenuItems = $derived([
     {
@@ -1875,6 +1988,16 @@
             dataTestid="board-search-input"
           />
           <SubFilterBar {workspaceId} showCompletionToggle={false} />
+          <DropdownMenu
+            items={completedVisibilityMenuItems}
+            triggerIcon={Eye}
+            triggerText={t('boardControls.completedLabel', { value: completedVisibilityLabel })}
+            placement="bottom-start"
+            maxWidth="max-w-xs"
+            triggerClass="px-3 py-1.5 rounded text-sm font-medium transition-colors"
+            triggerStyle="color: var(--ds-text); background-color: var(--ctx-surface, var(--ds-background-neutral));"
+            triggerTestid="board-completed-visibility-menu"
+          />
         </div>
       </div>
 

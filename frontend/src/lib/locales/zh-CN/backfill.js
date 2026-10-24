@@ -600,6 +600,9 @@ export default {
       "recentActivityWindow": "最近活动时间窗口",
       "resetViews": "重置为工作区默认值",
       "retentionRangeError": "请输入 1 到 3650 之间的整数。",
+      "completedVisibility": "已完成工作",
+      "completedVisibilityCustom": "自定义（使用下方选项）",
+      "completedVisibilityHint": "设置此看板加载多少已完成工作。对所有查看者生效。",
       "retentionWindowHint": "在此期间内无活动的已完成事项将被隐藏。",
       "systemFieldNames": {
         "created_at": "创建时间",
