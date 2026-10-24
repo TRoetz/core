@@ -372,6 +372,8 @@ export default {
     scopes: { workItems: 'Рабочие элементы' },
     deleteData: 'Удалить данные',
     unavailable: 'Недоступно',
+    removeFromList: 'Убрать из списка',
+    importRemovedFromHistory: 'Импорт убран из истории',
     dataDeleted: 'Импортированные данные Jira удалены. Теперь импорт можно запустить снова.',
     deleteImportedTitle: 'Удаление импортированных данных Jira',
     deleteWarningTitle: 'Может быть удалено несколько рабочих пространств Windshift.',

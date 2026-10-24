@@ -368,6 +368,8 @@ export default {
     scopes: { workItems: 'Work items' },
     deleteData: 'Delete data',
     unavailable: 'Unavailable',
+    removeFromList: 'Remove from list',
+    importRemovedFromHistory: 'Import removed from history',
     dataDeleted: 'Imported Jira data deleted. You can run the import again.',
     deleteImportedTitle: 'Delete imported Jira data',
     deleteWarningTitle: 'This may delete several Windshift workspaces.',

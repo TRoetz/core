@@ -2964,6 +2964,14 @@ var Catalog = []Migration{
 		SQLite:        `ALTER TABLE jira_import_connections ADD COLUMN deleted_at DATETIME;`,
 		Postgres:      `ALTER TABLE jira_import_connections ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;`,
 	},
+	{
+		Version:       "20261109_jira_import_job_hidden_at",
+		Name:          "Let operators clear a Jira import from the history without deleting data",
+		CheckSQLite:   sqliteColumnCheck("jira_import_jobs", "hidden_at"),
+		CheckPostgres: pgColumnCheck("jira_import_jobs", "hidden_at"),
+		SQLite:        `ALTER TABLE jira_import_jobs ADD COLUMN hidden_at DATETIME;`,
+		Postgres:      `ALTER TABLE jira_import_jobs ADD COLUMN IF NOT EXISTS hidden_at TIMESTAMPTZ;`,
+	},
 }
 
 // applyAssetReportsWorkspacePinned backfills form-mode asset reports that have
