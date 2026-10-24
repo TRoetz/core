@@ -2972,6 +2972,14 @@ var Catalog = []Migration{
 		SQLite:        `ALTER TABLE jira_import_jobs ADD COLUMN hidden_at DATETIME;`,
 		Postgres:      `ALTER TABLE jira_import_jobs ADD COLUMN IF NOT EXISTS hidden_at TIMESTAMPTZ;`,
 	},
+	{
+		Version:       "20261110_intake_import_existing_mail",
+		Name:          "Let a new email intake start from new mail instead of importing the mailbox history (WI-1775)",
+		CheckSQLite:   sqliteColumnCheck("intakes", "import_existing_mail"),
+		CheckPostgres: pgColumnCheck("intakes", "import_existing_mail"),
+		SQLite:        `ALTER TABLE intakes ADD COLUMN import_existing_mail BOOLEAN NOT NULL DEFAULT false`,
+		Postgres:      `ALTER TABLE intakes ADD COLUMN IF NOT EXISTS import_existing_mail BOOLEAN NOT NULL DEFAULT false`,
+	},
 }
 
 // applyAssetReportsWorkspacePinned backfills form-mode asset reports that have
