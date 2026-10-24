@@ -3,6 +3,8 @@
   import { useEventListener } from 'runed';
   import { t } from '../../stores/i18n.svelte.js';
   import { items as itemsApi } from '../../api/items.js';
+  import { getAssignableUsers } from '../../api/users.js';
+  import { labels as labelsApi } from '../../api/misc.js';
   import { collections as collectionsApi } from '../../api/collections.js';
   import { workspaces as workspacesApi } from '../../api/workspaces.js';
   import { iterations as iterationsApi } from '../../api/milestones.js';
@@ -1511,8 +1513,16 @@
       const nextId = neighborItemId(itemId, event.key);
       if (nextId != null) {
         event.preventDefault();
+        if (event.shiftKey && (event.key === 'ArrowUp' || event.key === 'ArrowDown')) {
+          selectRangeTo(nextId);
+        }
         focusedItemId = nextId;
       }
+      return;
+    }
+    if (event.key === ' ') {
+      event.preventDefault();
+      toggleSelected(itemId);
       return;
     }
     if (event.key === 'c' || event.key === 'C') {
@@ -1546,6 +1556,218 @@
   }
 
   useEventListener(() => window, 'keydown', handleBoardGlobalKeydown);
+
+  // --- Multi-select and bulk actions (WI-98) ------------------------------
+  let selectedIds = $state([]);
+  let selectionAnchorId = $state(null);
+  let bulkBusy = $state(false);
+  let assignableUsers = $state([]);
+  let assignableUsersLoaded = $state(false);
+  let assignableUsersLoading = $state(false);
+
+  let selectedIdSet = $derived(new Set(selectedIds));
+  let selectedCount = $derived(selectedIds.length);
+  let selectedItems = $derived(items.filter((item) => selectedIdSet.has(item.id)));
+  let selectedItemsEditable = $derived(
+    selectedItems.length > 0 &&
+      selectedItems.every((item) => workspacePermissions.canEdit(item.workspace_id))
+  );
+
+  // Drop ids that leave the loaded set so the toolbar never acts on stale rows.
+  $effect(() => {
+    const present = new Set(items.map((item) => item.id));
+    const pruned = selectedIds.filter((id) => present.has(id));
+    if (pruned.length !== selectedIds.length) selectedIds = pruned;
+  });
+
+  function toggleSelected(itemId) {
+    selectedIds = selectedIdSet.has(itemId)
+      ? selectedIds.filter((id) => id !== itemId)
+      : [...selectedIds, itemId];
+    selectionAnchorId = itemId;
+  }
+
+  // Shift selection extends from the anchor within the focused card's column.
+  function selectRangeTo(itemId) {
+    const target = locateFocusedCard(itemId);
+    const anchor = selectionAnchorId ?? focusedItemId;
+    const origin = anchor != null ? locateFocusedCard(anchor) : null;
+    if (
+      !target ||
+      !origin ||
+      target.lane.lane.id !== origin.lane.lane.id ||
+      target.columnIndex !== origin.columnIndex
+    ) {
+      toggleSelected(itemId);
+      return;
+    }
+    const columnItems = target.lane.columns[target.columnIndex].items;
+    const from = Math.min(origin.itemIndex, target.itemIndex);
+    const to = Math.max(origin.itemIndex, target.itemIndex);
+    const rangeIds = columnItems.slice(from, to + 1).map((item) => item.id);
+    selectedIds = [...new Set([...selectedIds, ...rangeIds])];
+  }
+
+  function clearSelection() {
+    selectedIds = [];
+    selectionAnchorId = null;
+  }
+
+  function itemLabelIds(item) {
+    if (Array.isArray(item.label_ids)) return item.label_ids;
+    return (item.labels || []).map((label) => label.id);
+  }
+
+  function bulkSelectionIds() {
+    return selectedItems.map((item) => item.id);
+  }
+
+  async function bulkMoveToColumn(column) {
+    const targetStatusId = column.status_ids?.[0];
+    if (targetStatusId == null || bulkBusy) return;
+    const ids = bulkSelectionIds();
+    bulkBusy = true;
+    try {
+      const result = await itemsApi.bulkTransition(ids, targetStatusId);
+      const failed = result?.failed_count ?? 0;
+      if (failed > 0) {
+        warningToast(t('collections.bulkStatusPartial', {
+          count: result?.transitioned_count ?? 0,
+          failed,
+        }));
+      } else {
+        successToast(t('collections.bulkStatusSuccess', { count: result?.transitioned_count ?? ids.length }));
+      }
+      clearSelection();
+      reloadCollection();
+    } catch (error) {
+      console.error('Bulk transition failed:', error);
+      warningToast(error?.message || t('collections.bulkUpdateFailed'));
+    } finally {
+      bulkBusy = false;
+    }
+  }
+
+  async function bulkUpdateFields(fields) {
+    if (bulkBusy) return;
+    const ids = bulkSelectionIds();
+    if (ids.length === 0) return;
+    bulkBusy = true;
+    try {
+      const result = await itemsApi.bulkUpdate(ids, fields);
+      successToast(t('collections.bulkUpdateSuccess', { count: result?.updated_count ?? ids.length }));
+      clearSelection();
+      reloadCollection();
+    } catch (error) {
+      console.error('Bulk update failed:', error);
+      warningToast(error?.message || t('collections.bulkUpdateFailed'));
+    } finally {
+      bulkBusy = false;
+    }
+  }
+
+  // Labels are a join table with no bulk endpoint, so v1 applies them one item
+  // at a time and reports a combined result.
+  async function bulkToggleLabel(labelId) {
+    if (bulkBusy) return;
+    const targets = selectedItems;
+    if (targets.length === 0) return;
+    const removing = targets.every((item) => itemLabelIds(item).includes(labelId));
+    bulkBusy = true;
+    let updated = 0;
+    let failed = 0;
+    for (const item of targets) {
+      const current = itemLabelIds(item);
+      const next = removing
+        ? current.filter((id) => id !== labelId)
+        : [...new Set([...current, labelId])];
+      try {
+        await labelsApi.setForItem(item.id, next);
+        updated += 1;
+      } catch (error) {
+        console.error('Bulk label update failed:', error);
+        failed += 1;
+      }
+    }
+    if (failed > 0) {
+      warningToast(t('collections.bulkLabelPartial', { count: updated, failed }));
+    } else {
+      successToast(t('collections.bulkLabelSuccess', { count: updated }));
+    }
+    bulkBusy = false;
+    clearSelection();
+    reloadCollection();
+  }
+
+  async function ensureAssignableUsers() {
+    if (assignableUsersLoaded || assignableUsersLoading) return;
+    const scopeWorkspaceId = workspaceId ?? selectedItems[0]?.workspace_id;
+    if (!scopeWorkspaceId) return;
+    assignableUsersLoading = true;
+    try {
+      assignableUsers = (await getAssignableUsers(scopeWorkspaceId)) || [];
+      assignableUsersLoaded = true;
+    } catch (error) {
+      console.error('Failed to load assignable users:', error);
+    } finally {
+      assignableUsersLoading = false;
+    }
+  }
+
+  let bulkStatusMenuItems = $derived(
+    validColumns.map((column) => ({
+      id: `bulk-status-${column.id}`,
+      testid: `bulk-status-${column.status_ids[0]}`,
+      title: objectDisplayName(column, 'status'),
+      iconDot: true,
+      iconColor: column.color || 'var(--ds-text-subtle)',
+      onClick: () => bulkMoveToColumn(column),
+    }))
+  );
+
+  let bulkAssigneeMenuItems = $derived([
+    {
+      id: 'bulk-assignee-none',
+      testid: 'bulk-assignee-none',
+      title: t('common.unassigned'),
+      onClick: () => bulkUpdateFields({ assignee_id: null }),
+    },
+    ...assignableUsers.map((user) => ({
+      id: `bulk-assignee-${user.id}`,
+      testid: `bulk-assignee-${user.id}`,
+      title: `${user.first_name ?? ''} ${user.last_name ?? ''}`.trim() || user.username,
+      onClick: () => bulkUpdateFields({ assignee_id: user.id }),
+    })),
+  ]);
+
+  let bulkPriorityMenuItems = $derived([
+    {
+      id: 'bulk-priority-none',
+      testid: 'bulk-priority-none',
+      title: t('pickers.noPriority'),
+      onClick: () => bulkUpdateFields({ priority_id: null }),
+    },
+    ...priorities.map((priority) => ({
+      id: `bulk-priority-${priority.id}`,
+      testid: `bulk-priority-${priority.id}`,
+      title: priority.name,
+      iconDot: true,
+      iconColor: priority.color || 'var(--ds-text-subtle)',
+      onClick: () => bulkUpdateFields({ priority_id: priority.id }),
+    })),
+  ]);
+
+  let bulkLabelMenuItems = $derived(
+    wdsLabels.map((label) => ({
+      id: `bulk-label-${label.id}`,
+      testid: `bulk-label-${label.id}`,
+      type: 'checkbox',
+      checked: selectedItems.length > 0 && selectedItems.every((item) => itemLabelIds(item).includes(label.id)),
+      title: label.name,
+      closeOnSelect: false,
+      onChange: () => bulkToggleLabel(label.id),
+    }))
+  );
 
   // Card keydown lives on the scrolling canvas so it never fires for the
   // chrome above it; bound programmatically to keep the layout div role-free.
@@ -2399,6 +2621,9 @@
                                 canDrag={canDragCard}
                                 refreshToken={slaRefreshToken}
                                 focused={tabbableItemId === item.id}
+                                selected={selectedIdSet.has(item.id)}
+                                onselect={toggleSelected}
+                                onshiftselect={selectRangeTo}
                                 onopen={openItem}
                                 registerElement={registerBoardCardElement}
                               />
@@ -2444,6 +2669,72 @@
       </div>
       </div>
     </StaticViewBackground>
+
+    {#if selectedCount > 0}
+      <div
+        class="fixed bottom-4 left-1/2 z-40 flex max-w-[calc(100vw-2rem)] -translate-x-1/2 flex-wrap items-center gap-2 rounded-lg border px-3 py-2 shadow-xl"
+        style="background-color: var(--ds-surface-raised); border-color: var(--ds-border);"
+        data-testid="board-bulk-toolbar"
+      >
+        <span
+          class="mr-1 text-sm font-medium"
+          style="color: var(--ds-text);"
+          data-testid="board-bulk-count"
+        >
+          {t('collections.bulkSelected', { count: selectedCount })}
+        </span>
+        <DropdownMenu
+          items={bulkStatusMenuItems}
+          triggerText={t('collections.bulkSetStatus')}
+          placement="top-start"
+          maxWidth="max-w-xs"
+          disabled={bulkBusy || !selectedItemsEditable}
+          triggerClass="px-3 py-1.5 rounded text-sm font-medium"
+          triggerStyle="color: var(--ds-text); background-color: var(--ds-background-neutral);"
+          triggerTestid="board-bulk-status"
+        />
+        <DropdownMenu
+          items={bulkAssigneeMenuItems}
+          triggerText={t('collections.bulkSetAssignee')}
+          placement="top-start"
+          maxWidth="max-w-xs"
+          disabled={bulkBusy || !selectedItemsEditable}
+          triggerClass="px-3 py-1.5 rounded text-sm font-medium"
+          triggerStyle="color: var(--ds-text); background-color: var(--ds-background-neutral);"
+          triggerTestid="board-bulk-assignee"
+          onOpen={ensureAssignableUsers}
+        />
+        <DropdownMenu
+          items={bulkPriorityMenuItems}
+          triggerText={t('collections.bulkSetPriority')}
+          placement="top-start"
+          maxWidth="max-w-xs"
+          disabled={bulkBusy || !selectedItemsEditable}
+          triggerClass="px-3 py-1.5 rounded text-sm font-medium"
+          triggerStyle="color: var(--ds-text); background-color: var(--ds-background-neutral);"
+          triggerTestid="board-bulk-priority"
+        />
+        <DropdownMenu
+          items={bulkLabelMenuItems}
+          triggerText={t('collections.bulkLabels')}
+          placement="top-start"
+          maxWidth="max-w-xs"
+          disabled={bulkBusy || !selectedItemsEditable || wdsLabels.length === 0}
+          triggerClass="px-3 py-1.5 rounded text-sm font-medium"
+          triggerStyle="color: var(--ds-text); background-color: var(--ds-background-neutral);"
+          triggerTestid="board-bulk-labels"
+        />
+        <Button
+          variant="ghost"
+          size="sm"
+          onclick={clearSelection}
+          disabled={bulkBusy}
+          dataTestid="board-bulk-clear"
+        >
+          {t('collections.bulkClear')}
+        </Button>
+      </div>
+    {/if}
 {:else}
   <div class="p-6">
     <div class="text-center" style="color: var(--ds-text-subtle);">

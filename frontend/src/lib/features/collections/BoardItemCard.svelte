@@ -1,12 +1,15 @@
 <script>
   import CalendarDays from '@lucide/svelte/icons/calendar-days';
+  import CheckSquare from '@lucide/svelte/icons/check-square';
   import MoreHorizontal from '@lucide/svelte/icons/more-horizontal';
+  import Square from '@lucide/svelte/icons/square';
   import Avatar from '../../components/Avatar.svelte';
   import DropIndicator from '../../layout/DropIndicator.svelte';
   import DropdownMenu from '../../layout/DropdownMenu.svelte';
   import { formatDateOnly } from '../../utils/dateFormatter.js';
   import ItemTypeIcon from '../../components/ItemTypeIcon.svelte';
   import ItemKey from '../../components/ItemKey.svelte';
+  import { t } from '../../stores/i18n.svelte.js';
   import CardFieldChip from './CardFieldChip.svelte';
   import DependencySummary from './DependencySummary.svelte';
   import SLABadge from '../sla/SLABadge.svelte';
@@ -37,7 +40,10 @@
     dndAction = () => {},
     refreshToken = 0,
     focused = false,
+    selected = false,
     registerElement = null,
+    onselect = null,
+    onshiftselect = null,
     onopen = null,
   } = $props();
 
@@ -102,10 +108,25 @@
     onopen?.(item.id, event);
   }
 
+  // Shift-click extends the board selection instead of opening the card.
+  function handleCardClick(event) {
+    if (event.shiftKey && onshiftselect) {
+      event.preventDefault();
+      onshiftselect(item.id, event);
+      return;
+    }
+    open(event);
+  }
+
   function handleKeydown(event) {
-    if (event.key === 'Enter' || event.key === ' ') {
+    if (event.key === 'Enter') {
       open(event);
     }
+  }
+
+  function handleSelectClick(event) {
+    event.stopPropagation();
+    onselect?.(item.id, event);
   }
 </script>
 
@@ -119,9 +140,10 @@
   data-item-id={item.id}
   data-swimlane-dimension={swimlaneDimension}
   data-swimlane-key={swimlaneKey}
+  data-selected={selected ? 'true' : 'false'}
   role="button"
   tabindex={focused ? 0 : -1}
-  onclick={open}
+  onclick={handleCardClick}
   onkeydown={handleKeydown}
 >
   {#if closestEdge}
@@ -131,6 +153,25 @@
   <div class={canDrag ? 'cursor-grab active:cursor-grabbing' : ''}>
     <div class="min-w-0">
       <div class="flex items-start gap-2">
+        {#if onselect}
+          <button
+            type="button"
+            class="board-card-select -ml-0.5 mt-0.5 shrink-0 rounded p-0.5 transition-opacity"
+            style="color: {selected ? 'var(--ds-icon-brand)' : 'var(--ds-icon-subtle)'};"
+            data-testid={`board-card-select-${item.id}`}
+            aria-pressed={selected}
+            aria-label={t('collections.toggleSelection')}
+            title={t('collections.toggleSelection')}
+            onclick={handleSelectClick}
+            onkeydown={(event) => event.stopPropagation()}
+          >
+            {#if selected}
+              <CheckSquare class="h-4 w-4" />
+            {:else}
+              <Square class="h-4 w-4" />
+            {/if}
+          </button>
+        {/if}
         <h4 class="min-w-0 flex-1 break-words text-sm font-medium leading-5" style={textStyle}>
           {item.title}
         </h4>
@@ -258,6 +299,18 @@
 
   .board-card:hover .board-card-menu,
   .board-card:focus-within .board-card-menu {
+    opacity: 1;
+  }
+
+  /* The selection control stays hidden until the card is hovered or selected,
+     so a board at rest reads as cards rather than a checklist. */
+  .board-card-select {
+    opacity: 0;
+  }
+
+  .board-card:hover .board-card-select,
+  .board-card:focus-within .board-card-select,
+  .board-card-select[aria-pressed='true'] {
     opacity: 1;
   }
 </style>
