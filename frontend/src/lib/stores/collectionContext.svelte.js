@@ -339,6 +339,10 @@ class CollectionStore {
           : await getCollection(colId)
         : null;
       if (loadId !== this.#loadId) return; // stale
+      // Keep the collection record available to view-scoped controls (shared
+      // named views, configure affordances) on every collection view, not just
+      // the board where the board bootstrap normally populates it.
+      if (collection) this.boardCollection = collection;
 
       const [itemsResult, backlogResult, deferredResult, countResult] = await Promise.all([
         loadsItems(view)

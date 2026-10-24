@@ -5,6 +5,7 @@
   import DynamicFilterPopover from '../shared/DynamicFilterPopover.svelte';
   import Toggle from '../../components/Toggle.svelte';
   import SavedFilterMenu from './SavedFilterMenu.svelte';
+  import CollectionViewsMenu from './CollectionViewsMenu.svelte';
   import { t } from '../../stores/i18n.svelte.js';
 
   let {
@@ -63,6 +64,14 @@
   </DynamicFilterPopover>
 
   <SavedFilterMenu
+    {workspaceId}
+    {collectionId}
+    {activeQl}
+    activeRows={filters}
+    onapply={applySavedFilter}
+  />
+
+  <CollectionViewsMenu
     {workspaceId}
     {collectionId}
     {activeQl}
