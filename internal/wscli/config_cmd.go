@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/BurntSushi/toml"
 	"github.com/spf13/cobra"
 )
 
@@ -192,6 +193,8 @@ This shows the merged configuration from all sources:
   3. Project config (nearest ws.toml walking up from cwd)
   4. Global config (~/.config/ws/config.toml)`,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		emitConfigWarnings()
+
 		// Mask token for display
 		maskedToken := cfg.Server.Token
 		if len(maskedToken) > 8 {
@@ -290,19 +293,26 @@ Examples:
 		// Regenerate aliases with numeric IDs
 		cfg.StatusAliases = generateDefaultAliases(statuses)
 
-		// Save back to project config
-		projectConfig := Config{
-			Server:        cfg.Server,
-			Defaults:      cfg.Defaults,
-			Cache:         cfg.Cache,
-			StatusAliases: cfg.StatusAliases,
-		}
 		// Write back to the same ws.toml we loaded so refresh from a
 		// subdirectory updates the repo-root file rather than creating a
 		// stray one in cwd. Fall back to ./ws.toml if none was discovered.
 		targetPath := discoveredProjectConfig
 		if targetPath == "" {
 			targetPath = "./ws.toml"
+		}
+
+		// Keep the file's own [server] section. Writing cfg.Server would copy
+		// the global or environment token into the project file.
+		var existing Config
+		if _, err := toml.DecodeFile(targetPath, &existing); err != nil && !os.IsNotExist(err) {
+			return fmt.Errorf("failed to read %s: %w", targetPath, err)
+		}
+
+		projectConfig := Config{
+			Server:        existing.Server,
+			Defaults:      cfg.Defaults,
+			Cache:         cfg.Cache,
+			StatusAliases: cfg.StatusAliases,
 		}
 		if err := saveProjectConfig(projectConfig, targetPath); err != nil {
 			return fmt.Errorf("failed to save %s: %w", targetPath, err)
