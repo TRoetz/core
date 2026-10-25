@@ -2894,6 +2894,22 @@
         ]
       }
     },
+    "/catalogs/global-bootstrap": {
+      "get": {
+        "description": "Load global reference catalogs. Results include only resources visible to the authenticated caller; collections use their documented stable order and bounds.",
+        "parameters": [],
+        "responses": {
+          "401": {},
+          "403": {},
+          "429": {},
+          "500": {}
+        },
+        "summary": "Load global reference catalogs",
+        "tags": [
+          "Workspace configuration"
+        ]
+      }
+    },
     "/collection-categories": {
       "get": {
         "description": "List collection categories. Results include only resources visible to the authenticated caller; collections use their documented stable order and bounds.",

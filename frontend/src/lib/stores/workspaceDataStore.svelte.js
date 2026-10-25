@@ -1,8 +1,8 @@
-import { customFields, itemTypes, priorities } from '../api/configuration.js';
+import { catalogs, customFields, itemTypes, priorities } from '../api/configuration.js';
 import { iterations, milestones } from '../api/milestones.js';
 import { BACKGROUND_READ, FOREGROUND_READ } from '../api/readScheduler.js';
 import { getAssignableUsers, getUserDisplayBatch } from '../api/users.js';
-import { statusCategories, statuses } from '../api/workflows.js';
+import { statusCategories } from '../api/workflows.js';
 import { workspaces } from '../api/workspaces.js';
 import {
   canRunBackgroundSync,
@@ -558,39 +558,33 @@ class WorkspaceDataStore {
 
   /** @private */
   async _fetchAllGlobal() {
-    const [itemTypesData, statusesData, statusCategoriesData, prioritiesData] = await Promise.all([
-      itemTypes.getAll({}, FOREGROUND_READ),
-      statuses.getAll({}, FOREGROUND_READ),
-      statusCategories.getAll({}, FOREGROUND_READ),
-      priorities.getAll({}, FOREGROUND_READ),
-    ]);
+    const bootstrap = await catalogs.getGlobalBootstrap(FOREGROUND_READ);
 
     if (this.workspaceId !== 'global') return;
 
     this.workspace = null;
-    this.itemTypes = itemTypesData || [];
-    this.statuses = statusesData || [];
-    this.statusCategories = statusCategoriesData || [];
+    this.itemTypes = bootstrap?.item_types ?? [];
+    this.statuses = bootstrap?.statuses ?? [];
+    this.statusCategories = bootstrap?.status_categories ?? [];
+    this.priorities = bootstrap?.priorities ?? [];
     // The global roster is deliberately not enumerated here: with a large
     // directory that is many sequential pages before anything can render.
-    // Views hydrate only the users their visible rows reference.
-    this.users = [];
-    this.priorities = prioritiesData || [];
+    // Views hydrate only the users their visible rows reference. Hydrated
+    // user-display records survive reference refreshes; only a scope or auth
+    // reset clears them.
     this.milestones = [];
     this.iterations = [];
     this.projects = [];
     this.labels = [];
 
-    try {
-      const cfData = await customFields.getAll({}, FOREGROUND_READ);
-      if (this.workspaceId === 'global') {
-        this.customFieldDefinitions = cfData || [];
-      }
-    } catch (e) {
-      console.warn('WorkspaceDataStore: failed to load custom field definitions', e);
-      if (this.workspaceId === 'global') {
-        this.customFieldDefinitions = [];
-      }
+    if (bootstrap?.custom_field_definitions != null) {
+      this.customFieldDefinitions = bootstrap.custom_field_definitions;
+    } else {
+      console.warn(
+        'WorkspaceDataStore: failed to load custom field definitions',
+        bootstrap?.custom_fields_error
+      );
+      this.customFieldDefinitions = [];
     }
   }
 

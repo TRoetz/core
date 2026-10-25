@@ -5797,6 +5797,429 @@
         "format": "binary",
         "type": "string"
       },
+      "GetCatalogsGlobalBootstrapResult": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "additionalProperties": false,
+            "properties": {
+              "custom_field_definitions": {
+                "description": "The custom field definitions value.",
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "applies_to_customer_organisations": {
+                      "description": "The applies to customer organisations value.",
+                      "type": "boolean"
+                    },
+                    "applies_to_portal_customers": {
+                      "description": "The applies to portal customers value.",
+                      "type": "boolean"
+                    },
+                    "asset_type_usages": {
+                      "description": "The asset type usages value.",
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "asset_type_name": {
+                            "description": "The asset type name value.",
+                            "type": "string"
+                          },
+                          "set_name": {
+                            "description": "The set name value.",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "asset_type_name",
+                          "set_name"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "description": {
+                      "description": "The description value.",
+                      "type": "string"
+                    },
+                    "display_order": {
+                      "description": "The display order value.",
+                      "type": "integer"
+                    },
+                    "field_type": {
+                      "description": "The field type value.",
+                      "type": "string"
+                    },
+                    "id": {
+                      "description": "The id value.",
+                      "type": "integer"
+                    },
+                    "indexed": {
+                      "additionalProperties": false,
+                      "description": "The indexed value.",
+                      "properties": {
+                        "assets": {
+                          "description": "The assets value.",
+                          "type": "boolean"
+                        },
+                        "items": {
+                          "description": "The items value.",
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "assets",
+                        "items"
+                      ],
+                      "type": "object"
+                    },
+                    "name": {
+                      "description": "The name value.",
+                      "type": "string"
+                    },
+                    "options": {
+                      "additionalProperties": {
+                        "description": "Arbitrary JSON extension value."
+                      },
+                      "description": "The options value.",
+                      "type": "object"
+                    },
+                    "required": {
+                      "description": "The required value.",
+                      "type": "boolean"
+                    },
+                    "system_default": {
+                      "description": "The system default value.",
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "applies_to_customer_organisations",
+                    "applies_to_portal_customers",
+                    "asset_type_usages",
+                    "description",
+                    "display_order",
+                    "field_type",
+                    "id",
+                    "indexed",
+                    "name",
+                    "options",
+                    "required",
+                    "system_default"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "custom_fields_error": {
+                "description": "The custom fields error value.",
+                "nullable": true,
+                "type": "string"
+              },
+              "item_types": {
+                "description": "The item types value.",
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "builtin_key": {
+                      "description": "The builtin key value.",
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "color": {
+                      "description": "The color value.",
+                      "type": "string"
+                    },
+                    "description": {
+                      "description": "The description value.",
+                      "type": "string"
+                    },
+                    "display_description": {
+                      "description": "The display description value.",
+                      "type": "string"
+                    },
+                    "display_name": {
+                      "description": "The display name value.",
+                      "type": "string"
+                    },
+                    "hierarchy_level": {
+                      "description": "The hierarchy level value.",
+                      "type": "integer"
+                    },
+                    "icon": {
+                      "description": "The icon value.",
+                      "type": "string"
+                    },
+                    "id": {
+                      "description": "The id value.",
+                      "type": "integer"
+                    },
+                    "is_default": {
+                      "description": "The is default value.",
+                      "type": "boolean"
+                    },
+                    "name": {
+                      "description": "The name value.",
+                      "type": "string"
+                    },
+                    "sort_order": {
+                      "description": "The sort order value.",
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "color",
+                    "description",
+                    "display_description",
+                    "display_name",
+                    "hierarchy_level",
+                    "icon",
+                    "id",
+                    "is_default",
+                    "name",
+                    "sort_order"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "priorities": {
+                "description": "The priorities value.",
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "builtin_key": {
+                      "description": "The builtin key value.",
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "color": {
+                      "description": "The color value.",
+                      "type": "string"
+                    },
+                    "description": {
+                      "description": "The description value.",
+                      "type": "string"
+                    },
+                    "display_description": {
+                      "description": "The display description value.",
+                      "type": "string"
+                    },
+                    "display_name": {
+                      "description": "The display name value.",
+                      "type": "string"
+                    },
+                    "icon": {
+                      "description": "The icon value.",
+                      "type": "string"
+                    },
+                    "id": {
+                      "description": "The id value.",
+                      "type": "integer"
+                    },
+                    "is_default": {
+                      "description": "The is default value.",
+                      "type": "boolean"
+                    },
+                    "name": {
+                      "description": "The name value.",
+                      "type": "string"
+                    },
+                    "sort_order": {
+                      "description": "The sort order value.",
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "color",
+                    "description",
+                    "display_description",
+                    "display_name",
+                    "icon",
+                    "id",
+                    "is_default",
+                    "name",
+                    "sort_order"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "status_categories": {
+                "description": "The status categories value.",
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "builtin_key": {
+                      "description": "The builtin key value.",
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "color": {
+                      "description": "The color value.",
+                      "type": "string"
+                    },
+                    "description": {
+                      "description": "The description value.",
+                      "type": "string"
+                    },
+                    "display_description": {
+                      "description": "The display description value.",
+                      "type": "string"
+                    },
+                    "display_name": {
+                      "description": "The display name value.",
+                      "type": "string"
+                    },
+                    "id": {
+                      "description": "The id value.",
+                      "type": "integer"
+                    },
+                    "is_completed": {
+                      "description": "The is completed value.",
+                      "type": "boolean"
+                    },
+                    "is_default": {
+                      "description": "The is default value.",
+                      "type": "boolean"
+                    },
+                    "name": {
+                      "description": "The name value.",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "color",
+                    "description",
+                    "display_description",
+                    "display_name",
+                    "id",
+                    "is_completed",
+                    "is_default",
+                    "name"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "statuses": {
+                "description": "The statuses value.",
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "builtin_key": {
+                      "description": "The builtin key value.",
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "category": {
+                      "additionalProperties": false,
+                      "description": "The category value.",
+                      "properties": {
+                        "builtin_key": {
+                          "description": "The builtin key value.",
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "color": {
+                          "description": "The color value.",
+                          "type": "string"
+                        },
+                        "description": {
+                          "description": "The description value.",
+                          "type": "string"
+                        },
+                        "display_description": {
+                          "description": "The display description value.",
+                          "type": "string"
+                        },
+                        "display_name": {
+                          "description": "The display name value.",
+                          "type": "string"
+                        },
+                        "id": {
+                          "description": "The id value.",
+                          "type": "integer"
+                        },
+                        "is_completed": {
+                          "description": "The is completed value.",
+                          "type": "boolean"
+                        },
+                        "is_default": {
+                          "description": "The is default value.",
+                          "type": "boolean"
+                        },
+                        "name": {
+                          "description": "The name value.",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "color",
+                        "description",
+                        "display_description",
+                        "display_name",
+                        "id",
+                        "is_completed",
+                        "is_default",
+                        "name"
+                      ],
+                      "type": "object"
+                    },
+                    "description": {
+                      "description": "The description value.",
+                      "type": "string"
+                    },
+                    "display_description": {
+                      "description": "The display description value.",
+                      "type": "string"
+                    },
+                    "display_name": {
+                      "description": "The display name value.",
+                      "type": "string"
+                    },
+                    "id": {
+                      "description": "The id value.",
+                      "type": "integer"
+                    },
+                    "is_default": {
+                      "description": "The is default value.",
+                      "type": "boolean"
+                    },
+                    "name": {
+                      "description": "The name value.",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "category",
+                    "description",
+                    "display_description",
+                    "display_name",
+                    "id",
+                    "is_default",
+                    "name"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              }
+            },
+            "required": [
+              "custom_field_definitions",
+              "item_types",
+              "priorities",
+              "status_categories",
+              "statuses"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
       "GetCollectionCategoriesCategoryIdResult": {
         "additionalProperties": false,
         "properties": {
@@ -102362,6 +102785,51 @@
     },
     "/canned-responses/{response_id}": {},
     "/canned-responses/{response_id}/preview": {},
+    "/catalogs/global-bootstrap": {
+      "get": {
+        "description": "Load global reference catalogs. Results include only resources visible to the authenticated caller; collections use their documented stable order and bounds.",
+        "operationId": "getCatalogsGlobalBootstrap",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetCatalogsGlobalBootstrapResult"
+                }
+              }
+            },
+            "description": "Load global reference catalogs response."
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationError"
+          },
+          "403": {
+            "$ref": "#/components/responses/PermissionError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "Load global reference catalogs",
+        "tags": [
+          "Workspace configuration"
+        ],
+        "x-required-scopes": [
+          "item-types:read",
+          "statuses:read",
+          "priorities:read"
+        ]
+      }
+    },
     "/collection-categories": {
       "get": {
         "description": "List collection categories. Results include only resources visible to the authenticated caller; collections use their documented stable order and bounds.",
