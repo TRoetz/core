@@ -175,6 +175,7 @@
   // Quick-add state per column
   let quickAddState = $state({});
   let workspaces = $derived($workspacesStore.regularWorkspaces || []);
+  let directoryReady = $derived($workspacesStore.loaded);
   // The workspace directory caches only its first page, so the personal
   // workspace is not guaranteed to be in allWorkspaces. Merge the on-demand
   // personal workspace too, otherwise a personal task opens the generic item
@@ -385,7 +386,6 @@
     quickAddState[quickAddKey] = {
       show: true,
       workspaceId: preselectedWorkspaceId,
-      workspaces: laneWorkspaces,
       itemTypeId: null,
       availableTypes: [],
       loadingTypes: Boolean(preselectedWorkspaceId),
@@ -502,12 +502,16 @@
   }
 
   onMount(async () => {
+    // The directory is cached/single-flight and only feeds quick-add workspace
+    // choices, so it warms independently instead of gating the board paint.
+    void workspacesStore.load();
     await Promise.all([
       workspaceId ? loadWorkspaceGradient(workspaceId) : Promise.resolve(),
       workspaceId
         ? workspaceDataStore.initialize(workspaceId)
         : workspaceDataStore.initializeGlobal(),
-      workspacesStore.load(),
+      // Personal-workspace loading stays on the critical path: personal item
+      // classification, opening and drag behavior need it before paint.
       workspacesStore.loadPersonalWorkspace(),
     ]);
     loading = false;
@@ -2580,7 +2584,7 @@
                       textStyle={styles.glassTextStyle}
                       subtleTextStyle={styles.glassSubtleTextStyle}
                       dndAction={registerBoardColumn}
-                      onadd={laneQuickAddTypes.length > 0 && quickAddWorkspacesForLane(lane).length > 0
+                      onadd={laneQuickAddTypes.length > 0 && (!directoryReady || quickAddWorkspacesForLane(lane).length > 0)
                         ? () => initQuickAdd(column.id, column.status_ids[0], quickAddKey, lane.parent ?? null, lane)
                         : null}
                       oncollapse={() => toggleColumnCollapse(column.id)}
@@ -2590,7 +2594,8 @@
                             <QuickAddForm
                               parentId={quickAddKey}
                               formState={quickAddState[quickAddKey]}
-                              workspaces={quickAddState[quickAddKey]?.workspaces ?? creatableWorkspaces}
+                              workspaces={quickAddWorkspacesForLane(lane)}
+                              directoryLoading={!directoryReady}
                               cardBgStyle={styles.cardStyle(8)}
                               onUpdateField={updateQuickAddField}
                               onCreate={createColumnItem}

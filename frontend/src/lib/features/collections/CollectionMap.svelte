@@ -59,6 +59,7 @@
   let statuses = $derived(workspaceDataStore.statuses);
   let statusCategories = $derived(workspaceDataStore.statusCategories);
   let workspaces = $derived($workspacesStore.regularWorkspaces || []);
+  let directoryReady = $derived($workspacesStore.loaded);
   let currentParentId = $state(null); // null = root level, otherwise parent ID for current backbone
   let hierarchyBreadcrumbs = $state([]); // Navigation breadcrumbs for hierarchy levels
 
@@ -207,11 +208,13 @@
 
   async function loadAllData() {
     loading = true;
+    // The directory only feeds quick-add workspace choices, so it warms
+    // independently instead of gating the map paint.
+    void workspacesStore.load();
     await Promise.all([
       workspaceId
         ? workspaceDataStore.initialize(workspaceId)
         : workspaceDataStore.initializeGlobal(),
-      workspacesStore.load(),
     ]);
     loadStoryMapDataFromURL();
     loadSwimlanePreference();
@@ -978,6 +981,7 @@
                   parentId={quickAddKey(parentId, laneKey)}
                   formState={quickAddState[quickAddKey(parentId, laneKey)]}
                   {workspaces}
+                  directoryLoading={!directoryReady}
                   compact={true}
                   cardBgStyle={styles.cardStyle(8)}
                   onUpdateField={updateQuickAddField}
