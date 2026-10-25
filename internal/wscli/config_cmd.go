@@ -30,11 +30,27 @@ Examples:
 	RunE: func(cmd *cobra.Command, args []string) error {
 		reader := bufio.NewReader(stdin)
 
+		// Flags win over the environment, which is a documented config source.
+		// Read into locals so repeated in-process runs do not leak values into
+		// the flag-bound globals.
+		instanceURL := serverURL
+		if instanceURL == "" {
+			instanceURL = os.Getenv("WS_URL")
+		}
+		apiToken := token
+		if apiToken == "" {
+			apiToken = os.Getenv("WS_TOKEN")
+		}
+		workspace := workspaceKey
+		if workspace == "" {
+			workspace = os.Getenv("WS_WORKSPACE")
+		}
+
 		// Non-interactive mode kicks in when explicitly requested, when stdin
 		// is not a TTY (CI / piped input), or when both required fields were
-		// already supplied via flags. Any prompt in non-interactive mode is a
-		// fatal error rather than a stdin hang.
-		nonInteractive := configInitNonInteractive || !stdinIsTTY() || (serverURL != "" && token != "")
+		// already supplied. Any prompt in non-interactive mode is a fatal
+		// error rather than a stdin hang.
+		nonInteractive := configInitNonInteractive || !stdinIsTTY() || (instanceURL != "" && apiToken != "")
 
 		// Determine config path
 		var configPath string
@@ -60,46 +76,46 @@ Examples:
 			}
 		}
 
-		// Prompt for server URL (skip if provided via flag)
-		if serverURL == "" {
+		// Prompt for server URL (skip if provided via flag or environment)
+		if instanceURL == "" {
 			if nonInteractive {
 				return fmt.Errorf("--url is required in non-interactive mode (also accepts WS_URL env var)")
 			}
 			_, _ = fmt.Fprint(stdout, "Windshift server URL (e.g., https://windshift.example.com): ")
-			serverURL, _ = reader.ReadString('\n') //nolint:errcheck // interactive user input
-			serverURL = strings.TrimSpace(serverURL)
+			instanceURL, _ = reader.ReadString('\n') //nolint:errcheck // interactive user input
+			instanceURL = strings.TrimSpace(instanceURL)
 		}
 
-		// Prompt for token (skip if provided via flag)
-		if token == "" {
+		// Prompt for token (skip if provided via flag or environment)
+		if apiToken == "" {
 			if nonInteractive {
 				return fmt.Errorf("--token is required in non-interactive mode (also accepts WS_TOKEN env var)")
 			}
 			_, _ = fmt.Fprint(stdout, "API token (crw_...): ")
-			token, _ = reader.ReadString('\n') //nolint:errcheck // interactive user input
-			token = strings.TrimSpace(token)
+			apiToken, _ = reader.ReadString('\n') //nolint:errcheck // interactive user input
+			apiToken = strings.TrimSpace(apiToken)
 		}
 
-		// Prompt for default workspace (skip if provided via flag)
-		if workspaceKey == "" && !nonInteractive {
+		// Prompt for default workspace (skip if provided via flag or environment)
+		if workspace == "" && !nonInteractive {
 			_, _ = fmt.Fprint(stdout, "Default workspace key (optional, press Enter to skip): ")
-			workspaceKey, _ = reader.ReadString('\n') //nolint:errcheck // interactive user input
-			workspaceKey = strings.TrimSpace(workspaceKey)
+			workspace, _ = reader.ReadString('\n') //nolint:errcheck // interactive user input
+			workspace = strings.TrimSpace(workspace)
 		}
 
 		newConfig := Config{
 			Server: ServerConfig{
-				URL:   serverURL,
-				Token: token,
+				URL:   instanceURL,
+				Token: apiToken,
 			},
 			Defaults: DefaultsConfig{
-				WorkspaceKey: workspaceKey,
+				WorkspaceKey: workspace,
 			},
 			StatusAliases: map[string]string{},
 		}
 
 		// Add default status aliases if this is a project config
-		if !configInitGlobal && workspaceKey != "" && !nonInteractive {
+		if !configInitGlobal && workspace != "" && !nonInteractive {
 			_, _ = fmt.Fprintln(stdout, "\nWould you like to configure status aliases? (These let you use shortcuts like 'done' instead of full status names)")
 			_, _ = fmt.Fprint(stdout, "Configure aliases? [y/N]: ")
 			input, _ := reader.ReadString('\n')
