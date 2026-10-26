@@ -543,7 +543,7 @@ func globalCatalogBootstrap(deps Deps) readOperation[globalBootstrapDTO] {
 		if err != nil {
 			code := "custom_fields_unavailable"
 			result.CustomFieldsError = &code
-			return result, nil
+			return result, nil //nolint:nilerr // custom fields are optional; the bootstrap reports the failure inline
 		}
 		result.CustomFieldDefinitions = fields
 		return result, nil
