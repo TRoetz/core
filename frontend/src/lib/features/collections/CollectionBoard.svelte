@@ -52,7 +52,6 @@
   import MoreHorizontal from '@lucide/svelte/icons/more-horizontal';
   import Layers from '@lucide/svelte/icons/layers';
   import Eye from '@lucide/svelte/icons/eye';
-  import CheckSquare from '@lucide/svelte/icons/check-square';
   import Milestone from '@lucide/svelte/icons/milestone';
   import ArrowDownUp from '@lucide/svelte/icons/arrow-down-up';
   import ItemPicker from '../../pickers/ItemPicker.svelte';
@@ -2444,10 +2443,10 @@
             triggerTestid="board-completed-visibility-menu"
           />
           <Button
-            variant={selectionMode ? 'selected' : 'secondary'}
-            icon={CheckSquare}
+            variant="control"
+            pressed={selectionMode}
+            size="sm"
             onclick={toggleSelectionMode}
-            title={t('collections.selectItems')}
             dataTestid="board-select-mode-toggle"
           >
             {t('collections.selectItems')}
