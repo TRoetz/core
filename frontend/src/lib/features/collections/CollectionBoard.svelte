@@ -52,6 +52,7 @@
   import MoreHorizontal from '@lucide/svelte/icons/more-horizontal';
   import Layers from '@lucide/svelte/icons/layers';
   import Eye from '@lucide/svelte/icons/eye';
+  import CheckSquare from '@lucide/svelte/icons/check-square';
   import Milestone from '@lucide/svelte/icons/milestone';
   import ArrowDownUp from '@lucide/svelte/icons/arrow-down-up';
   import ItemPicker from '../../pickers/ItemPicker.svelte';
@@ -1583,12 +1584,19 @@
   }
 
   function handleBoardGlobalKeydown(event) {
-    if (event.key !== '/' || event.metaKey || event.ctrlKey || event.altKey) return;
     const target = event.target;
-    if (
+    const inEditable =
       target instanceof HTMLElement &&
-      (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)
-    ) {
+      (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable);
+
+    if (event.key === 'Escape' && selectionMode && !inEditable && !showItemModal) {
+      event.preventDefault();
+      exitSelectionMode();
+      return;
+    }
+
+    if (event.key !== '/' || event.metaKey || event.ctrlKey || event.altKey) return;
+    if (inEditable) {
       return;
     }
     const searchInput = document.querySelector('[data-testid="board-search-input"]');
@@ -1602,6 +1610,9 @@
 
   // --- Multi-select and bulk actions (WI-98) ------------------------------
   let selectedIds = $state([]);
+  // Selection mode is explicit: checkboxes and bulk actions only appear once
+  // the user opts in, so the board at rest stays free of selection chrome.
+  let selectionMode = $state(false);
   let selectionAnchorId = $state(null);
   let bulkBusy = $state(false);
   let assignableUsers = $state([]);
@@ -1623,7 +1634,22 @@
     if (pruned.length !== selectedIds.length) selectedIds = pruned;
   });
 
+  function enterSelectionMode() {
+    selectionMode = true;
+  }
+
+  function exitSelectionMode() {
+    selectionMode = false;
+    clearSelection();
+  }
+
+  function toggleSelectionMode() {
+    if (selectionMode) exitSelectionMode();
+    else enterSelectionMode();
+  }
+
   function toggleSelected(itemId) {
+    selectionMode = true;
     selectedIds = selectedIdSet.has(itemId)
       ? selectedIds.filter((id) => id !== itemId)
       : [...selectedIds, itemId];
@@ -1632,6 +1658,7 @@
 
   // Shift selection extends from the anchor within the focused card's column.
   function selectRangeTo(itemId) {
+    selectionMode = true;
     const target = locateFocusedCard(itemId);
     const anchor = selectionAnchorId ?? focusedItemId;
     const origin = anchor != null ? locateFocusedCard(anchor) : null;
@@ -2416,6 +2443,15 @@
             triggerStyle="color: var(--ds-text); background-color: var(--ctx-surface, var(--ds-background-neutral));"
             triggerTestid="board-completed-visibility-menu"
           />
+          <Button
+            variant={selectionMode ? 'selected' : 'secondary'}
+            icon={CheckSquare}
+            onclick={toggleSelectionMode}
+            title={t('collections.selectItems')}
+            dataTestid="board-select-mode-toggle"
+          >
+            {t('collections.selectItems')}
+          </Button>
         </div>
       </div>
 
@@ -2666,6 +2702,7 @@
                                 refreshToken={slaRefreshToken}
                                 focused={tabbableItemId === item.id}
                                 selected={selectedIdSet.has(item.id)}
+                                selectionMode={selectionMode}
                                 visible={visibleBoardItemIds.has(item.id)}
                                 onvisibilitychange={handleCardVisibility}
                                 onselect={toggleSelected}
@@ -2716,19 +2753,29 @@
       </div>
     </StaticViewBackground>
 
-    {#if selectedCount > 0}
+    {#if selectionMode}
       <div
-        class="fixed bottom-4 left-1/2 z-40 flex max-w-[calc(100vw-2rem)] -translate-x-1/2 flex-wrap items-center gap-2 rounded-lg border px-3 py-2 shadow-xl"
-        style="background-color: var(--ds-surface-raised); border-color: var(--ds-border);"
+        class="fixed bottom-4 left-1/2 z-40 flex max-w-[calc(100vw-2rem)] -translate-x-1/2 flex-wrap items-center gap-2 rounded-xl border px-4 py-2.5"
+        style="background-color: var(--ds-surface-overlay); border-color: var(--ds-border-bold); box-shadow: 0 12px 32px rgba(9, 30, 66, 0.32), 0 0 0 1px var(--ds-border-bold);"
         data-testid="board-bulk-toolbar"
       >
-        <span
-          class="mr-1 text-sm font-medium"
-          style="color: var(--ds-text);"
-          data-testid="board-bulk-count"
-        >
-          {t('collections.bulkSelected', { count: selectedCount })}
-        </span>
+        {#if selectedCount > 0}
+          <span
+            class="mr-1 inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold text-white"
+            style="background-color: var(--ds-interactive);"
+            data-testid="board-bulk-count"
+          >
+            {t('collections.bulkSelected', { count: selectedCount })}
+          </span>
+        {:else}
+          <span
+            class="mr-1 text-sm font-medium"
+            style="color: var(--ds-text-subtle);"
+            data-testid="board-bulk-hint"
+          >
+            {t('collections.bulkSelectHint')}
+          </span>
+        {/if}
         <DropdownMenu
           items={bulkStatusMenuItems}
           triggerText={t('collections.bulkSetStatus')}
@@ -2774,10 +2821,19 @@
           variant="ghost"
           size="sm"
           onclick={clearSelection}
-          disabled={bulkBusy}
+          disabled={bulkBusy || selectedCount === 0}
           dataTestid="board-bulk-clear"
         >
           {t('collections.bulkClear')}
+        </Button>
+        <Button
+          variant="primary"
+          size="sm"
+          onclick={exitSelectionMode}
+          disabled={bulkBusy}
+          dataTestid="board-bulk-done"
+        >
+          {t('collections.bulkDone')}
         </Button>
       </div>
     {/if}
