@@ -11,20 +11,23 @@ export function savedFiltersStorageKey(workspaceId, collectionId) {
 }
 
 /**
- * Parses stored filter sets, dropping malformed entries instead of failing the
- * whole board when one row is corrupt.
- * @param {string|null|undefined} raw
+ * Normalizes saved filter sets from a stored JSON string or an already-parsed
+ * value (the server stores the same shape). Drops malformed entries instead of
+ * failing the whole board when one row is corrupt.
+ * @param {string|unknown[]|null|undefined} value
  */
-export function parseSavedFilters(raw) {
-  if (!raw) return [];
-  let parsed;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    return [];
+export function normalizeSavedFilters(value) {
+  if (!value) return [];
+  let parsed = value;
+  if (typeof value === 'string') {
+    try {
+      parsed = JSON.parse(value);
+    } catch {
+      return [];
+    }
   }
   if (!Array.isArray(parsed)) return [];
-  return parsed
+  return /** @type {any[]} */ (parsed)
     .filter((entry) => entry && typeof entry === 'object' && typeof entry.name === 'string')
     .map((entry, index) => ({
       id: String(entry.id ?? `saved-${index}`),
@@ -34,6 +37,11 @@ export function parseSavedFilters(raw) {
       pinned: entry.pinned === true,
     }))
     .filter((entry) => entry.ql);
+}
+
+/** Parses a stored JSON string of saved filters. */
+export function parseSavedFilters(raw) {
+  return normalizeSavedFilters(raw);
 }
 
 /** Serializes saved filters back to storage, keeping only owned fields. */

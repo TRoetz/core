@@ -10,6 +10,7 @@
     scheduleCollectionReconciliation,
   } from '../../stores/collectionContext.js';
   import { workspaceDataStore } from '../../stores/workspaceDataStore.svelte.js';
+  import { collectionPreferences } from '../../stores/collectionPreferences.svelte.js';
   import { workspacesStore } from '../../stores/workspaces.svelte.js';
   import { capabilitiesStore } from '../../stores/capabilities.svelte.js';
   import { itemModalStore } from '../../stores/itemModalStore.svelte.js';
@@ -88,6 +89,16 @@
   }
 
   function loadSwimlanePreference() {
+    const stored = collectionPreferences.viewStateValue(
+      workspaceId,
+      collectionId,
+      'map',
+      'swimlane_dimension'
+    );
+    if (stored !== undefined) {
+      if (stored && SWIMLANE_DIMENSIONS.includes(stored)) swimlaneDimension = stored;
+      return;
+    }
     const saved = localStorage.getItem(mapSwimlaneStorageKey(mapPreferenceScope()));
     if (saved && SWIMLANE_DIMENSIONS.includes(saved)) {
       swimlaneDimension = saved;
@@ -97,12 +108,9 @@
   function setSwimlaneDimension(value) {
     swimlaneDimension = SWIMLANE_DIMENSIONS.includes(value) ? value : null;
     swimlaneCollapsed = {};
-    const storageKey = mapSwimlaneStorageKey(mapPreferenceScope());
-    if (swimlaneDimension) {
-      localStorage.setItem(storageKey, swimlaneDimension);
-    } else {
-      localStorage.removeItem(storageKey);
-    }
+    collectionPreferences.patchViewState(workspaceId, collectionId, 'map', {
+      swimlane_dimension: swimlaneDimension,
+    });
   }
 
   function toggleSwimlaneCollapsed(laneKey) {

@@ -25,6 +25,7 @@
   import ItemPicker from '../../pickers/ItemPicker.svelte';
   import { backlogStore } from '../../stores/backlogStore.svelte.js';
   import { workspaceDataStore } from '../../stores/workspaceDataStore.svelte.js';
+  import { collectionPreferences } from '../../stores/collectionPreferences.svelte.js';
   import { itemModalStore } from '../../stores/itemModalStore.svelte.js';
   import { useCollectionEventStream } from '../../composables/useCollectionEventStream.svelte.js';
   import { errorToast, successToast, warningToast } from '../../stores/toasts.svelte.js';
@@ -65,28 +66,53 @@
   let iterationIncompleteItems = $state([]);
   let iterationCompleteTargets = $state([]);
 
-  // localStorage keys
+  // Legacy localStorage keys, read only as a fallback for settings saved
+  // before backlog view state moved into user preferences.
   const globalIdsKey = $derived(`backlog-global-iterations-${workspaceId}`);
   const collapsedKey = $derived(`backlog-collapsed-sections-${workspaceId}`);
 
-  // Restore persisted state from localStorage
   function restorePersistedState() {
-    try {
-      const savedGlobal = localStorage.getItem(globalIdsKey);
-      if (savedGlobal) addedGlobalIds = new Set(JSON.parse(savedGlobal));
-    } catch { /* ignore */ }
-    try {
-      const savedCollapsed = localStorage.getItem(collapsedKey);
-      if (savedCollapsed) collapsedSections = new Set(JSON.parse(savedCollapsed));
-    } catch { /* ignore */ }
+    const storedGlobal = collectionPreferences.viewStateValue(
+      workspaceId,
+      collectionId,
+      'backlog',
+      'global_iteration_ids'
+    );
+    if (Array.isArray(storedGlobal)) {
+      addedGlobalIds = new Set(storedGlobal);
+    } else {
+      try {
+        const savedGlobal = localStorage.getItem(globalIdsKey);
+        if (savedGlobal) addedGlobalIds = new Set(JSON.parse(savedGlobal));
+      } catch { /* ignore */ }
+    }
+
+    const storedCollapsed = collectionPreferences.viewStateValue(
+      workspaceId,
+      collectionId,
+      'backlog',
+      'collapsed_sections'
+    );
+    if (Array.isArray(storedCollapsed)) {
+      collapsedSections = new Set(storedCollapsed);
+    } else {
+      try {
+        const savedCollapsed = localStorage.getItem(collapsedKey);
+        if (savedCollapsed) collapsedSections = new Set(JSON.parse(savedCollapsed));
+      } catch { /* ignore */ }
+    }
   }
 
   function persistGlobalIds() {
-    localStorage.setItem(globalIdsKey, JSON.stringify([...addedGlobalIds]));
+    collectionPreferences.patchViewState(workspaceId, collectionId, 'backlog', {
+      global_iteration_ids: [...addedGlobalIds],
+    });
   }
 
   function persistCollapsed() {
-    localStorage.setItem(collapsedKey, JSON.stringify([...collapsedSections]));
+    collectionPreferences.patchViewState(workspaceId, collectionId, 'backlog', {
+      collapsed_sections: [...collapsedSections],
+    });
   }
 
   // Derived iteration groupings

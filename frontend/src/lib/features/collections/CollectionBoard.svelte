@@ -75,6 +75,7 @@
   import DropdownMenu from '../../layout/DropdownMenu.svelte';
   import { backlogStore } from '../../stores/backlogStore.svelte.js';
   import { workspaceDataStore } from '../../stores/workspaceDataStore.svelte.js';
+  import { collectionPreferences } from '../../stores/collectionPreferences.svelte.js';
   import { workspacesStore } from '../../stores/workspaces.svelte.js';
   import { workspacePermissions } from '../../stores/workspacePermissions.svelte.js';
   import { itemModalStore } from '../../stores/itemModalStore.svelte.js';
@@ -539,13 +540,26 @@
       if (requestedView !== viewSignature) return;
       allIterations = iters || [];
 
-      const saved = localStorage.getItem(`board-iteration-filter-${requestedWorkspaceId}`);
-      if (saved) {
-        const id = parseInt(saved, 10);
-        if (allIterations.some((iteration) => iteration.id === id)) {
-          iterationFilterId = id;
-        } else {
+      const storedIteration = collectionPreferences.viewStateValue(
+        workspaceId,
+        collectionId,
+        'board',
+        'iteration_id'
+      );
+      let savedIterationId = storedIteration;
+      if (savedIterationId === undefined) {
+        const saved = localStorage.getItem(`board-iteration-filter-${requestedWorkspaceId}`);
+        savedIterationId = saved ? parseInt(saved, 10) : null;
+      }
+      if (savedIterationId != null) {
+        if (allIterations.some((iteration) => iteration.id === savedIterationId)) {
+          iterationFilterId = savedIterationId;
+        } else if (storedIteration === undefined) {
           localStorage.removeItem(`board-iteration-filter-${requestedWorkspaceId}`);
+        } else {
+          collectionPreferences.patchViewState(workspaceId, collectionId, 'board', {
+            iteration_id: null,
+          });
         }
       }
     } catch (error) {
@@ -589,14 +603,30 @@
     excludeRightmostSwimlaneParents = false;
     swimlaneCollapsed = {};
     try {
+      const storedGroupBy = collectionPreferences.viewStateValue(
+        workspaceId,
+        collectionId,
+        'board',
+        'group_by'
+      );
       boardGroupBy = resolveStoredBoardGroupBy(
-        localStorage.getItem(boardGroupStorageKey()),
+        storedGroupBy !== undefined ? storedGroupBy : localStorage.getItem(boardGroupStorageKey()),
         localStorage.getItem(legacyGroupByItemTypeStorageKey()),
         []
       );
-      const savedExcludeRightmost = localStorage.getItem(excludeRightmostSwimlaneParentsStorageKey());
-      if (savedExcludeRightmost !== null) {
-        excludeRightmostSwimlaneParents = savedExcludeRightmost === 'true';
+      const storedExcludeRightmost = collectionPreferences.viewStateValue(
+        workspaceId,
+        collectionId,
+        'board',
+        'exclude_rightmost'
+      );
+      if (storedExcludeRightmost !== undefined) {
+        excludeRightmostSwimlaneParents = storedExcludeRightmost === true;
+      } else {
+        const savedExcludeRightmost = localStorage.getItem(excludeRightmostSwimlaneParentsStorageKey());
+        if (savedExcludeRightmost !== null) {
+          excludeRightmostSwimlaneParents = savedExcludeRightmost === 'true';
+        }
       }
     } catch (e) { /* ignore storage errors */ }
     // MainApp reuses this component across boards, so restore per-view preferences here.
@@ -1040,11 +1070,9 @@
 
   function setIterationFilter(iterationId) {
     iterationFilterId = iterationId;
-    if (iterationId) {
-      localStorage.setItem(`board-iteration-filter-${workspaceId}`, String(iterationId));
-    } else {
-      localStorage.removeItem(`board-iteration-filter-${workspaceId}`);
-    }
+    collectionPreferences.patchViewState(workspaceId, collectionId, 'board', {
+      iteration_id: iterationId ?? null,
+    });
   }
 
   function boardPreferenceScope() {
@@ -1068,6 +1096,8 @@
   }
 
   function loadSortMode() {
+    const stored = collectionPreferences.viewStateValue(workspaceId, collectionId, 'board', 'sort_mode');
+    if (stored !== undefined) return stored === 'bubble' ? 'bubble' : 'rank';
     try {
       return localStorage.getItem(sortModeStorageKey()) === 'bubble' ? 'bubble' : 'rank';
     } catch (e) {
@@ -1077,36 +1107,24 @@
 
   function setSortMode(mode) {
     sortMode = mode === 'bubble' ? 'bubble' : 'rank';
-    try {
-      if (sortMode === 'bubble') {
-        localStorage.setItem(sortModeStorageKey(), sortMode);
-      } else {
-        localStorage.removeItem(sortModeStorageKey());
-      }
-    } catch (e) { /* ignore storage errors */ }
+    collectionPreferences.patchViewState(workspaceId, collectionId, 'board', { sort_mode: sortMode });
     collectionStore.setBoardSortMode(sortMode);
   }
 
   function setBoardGroupBy(groupBy) {
     boardGroupBy = groupBy;
     swimlaneCollapsed = {};
-    try {
-      const serialized = serializeBoardGroupBy(groupBy);
-      if (serialized) {
-        localStorage.setItem(boardGroupStorageKey(), serialized);
-      } else {
-        localStorage.removeItem(boardGroupStorageKey());
-      }
-      localStorage.removeItem(legacyGroupByItemTypeStorageKey());
-    } catch (e) { /* ignore storage errors */ }
+    collectionPreferences.patchViewState(workspaceId, collectionId, 'board', {
+      group_by: serializeBoardGroupBy(groupBy),
+    });
   }
 
   function setExcludeRightmostSwimlaneParents(value) {
     excludeRightmostSwimlaneParents = value;
     swimlaneCollapsed = {};
-    try {
-      localStorage.setItem(excludeRightmostSwimlaneParentsStorageKey(), String(value));
-    } catch (e) { /* ignore storage errors */ }
+    collectionPreferences.patchViewState(workspaceId, collectionId, 'board', {
+      exclude_rightmost: value,
+    });
   }
 
   function toggleSwimlane(swimlaneId) {
@@ -1126,28 +1144,32 @@
   }
 
   function loadCollapsedColumns() {
-    try {
-      const saved = localStorage.getItem(collapsedColumnsStorageKey());
-      if (!saved) return {};
-      const ids = JSON.parse(saved);
-      if (!Array.isArray(ids)) return {};
-      const map = {};
-      for (const id of ids) map[id] = true;
-      return map;
-    } catch (e) {
-      return {};
+    const stored = collectionPreferences.viewStateValue(
+      workspaceId,
+      collectionId,
+      'board',
+      'collapsed_columns'
+    );
+    let ids = Array.isArray(stored) ? stored : null;
+    if (stored === undefined) {
+      try {
+        const saved = localStorage.getItem(collapsedColumnsStorageKey());
+        ids = saved ? JSON.parse(saved) : null;
+      } catch (e) {
+        ids = null;
+      }
     }
+    if (!Array.isArray(ids)) return {};
+    const map = {};
+    for (const id of ids) map[id] = true;
+    return map;
   }
 
   function saveCollapsedColumns() {
-    try {
-      const collapsed = Object.keys(collapsedColumns).filter((id) => collapsedColumns[id]);
-      if (collapsed.length > 0) {
-        localStorage.setItem(collapsedColumnsStorageKey(), JSON.stringify(collapsed));
-      } else {
-        localStorage.removeItem(collapsedColumnsStorageKey());
-      }
-    } catch (e) { /* ignore storage errors */ }
+    const collapsed = Object.keys(collapsedColumns).filter((id) => collapsedColumns[id]);
+    collectionPreferences.patchViewState(workspaceId, collectionId, 'board', {
+      collapsed_columns: collapsed,
+    });
   }
 
   function isColumnCollapsed(columnId) {

@@ -7,13 +7,13 @@
   import Trash2 from '@lucide/svelte/icons/trash-2';
   import { t } from '../../stores/i18n.svelte.js';
   import { successToast } from '../../stores/toasts.svelte.js';
+  import { collectionPreferences } from '../../stores/collectionPreferences.svelte.js';
   import {
     addSavedFilter,
+    normalizeSavedFilters,
     orderedSavedFilters,
-    parseSavedFilters,
     removeSavedFilter,
     savedFiltersStorageKey,
-    serializeSavedFilters,
     togglePinnedSavedFilter,
   } from './savedBoardFilters.js';
 
@@ -54,12 +54,18 @@
   const pinnedFilters = $derived(filters.filter((entry) => entry.pinned));
   const canSave = $derived(Boolean(activeQl) && draftName.trim().length > 0);
 
+  // The server value wins; the localStorage entry stays readable as a fallback
+  // for settings saved before they moved into user preferences.
   $effect(() => {
-    const key = storageKey;
-    try {
-      filters = parseSavedFilters(localStorage.getItem(key));
-    } catch {
-      filters = [];
+    const serverFilters = collectionPreferences.getSavedFilters(workspaceId, collectionId);
+    if (serverFilters) {
+      filters = normalizeSavedFilters(serverFilters);
+    } else {
+      try {
+        filters = normalizeSavedFilters(localStorage.getItem(storageKey));
+      } catch {
+        filters = [];
+      }
     }
     draftName = '';
     error = '';
@@ -67,11 +73,7 @@
 
   function persist(next) {
     filters = next;
-    try {
-      localStorage.setItem(storageKey, serializeSavedFilters(next));
-    } catch {
-      // Keep the in-memory list usable when storage is unavailable.
-    }
+    collectionPreferences.setSavedFilters(workspaceId, collectionId, next);
   }
 
   function errorMessage(code) {

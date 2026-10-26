@@ -31266,6 +31266,13 @@
                 "description": "The color mode value.",
                 "type": "string"
               },
+              "saved_filters": {
+                "additionalProperties": {
+                  "description": "Arbitrary JSON extension value."
+                },
+                "description": "The saved filters value.",
+                "type": "object"
+              },
               "theme": {
                 "additionalProperties": false,
                 "description": "The theme value.",
@@ -31379,11 +31386,23 @@
                   }
                 },
                 "type": "object"
+              },
+              "view_state": {
+                "additionalProperties": {
+                  "additionalProperties": {
+                    "description": "Arbitrary JSON extension value."
+                  },
+                  "type": "object"
+                },
+                "description": "The view state value.",
+                "type": "object"
               }
             },
             "required": [
               "color_mode",
-              "tui"
+              "saved_filters",
+              "tui",
+              "view_state"
             ],
             "type": "object"
           }
@@ -59014,6 +59033,14 @@
             "nullable": true,
             "type": "string"
           },
+          "saved_filters": {
+            "additionalProperties": {
+              "description": "Arbitrary JSON extension value."
+            },
+            "description": "The saved filters value.",
+            "nullable": true,
+            "type": "object"
+          },
           "theme_id": {
             "description": "The theme id value.",
             "nullable": true,
@@ -59041,6 +59068,17 @@
               }
             },
             "type": "object"
+          },
+          "view_state": {
+            "additionalProperties": {
+              "additionalProperties": {
+                "description": "Arbitrary JSON extension value."
+              },
+              "type": "object"
+            },
+            "description": "The view state value.",
+            "nullable": true,
+            "type": "object"
           }
         },
         "type": "object"
@@ -59054,6 +59092,13 @@
               "color_mode": {
                 "description": "The color mode value.",
                 "type": "string"
+              },
+              "saved_filters": {
+                "additionalProperties": {
+                  "description": "Arbitrary JSON extension value."
+                },
+                "description": "The saved filters value.",
+                "type": "object"
               },
               "theme": {
                 "additionalProperties": false,
@@ -59168,11 +59213,23 @@
                   }
                 },
                 "type": "object"
+              },
+              "view_state": {
+                "additionalProperties": {
+                  "additionalProperties": {
+                    "description": "Arbitrary JSON extension value."
+                  },
+                  "type": "object"
+                },
+                "description": "The view state value.",
+                "type": "object"
               }
             },
             "required": [
               "color_mode",
-              "tui"
+              "saved_filters",
+              "tui",
+              "view_state"
             ],
             "type": "object"
           }

@@ -16,6 +16,7 @@ import {
 import { currentRoute, GLOBAL_COLLECTION_VIEWS } from '../router.js';
 import { isExpectedBackgroundSyncError } from '../utils/backgroundSync.js';
 import { calcHasMore } from '../utils/paginationUtils.js';
+import { collectionPreferences } from './collectionPreferences.svelte.js';
 import { workspaceDataStore } from './workspaceDataStore.svelte.js';
 
 const COLLECTION_VIEWS = new Set([
@@ -155,16 +156,28 @@ class CollectionStore {
     return `collection-show-completed:${scope}:${view?.split('-').at(-1)}`;
   }
 
+  // View state lives in user preferences; the localStorage key is only the
+  // fallback for settings saved before that moved to the server.
+  #showCompletedFor(wsId, colId, view) {
+    const stored = collectionPreferences.getViewState(wsId, colId, view?.split('-').at(-1));
+    if (stored && typeof stored.show_completed === 'boolean') return stored.show_completed;
+    try {
+      return localStorage.getItem(this.#completionPreferenceKey(wsId, colId, view)) === 'true';
+    } catch {
+      return false;
+    }
+  }
+
   async setShowCompleted(value) {
     this.showCompleted = value;
-    try {
-      localStorage.setItem(
-        this.#completionPreferenceKey(this.#wsId, this.#colId, this.#currentView),
-        String(value)
-      );
-    } catch {
-      // Keep the setting usable when browser storage is unavailable.
-    }
+    collectionPreferences.patchViewState(
+      this.#wsId,
+      this.#colId,
+      this.#currentView?.split('-').at(-1),
+      {
+        show_completed: value,
+      }
+    );
     this.clearSearch();
     if (this.#wsId || this.#colId) {
       await this.load(this.#wsId, this.#colId, this.#currentView);
@@ -260,12 +273,7 @@ class CollectionStore {
     if (BOARD_VIEWS.has(view)) {
       this.showCompleted = true;
     } else if (!sameCollection || viewChanged) {
-      try {
-        this.showCompleted =
-          localStorage.getItem(this.#completionPreferenceKey(wsId, colId, view)) === 'true';
-      } catch {
-        this.showCompleted = false;
-      }
+      this.showCompleted = this.#showCompletedFor(wsId, colId, view);
     }
 
     // Switching between passive collection views does not need another network
