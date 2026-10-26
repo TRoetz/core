@@ -97,7 +97,14 @@ class CollectionStore {
   backlogItems = $state([]);
   collectionName = $state('Default');
   collectionTotal = $state(null);
-  #countRequestId = 0;
+  // Deferred count coalescing: at most one in-flight count per scope
+  // generation, plus a dirty flag that turns any number of invalidations into
+  // a single follow-up read. The generation changes on scope change so a late
+  // response from a previous scope cannot write the current one.
+  #countPending = null;
+  #countPendingGeneration = -1;
+  #countDirty = false;
+  #countGeneration = 0;
   publicSlug = $state(null);
   loading = $state(false);
 
@@ -321,6 +328,10 @@ class CollectionStore {
       this.#boardConfigurationPromise = null;
       this.#boardConfigurationLoaded = false;
       this.#changesWatermark = null;
+      this.#countGeneration += 1;
+      this.#countPending = null;
+      this.#countPendingGeneration = -1;
+      this.#countDirty = false;
       this.clearSearch();
     }
     this.#wsId = wsId;
@@ -344,7 +355,7 @@ class CollectionStore {
       // the board where the board bootstrap normally populates it.
       if (collection) this.boardCollection = collection;
 
-      const [itemsResult, backlogResult, deferredResult, countResult] = await Promise.all([
+      const [itemsResult, backlogResult, deferredResult] = await Promise.all([
         loadsItems(view)
           ? this.#fetchMainItems(
               wsId,
@@ -367,7 +378,6 @@ class CollectionStore {
         loadsItems(view)
           ? this.#fetchBoardDeferredItems(wsId, colId, boardPartition, collection)
           : Promise.resolve(null),
-        this.#refreshCollectionTotal(),
       ]);
 
       if (loadId !== this.#loadId) return; // stale
@@ -376,10 +386,11 @@ class CollectionStore {
         itemsResult,
         backlogResult,
         deferredResult,
-        countResult,
         boardPartition,
         collection,
       });
+      // The count is not needed to paint rows; fetch it after they are visible.
+      void this.#requestCollectionTotal();
       if (itemsResult && BOARD_VIEWS.has(view)) {
         void this.#loadRemainingBoardItems({
           first: itemsResult,
@@ -413,14 +424,7 @@ class CollectionStore {
    * Apply one round of fetched results to store state. Load and refresh share
    * this so their state shapes cannot drift apart.
    */
-  #applyResults({
-    itemsResult,
-    backlogResult,
-    deferredResult,
-    countResult,
-    boardPartition,
-    collection,
-  }) {
+  #applyResults({ itemsResult, backlogResult, deferredResult, boardPartition, collection }) {
     if (itemsResult) {
       this.items = deferredResult
         ? [...itemsResult.items, ...deferredResult.items]
@@ -457,30 +461,49 @@ class CollectionStore {
           collection?.is_public && collection?.public_slug ? collection.public_slug : null;
       }
     }
-    this.#changesWatermark = snapshotWatermark(
-      itemsResult,
-      backlogResult,
-      deferredResult,
-      countResult
-    );
+    this.#changesWatermark = snapshotWatermark(itemsResult, backlogResult, deferredResult);
   }
 
-  async #refreshCollectionTotal() {
+  /**
+   * Request the unfiltered collection count without blocking item paint. One
+   * read is in flight per scope generation; any invalidation that arrives
+   * while it is pending is folded into a single follow-up read. A response
+   * from a previous scope is discarded.
+   */
+  #requestCollectionTotal() {
     if (!this.#wsId && !this.#colId) return null;
-    const requestId = ++this.#countRequestId;
-    const loadId = this.#loadId;
+    const generation = this.#countGeneration;
+    if (this.#countPending && this.#countPendingGeneration === generation) {
+      this.#countDirty = true;
+      return this.#countPending;
+    }
+    this.#countDirty = false;
+    const run = this.#runCollectionTotal(generation);
+    this.#countPending = run;
+    this.#countPendingGeneration = generation;
+    return run;
+  }
+
+  async #runCollectionTotal(generation) {
     try {
-      const result = await fetchCollectionTotal(this.#wsId, this.#colId, FOREGROUND_READ);
-      if (requestId === this.#countRequestId && loadId === this.#loadId) {
-        this.collectionTotal = result.total;
-        this.#changesWatermark = minimumWatermark(this.#changesWatermark, result.watermark);
-      }
-      return result;
+      const result = await fetchCollectionTotal(this.#wsId, this.#colId, BACKGROUND_READ);
+      if (generation !== this.#countGeneration) return;
+      if (result?.total != null) this.collectionTotal = result.total;
+      this.#changesWatermark = minimumWatermark(this.#changesWatermark, result?.watermark);
     } catch (error) {
-      if (requestId !== this.#countRequestId || loadId !== this.#loadId) return;
-      this.collectionTotal = null;
+      if (generation !== this.#countGeneration) return;
+      // Keep the last known count as stale. An unavailable count is never 0.
       if (!isExpectedBackgroundSyncError(error)) {
         console.error('[collectionStore] Count refresh failed:', error);
+      }
+    } finally {
+      if (this.#countPendingGeneration === generation) {
+        this.#countPending = null;
+        this.#countPendingGeneration = -1;
+        if (this.#countDirty) {
+          this.#countDirty = false;
+          void this.#requestCollectionTotal();
+        }
       }
     }
   }
@@ -999,16 +1022,13 @@ class CollectionStore {
     const loadId = ++this.#loadId;
 
     try {
-      const [result] = await Promise.all([
-        fetchCollectionItems(this.#wsId, this.#colId, {
-          page,
-          limit,
-          sub_ql: this.effectiveSubFilterQL || undefined,
-          requestOptions: FOREGROUND_READ,
-          ...this.#itemSortOptions(),
-        }),
-        this.#refreshCollectionTotal(),
-      ]);
+      const result = await fetchCollectionItems(this.#wsId, this.#colId, {
+        page,
+        limit,
+        sub_ql: this.effectiveSubFilterQL || undefined,
+        requestOptions: FOREGROUND_READ,
+        ...this.#itemSortOptions(),
+      });
 
       if (loadId !== this.#loadId) return;
 
@@ -1025,6 +1045,7 @@ class CollectionStore {
         this.sortableFields = result.sortableFields;
       }
       this.#changesWatermark = minimumWatermark(this.#changesWatermark, result.watermark ?? 0);
+      void this.#requestCollectionTotal();
     } catch (error) {
       if (loadId !== this.#loadId) return;
       console.error('[collectionStore] setItemsPage failed:', error);
@@ -1062,7 +1083,7 @@ class CollectionStore {
       if (loadId !== this.#loadId) return false;
 
       const deferredLoadedCount = this.items.length - this.mainItemsLoadedCount;
-      const [itemsResult, backlogResult, deferredResult, countResult] = await Promise.all([
+      const [itemsResult, backlogResult, deferredResult] = await Promise.all([
         loadsItems(this.#currentView)
           ? this.#fetchCompleteMainItems(
               this.#wsId,
@@ -1093,7 +1114,6 @@ class CollectionStore {
               deferredLoadedCount
             )
           : Promise.resolve(null),
-        this.#refreshCollectionTotal(),
       ]);
       if (loadId !== this.#loadId) return false;
 
@@ -1101,10 +1121,10 @@ class CollectionStore {
         itemsResult,
         backlogResult,
         deferredResult,
-        countResult,
         boardPartition,
         collection,
       });
+      void this.#requestCollectionTotal();
       return true;
     } catch (error) {
       if (loadId !== this.#loadId) return false;
@@ -1183,7 +1203,7 @@ class CollectionStore {
     try {
       const updated = await itemsApi.get(itemId);
       this.#applyUpdatedItem(updated);
-      await this.#refreshCollectionTotal();
+      await this.#requestCollectionTotal();
     } catch (e) {
       console.error('[collectionStore] refreshItem failed:', e);
     }
@@ -1191,7 +1211,7 @@ class CollectionStore {
 
   applyItem(item) {
     if (!item?.id) return;
-    void this.#refreshCollectionTotal();
+    void this.#requestCollectionTotal();
     if (this.#hideCompletedItem(item)) return;
     const index = this.items.findIndex((current) => current.id === item.id);
     if (index === -1) {
@@ -1353,7 +1373,7 @@ class CollectionStore {
       // object identity for rows/cards that were patched in place.
       this.items = [...this.items];
       this.backlogItems = [...this.backlogItems];
-      await this.#refreshCollectionTotal();
+      await this.#requestCollectionTotal();
       // Commit the cursor only after the patch applied successfully so a
       // failure preserves the previous cursor for replay.
       this.#changesWatermark = nextWatermark;
