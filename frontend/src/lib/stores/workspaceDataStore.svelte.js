@@ -15,6 +15,7 @@ const USER_DISPLAY_BATCH_SIZE = 200;
 const USER_DISPLAY_CACHE_LIMIT = 2000;
 const USER_DISPLAY_FRESH_MS = 5 * 60 * 1000;
 const USER_DISPLAY_MAX_OUTSTANDING = 2;
+const SCREEN_CONFIG_CACHE_LIMIT = 50;
 
 /**
  * Shared workspace data store that caches reference data at workspace scope.
@@ -26,6 +27,9 @@ class WorkspaceDataStore {
 
   /** @type {Map<string, Promise<object>>} */
   #screenConfigPromises = new Map();
+  #screenConfigEpoch = 0;
+  /** @type {Map<string, true>} Insertion order is least-recently-used first. */
+  #screenConfigAccess = new Map();
   /** @type {Map<number, {promise: Promise<object|null>, resolve: (user: object|null) => void}>} */
   #userHydrationPromises = new Map();
   /** @type {Map<number, number>} */
@@ -51,8 +55,9 @@ class WorkspaceDataStore {
   projects = $state([]);
   customFieldDefinitions = $state([]);
   labels = $state([]);
-  // Resolved effective configuration per item type, keyed by item type id or
-  // 'default'. Fetched once per workspace, invalidated on workspace switch.
+  // Resolved effective configuration keyed by "<workspaceId>:<itemTypeId|default>".
+  // Bounded and invalidated on workspace switch and config mutation.
+  /** @type {Record<string, any>} */
   screenConfigs = $state({});
   // Whether bootstrap's milestone/iteration lists are complete directories.
   // null means the server did not report completeness (unknown, not complete).
@@ -243,7 +248,7 @@ class WorkspaceDataStore {
         } else {
           await this._fetchAll(id);
         }
-        await this.#refreshScreenConfigs(id);
+        await this.#refreshScreenConfigs();
         if (this.workspaceId === id) {
           this.lastRefreshedAt = Date.now();
         }
@@ -290,7 +295,9 @@ class WorkspaceDataStore {
     this.projects = [];
     this.customFieldDefinitions = [];
     this.labels = [];
+    this.#screenConfigEpoch += 1;
     this.screenConfigs = {};
+    this.#screenConfigAccess.clear();
     this.planningCompleteness = null;
     this.#screenConfigPromises.clear();
     this.resetUserDisplayCache();
@@ -446,25 +453,38 @@ class WorkspaceDataStore {
 
   /**
    * Resolved effective configuration for the current workspace and optional
-   * item type: assigned config set (else the global default), its effective
-   * screens with fields, and config-set priorities. Cached per item type;
-   * in-flight requests are shared.
+   * item type. Convenience delegate for the workspace-scoped callers; see
+   * screenConfigFor for the cross-workspace contract.
    */
-  async screenConfig(itemTypeId = null) {
-    if (!this.workspaceId || this.workspaceId === 'global') return null;
-    const key = itemTypeId == null ? 'default' : String(itemTypeId);
+  screenConfig(itemTypeId = null) {
+    return this.screenConfigFor(this.workspaceId, itemTypeId);
+  }
+
+  /**
+   * Resolved effective configuration for any workspace and optional item type:
+   * assigned config set (else the global default), its effective screens with
+   * fields, and config-set priorities. Cached per (workspace, item type);
+   * in-flight requests are shared and the cache is bounded. A delayed response
+   * is written only when the cache has not been invalidated in the meantime.
+   */
+  async screenConfigFor(workspaceId, itemTypeId = null) {
+    if (!workspaceId || workspaceId === 'global') return null;
+    const key = `${workspaceId}:${itemTypeId == null ? 'default' : itemTypeId}`;
     const cached = this.screenConfigs[key];
-    if (cached) return cached;
+    if (cached) {
+      this.#touchScreenConfig(key);
+      return cached;
+    }
 
     const pending = this.#screenConfigPromises.get(key);
     if (pending) return pending;
 
-    const workspaceId = this.workspaceId;
+    const epoch = this.#screenConfigEpoch;
     const promise = workspaces
       .getEffectiveConfig(workspaceId, itemTypeId, FOREGROUND_READ)
       .then((config) => {
-        if (this.workspaceId === workspaceId) {
-          this.screenConfigs = { ...this.screenConfigs, [key]: config };
+        if (this.#screenConfigEpoch === epoch) {
+          this.#storeScreenConfig(key, config);
         }
         return config;
       })
@@ -479,21 +499,44 @@ class WorkspaceDataStore {
 
   /** Drop cached effective configurations (after admin config changes). */
   invalidateScreenConfigs() {
+    this.#screenConfigEpoch += 1;
     this.screenConfigs = {};
+    this.#screenConfigAccess.clear();
     this.#screenConfigPromises.clear();
   }
 
+  #storeScreenConfig(key, config) {
+    this.screenConfigs = { ...this.screenConfigs, [key]: config };
+    this.#touchScreenConfig(key);
+    while (this.#screenConfigAccess.size > SCREEN_CONFIG_CACHE_LIMIT) {
+      const oldest = /** @type {string} */ (this.#screenConfigAccess.keys().next().value);
+      if (oldest === key) break;
+      this.#screenConfigAccess.delete(oldest);
+      const { [oldest]: _evicted, ...rest } = this.screenConfigs;
+      this.screenConfigs = rest;
+    }
+  }
+
+  #touchScreenConfig(key) {
+    this.#screenConfigAccess.delete(key);
+    this.#screenConfigAccess.set(key, true);
+  }
+
   // Silent re-fetch of cached screen configurations; keeps stale data on error.
-  async #refreshScreenConfigs(workspaceId) {
+  async #refreshScreenConfigs() {
     const keys = Object.keys(this.screenConfigs);
     if (keys.length === 0) return;
     await Promise.all(
       keys.map(async (key) => {
-        const itemTypeId = key === 'default' ? null : Number(key);
+        const [workspacePart, itemTypePart] = key.split(':');
+        const workspaceId = Number(workspacePart);
+        const itemTypeId = itemTypePart === 'default' ? null : Number(itemTypePart);
+        if (!Number.isInteger(workspaceId) || workspaceId <= 0) return;
+        const epoch = this.#screenConfigEpoch;
         try {
           const config = await workspaces.getEffectiveConfig(workspaceId, itemTypeId);
-          if (this.workspaceId === workspaceId) {
-            this.screenConfigs = { ...this.screenConfigs, [key]: config };
+          if (this.#screenConfigEpoch === epoch) {
+            this.#storeScreenConfig(key, config);
           }
         } catch (err) {
           if (!isExpectedBackgroundSyncError(err)) {
