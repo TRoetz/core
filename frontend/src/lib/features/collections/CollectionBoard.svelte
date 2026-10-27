@@ -50,7 +50,7 @@
   import ChevronRight from '@lucide/svelte/icons/chevron-right';
   import MoreHorizontal from '@lucide/svelte/icons/more-horizontal';
   import Layers from '@lucide/svelte/icons/layers';
-  import CheckSquare from '@lucide/svelte/icons/check-square';
+  import CheckSquare from '@lucide/svelte/icons/square-check';
   import Milestone from '@lucide/svelte/icons/milestone';
   import ArrowDownUp from '@lucide/svelte/icons/arrow-down-up';
   import ItemPicker from '../../pickers/ItemPicker.svelte';
@@ -63,6 +63,7 @@
   import ViewHeader from '../../layout/ViewHeader.svelte';
   import StaticViewBackground from '../../layout/StaticViewBackground.svelte';
   import Button from '../../components/Button.svelte';
+  import ButtonGroup from '../../components/ButtonGroup.svelte';
   import SearchInput from '../../components/SearchInput.svelte';
   import SubFilterBar from './SubFilterBar.svelte';
   import BoardColumn from './BoardColumn.svelte';
@@ -2266,47 +2267,46 @@
                   {/if}
                 </div>
               {/if}
-              <!-- Group by / Sort by segmented group, styled to match the
-                   board/backlog view switcher beside it. The trigger is
-                   highlighted (raised + shadow) when a non-default selection is
-                   active. -->
-              <div class="flex rounded p-1" style="background-color: var(--ctx-surface, var(--ds-background-neutral)); backdrop-filter: var(--ctx-backdrop, none);">
-                <DropdownMenu
-                  items={groupByMenuItems}
-                  triggerIcon={Layers}
-                  triggerText={selectedGroupByLabel}
-                  placement="bottom-end"
-                  maxWidth="max-w-xs"
-                  triggerClass="px-3 py-1.5 rounded text-sm font-medium transition-colors {boardGroupingActive ? 'shadow-sm' : ''}"
-                  triggerStyle={boardGroupingActive ? 'color: var(--ds-text); background-color: var(--ctx-surface-raised, var(--ds-surface-raised));' : 'color: var(--ds-text);'}
-                  triggerTestid="board-group-by-menu"
-                />
-                <DropdownMenu
-                  items={sortByMenuItems}
-                  triggerIcon={ArrowDownUp}
-                  triggerText={sortMode === 'bubble' ? t('boardControls.sortBubble') : t('boardControls.sortBy')}
-                  placement="bottom-end"
-                  maxWidth="max-w-xs"
-                  triggerClass="px-3 py-1.5 rounded text-sm font-medium transition-colors {sortMode === 'bubble' ? 'shadow-sm' : ''}"
-                  triggerStyle={sortMode === 'bubble' ? 'color: var(--ds-text); background-color: var(--ctx-surface-raised, var(--ds-surface-raised));' : 'color: var(--ds-text);'}
-                  triggerTestid="board-sort-by-menu"
-                />
-                <!-- Selection is an explicit mode. Keeping it in this group
-                     makes it a peer of grouping and sorting instead of a
-                     standalone toolbar action. -->
-                <Button
-                  variant="control"
-                  pressed={selectionMode}
-                  size="sm"
-                  icon={CheckSquare}
-                  class="px-3"
-                  title={t('collections.selectItems')}
-                  onclick={toggleSelectionMode}
-                  dataTestid="board-select-mode-toggle"
-                >
-                  {t('common.select')}
-                </Button>
-              </div>
+              <!-- Group by / Sort by / Select share one toolbar group. A
+                   dropdown is selected while its non-default setting is active. -->
+              <ButtonGroup testid="board-controls-group">
+                {#snippet children(segment)}
+                  <DropdownMenu
+                    items={groupByMenuItems}
+                    triggerIcon={Layers}
+                    triggerText={selectedGroupByLabel}
+                    placement="bottom-end"
+                    maxWidth="max-w-xs"
+                    triggerClass={segment}
+                    triggerActive={boardGroupingActive}
+                    triggerTestid="board-group-by-menu"
+                  />
+                  <DropdownMenu
+                    items={sortByMenuItems}
+                    triggerIcon={ArrowDownUp}
+                    triggerText={sortMode === 'bubble' ? t('boardControls.sortBubble') : t('boardControls.sortBy')}
+                    placement="bottom-end"
+                    maxWidth="max-w-xs"
+                    triggerClass={segment}
+                    triggerActive={sortMode === 'bubble'}
+                    triggerTestid="board-sort-by-menu"
+                  />
+                  <!-- Selection is an explicit mode, kept beside grouping and
+                       sorting so the toolbar stays one control cluster. -->
+                  <button
+                    type="button"
+                    class={segment}
+                    data-active={selectionMode}
+                    aria-pressed={selectionMode}
+                    title={t('collections.selectItems')}
+                    onclick={toggleSelectionMode}
+                    data-testid="board-select-mode-toggle"
+                  >
+                    <CheckSquare class="w-4 h-4" />
+                    {t('common.select')}
+                  </button>
+                {/snippet}
+              </ButtonGroup>
               <CollectionViewSwitcher
                 {workspaceId}
                 {collectionId}

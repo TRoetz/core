@@ -89,11 +89,6 @@
     danger: 'bg-[var(--ds-background-danger-bold)] hover:bg-[var(--ds-background-danger-bold-hovered)] focus:ring-[var(--ds-danger)] text-white border border-transparent',
     'danger-ghost': 'bg-transparent text-[var(--ds-text-danger)] hover:bg-[var(--ds-background-danger-bold)] hover:text-white focus:ring-[var(--ds-danger)] border border-transparent',
     selected: 'bg-[var(--ds-interactive-pressed)] hover:bg-[var(--ds-interactive-hovered)] focus:ring-[var(--ds-border-focused)] text-white border border-transparent',
-    // Board/collection toolbar control: the translucent surface used by the
-    // filter and view buttons, with a raised surface while toggled on.
-    control: pressed
-      ? 'bg-[var(--ctx-surface-raised,var(--ds-surface-raised))] shadow-sm hover:bg-[var(--ctx-surface-raised,var(--ds-surface-raised))] focus:ring-2 focus:ring-ds-border-bold text-[var(--ds-text)]'
-      : 'bg-[var(--ctx-surface,var(--ds-background-neutral))] hover:bg-[var(--ctx-surface-raised,var(--ds-surface-raised))] focus:ring-2 focus:ring-ds-border-bold text-[var(--ds-text)]',
     ghost: 'bg-transparent hover:bg-[var(--ctx-active-bg,var(--ds-background-neutral-hovered,#f3f4f6))] focus:ring-2 focus:ring-ds-border-bold text-[var(--ctx-text,var(--ds-text,#374151))]',
     link: 'bg-transparent hover:underline focus:ring-0 text-[var(--ds-text-link)] hover:text-[var(--ds-text-link-hovered)] border-none p-0'
   }[variant]);
@@ -116,7 +111,6 @@
     danger: 'bg-[var(--ds-background-danger-bold-hovered)] bg-opacity-50 border-[var(--ds-danger)] text-white',
     'danger-ghost': 'bg-[var(--ds-background-danger-bold-hovered)] bg-opacity-50 border-[var(--ds-danger)] text-white',
     selected: 'bg-[var(--ds-interactive-subtle)] border-[var(--ds-border)] text-[var(--ds-interactive-pressed)]',
-    control: 'bg-[var(--ds-background-neutral)] border-[var(--ds-border)] text-[var(--ds-text-subtle)]',
     ghost: 'bg-[var(--ds-background-neutral)] border-[var(--ds-border)] text-[var(--ds-text-subtle)]',
     link: 'bg-[var(--ds-background-neutral)] border-[var(--ds-border)] text-[var(--ds-text-subtle)]'
   }[variant]);
