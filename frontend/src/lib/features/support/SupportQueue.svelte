@@ -517,7 +517,11 @@
     });
     try {
       if (editorQueueId) {
-        await fetchV2Data(`/queues/${editorQueueId}`, { method: 'PATCH', body });
+        await fetchV2Data(`/queues/${editorQueueId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/merge-patch+json' },
+          body,
+        });
         successToast(t('supportQueue.updated'));
       } else {
         const path = queuesPath();
