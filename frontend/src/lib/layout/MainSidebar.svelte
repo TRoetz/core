@@ -1,4 +1,5 @@
 <script>
+  import { onMount } from 'svelte';
   import { currentRoute, isWorkspaceRoute } from '../router.js';
   import { permissionStore } from '../stores/permissions.svelte.js';
   import { uiStore } from '../stores/ui.svelte.js';
@@ -78,6 +79,13 @@
     const timestamp = Date.parse(visit?.last_visited ?? '');
     return Number.isNaN(timestamp) ? 0 : timestamp;
   }
+
+  // Resolve the visit order before the menu is first opened. Loading it in
+  // onOpen sorted an already-visible list and flashed from directory order to
+  // recency order. onOpen still refreshes it so recent navigation is reflected.
+  onMount(() => {
+    void loadRecentWorkspaceOrder();
+  });
 
   function onWorkspaceSearchInput(value) {
     workspaceSearchQuery = value;
