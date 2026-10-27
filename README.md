@@ -153,6 +153,7 @@ We are especially interested in early bug reports and real-world feedback about 
 - [Contributing guide](CONTRIBUTING.md)
 - [Logging configuration](LOGGING.md)
 - [Docker backup and restore](deploy/backup-restore.md)
+- [Kubernetes deployment](deploy/kubernetes.md)
 - [Product documentation](https://windshift.sh/docs)
 
 ## License
