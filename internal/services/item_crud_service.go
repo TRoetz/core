@@ -90,6 +90,7 @@ func (s *ItemCRUDService) DeleteSingleWithMetadata(itemID int, metadata itemeven
 func (s *ItemCRUDService) deleteSingleWithAuthorization(itemID int, metadata itemevents.Metadata, authorize func([]*models.Item) error) ([]int, error) {
 	var root *models.Item
 	var children []*models.Item
+	var attachmentPaths []string
 	err := database.WithTx(s.db, func(tx database.Tx) error {
 		ctx := context.Background()
 		var err error
@@ -148,6 +149,15 @@ func (s *ItemCRUDService) deleteSingleWithAuthorization(itemID int, metadata ite
 		if err := s.stampEmailTrackingCompletedTx(tx, []int{itemID}); err != nil {
 			return err
 		}
+		// Collect the root's blob paths inside the transaction (a SELECT only);
+		// removal happens after commit on the background workers so S3 I/O never
+		// holds the write connection.
+		if itemAttachmentBlobRemover != nil {
+			attachmentPaths, err = s.repo.AttachmentPathsForItemsTx(tx, []int{itemID})
+			if err != nil {
+				return err
+			}
+		}
 		if err := s.deleteItemRelationsTx(tx, itemID); err != nil {
 			return err
 		}
@@ -156,6 +166,7 @@ func (s *ItemCRUDService) deleteSingleWithAuthorization(itemID int, metadata ite
 	if err != nil {
 		return nil, err
 	}
+	enqueueAttachmentDeletions(attachmentPaths)
 	s.finishItemDeletion(root.WorkspaceID, []int{itemID}, root.ParentID)
 	childIDs := make([]int, 0, len(children))
 	for _, child := range children {
@@ -179,6 +190,7 @@ func (s *ItemCRUDService) DeleteWithMetadata(itemID int, metadata itemevents.Met
 func (s *ItemCRUDService) deleteWithAuthorization(itemID int, metadata itemevents.Metadata, authorize func([]*models.Item) error) (*DeleteResult, error) {
 	var items []*models.Item
 	var result DeleteResult
+	var attachmentPaths []string
 	err := database.WithTx(s.db, func(tx database.Tx) error {
 		ctx := context.Background()
 		var err error
@@ -227,6 +239,15 @@ func (s *ItemCRUDService) deleteWithAuthorization(itemID int, metadata itemevent
 		if err := s.stampEmailTrackingCompletedTx(tx, itemIDs); err != nil {
 			return err
 		}
+		// Collect attachment paths inside the transaction (a SELECT only) and
+		// remove them after commit. S3 I/O must not hold the write connection,
+		// especially on SQLite's single-writer pool.
+		if itemAttachmentBlobRemover != nil {
+			attachmentPaths, err = s.repo.AttachmentPathsForItemsTx(tx, itemIDs)
+			if err != nil {
+				return err
+			}
+		}
 		// Remove children first so the foreign key cannot bypass their cleanup.
 		for i := len(items) - 1; i >= 0; i-- {
 			id := items[i].ID
@@ -242,6 +263,7 @@ func (s *ItemCRUDService) deleteWithAuthorization(itemID int, metadata itemevent
 	if err != nil {
 		return nil, err
 	}
+	enqueueAttachmentDeletions(attachmentPaths)
 	for _, item := range items {
 		s.finishItemDeletion(item.WorkspaceID, []int{item.ID}, nil)
 	}
@@ -280,6 +302,12 @@ func (s *ItemCRUDService) stampEmailTrackingCompletedTx(tx database.Tx, itemIDs 
 }
 
 func (s *ItemCRUDService) deleteItemRelationsTx(tx database.Tx, itemID int) error {
+	if _, err := tx.Exec(`
+		DELETE FROM attachments
+		WHERE item_id = ? AND COALESCE(entity_type, 'item') = 'item'
+	`, itemID); err != nil {
+		return fmt.Errorf("failed to delete item attachments: %w", err)
+	}
 	if err := s.repo.DeleteItemWatches(tx, itemID); err != nil {
 		return err
 	}

@@ -49,7 +49,7 @@ func uploadPageAttachment(deps Deps) Handler {
 		if err != nil {
 			return internalError(err)
 		}
-		result, err := deps.PageAttachments.UploadPageAttachment(services.PageAttachmentUploadInput{
+		result, err := deps.PageAttachments.UploadPageAttachment(r.Context(), services.PageAttachmentUploadInput{
 			PageID: pageID, UploaderID: user.ID, OriginalFilename: header.Filename,
 			FileData: data, FileSize: int64(len(data)),
 		})
@@ -133,7 +133,7 @@ func uploadItemAttachment(attachments attachmentApplication) Handler {
 		if int64(len(data)) > policy.MaxFileSize {
 			return newError(http.StatusRequestEntityTooLarge, "payload_too_large", "Attachment exceeds the configured size limit")
 		}
-		result, err := attachments.UploadItemAttachment(services.ItemAttachmentUploadInput{ItemID: itemID, UploaderID: user.ID, OriginalFilename: header.Filename, FileData: data, FileSize: int64(len(data))})
+		result, err := attachments.UploadItemAttachment(r.Context(), services.ItemAttachmentUploadInput{ItemID: itemID, UploaderID: user.ID, OriginalFilename: header.Filename, FileData: data, FileSize: int64(len(data))})
 		if err != nil {
 			return attachmentError(err)
 		}
@@ -165,15 +165,11 @@ func serveItemAttachment(attachments attachmentApplication, mode attachmentServe
 		if err != nil {
 			return err
 		}
-		binary, err := attachments.OpenItemAttachment(user.ID, attachmentID, mode == attachmentServeThumbnail)
+		binary, err := attachments.OpenItemAttachment(r.Context(), user.ID, attachmentID, mode == attachmentServeThumbnail)
 		if err != nil {
 			return attachmentError(err)
 		}
 		defer func() { _ = binary.File.Close() }()
-		info, err := binary.File.Stat()
-		if err != nil {
-			return internalError(err)
-		}
 		w.Header().Set("Content-Type", binary.MimeType)
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.Header().Set("ETag", fmt.Sprintf("\"attachment-%d-%d\"", attachmentID, binary.FileSize))
@@ -194,7 +190,7 @@ func serveItemAttachment(attachments attachmentApplication, mode attachmentServe
 				w.Header().Set("Content-Security-Policy", "default-src 'none'; sandbox")
 			}
 		}
-		http.ServeContent(w, r, binary.OriginalFilename, info.ModTime(), binary.File)
+		http.ServeContent(w, r, binary.OriginalFilename, binary.File.ModTime(), binary.File)
 		return nil
 	}
 }
@@ -209,7 +205,7 @@ func deleteItemAttachment(attachments attachmentApplication) commandOperation {
 		if err != nil {
 			return err
 		}
-		return attachmentError(attachments.DeleteItemAttachment(attachmentID, user.ID))
+		return attachmentError(attachments.DeleteItemAttachment(r.Context(), attachmentID, user.ID))
 	}
 }
 
