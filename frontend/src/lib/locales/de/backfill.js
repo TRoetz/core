@@ -152,6 +152,11 @@ export default {
     "completedVisibilitySaved": "Sichtbarkeit abgeschlossener Arbeit gespeichert",
   },
   "collections": {
+    "sharedFilters": "Geteilt",
+    "myFilters": "Meine Filter",
+    "saveFilter": "Filter speichern",
+    "shareFilter": "Für alle freigegeben",
+    "shareFilterHint": "Alle mit Zugriff auf dieses Board können ihn verwenden",
     "savedFilters": "Gespeicherte Filter",
     "saveCurrentFilter": "Aktuelle Filter speichern",
     "filterNamePlaceholder": "Filtername",

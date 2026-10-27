@@ -76,6 +76,11 @@ export default {
   },
 
   collections: {
+    sharedFilters: 'Общие',
+    myFilters: 'Мои фильтры',
+    saveFilter: 'Сохранить фильтр',
+    shareFilter: 'Доступен всем',
+    shareFilterHint: 'Его смогут использовать все, у кого есть доступ к этой доске',
     savedFilters: 'Сохранённые фильтры',
     saveCurrentFilter: 'Сохранить текущие фильтры',
     filterNamePlaceholder: 'Название фильтра',

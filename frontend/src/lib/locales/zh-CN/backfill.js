@@ -136,6 +136,11 @@ export default {
     "selectPortal": "选择门户",
   },
   "collections": {
+    "sharedFilters": "共享",
+    "myFilters": "我的筛选",
+    "saveFilter": "保存筛选",
+    "shareFilter": "与所有人共享",
+    "shareFilterHint": "所有有权访问此看板的人都可以使用",
     "savedFilters": "已保存的筛选器",
     "saveCurrentFilter": "保存当前筛选条件",
     "filterNamePlaceholder": "筛选器名称",

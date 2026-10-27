@@ -164,6 +164,11 @@ export default {
     "selectPortal": "Sélectionner un portail",
   },
   "collections": {
+    "sharedFilters": "Partagés",
+    "myFilters": "Mes filtres",
+    "saveFilter": "Enregistrer le filtre",
+    "shareFilter": "Partagé avec tout le monde",
+    "shareFilterHint": "Toutes les personnes ayant accès à ce tableau peuvent l'utiliser",
     "savedFilters": "Filtres enregistrés",
     "saveCurrentFilter": "Enregistrer les filtres actuels",
     "filterNamePlaceholder": "Nom du filtre",

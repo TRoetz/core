@@ -697,6 +697,11 @@ export default {
 
     // Filters and query
     filters: 'Filters',
+    sharedFilters: 'Shared',
+    myFilters: 'My filters',
+    saveFilter: 'Save filter',
+    shareFilter: 'Shared with everyone',
+    shareFilterHint: 'Everyone with access to this board can use it',
     savedFilters: 'Saved filters',
     saveCurrentFilter: 'Save current filters',
     filterNamePlaceholder: 'Filter name',
