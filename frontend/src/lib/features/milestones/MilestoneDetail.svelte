@@ -266,7 +266,7 @@
         {#if milestone?.releases?.length > 0}
           <div class="flex flex-col gap-1.5 mt-2">
             {#each milestone.releases as release (release.id)}
-              <div class="flex items-center gap-2 text-sm">
+              <div class="flex items-center gap-2 text-sm" data-testid={`milestone-release-${release.id}`}>
                 <Tag class="w-4 h-4 shrink-0" style="color: var(--ds-text-subtle);" />
                 <span class="font-mono text-xs" style="color: var(--ds-text);">{release.tag_name}</span>
                 {#if release.name && release.name !== release.tag_name}
@@ -298,7 +298,9 @@
                 {#if release.assets?.length}
                   <span class="text-xs" style="color: var(--ds-text-subtlest);">{release.assets.length} assets</span>
                 {/if}
-                <span class="text-xs" style="color: var(--ds-text-subtlest);">{formatDateShort(release.released_at || release.created_at)}</span>
+                {#if release.released_at}
+                  <span class="text-xs" style="color: var(--ds-text-subtlest);">{formatDateShort(release.released_at)}</span>
+                {/if}
               </div>
             {/each}
           </div>
