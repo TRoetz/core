@@ -2,10 +2,6 @@ import { collections } from '../api/collections.js';
 import { items as itemsApi } from '../api/items.js';
 import { BACKGROUND_READ, FOREGROUND_READ } from '../api/readScheduler.js';
 import {
-  RIGHTMOST_COLUMN_LIMIT,
-  rightmostCapStatusIds,
-} from '../features/collections/boardColumns.js';
-import {
   fetchCollectionBacklog,
   fetchCollectionItemChanges,
   fetchCollectionItems,
@@ -116,9 +112,7 @@ class CollectionStore {
   boardBackgroundLoading = $state(false);
 
   // Board views load every unfinished item separately from completed work.
-  // The rightmost cap is retained as a specialized view of that partition.
   boardDeferred = $state(null);
-  rightmostCap = $state(null);
   // Iteration that the "current_iteration" completed-visibility preset scopes
   // completed work to. The board sets it once its iteration catalog loads.
   boardCompletedIterationId = $state(null);
@@ -278,8 +272,8 @@ class CollectionStore {
 
     // Switching between passive collection views does not need another network
     // roundtrip when the already-loaded item page is large enough and there is
-    // no active server-side sort/filter. Board views may need capped-column
-    // fetches, so they intentionally keep loading.
+    // no active server-side sort/filter. Board views fetch completed work
+    // separately, so they intentionally keep loading.
     const canReuseTargetData =
       loadsItems(view) &&
       loadsItems(this.#currentView) &&
@@ -316,7 +310,6 @@ class CollectionStore {
       this.itemsLoadingMore = false;
       this.boardBackgroundLoading = false;
       this.boardDeferred = null;
-      this.rightmostCap = null;
       this.boardCompletedIterationId = null;
       this.backlogPagination = null;
       this.backlogHasMore = false;
@@ -444,12 +437,6 @@ class CollectionStore {
             total: deferredResult.pagination?.total_items ?? deferredResult.items.length,
           }
         : null;
-      this.rightmostCap = this.boardDeferred?.capped
-        ? {
-            statusIds: this.boardDeferred.statusIds,
-            total: this.boardDeferred.total,
-          }
-        : null;
       this.collectionName = itemsResult.collectionName;
       this.publicSlug = itemsResult.publicSlug ?? null;
       this.itemsPagination = itemsResult.pagination;
@@ -517,9 +504,8 @@ class CollectionStore {
   }
 
   /**
-   * Resolves the statuses deferred from the board's full unfinished fetch.
-   * A capped rightmost column keeps its existing 50-card behavior; otherwise
-   * completed statuses are paged separately so they cannot hide active work.
+   * Resolves the statuses deferred from the board's full unfinished fetch so
+   * completed statuses are paged separately and cannot hide active work.
    */
   async #resolveBoardPartition(wsId, colId, view) {
     if (!BOARD_VIEWS.has(view) || !this.showCompleted) return null;
@@ -535,18 +521,17 @@ class CollectionStore {
         statuses = workspaceDataStore.statuses;
       }
 
-      const cappedStatusIds = rightmostCapStatusIds(config, statuses);
       const completedStatusIds = statuses
         .filter((status) => status.is_completed)
         .map((status) => status.id);
       const visibility = config?.view_settings?.completed_visibility ?? '';
 
-      // Explicit presets take precedence over the legacy cap/retention pair.
+      // Explicit presets select how much completed work to load.
       if (visibility === 'none') {
         // Keep completed statuses out of the main fetch without a second
         // request; the board renders no completed work at all.
         return completedStatusIds.length
-          ? { statusIds: completedStatusIds, limit: 0, capped: false, hidden: true }
+          ? { statusIds: completedStatusIds, limit: 0, hidden: true }
           : null;
       }
       if (
@@ -560,14 +545,9 @@ class CollectionStore {
         return {
           statusIds: completedStatusIds,
           limit: DEFAULT_PAGE_SIZE,
-          capped: false,
           completedActivityDays: activityDays,
           iterationId: visibility === 'current_iteration' ? this.boardCompletedIterationId : null,
         };
-      }
-
-      if (cappedStatusIds?.length) {
-        return { statusIds: cappedStatusIds, limit: RIGHTMOST_COLUMN_LIMIT, capped: true };
       }
 
       const retentionDays = Number(config?.completed_item_retention_days);
@@ -579,7 +559,6 @@ class CollectionStore {
         ? {
             statusIds: completedStatusIds,
             limit: DEFAULT_PAGE_SIZE,
-            capped: false,
             completedActivityDays,
           }
         : null;
@@ -797,9 +776,7 @@ class CollectionStore {
 
   #fetchBoardDeferredItems(wsId, colId, boardPartition, collection, limitOverride = null) {
     if (!boardPartition?.statusIds?.length || boardPartition.hidden) return Promise.resolve(null);
-    const limit = boardPartition.capped
-      ? RIGHTMOST_COLUMN_LIMIT
-      : Math.max(DEFAULT_PAGE_SIZE, limitOverride ?? boardPartition.limit ?? 0);
+    const limit = Math.max(DEFAULT_PAGE_SIZE, limitOverride ?? boardPartition.limit ?? 0);
     return fetchCollectionItems(wsId, colId, {
       page: 1,
       limit,
@@ -809,9 +786,7 @@ class CollectionStore {
       status_id: boardPartition.statusIds.join(','),
       completed_activity_days: boardPartition.completedActivityDays || undefined,
       iteration_id: boardPartition.iterationId || undefined,
-      ...(boardPartition.capped
-        ? { order_by: 'last_active_at', sort_direction: 'desc' }
-        : this.#itemSortOptions()),
+      ...this.#itemSortOptions(),
     });
   }
 
@@ -825,7 +800,7 @@ class CollectionStore {
   }
 
   get itemsRemainingCount() {
-    if (this.boardDeferred && !this.boardDeferred.capped) {
+    if (this.boardDeferred) {
       const deferredSet = new Set(this.boardDeferred.statusIds);
       const loaded = this.items.filter((item) => deferredSet.has(item.status_id)).length;
       return Math.max(0, this.boardDeferred.total - loaded);
@@ -926,7 +901,7 @@ class CollectionStore {
 
   #hasMoreItems() {
     if (this.boardDeferred) {
-      return !this.boardDeferred.capped && calcHasMore(this.boardDeferred.pagination);
+      return calcHasMore(this.boardDeferred.pagination);
     }
     return calcHasMore(this.itemsPagination);
   }
@@ -943,7 +918,7 @@ class CollectionStore {
       return;
     }
 
-    const deferred = this.boardDeferred && !this.boardDeferred.capped ? this.boardDeferred : null;
+    const deferred = this.boardDeferred;
     const pagination = deferred?.pagination ?? this.itemsPagination;
     const nextPage = (pagination?.page ?? 0) + 1;
     const loadId = this.#loadId;
@@ -1042,7 +1017,6 @@ class CollectionStore {
 
       this.items = result.items;
       this.boardDeferred = null;
-      this.rightmostCap = null;
       this.collectionName = result.collectionName;
       this.publicSlug = result.publicSlug ?? null;
       this.itemsPagination = result.pagination;
@@ -1477,9 +1451,6 @@ class CollectionStore {
         total,
         pagination,
       };
-      this.rightmostCap = this.boardDeferred.capped
-        ? { statusIds: this.boardDeferred.statusIds, total }
-        : null;
     }
     this.itemsHasMore = this.#hasMoreItems();
     if (removedBacklog > 0 && this.backlogPagination) {

@@ -54,13 +54,8 @@
   let activeTab = $state('columns');
   let backlogStatusIDs = $state([]);
   let cardFields = $state([]);
-  let showRightmostColumnLast50 = $state(false);
-  let trimCompletedItemsByAge = $state(false);
-  let completedItemRetentionDays = $state(30);
-  let completedItemRetentionError = $state('');
-  // Explicit completed-work preset (WI-100). Empty means the legacy cap/age
-  // controls below are the source of truth.
-  let completedVisibility = $state('');
+  // Completed-work preset (WI-100) — the board's single display control.
+  let completedVisibility = $state('all');
   let completedVisibilityDirty = $state(false);
   let customFieldDefinitions = $state([]);
   let enabledViews = $state([]);
@@ -222,22 +217,15 @@
           field => !isPublicCollection ||
             (field.field_type === 'system' && PUBLIC_BOARD_CARD_FIELDS.has(field.field_identifier))
         );
-        showRightmostColumnLast50 = Boolean(boardConfig.show_rightmost_column_last_50);
-        const savedRetentionDays = Number(boardConfig.completed_item_retention_days);
-        trimCompletedItemsByAge = !showRightmostColumnLast50 && Number.isInteger(savedRetentionDays) && savedRetentionDays > 0;
-        completedItemRetentionDays = trimCompletedItemsByAge ? savedRetentionDays : 30;
-        completedItemRetentionError = '';
-        completedVisibility = boardConfig.view_settings?.completed_visibility ?? '';
-        completedVisibilityDirty = false;
+        const storedVisibility = boardConfig.view_settings?.completed_visibility ?? '';
+        completedVisibility = storedVisibility || legacyCompletedPreset(boardConfig);
+        // A board saved before presets existed migrates on the next save.
+        completedVisibilityDirty = storedVisibility === '';
       } else {
         columns = [];
         backlogStatusIDs = statuses.filter(s => !s.is_default && !s.is_completed).map(s => s.id);
         cardFields = [];
-        showRightmostColumnLast50 = false;
-        trimCompletedItemsByAge = false;
-        completedItemRetentionDays = 30;
-        completedItemRetentionError = '';
-        completedVisibility = '';
+        completedVisibility = 'all';
         completedVisibilityDirty = false;
       }
     } catch (error) {
@@ -618,53 +606,24 @@
     { value: 'current_iteration', labelKey: 'completedCurrentIteration' },
     { value: 'none', labelKey: 'completedNone' },
   ];
-  let completedVisibilityOptions = $derived([
-    { value: '', label: t('settings.boardConfig.completedVisibilityCustom') },
-    ...COMPLETED_VISIBILITY_OPTIONS.map((option) => ({
+  let completedVisibilityOptions = $derived(
+    COMPLETED_VISIBILITY_OPTIONS.map((option) => ({
       value: option.value,
       label: t(`settings.boardConfig.${option.labelKey}`),
-    })),
-  ]);
+    }))
+  );
+
+  // A board saved before presets existed maps onto the closest preset.
+  function legacyCompletedPreset(config) {
+    const days = Number(config?.completed_item_retention_days);
+    if (days === 1) return 'last_day';
+    if (days === 7) return 'last_week';
+    return 'all';
+  }
 
   function setCompletedVisibility(value) {
     completedVisibility = value;
     completedVisibilityDirty = true;
-    // Keep the legacy fields aligned so old readers agree with the preset.
-    showRightmostColumnLast50 = false;
-    trimCompletedItemsByAge = value === 'last_day' || value === 'last_week';
-    completedItemRetentionDays = value === 'last_day' ? 1 : value === 'last_week' ? 7 : 30;
-    completedItemRetentionError = '';
-    hasChanges = true;
-  }
-
-  // Editing the legacy controls means the board no longer follows a preset.
-  function clearCompletedVisibilityPreset() {
-    completedVisibility = '';
-    completedVisibilityDirty = true;
-  }
-
-  function setShowRightmostColumnLast50(value) {
-    showRightmostColumnLast50 = value;
-    if (value) {
-      trimCompletedItemsByAge = false;
-      completedItemRetentionError = '';
-    }
-    clearCompletedVisibilityPreset();
-    hasChanges = true;
-  }
-
-  function setTrimCompletedItemsByAge(value) {
-    trimCompletedItemsByAge = value;
-    if (value) showRightmostColumnLast50 = false;
-    completedItemRetentionError = '';
-    clearCompletedVisibilityPreset();
-    hasChanges = true;
-  }
-
-  function updateCompletedItemRetentionDays(value) {
-    completedItemRetentionDays = value;
-    completedItemRetentionError = '';
-    clearCompletedVisibilityPreset();
     hasChanges = true;
   }
 
@@ -760,14 +719,8 @@
   }
 
   async function saveConfiguration() {
-    const retentionDays = Number(completedItemRetentionDays);
-    if (
-      trimCompletedItemsByAge &&
-      (!Number.isInteger(retentionDays) || retentionDays < 1 || retentionDays > 3650)
-    ) {
-      completedItemRetentionError = t('settings.boardConfig.retentionRangeError');
-      return;
-    }
+    const completedRetentionDays =
+      completedVisibility === 'last_day' ? 1 : completedVisibility === 'last_week' ? 7 : null;
 
     saving = true;
     try {
@@ -789,8 +742,8 @@
           display_order: i,
           width: 0
         })),
-        show_rightmost_column_last_50: showRightmostColumnLast50,
-        completed_item_retention_days: trimCompletedItemsByAge ? retentionDays : null
+        show_rightmost_column_last_50: false,
+        completed_item_retention_days: completedRetentionDays
       };
 
       // Only carry view settings when this scope owns an override, the user
@@ -851,11 +804,7 @@
         columns = [];
         backlogStatusIDs = [];
         cardFields = [];
-        showRightmostColumnLast50 = false;
-        trimCompletedItemsByAge = false;
-        completedItemRetentionDays = 30;
-        completedItemRetentionError = '';
-        completedVisibility = '';
+        completedVisibility = 'all';
         completedVisibilityDirty = false;
         hasChanges = false;
         goToBoard();
@@ -867,11 +816,7 @@
       columns = [];
       backlogStatusIDs = [];
       cardFields = [];
-      showRightmostColumnLast50 = false;
-      trimCompletedItemsByAge = false;
-      completedItemRetentionDays = 30;
-      completedItemRetentionError = '';
-      completedVisibility = '';
+      completedVisibility = 'all';
       completedVisibilityDirty = false;
       hasChanges = false;
     }
@@ -968,62 +913,6 @@
               {t('settings.boardConfig.completedVisibilityHint')}
             </p>
           </div>
-          <Checkbox
-            bind:checked={showRightmostColumnLast50}
-            onchange={setShowRightmostColumnLast50}
-            disabled={!canConfigure}
-            dataTestid="board-rightmost-limit-enabled"
-            label={t('settings.boardConfig.latestFiftyRightmost')}
-            hint={t('settings.boardConfig.latestFiftyRightmostHint')}
-            size="small"
-          />
-          {#if !showRightmostColumnLast50}
-            <div class="border-t pt-4" style="border-color: var(--ds-border);">
-              <Checkbox
-                bind:checked={trimCompletedItemsByAge}
-                onchange={setTrimCompletedItemsByAge}
-                disabled={!canConfigure}
-                dataTestid="board-completed-age-enabled"
-                label={t('settings.boardConfig.hideCompletedByAge')}
-                hint={t('settings.boardConfig.hideCompletedByAgeHint')}
-                size="small"
-              />
-              {#if trimCompletedItemsByAge}
-                <div class="ml-6 mt-3 max-w-xs">
-                  <label
-                    for="board-completed-retention-days"
-                    class="mb-1.5 block text-xs font-medium"
-                    style="color: var(--ds-text-subtle);"
-                  >
-                    {t('settings.boardConfig.recentActivityWindow')}
-                  </label>
-                  <div class="flex items-center gap-2">
-                    <Input
-                      id="board-completed-retention-days"
-                      type="number"
-                      value={completedItemRetentionDays}
-                      oninput={(event) => updateCompletedItemRetentionDays(event.currentTarget.value)}
-                      min={1}
-                      max={3650}
-                      step={1}
-                      size="small"
-                      dataTestid="board-completed-retention-days"
-                      ariaDescribedby="board-completed-retention-help"
-                      class="w-24"
-                    />
-                    <span class="text-xs" style="color: var(--ds-text-subtle);">{t('settings.boardConfig.days')}</span>
-                  </div>
-                  <p
-                    id="board-completed-retention-help"
-                    class="mt-1.5 text-xs"
-                    style="color: {completedItemRetentionError ? 'var(--ds-text-danger)' : 'var(--ds-text-subtlest)'};"
-                  >
-                    {completedItemRetentionError || t('settings.boardConfig.retentionWindowHint')}
-                  </p>
-                </div>
-              {/if}
-            </div>
-          {/if}
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-6 gap-5 mt-5 mb-8">

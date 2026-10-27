@@ -18,7 +18,6 @@
   import QuickAddForm from './QuickAddForm.svelte';
   import { resolveCreatedItemMembership } from './collectionService.js';
   import {
-    RIGHTMOST_COLUMN_LIMIT,
     boardStatusIdForItem,
     buildDisplayColumns,
     statusIdForBoardColumnMove,
@@ -51,7 +50,7 @@
   import ChevronRight from '@lucide/svelte/icons/chevron-right';
   import MoreHorizontal from '@lucide/svelte/icons/more-horizontal';
   import Layers from '@lucide/svelte/icons/layers';
-  import Eye from '@lucide/svelte/icons/eye';
+  import CheckSquare from '@lucide/svelte/icons/check-square';
   import Milestone from '@lucide/svelte/icons/milestone';
   import ArrowDownUp from '@lucide/svelte/icons/arrow-down-up';
   import ItemPicker from '../../pickers/ItemPicker.svelte';
@@ -161,7 +160,6 @@
   );
   let milestoneSwimlaneDialogOpen = $state(false);
   let savingMilestoneSwimlaneConfig = $state(false);
-  let savingCompletedVisibility = $state(false);
 
   let loading = $state(true);
   let currentCollectionName = $derived(collectionStore.collectionName);
@@ -700,37 +698,6 @@
     }
   }
 
-  async function saveCompletedVisibility(visibility) {
-    if (visibility === completedVisibilityPreset) return;
-    savingCompletedVisibility = true;
-    try {
-      const payload = buildBoardConfigurationPayload(boardConfig, {
-        globalMilestoneIds: pinnedGlobalMilestoneIds,
-        showCompleted: showCompletedMilestones,
-        showOpenFromCompleted: showOpenFromCompletedMilestones,
-        completedVisibility: visibility,
-      });
-      if (boardConfig?.id) {
-        await collectionsApi.updateBoardConfiguration(
-          collectionId,
-          boardConfig.id,
-          payload,
-          workspaceId
-        );
-      } else {
-        await collectionsApi.createBoardConfiguration(collectionId, workspaceId, payload);
-      }
-      collectionStore.invalidateBoardConfiguration(workspaceId, collectionId);
-      await loadBoardConfig();
-      successToast(t('boardControls.completedVisibilitySaved'));
-    } catch (error) {
-      console.error('Failed to save completed visibility:', error);
-      warningToast(error?.message || t('dialogs.alerts.failedToSave', { error: error?.message ?? '' }));
-    } finally {
-      savingCompletedVisibility = false;
-    }
-  }
-
   // Scoped SSE invalidations (WI-1624): any frame runs the existing delta fetch,
   // and a reconnect reconciles. No polling fallback.
   useCollectionEventStream(
@@ -1197,7 +1164,7 @@
 
   // Compute display columns based on board configuration or fall back to
   // sorted statuses. Shared with collectionContext's split-fetch logic so
-  // the store excludes exactly the statuses rendered in the capped column.
+  // the store excludes exactly the statuses the board renders.
   let displayColumns = $derived(buildDisplayColumns(boardConfig, statuses));
 
   let validColumns = $derived(displayColumns.filter(col => col.status_ids?.length > 0));
@@ -1208,14 +1175,6 @@
   let completedStatusIds = $derived(
     new Set(statuses.filter((status) => statusIsCompleted(status)).map((status) => Number(status.id)))
   );
-
-  function shouldLimitRightmostColumn(columnIndex, columnsForBoard = validColumns) {
-    return Boolean(
-      !searchActive &&
-      boardConfig?.show_rightmost_column_last_50 &&
-      columnIndex === columnsForBoard.length - 1
-    );
-  }
 
   function itemRecencyValue(item) {
     return new Date(item.last_active_at || item.updated_at || item.created_at || 0).getTime() || 0;
@@ -1228,16 +1187,7 @@
   function getDisplayItemsByColumn(column, columnIndex, columnsForBoard = validColumns, itemSubset = filteredItems) {
     const columnItems = getItemsByColumn(column, itemSubset);
     // Bubble Mode: most-recently-active cards rise to the top of every column.
-    if (sortMode === 'bubble') {
-      return shouldLimitRightmostColumn(columnIndex, columnsForBoard)
-        ? sortByRecency(columnItems).slice(0, RIGHTMOST_COLUMN_LIMIT)
-        : sortByRecency(columnItems);
-    }
-    // Rank Mode: backend frac_index order, except the capped rightmost column
-    // which always shows the latest by recency.
-    return shouldLimitRightmostColumn(columnIndex, columnsForBoard)
-      ? sortByRecency(columnItems).slice(0, RIGHTMOST_COLUMN_LIMIT)
-      : columnItems;
+    return sortMode === 'bubble' ? sortByRecency(columnItems) : columnItems;
   }
 
   // Use the deferred partition's server total when all of its statuses belong
@@ -1286,78 +1236,6 @@
       item => item.item_type_id === boardGroupBy.itemTypeId && isExcludedRightmostSwimlaneParent(item)
     ).length;
   });
-
-  // Completed-work visibility. Explicit presets live in view_settings; a board
-  // saved before presets existed is mapped back onto the closest preset so the
-  // menu reflects what the board actually does.
-  let completedVisibilityPreset = $derived.by(() => {
-    const explicit = boardConfig?.view_settings?.completed_visibility ?? '';
-    if (explicit) return explicit;
-    if (boardConfig?.show_rightmost_column_last_50) return 'latest_50';
-    const days = Number(boardConfig?.completed_item_retention_days);
-    if (Number.isInteger(days) && days >= 1) return 'custom';
-    return 'all';
-  });
-  let completedVisibilityLabel = $derived.by(() => {
-    switch (completedVisibilityPreset) {
-      case 'last_day':
-        return t('boardControls.completedLastDay');
-      case 'last_week':
-        return t('boardControls.completedLastWeek');
-      case 'current_iteration':
-        return t('boardControls.completedCurrentIteration');
-      case 'none':
-        return t('boardControls.completedNone');
-      case 'latest_50':
-        return t('boardControls.completedLatestFifty');
-      case 'custom':
-        return t('boardControls.completedCustom');
-      default:
-        return t('boardControls.completedAll');
-    }
-  });
-  let completedVisibilityMenuItems = $derived([
-    {
-      id: 'completed-all',
-      testid: 'board-completed-all',
-      title: t('boardControls.completedAll'),
-      subtitle: t('boardControls.completedAllDescription'),
-      selected: completedVisibilityPreset === 'all',
-      onClick: () => saveCompletedVisibility('all'),
-    },
-    {
-      id: 'completed-last-day',
-      testid: 'board-completed-last-day',
-      title: t('boardControls.completedLastDay'),
-      subtitle: t('boardControls.completedLastDayDescription'),
-      selected: completedVisibilityPreset === 'last_day',
-      onClick: () => saveCompletedVisibility('last_day'),
-    },
-    {
-      id: 'completed-last-week',
-      testid: 'board-completed-last-week',
-      title: t('boardControls.completedLastWeek'),
-      subtitle: t('boardControls.completedLastWeekDescription'),
-      selected: completedVisibilityPreset === 'last_week',
-      onClick: () => saveCompletedVisibility('last_week'),
-    },
-    {
-      id: 'completed-current-iteration',
-      testid: 'board-completed-current-iteration',
-      title: t('boardControls.completedCurrentIteration'),
-      subtitle: t('boardControls.completedCurrentIterationDescription'),
-      selected: completedVisibilityPreset === 'current_iteration',
-      onClick: () => saveCompletedVisibility('current_iteration'),
-    },
-    {
-      id: 'completed-none',
-      testid: 'board-completed-none',
-      title: t('boardControls.completedNone'),
-      subtitle: t('boardControls.completedNoneDescription'),
-      selected: completedVisibilityPreset === 'none',
-      onClick: () => saveCompletedVisibility('none'),
-    },
-  ]);
 
   let sortByMenuItems = $derived([
     {
@@ -2413,6 +2291,21 @@
                   triggerStyle={sortMode === 'bubble' ? 'color: var(--ds-text); background-color: var(--ctx-surface-raised, var(--ds-surface-raised));' : 'color: var(--ds-text);'}
                   triggerTestid="board-sort-by-menu"
                 />
+                <!-- Selection is an explicit mode. Keeping it in this group
+                     makes it a peer of grouping and sorting instead of a
+                     standalone toolbar action. -->
+                <Button
+                  variant="control"
+                  pressed={selectionMode}
+                  size="sm"
+                  icon={CheckSquare}
+                  class="px-3"
+                  title={t('collections.selectItems')}
+                  onclick={toggleSelectionMode}
+                  dataTestid="board-select-mode-toggle"
+                >
+                  {t('common.select')}
+                </Button>
               </div>
               <CollectionViewSwitcher
                 {workspaceId}
@@ -2432,25 +2325,6 @@
             dataTestid="board-search-input"
           />
           <SubFilterBar {workspaceId} {collectionId} showCompletionToggle={false} />
-          <DropdownMenu
-            items={completedVisibilityMenuItems}
-            triggerIcon={Eye}
-            triggerText={t('boardControls.completedLabel', { value: completedVisibilityLabel })}
-            placement="bottom-start"
-            maxWidth="max-w-xs"
-            triggerClass="px-3 py-1.5 rounded text-sm font-medium transition-colors"
-            triggerStyle="color: var(--ds-text); background-color: var(--ctx-surface, var(--ds-background-neutral));"
-            triggerTestid="board-completed-visibility-menu"
-          />
-          <Button
-            variant="control"
-            pressed={selectionMode}
-            size="sm"
-            onclick={toggleSelectionMode}
-            dataTestid="board-select-mode-toggle"
-          >
-            {t('collections.selectItems')}
-          </Button>
         </div>
       </div>
 
@@ -2665,11 +2539,7 @@
                         {:else}
                           {#if hiddenColumnItemCount > 0}
                             <p class="text-xs mb-3" style={styles.glassSubtleTextStyle}>
-                              {#if collectionStore.boardDeferred?.capped}
-                                Showing latest {columnItems.length} of {columnTotal} items in this column.
-                              {:else}
-                                Showing {columnItems.length} of {columnTotal} items in this column. Load more to see the remaining completed work.
-                              {/if}
+                              Showing {columnItems.length} of {columnTotal} items in this column. Load more to see the remaining completed work.
                             </p>
                           {/if}
                           <div class="space-y-1">
