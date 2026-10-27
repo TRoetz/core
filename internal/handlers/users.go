@@ -787,7 +787,7 @@ func (h *UserHandler) DeactivateUser(w http.ResponseWriter, r *http.Request) {
 		for _, agentID := range cascade.AgentIDs {
 			aid := agentID
 			h.auditor.LogWithDetails(r, currentUser,
-				logger.ActionAgentDeactivate, logger.ResourceUser,
+				logger.ActionAgentDeactivate, logger.ResourceAgent,
 				&aid, "",
 				map[string]any{
 					"reason":   "owner_deactivated",

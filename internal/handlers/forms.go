@@ -836,7 +836,7 @@ func (h *FormHandler) UpdateRequestTypeConfig(w http.ResponseWriter, r *http.Req
 	}
 
 	if user != nil {
-		h.auditor.Log(r, user, logger.ActionRequestTypeConfigUpdate, logger.ResourceRequestTypeConfig, &id, "")
+		h.auditor.Log(r, user, logger.ActionRequestTypeConfigUpdate, logger.ResourceRequestType, &id, "")
 	}
 	respondJSONOK(w, rtConfig)
 }

@@ -42,6 +42,7 @@ type AuditLogEntryResponse struct {
 	Details      map[string]any `json:"details,omitempty"`
 	Success      bool           `json:"success"`
 	ErrorMessage string         `json:"error_message,omitempty"`
+	Source       string         `json:"source,omitempty"`
 }
 
 // List handles GET /rest/api/v1/admin/audit-logs
@@ -76,6 +77,7 @@ func (h *AdminAuditLogHandler) List(w http.ResponseWriter, r *http.Request) {
 	filters := repository.AuditLogFilters{
 		ActionType:   q.Get("action_type"),
 		ResourceType: q.Get("resource_type"),
+		Source:       q.Get("source"),
 	}
 	if v := q.Get("user_id"); v != "" {
 		uid, err := strconv.Atoi(v)
@@ -207,6 +209,7 @@ func mapAuditLogRowsToResponses(rows []repository.AuditLogRow) []AuditLogEntryRe
 			Details:      e.Details,
 			Success:      e.Success,
 			ErrorMessage: e.ErrorMessage,
+			Source:       e.Source,
 		})
 	}
 	return entries

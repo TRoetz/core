@@ -2996,6 +2996,14 @@ var Catalog = []Migration{
 		`,
 		ApplySQLite: applySQLiteQueuesCollectionScope,
 	},
+	{
+		Version:       "20261112_audit_logs_source",
+		Name:          "Add audit_logs.source for system/SCIM/user attribution",
+		CheckSQLite:   sqliteColumnCheck("audit_logs", "source"),
+		CheckPostgres: pgColumnCheck("audit_logs", "source"),
+		SQLite:        "ALTER TABLE audit_logs ADD COLUMN source TEXT NOT NULL DEFAULT ''",
+		Postgres:      "ALTER TABLE audit_logs ADD COLUMN source TEXT NOT NULL DEFAULT ''",
+	},
 }
 
 // applyAssetReportsWorkspacePinned backfills form-mode asset reports that have

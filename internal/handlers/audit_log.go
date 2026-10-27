@@ -43,6 +43,7 @@ type AuditLogEntry struct {
 	Details      map[string]any `json:"details,omitempty"`
 	Success      bool           `json:"success"`
 	ErrorMessage string         `json:"error_message,omitempty"`
+	Source       string         `json:"source,omitempty"`
 }
 
 // AuditLogResponse is the paginated response for audit log queries.
@@ -71,6 +72,7 @@ func (h *AuditLogHandler) ListAuditLogs(w http.ResponseWriter, r *http.Request) 
 	filters := repository.AuditLogFilters{
 		ActionType:   q.Get("action_type"),
 		ResourceType: q.Get("resource_type"),
+		Source:       q.Get("source"),
 		Search:       q.Get("search"),
 	}
 	if v := q.Get("user_id"); v != "" {
@@ -148,6 +150,7 @@ func auditRowToEntry(e repository.AuditLogRow) AuditLogEntry {
 		Details:      e.Details,
 		Success:      e.Success,
 		ErrorMessage: e.ErrorMessage,
+		Source:       e.Source,
 	}
 }
 

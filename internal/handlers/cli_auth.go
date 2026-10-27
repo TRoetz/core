@@ -199,7 +199,7 @@ func (h *CLIAuthHandler) Approve(w http.ResponseWriter, r *http.Request) {
 		}
 		agent = created
 
-		h.auditor.LogWithDetails(r, currentUser, logger.ActionAgentCreate, logger.ResourceUser, &agent.ID, agent.Username, map[string]any{
+		h.auditor.LogWithDetails(r, currentUser, logger.ActionAgentCreate, logger.ResourceAgent, &agent.ID, agent.Username, map[string]any{
 			"agent_kind":    "owned",
 			"origin":        "cli_onboarding",
 			"owner_user_id": currentUser.ID,

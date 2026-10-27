@@ -27,7 +27,7 @@ func (r *AuditLogRepository) Get(id int) (*AuditLogRow, error) {
 	rows, err := r.db.Query(`
 		SELECT id, timestamp, user_id, username, ip_address, user_agent,
 		       action_type, resource_type, resource_id, resource_name,
-		       details, success, error_message
+		       details, success, error_message, source
 		FROM audit_logs WHERE id = ?
 	`, id)
 	if err != nil {
@@ -53,6 +53,7 @@ type AuditLogFilters struct {
 	ActionType   string     // exact match
 	UserID       *int       // exact match (nil = any)
 	ResourceType string     // exact match
+	Source       string     // exact match (USER, SCIM, SYSTEM, ...)
 	Success      *bool      // nil = any
 	From         *time.Time // timestamp >= From
 	To           *time.Time // timestamp <= To
@@ -75,6 +76,7 @@ type AuditLogRow struct {
 	Details      map[string]any
 	Success      bool
 	ErrorMessage string
+	Source       string
 }
 
 // List returns a page of audit logs matching the filters plus the unfiltered-by-page total.
@@ -95,7 +97,7 @@ func (r *AuditLogRepository) List(filters AuditLogFilters, page, perPage int) ([
 
 	offset := (page - 1) * perPage
 	query := `SELECT id, timestamp, user_id, username, ip_address, user_agent,
-		action_type, resource_type, resource_id, resource_name, details, success, error_message
+		action_type, resource_type, resource_id, resource_name, details, success, error_message, source
 		FROM audit_logs ` + whereClause + ` ORDER BY timestamp DESC, id DESC LIMIT ? OFFSET ?`
 
 	dataArgs := append(args, perPage, offset) //nolint:gocritic // separate variable to keep filter args reusable above
@@ -128,7 +130,7 @@ func (r *AuditLogRepository) List(filters AuditLogFilters, page, perPage int) ([
 // The handler is responsible for clamping limit; the repo trusts the caller.
 func (r *AuditLogRepository) ListSince(afterID, limit int) ([]AuditLogRow, error) {
 	query := `SELECT id, timestamp, user_id, username, ip_address, user_agent,
-		action_type, resource_type, resource_id, resource_name, details, success, error_message
+		action_type, resource_type, resource_id, resource_name, details, success, error_message, source
 		FROM audit_logs WHERE id > ? ORDER BY id ASC LIMIT ?`
 
 	rows, err := r.db.Query(query, afterID, limit)
@@ -163,7 +165,7 @@ func scanAuditLogRow(rows *sql.Rows) (AuditLogRow, error) {
 		&e.ID, &e.Timestamp, &e.UserID, &e.Username,
 		&ipAddress, &userAgent,
 		&e.ActionType, &e.ResourceType, &e.ResourceID, &resourceName,
-		&detailsJSON, &e.Success, &errorMessage,
+		&detailsJSON, &e.Success, &errorMessage, &e.Source,
 	); err != nil {
 		return AuditLogRow{}, fmt.Errorf("scan audit log: %w", err)
 	}
@@ -195,6 +197,12 @@ func (r *AuditLogRepository) ListDistinctActionTypes() ([]string, error) {
 // ordered alphabetically. Used to populate filter dropdowns.
 func (r *AuditLogRepository) ListDistinctResourceTypes() ([]string, error) {
 	return r.queryDistinctStrings("SELECT DISTINCT resource_type FROM audit_logs ORDER BY resource_type")
+}
+
+// ListDistinctSources returns every source value in the audit log, ordered
+// alphabetically. Used to populate filter dropdowns.
+func (r *AuditLogRepository) ListDistinctSources() ([]string, error) {
+	return r.queryDistinctStrings("SELECT DISTINCT source FROM audit_logs WHERE source <> '' ORDER BY source")
 }
 
 func (r *AuditLogRepository) queryDistinctStrings(query string) ([]string, error) {
@@ -247,6 +255,10 @@ func buildAuditLogWhere(f AuditLogFilters) (whereClause string, args []any) {
 	if f.ResourceType != "" {
 		conditions = append(conditions, "resource_type = ?")
 		args = append(args, f.ResourceType)
+	}
+	if f.Source != "" {
+		conditions = append(conditions, "source = ?")
+		args = append(args, f.Source)
 	}
 	if f.Success != nil {
 		if *f.Success {

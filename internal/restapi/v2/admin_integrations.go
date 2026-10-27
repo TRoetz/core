@@ -44,6 +44,7 @@ type auditLogDTO struct {
 	Details      map[string]any `json:"details,omitempty"`
 	Success      bool           `json:"success"`
 	ErrorMessage string         `json:"error_message,omitempty"`
+	Source       string         `json:"source,omitempty"`
 }
 
 type auditLogStreamDTO struct {
@@ -72,7 +73,7 @@ func listAdminAuditLogs(deps Deps) pageOperation[auditLogDTO] {
 		if err != nil {
 			return nil, page, 0, err
 		}
-		filters := repository.AuditLogFilters{ActionType: r.URL.Query().Get("action_type"), ResourceType: r.URL.Query().Get("resource_type")}
+		filters := repository.AuditLogFilters{ActionType: r.URL.Query().Get("action_type"), ResourceType: r.URL.Query().Get("resource_type"), Source: r.URL.Query().Get("source")}
 		filters.UserID, err = adminUserFilter(r)
 		if err != nil {
 			return nil, page, 0, err
@@ -133,7 +134,7 @@ func streamAdminAuditLogs(deps Deps) readOperation[auditLogStreamDTO] {
 func auditLogDTOs(rows []repository.AuditLogRow) []auditLogDTO {
 	result := make([]auditLogDTO, len(rows))
 	for i, row := range rows {
-		result[i] = auditLogDTO{ID: row.ID, Timestamp: row.Timestamp.Format(time.RFC3339), UserID: row.UserID, Username: row.Username, IPAddress: row.IPAddress, UserAgent: row.UserAgent, ActionType: row.ActionType, ResourceType: row.ResourceType, ResourceID: row.ResourceID, ResourceName: row.ResourceName, Details: row.Details, Success: row.Success, ErrorMessage: row.ErrorMessage}
+		result[i] = auditLogDTO{ID: row.ID, Timestamp: row.Timestamp.Format(time.RFC3339), UserID: row.UserID, Username: row.Username, IPAddress: row.IPAddress, UserAgent: row.UserAgent, ActionType: row.ActionType, ResourceType: row.ResourceType, ResourceID: row.ResourceID, ResourceName: row.ResourceName, Details: row.Details, Success: row.Success, ErrorMessage: row.ErrorMessage, Source: row.Source}
 	}
 	return result
 }

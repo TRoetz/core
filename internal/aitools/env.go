@@ -101,11 +101,11 @@ func (e *Env) audit(actionType, resourceType string, resourceID int, resourceNam
 	if source == "" {
 		source = "unknown"
 	}
-	details["source"] = source
 	id := resourceID
 	err := logger.LogAudit(e.DB, logger.AuditEvent{
 		UserID:       e.UserID,
 		Username:     e.Username,
+		Source:       source,
 		ActionType:   actionType,
 		ResourceType: resourceType,
 		ResourceID:   &id,

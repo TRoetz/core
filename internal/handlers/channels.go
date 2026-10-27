@@ -1186,7 +1186,7 @@ func (h *ChannelHandler) AddChannelManager(w http.ResponseWriter, r *http.Reques
 
 	for _, managerID := range insertedManagerIDs {
 		h.auditor.LogWithDetails(r, user,
-			logger.ActionChannelAddManager, logger.ResourceChannelManager,
+			logger.ActionChannelAddManager, logger.ResourceChannel,
 			&channelID, channel.Name,
 			map[string]any{
 				"manager_type": request.ManagerType,
@@ -1269,7 +1269,7 @@ func (h *ChannelHandler) RemoveChannelManager(w http.ResponseWriter, r *http.Req
 	}
 
 	h.auditor.LogWithDetails(r, user,
-		logger.ActionChannelRemoveManager, logger.ResourceChannelManager,
+		logger.ActionChannelRemoveManager, logger.ResourceChannel,
 		&channelID, channel.Name,
 		map[string]any{
 			"manager_type": managerType,

@@ -7,6 +7,7 @@ import (
 	"sort"
 
 	"windshift/internal/database"
+	"windshift/internal/logger"
 	"windshift/internal/models"
 	"windshift/internal/repository"
 	"windshift/internal/sanitize"
@@ -218,6 +219,11 @@ func (s *ActionApplicationService) Create(userID, workspaceID int, actor AuditAc
 	}
 	if err == nil {
 		emitServiceAudit(s.db, actor, "automation.create", "automation", &created.ID, created.Name, nil)
+		if input.ActorUserID != nil {
+			emitServiceAudit(s.db, actor, logger.ActionAutomationSetActor, logger.ResourceAutomation, &created.ID, created.Name, map[string]any{
+				"new_actor_user_id": *input.ActorUserID,
+			})
+		}
 	}
 	return created, err
 }
@@ -296,6 +302,20 @@ func (s *ActionApplicationService) Update(userID, workspaceID, actionID int, act
 		}
 	}
 	emitServiceAudit(s.db, actor, "automation.update", "automation", &updated.ID, updated.Name, nil)
+	if actorChanging {
+		oldActor := 0
+		if previousActor != nil {
+			oldActor = *previousActor
+		}
+		newActor := 0
+		if input.ActorUserID.Value != nil {
+			newActor = *input.ActorUserID.Value
+		}
+		emitServiceAudit(s.db, actor, logger.ActionAutomationSetActor, logger.ResourceAutomation, &updated.ID, updated.Name, map[string]any{
+			"old_actor_user_id": oldActor,
+			"new_actor_user_id": newActor,
+		})
+	}
 	return updated, nil
 }
 

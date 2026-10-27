@@ -1665,6 +1665,10 @@
                   "description": "The resource type value.",
                   "type": "string"
                 },
+                "source": {
+                  "description": "The source value.",
+                  "type": "string"
+                },
                 "success": {
                   "description": "The success value.",
                   "type": "boolean"
@@ -1754,6 +1758,10 @@
                     },
                     "resource_type": {
                       "description": "The resource type value.",
+                      "type": "string"
+                    },
+                    "source": {
+                      "description": "The source value.",
                       "type": "string"
                     },
                     "success": {

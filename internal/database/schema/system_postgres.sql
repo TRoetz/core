@@ -354,6 +354,7 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 	details TEXT,
 	success BOOLEAN NOT NULL DEFAULT TRUE,
 	error_message TEXT,
+	source TEXT NOT NULL DEFAULT '',
 	FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
 );
 

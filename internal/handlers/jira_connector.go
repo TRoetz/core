@@ -111,7 +111,7 @@ func (h *JiraImportHandler) Connect(w http.ResponseWriter, r *http.Request) {
 			IPAddress:    utils.GetClientIP(r),
 			UserAgent:    r.UserAgent(),
 			ActionType:   logger.ActionJiraConnect,
-			ResourceType: logger.ResourceJiraImport,
+			ResourceType: logger.ResourceJiraConnection,
 			ResourceName: connectionID,
 			Details: map[string]any{
 				"instance_url":    req.InstanceURL,
@@ -199,7 +199,7 @@ func (h *JiraImportHandler) UpdateConnection(w http.ResponseWriter, r *http.Requ
 			IPAddress:    utils.GetClientIP(r),
 			UserAgent:    r.UserAgent(),
 			ActionType:   logger.ActionJiraConnectionUpdate,
-			ResourceType: logger.ResourceJiraImport,
+			ResourceType: logger.ResourceJiraConnection,
 			ResourceName: connectionID,
 			Details: map[string]any{
 				"instance_url":    stored.InstanceURL,
@@ -313,7 +313,7 @@ func (h *JiraImportHandler) DeleteConnection(w http.ResponseWriter, r *http.Requ
 			IPAddress:    utils.GetClientIP(r),
 			UserAgent:    r.UserAgent(),
 			ActionType:   logger.ActionJiraDisconnect,
-			ResourceType: logger.ResourceJiraImport,
+			ResourceType: logger.ResourceJiraConnection,
 			ResourceName: connectionID,
 			Success:      true,
 		})

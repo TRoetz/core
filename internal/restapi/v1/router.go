@@ -10,6 +10,7 @@ import (
 	"net/http"
 
 	"windshift/internal/auth"
+	"windshift/internal/logger"
 	coremiddleware "windshift/internal/middleware"
 	"windshift/internal/objecttranslation"
 	"windshift/internal/repository"
@@ -39,7 +40,7 @@ func RegisterRoutes(deps restapi.Deps) {
 		objectTranslationService = objecttranslation.NewService(db)
 	}
 
-	bearerAuth := v1middleware.NewBearerAuthWithPermissions(tokenManager, permissionService)
+	bearerAuth := v1middleware.NewBearerAuthWithPermissions(tokenManager, permissionService, logger.NewAuditor(db))
 
 	rateLimiter := v1middleware.NewRateLimiter(1000, deps.IPExtractor)
 

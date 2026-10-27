@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"windshift/internal/fileserve"
+	"windshift/internal/logger"
 	"windshift/internal/models"
 	"windshift/internal/services"
 )
@@ -24,7 +25,7 @@ func registerAttachmentRoutes(builder *routeBuilder, deps Deps) {
 	builder.RawResponse[[]byte](http.MethodGet, "/attachments/{attachment_id}/content", http.StatusOK, "application/octet-stream", AuthAuthenticated, []string{"items:read"}, serveItemAttachment(attachments, attachmentServeContent))
 	builder.RawResponse[[]byte](http.MethodGet, "/attachments/{attachment_id}/download", http.StatusOK, "application/octet-stream", AuthAuthenticated, []string{"items:read"}, serveItemAttachment(attachments, attachmentServeDownload))
 	builder.RawResponse[[]byte](http.MethodGet, "/attachments/{attachment_id}/thumbnail", http.StatusOK, "application/octet-stream", AuthAuthenticated, []string{"items:read"}, serveItemAttachment(attachments, attachmentServeThumbnail))
-	builder.Command(http.MethodDelete, "/attachments/{attachment_id}", AuthAuthenticated, []string{"items:write"}, deleteItemAttachment(attachments))
+	builder.Command(http.MethodDelete, "/attachments/{attachment_id}", AuthAuthenticated, []string{"items:write"}, deleteItemAttachment(deps))
 }
 
 func uploadPageAttachment(deps Deps) Handler {
@@ -195,7 +196,7 @@ func serveItemAttachment(attachments attachmentApplication, mode attachmentServe
 	}
 }
 
-func deleteItemAttachment(attachments attachmentApplication) commandOperation {
+func deleteItemAttachment(deps Deps) commandOperation {
 	return func(r *http.Request) error {
 		user, err := principal(r)
 		if err != nil {
@@ -205,7 +206,18 @@ func deleteItemAttachment(attachments attachmentApplication) commandOperation {
 		if err != nil {
 			return err
 		}
-		return attachmentError(attachments.DeleteItemAttachment(r.Context(), attachmentID, user.ID))
+		// Fetch before deleting so the audit row can name the attachment.
+		attachment, err := deps.Attachments.GetItemAttachment(user.ID, attachmentID)
+		if err != nil {
+			return attachmentError(err)
+		}
+		if err := deps.Attachments.DeleteItemAttachment(r.Context(), attachmentID, user.ID); err != nil {
+			return attachmentError(err)
+		}
+		deps.AdminAuditor.LogWithDetails(r, user, logger.ActionAttachmentDelete, logger.ResourceAttachment, &attachmentID, attachment.OriginalFilename, map[string]any{
+			"item_id": *attachment.ItemID,
+		})
+		return nil
 	}
 }
 

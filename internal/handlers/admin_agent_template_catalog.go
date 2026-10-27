@@ -207,7 +207,7 @@ func (h *AdminAgentTemplateCatalogHandler) CreateTemplate(w http.ResponseWriter,
 		return
 	}
 	h.auditor.LogWithDetails(r, user, "agent_template_catalog.create", "agent_template_catalog", nil,
-		"template_key", map[string]any{
+		created.TemplateKey, map[string]any{
 			"template_key": created.TemplateKey,
 			"enabled":      created.Enabled,
 		})
@@ -266,7 +266,7 @@ func (h *AdminAgentTemplateCatalogHandler) UpdateTemplate(w http.ResponseWriter,
 		return
 	}
 	h.auditor.LogWithDetails(r, user, "agent_template_catalog.update", "agent_template_catalog", nil,
-		"template_key", map[string]any{
+		current.TemplateKey, map[string]any{
 			"id":      current.ID,
 			"enabled": current.Enabled,
 		})
@@ -286,6 +286,15 @@ func (h *AdminAgentTemplateCatalogHandler) DeleteTemplate(w http.ResponseWriter,
 	if !ok {
 		return
 	}
+	entry, err := h.repo.Get(r.Context(), int64(id))
+	if errors.Is(err, repository.ErrNotFound) {
+		respondNotFound(w, r, "agent_template")
+		return
+	}
+	if err != nil {
+		respondInternalError(w, r, err)
+		return
+	}
 	if err := h.repo.Delete(r.Context(), int64(id)); err != nil {
 		if errors.Is(err, repository.ErrNotFound) {
 			respondNotFound(w, r, "agent_template")
@@ -295,7 +304,7 @@ func (h *AdminAgentTemplateCatalogHandler) DeleteTemplate(w http.ResponseWriter,
 		return
 	}
 	h.auditor.LogWithDetails(r, user, "agent_template_catalog.delete", "agent_template_catalog", nil,
-		"template_key", map[string]any{
+		entry.TemplateKey, map[string]any{
 			"id": id,
 		})
 	w.WriteHeader(http.StatusNoContent)
