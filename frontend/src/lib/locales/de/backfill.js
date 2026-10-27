@@ -177,6 +177,8 @@ export default {
     "bulkSetAssignee": "Zugewiesen an",
     "bulkSetPriority": "Priorität",
     "bulkLabels": "Labels",
+    "bulkLabelsHint": "Labels für {count} ausgewählte Vorgänge hinzufügen oder entfernen",
+    "bulkLabelsApply": "Labels anwenden",
     "bulkClear": "Auswahl aufheben",
     "bulkDone": "Fertig",
     "bulkStatusSuccess": "{count} Vorgänge verschoben",

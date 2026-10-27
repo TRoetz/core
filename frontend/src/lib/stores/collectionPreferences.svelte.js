@@ -30,7 +30,7 @@ class CollectionPreferencesStore {
    * Load the user's preferences once. Safe to call repeatedly; a call for a
    * different user resets the cache first.
    */
-  ensureLoaded(userId = null) {
+  ensureLoaded(userId = null, { timeout = 0 } = {}) {
     if (userId != null && this.#userId != null && this.#userId !== userId) {
       this.reset();
     }
@@ -40,7 +40,7 @@ class CollectionPreferencesStore {
 
     const generation = this.#generation;
     const promise = userPreferences
-      .get()
+      .get({ timeout })
       .then((prefs) => {
         if (generation !== this.#generation) return;
         this.viewState = prefs?.view_state ?? {};
@@ -123,7 +123,7 @@ class CollectionPreferencesStore {
   }
 
   /** Flush pending writes immediately (also used by tests). */
-  async flush() {
+  async flush({ keepalive = false } = {}) {
     if (this.#saveTimer) {
       clearTimeout(this.#saveTimer);
       this.#saveTimer = null;
@@ -151,8 +151,10 @@ class CollectionPreferencesStore {
       );
     }
 
-    this.#saving = userPreferences
-      .update(body)
+    const save = keepalive
+      ? userPreferences.update(body, { keepalive: true })
+      : userPreferences.update(body);
+    this.#saving = save
       .catch((error) => {
         // Re-mark for retry; the local state stays authoritative.
         for (const scope of viewScopes) this.#dirtyViewScopes.add(scope);
@@ -167,3 +169,11 @@ class CollectionPreferencesStore {
 }
 
 export const collectionPreferences = new CollectionPreferencesStore();
+
+// Debounced writes must not be lost when the user reloads or closes the tab
+// before the timer fires. A keepalive PATCH survives the unload.
+if (typeof window !== 'undefined') {
+  window.addEventListener('pagehide', () => {
+    void collectionPreferences.flush({ keepalive: true });
+  });
+}

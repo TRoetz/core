@@ -297,6 +297,27 @@ func (r *TestCaseBDDRepository) FindStepResultsForExample(exampleResultID int) (
 	return results, nil
 }
 
+// FindExampleStepResult returns one recorded step result of an example
+// execution, or ErrNotFound when the step has no result yet.
+func (r *TestCaseBDDRepository) FindExampleStepResult(exampleResultID, stepNumber int) (*models.TestExampleStepResult, error) {
+	row := r.db.QueryRow(`
+		SELECT id, example_result_id, step_number, status, COALESCE(actual_result, ''),
+		       COALESCE(notes, ''), item_id, executed_at
+		FROM test_example_step_results
+		WHERE example_result_id = ? AND step_number = ?
+	`, exampleResultID, stepNumber)
+	var step models.TestExampleStepResult
+	err := row.Scan(&step.ID, &step.ExampleResultID, &step.StepNumber,
+		&step.Status, &step.ActualResult, &step.Notes, &step.ItemID, &step.ExecutedAt)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrNotFound
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to find example step result: %w", err)
+	}
+	return &step, nil
+}
+
 // UpsertExampleStepResult inserts or updates one step result of an example
 // execution and returns the example result it belongs to.
 func (r *TestCaseBDDRepository) UpsertExampleStepResult(tx database.Tx, input *models.TestExampleStepResult) (exampleResultID int, err error) {

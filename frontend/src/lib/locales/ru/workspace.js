@@ -101,6 +101,8 @@ export default {
     bulkSetAssignee: 'Исполнитель',
     bulkSetPriority: 'Приоритет',
     bulkLabels: 'Метки',
+    bulkLabelsHint: 'Добавить или убрать метки у {count} выбранных элементов',
+    bulkLabelsApply: 'Применить метки',
     bulkClear: 'Сбросить',
     bulkDone: 'Готово',
     bulkStatusSuccess: 'Перемещено элементов: {count}',

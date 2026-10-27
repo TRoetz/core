@@ -722,6 +722,8 @@ export default {
     bulkSetAssignee: 'Assignee',
     bulkSetPriority: 'Priority',
     bulkLabels: 'Labels',
+    bulkLabelsHint: 'Add or remove labels on {count} selected items',
+    bulkLabelsApply: 'Apply labels',
     bulkClear: 'Clear',
     bulkDone: 'Done',
     bulkStatusSuccess: 'Moved {count} items',

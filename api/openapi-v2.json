@@ -44109,6 +44109,10 @@
                       "description": "The status value.",
                       "type": "string"
                     },
+                    "test_case_format": {
+                      "description": "The test case format value.",
+                      "type": "string"
+                    },
                     "test_case_id": {
                       "description": "The test case id value.",
                       "type": "integer"
@@ -44130,6 +44134,7 @@
                     "notes",
                     "run_id",
                     "status",
+                    "test_case_format",
                     "test_case_id",
                     "test_case_title",
                     "updated_at"
@@ -44753,6 +44758,10 @@
                   "description": "The status value.",
                   "type": "string"
                 },
+                "test_case_format": {
+                  "description": "The test case format value.",
+                  "type": "string"
+                },
                 "test_case_id": {
                   "description": "The test case id value.",
                   "type": "integer"
@@ -44774,6 +44783,7 @@
                 "notes",
                 "run_id",
                 "status",
+                "test_case_format",
                 "test_case_id",
                 "test_case_title",
                 "updated_at"
@@ -62423,22 +62433,20 @@
         "properties": {
           "actual_result": {
             "description": "The actual result value.",
+            "nullable": true,
             "type": "string"
           },
           "notes": {
             "description": "The notes value.",
+            "nullable": true,
             "type": "string"
           },
           "status": {
             "description": "The status value.",
+            "nullable": true,
             "type": "string"
           }
         },
-        "required": [
-          "actual_result",
-          "notes",
-          "status"
-        ],
         "type": "object"
       },
       "PatchWorkspacesWorkspaceIdTestRunsRunIdTestCasesTestCaseIdExamplesExampleIndexResult": {
@@ -62578,6 +62586,7 @@
         "properties": {
           "actual_result": {
             "description": "The actual result value.",
+            "nullable": true,
             "type": "string"
           },
           "item_id": {
@@ -62587,18 +62596,15 @@
           },
           "notes": {
             "description": "The notes value.",
+            "nullable": true,
             "type": "string"
           },
           "status": {
             "description": "The status value.",
+            "nullable": true,
             "type": "string"
           }
         },
-        "required": [
-          "actual_result",
-          "notes",
-          "status"
-        ],
         "type": "object"
       },
       "PatchWorkspacesWorkspaceIdTestRunsRunIdTestCasesTestCaseIdExamplesExampleIndexStepsStepNumberResult": {

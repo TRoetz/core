@@ -161,6 +161,8 @@ export default {
     "bulkSetAssignee": "负责人",
     "bulkSetPriority": "优先级",
     "bulkLabels": "标签",
+    "bulkLabelsHint": "为 {count} 个所选事项添加或移除标签",
+    "bulkLabelsApply": "应用标签",
     "bulkClear": "清除选择",
     "bulkDone": "完成",
     "bulkStatusSuccess": "已移动 {count} 个事项",

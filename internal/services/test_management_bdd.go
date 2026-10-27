@@ -121,13 +121,22 @@ func featureFilename(title string, id int) string {
 }
 
 // ValidateFeature parses authored Gherkin and returns structured errors plus
-// the parsed document for preview purposes. It persists nothing.
+// the parsed document for preview purposes. It applies the same case rules as
+// saving a BDD test case (exactly one named scenario) so a green validation
+// cannot still fail on save. It persists nothing.
 func (s *TestManagementApplicationService) ValidateFeature(userID, workspaceID int, content string) (*GherkinDocumentResponse, error) {
 	if err := s.require(userID, workspaceID, models.PermissionTestManage); err != nil {
 		return nil, err
 	}
 	doc, errs := gherkin.Parse(content)
-	return newGherkinDocumentResponse(doc, errs), nil
+	response := newGherkinDocumentResponse(doc, errs)
+	if errs.Empty() {
+		for _, ruleErr := range caseRuleErrors(doc) {
+			response.Valid = false
+			response.Errors = append(response.Errors, ruleErr)
+		}
+	}
+	return response, nil
 }
 
 // ListRunExamples returns the per-example execution results of a run.

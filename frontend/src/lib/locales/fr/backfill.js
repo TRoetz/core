@@ -189,6 +189,8 @@ export default {
     "bulkSetAssignee": "Responsable",
     "bulkSetPriority": "Priorité",
     "bulkLabels": "Étiquettes",
+    "bulkLabelsHint": "Ajouter ou retirer des étiquettes sur {count} éléments sélectionnés",
+    "bulkLabelsApply": "Appliquer les étiquettes",
     "bulkClear": "Effacer",
     "bulkDone": "Terminé",
     "bulkStatusSuccess": "{count} éléments déplacés",

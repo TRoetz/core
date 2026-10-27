@@ -73,6 +73,10 @@
   import CollectionViewSwitcher from './CollectionViewSwitcher.svelte';
   import MilestoneSwimlaneConfigDialog from './MilestoneSwimlaneConfigDialog.svelte';
   import DropdownMenu from '../../layout/DropdownMenu.svelte';
+  import Modal from '../../dialogs/Modal.svelte';
+  import ModalHeader from '../../dialogs/ModalHeader.svelte';
+  import DialogFooter from '../../dialogs/DialogFooter.svelte';
+  import WorkspaceLabelCombobox from '../../pickers/WorkspaceLabelCombobox.svelte';
   import { backlogStore } from '../../stores/backlogStore.svelte.js';
   import { workspaceDataStore } from '../../stores/workspaceDataStore.svelte.js';
   import { collectionPreferences } from '../../stores/collectionPreferences.svelte.js';
@@ -1614,21 +1618,61 @@
     }
   }
 
+  let bulkLabelsModalOpen = $state(false);
+  // Names drive the picker; ids are the resolved target set it reports back.
+  let bulkLabelNames = $state([]);
+  let bulkLabelIds = $state([]);
+
+  let bulkLabelsWorkspaceId = $derived(
+    workspaceId ?? selectedItems[0]?.workspace_id ?? null
+  );
+
+  // Labels present on every selected item are the modal's starting point; the
+  // apply step only propagates the user's additions and removals so labels
+  // that belong to just some items are left alone.
+  function commonLabelIds() {
+    const targets = selectedItems;
+    if (targets.length === 0) return [];
+    return itemLabelIds(targets[0]).filter((id) =>
+      targets.every((item) => itemLabelIds(item).includes(id))
+    );
+  }
+
+  function labelNameById(labelId) {
+    for (const item of selectedItems) {
+      const label = (item.labels || []).find((candidate) => candidate.id === labelId);
+      if (label) return label.name;
+    }
+    return wdsLabels.find((label) => label.id === labelId)?.name ?? null;
+  }
+
+  function openBulkLabelsModal() {
+    if (bulkBusy || !selectedItemsEditable) return;
+    const ids = commonLabelIds();
+    bulkLabelIds = ids;
+    bulkLabelNames = ids.map(labelNameById).filter(Boolean);
+    bulkLabelsModalOpen = true;
+  }
+
   // Labels are a join table with no bulk endpoint, so v1 applies them one item
   // at a time and reports a combined result.
-  async function bulkToggleLabel(labelId) {
+  async function applyBulkLabels() {
     if (bulkBusy) return;
     const targets = selectedItems;
     if (targets.length === 0) return;
-    const removing = targets.every((item) => itemLabelIds(item).includes(labelId));
+    const commonIds = commonLabelIds();
+    const added = bulkLabelIds.filter((id) => !commonIds.includes(id));
+    const removed = commonIds.filter((id) => !bulkLabelIds.includes(id));
+    bulkLabelsModalOpen = false;
+    if (added.length === 0 && removed.length === 0) return;
     bulkBusy = true;
     let updated = 0;
     let failed = 0;
     for (const item of targets) {
       const current = itemLabelIds(item);
-      const next = removing
-        ? current.filter((id) => id !== labelId)
-        : [...new Set([...current, labelId])];
+      const next = [
+        ...new Set([...current.filter((id) => !removed.includes(id)), ...added]),
+      ];
       try {
         await labelsApi.setForItem(item.id, next);
         updated += 1;
@@ -1644,6 +1688,9 @@
     }
     bulkBusy = false;
     clearSelection();
+    // Keep the shared label directory in sync so newly created labels appear
+    // on cards and in other pickers.
+    void workspaceDataStore.invalidate('labels');
     reloadCollection();
   }
 
@@ -1704,18 +1751,6 @@
       onClick: () => bulkUpdateFields({ priority_id: priority.id }),
     })),
   ]);
-
-  let bulkLabelMenuItems = $derived(
-    wdsLabels.map((label) => ({
-      id: `bulk-label-${label.id}`,
-      testid: `bulk-label-${label.id}`,
-      type: 'checkbox',
-      checked: selectedItems.length > 0 && selectedItems.every((item) => itemLabelIds(item).includes(label.id)),
-      title: label.name,
-      closeOnSelect: false,
-      onChange: () => bulkToggleLabel(label.id),
-    }))
-  );
 
   // Card keydown lives on the scrolling canvas so it never fires for the
   // chrome above it; bound programmatically to keep the layout div role-free.
@@ -2676,16 +2711,15 @@
           triggerStyle="color: var(--ds-text); background-color: var(--ds-background-neutral);"
           triggerTestid="board-bulk-priority"
         />
-        <DropdownMenu
-          items={bulkLabelMenuItems}
-          triggerText={t('collections.bulkLabels')}
-          placement="top-start"
-          maxWidth="max-w-xs"
-          disabled={bulkBusy || !selectedItemsEditable || wdsLabels.length === 0}
-          triggerClass="px-3 py-1.5 rounded text-sm font-medium"
-          triggerStyle="color: var(--ds-text); background-color: var(--ds-background-neutral);"
-          triggerTestid="board-bulk-labels"
-        />
+        <Button
+          variant="secondary"
+          size="sm"
+          onclick={openBulkLabelsModal}
+          disabled={bulkBusy || !selectedItemsEditable}
+          dataTestid="board-bulk-labels"
+        >
+          {t('collections.bulkLabels')}
+        </Button>
         <Button
           variant="ghost"
           size="sm"
@@ -2705,6 +2739,38 @@
           {t('collections.bulkDone')}
         </Button>
       </div>
+
+      <Modal
+        bind:isOpen={bulkLabelsModalOpen}
+        maxWidth="max-w-lg"
+        closeOnBackdropClick={false}
+        onclose={() => (bulkLabelsModalOpen = false)}
+        dataTestid="board-bulk-labels-modal"
+      >
+        <ModalHeader
+          title={t('collections.bulkLabels')}
+          subtitle={t('collections.bulkLabelsHint', { count: selectedCount })}
+          onclose={() => (bulkLabelsModalOpen = false)}
+        />
+        <div class="p-6">
+          <WorkspaceLabelCombobox
+            id="board-bulk-label-picker-input"
+            workspaceId={bulkLabelsWorkspaceId}
+            testidPrefix="board-bulk-label-picker"
+            bind:value={bulkLabelNames}
+            placeholder={t('items.selectOrCreateLabels')}
+            onSelect={(result) => (bulkLabelIds = (result?.labels || []).map((label) => label.id))}
+          />
+        </div>
+        <DialogFooter
+          onCancel={() => (bulkLabelsModalOpen = false)}
+          onConfirm={applyBulkLabels}
+          confirmLabel={t('collections.bulkLabelsApply')}
+          loading={bulkBusy}
+          confirmTestid="board-bulk-labels-apply"
+          cancelTestid="board-bulk-labels-cancel"
+        />
+      </Modal>
     {/if}
 {:else}
   <div class="p-6">
