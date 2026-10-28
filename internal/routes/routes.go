@@ -26,4 +26,5 @@ func RegisterAll(deps *Deps) {
 	RegisterPageRoutes(deps)
 	RegisterPushRoutes(deps)
 	RegisterSLARoutes(deps)
+	RegisterP3MRoutes(deps)
 }

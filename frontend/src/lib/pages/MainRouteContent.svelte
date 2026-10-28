@@ -117,6 +117,14 @@
   <div class="h-full" style="background-color: var(--ds-surface); height: calc(100vh - 56px);">
     {@render lazyLoadedComponent(view, routeProps)}
   </div>
+{:else if view === 'p3m'}
+  <!-- P3M module access is granted per group through the global p3m.view
+       permission; direct URL visits by non-members get a clean no-access state. -->
+  <PermissionGuard permissionKey="p3m.view">
+    <div class="h-full min-h-0 overflow-y-auto" style="background-color: var(--ds-surface);">
+      {@render lazyLoadedComponent(view, routeProps)}
+    </div>
+  </PermissionGuard>
 {:else if routeEntry.config}
   {#if wrapper === 'surface-full'}
     <div class="h-full min-h-0 overflow-y-auto" style="background-color: var(--ds-surface);">

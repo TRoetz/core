@@ -1656,6 +1656,7 @@ func (s *Server) initialize() error {
 
 	// Build route dependencies
 	slaHandler := handlers.NewSLAHandler(s.db, s.slaEngine, permService)
+	p3mHandler := handlers.NewP3MHandler(s.db, permService)
 	routeDeps := &routes.Deps{
 		SLA:       slaHandler,
 		API:       api,
@@ -1847,6 +1848,7 @@ func (s *Server) initialize() error {
 			KnowledgeSearch: knowledgeSearchHandler,
 		},
 		Push: pushHandler,
+		P3M:  p3mHandler,
 	}
 	routes.RegisterAll(routeDeps)
 
