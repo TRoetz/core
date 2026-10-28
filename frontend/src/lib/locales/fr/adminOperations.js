@@ -247,7 +247,7 @@ export default {
     removeRoleFailed: 'Échec du retrait du rôle : {error}',
     summaryTitle: 'Résumé des accès',
     summaryDescription:
-      'Affiche comment les rôles sont attribués dans cet espace de travail. Un rôle sans membres ni groupes attribués est accessible à tous. Hiérarchie des autorisations : {viewer} → {editor} → {tester}.',
+      'Affiche comment les rôles sont attribués dans cet espace de travail. Un rôle sans membres ni groupes attribués est accessible à tous. Attribuer le rôle {viewer} à quelqu\u2019un restreint l\u2019espace de travail afin que seuls les utilisateurs et groupes attribués puissent le voir. Hiérarchie des autorisations : {viewer} → {editor} → {tester}.',
     role: 'Rôle',
     effectiveAccess: 'Accès',
     assignments: 'Attributions',
