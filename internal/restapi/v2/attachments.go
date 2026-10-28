@@ -18,13 +18,14 @@ type attachmentUploadForm struct {
 
 func registerAttachmentRoutes(builder *routeBuilder, deps Deps) {
 	attachments := deps.Attachments
+	pageAttachments := deps.PageAttachments
 	builder.Page("/items/{item_id}/attachments", AuthAuthenticated, []string{"items:read"}, listItemAttachments(attachments))
 	builder.RawDocument[attachmentUploadForm, models.Attachment](http.MethodPost, "/items/{item_id}/attachments", http.StatusCreated, "multipart/form-data", AuthAuthenticated, []string{"items:write"}, uploadItemAttachment(attachments))
 	builder.RawDocument[attachmentUploadForm, models.Attachment](http.MethodPost, "/workspaces/{workspace_id}/pages/{page_id}/attachments", http.StatusCreated, "multipart/form-data", AuthAuthenticated, []string{"pages:write"}, uploadPageAttachment(deps))
 	builder.Read("/attachments/{attachment_id}", AuthAuthenticated, []string{"items:read"}, getItemAttachment(attachments))
-	builder.RawResponse[[]byte](http.MethodGet, "/attachments/{attachment_id}/content", http.StatusOK, "application/octet-stream", AuthAuthenticated, []string{"items:read"}, serveItemAttachment(attachments, attachmentServeContent))
-	builder.RawResponse[[]byte](http.MethodGet, "/attachments/{attachment_id}/download", http.StatusOK, "application/octet-stream", AuthAuthenticated, []string{"items:read"}, serveItemAttachment(attachments, attachmentServeDownload))
-	builder.RawResponse[[]byte](http.MethodGet, "/attachments/{attachment_id}/thumbnail", http.StatusOK, "application/octet-stream", AuthAuthenticated, []string{"items:read"}, serveItemAttachment(attachments, attachmentServeThumbnail))
+	builder.RawResponse[[]byte](http.MethodGet, "/attachments/{attachment_id}/content", http.StatusOK, "application/octet-stream", AuthAuthenticated, []string{"items:read"}, serveAttachment(attachments, pageAttachments, attachmentServeContent))
+	builder.RawResponse[[]byte](http.MethodGet, "/attachments/{attachment_id}/download", http.StatusOK, "application/octet-stream", AuthAuthenticated, []string{"items:read"}, serveAttachment(attachments, pageAttachments, attachmentServeDownload))
+	builder.RawResponse[[]byte](http.MethodGet, "/attachments/{attachment_id}/thumbnail", http.StatusOK, "application/octet-stream", AuthAuthenticated, []string{"items:read"}, serveAttachment(attachments, pageAttachments, attachmentServeThumbnail))
 	builder.Command(http.MethodDelete, "/attachments/{attachment_id}", AuthAuthenticated, []string{"items:write"}, deleteItemAttachment(deps))
 }
 
@@ -156,7 +157,10 @@ const (
 	attachmentServeThumbnail
 )
 
-func serveItemAttachment(attachments attachmentApplication, mode attachmentServeMode) Handler {
+// serveAttachment streams an attachment binary. Item-scoped attachments are
+// resolved first; page-scoped rows fall back to the page attachment service so
+// the shared content/download/thumbnail URLs serve embedded page images too.
+func serveAttachment(attachments attachmentApplication, pageAttachments pageAttachmentApplication, mode attachmentServeMode) Handler {
 	return func(w http.ResponseWriter, r *http.Request) error {
 		user, err := principal(r)
 		if err != nil {
@@ -166,7 +170,11 @@ func serveItemAttachment(attachments attachmentApplication, mode attachmentServe
 		if err != nil {
 			return err
 		}
-		binary, err := attachments.OpenItemAttachment(r.Context(), user.ID, attachmentID, mode == attachmentServeThumbnail)
+		thumbnail := mode == attachmentServeThumbnail
+		binary, err := attachments.OpenItemAttachment(r.Context(), user.ID, attachmentID, thumbnail)
+		if errors.Is(err, services.ErrItemAttachmentNotFound) && pageAttachments != nil {
+			binary, err = pageAttachments.OpenPageAttachment(r.Context(), user.ID, attachmentID, thumbnail)
+		}
 		if err != nil {
 			return attachmentError(err)
 		}
@@ -226,9 +234,9 @@ func attachmentError(err error) error {
 		return nil
 	}
 	switch {
-	case errors.Is(err, services.ErrItemAttachmentNotFound):
+	case errors.Is(err, services.ErrItemAttachmentNotFound), errors.Is(err, services.ErrPageAttachmentNotFound):
 		return newError(http.StatusNotFound, "not_found", "Attachment was not found")
-	case errors.Is(err, services.ErrItemAttachmentDisabled):
+	case errors.Is(err, services.ErrItemAttachmentDisabled), errors.Is(err, services.ErrPageAttachmentUploadDisabled):
 		return newError(http.StatusServiceUnavailable, "service_unavailable", "Attachments are not enabled")
 	case errors.Is(err, services.ErrItemAttachmentInvalid):
 		return newError(http.StatusBadRequest, "invalid_request", err.Error())

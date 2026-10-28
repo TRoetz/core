@@ -27,6 +27,9 @@ var (
 	ErrPageAttachmentUploadDisabled = errors.New("page attachment upload disabled")
 	ErrPageAttachmentUploadInvalid  = errors.New("page attachment upload invalid")
 	ErrPageAttachmentUploadNotFound = errors.New("page attachment upload target not found")
+	// ErrPageAttachmentNotFound collapses a missing, non-page, or
+	// unauthorized page attachment so existence is never leaked.
+	ErrPageAttachmentNotFound = errors.New("page attachment not found")
 )
 
 // PageAttachmentUploadService owns page-attachment upload validation, storage,
@@ -159,8 +162,46 @@ func (s *PageAttachmentUploadService) authorizePageEdit(userID, pageID int) erro
 	if err != nil {
 		return fmt.Errorf("resolve page workspace: %w", err)
 	}
+	return s.checkPageAccess(userID, wsID, pageID, PageOpEdit)
+}
+
+// OpenPageAttachment opens a page-scoped attachment for an authorized viewer.
+// View access follows the owning page's effective ACL, matching the cookie-auth
+// attachment handler. Missing rows, non-page rows, and denied callers all
+// collapse to ErrPageAttachmentNotFound.
+func (s *PageAttachmentUploadService) OpenPageAttachment(ctx context.Context, userID, attachmentID int, thumbnail bool) (*ItemAttachmentBinary, error) {
+	if !s.storage.Enabled() {
+		return nil, ErrPageAttachmentUploadDisabled
+	}
+	rec, err := repository.NewAttachmentRepository(s.db).GetPageAttachmentRecordByID(attachmentID)
+	if err != nil {
+		return nil, ErrPageAttachmentNotFound
+	}
+	if err := s.checkPageAccess(userID, rec.WorkspaceID, rec.PageID, PageOpView); err != nil {
+		return nil, ErrPageAttachmentNotFound
+	}
+	if thumbnail {
+		if rec.ThumbnailPath == "" {
+			return nil, ErrPageAttachmentNotFound
+		}
+		file, err := s.storage.Open(ctx, rec.ThumbnailPath)
+		if err != nil {
+			return nil, ErrPageAttachmentNotFound
+		}
+		return &ItemAttachmentBinary{File: file, OriginalFilename: "thumbnail.jpg", MimeType: "image/jpeg", FileSize: file.Size()}, nil
+	}
+	file, err := s.storage.Open(ctx, rec.FilePath)
+	if err != nil {
+		return nil, ErrPageAttachmentNotFound
+	}
+	return &ItemAttachmentBinary{File: file, OriginalFilename: rec.OriginalFilename, MimeType: rec.MimeType, FileSize: rec.FileSize}, nil
+}
+
+// checkPageAccess evaluates a page operation with the page ACL service when
+// wired, falling back to the workspace page permission in degraded mode.
+func (s *PageAttachmentUploadService) checkPageAccess(userID, wsID, pageID int, op string) error {
 	if s.pagePermissionService != nil {
-		can, err := s.pagePermissionService.Can(userID, wsID, pageID, PageOpEdit)
+		can, err := s.pagePermissionService.Can(userID, wsID, pageID, op)
 		if err != nil {
 			return fmt.Errorf("check page permission: %w", err)
 		}
@@ -172,7 +213,11 @@ func (s *PageAttachmentUploadService) authorizePageEdit(userID, pageID int) erro
 	if s.permissionService == nil {
 		return ErrPageAttachmentUploadNotFound
 	}
-	allowed, err := s.permissionService.HasWorkspacePermission(userID, wsID, models.PermissionPageEdit)
+	key := models.PermissionPageEdit
+	if op == PageOpView {
+		key = models.PermissionPageView
+	}
+	allowed, err := s.permissionService.HasWorkspacePermission(userID, wsID, key)
 	if err != nil {
 		return fmt.Errorf("check workspace permission: %w", err)
 	}
