@@ -46,6 +46,12 @@
   // Additional fields toggle
   let showAdditionalFields = $state(false);
 
+  // A milestone created inline must invalidate the form store's cached
+  // milestone options so reopening the picker does not show a stale list.
+  function handleMilestoneCreated() {
+    void store.loadMilestones(store.formData.workspace_id, true);
+  }
+
   // Due date popover
   const {
     elements: { trigger: dueDateTrigger, content: dueDateContent },
@@ -538,6 +544,7 @@
         milestones={store.milestones}
         loading={store.milestonesLoading}
         placeholder={t('createModal.noMilestone')}
+        onCreated={handleMilestoneCreated}
       >
         {#snippet children()}
           {@const selectedIds = Array.isArray(store.formData.milestone_ids) ? store.formData.milestone_ids : []}
@@ -700,6 +707,7 @@
               milestones={store.milestones}
               loading={store.milestonesLoading}
               placeholder={t('createModal.noMilestone')}
+              onCreated={handleMilestoneCreated}
             />
           </div>
         {:else if field.field_identifier === 'assignee'}
