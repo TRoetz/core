@@ -247,7 +247,7 @@ export default {
     removeRoleFailed: 'Failed to remove role: {error}',
     summaryTitle: 'Access summary',
     summaryDescription:
-      'Shows how roles are assigned in this workspace. A role without assigned members or groups is available to everyone. Permission hierarchy: {viewer} → {editor} → {tester}.',
+      'Shows how roles are assigned in this workspace. A role without assigned members or groups is available to everyone. Assigning anyone the {viewer} role restricts the workspace so only assigned users and groups can see it. Permission hierarchy: {viewer} → {editor} → {tester}.',
     role: 'Role',
     effectiveAccess: 'Access',
     assignments: 'Assignments',
