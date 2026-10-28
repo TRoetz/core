@@ -210,7 +210,8 @@ INSERT INTO permissions (permission_key, permission_name, description, scope, is
 	('action.credential.manage', 'Manage Action Credentials', 'Can create, rotate, and delete workspace-scoped action credentials (API tokens for HTTP capabilities)', 'workspace', false),
 	('action.set_actor', 'Set Action Actor', 'Can configure an action to run as a specific user (impersonation); grants cross-workspace reach', 'global', false),
 	('teams.manage', 'Manage Teams', 'Can create, edit, and delete teams', 'global', false),
-	('public_board.manage', 'Manage Public Boards', 'Can make collections public and configure public board sharing', 'global', false)
+	('public_board.manage', 'Manage Public Boards', 'Can make collections public and configure public board sharing', 'global', false),
+	('p3m.view', 'View P3M Module', 'Can view the Portfolio, Programme, and Project Management (P3M) module', 'global', false)
 ON CONFLICT (permission_key) DO NOTHING;
 
 -- Default workspace roles

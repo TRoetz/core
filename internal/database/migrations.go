@@ -3004,6 +3004,18 @@ var Catalog = []Migration{
 		SQLite:        "ALTER TABLE audit_logs ADD COLUMN source TEXT NOT NULL DEFAULT ''",
 		Postgres:      "ALTER TABLE audit_logs ADD COLUMN source TEXT NOT NULL DEFAULT ''",
 	},
+	{
+		Version:       "20261028_p3m_module",
+		Name:          "Add P3M portfolio, programme, and project management module tables",
+		CheckSQLite:   sqliteTableCheck("p3m_portfolios"),
+		CheckPostgres: pgTableCheck("p3m_portfolios"),
+		// Reuses the embedded fresh-install DDL (idempotent CREATE ... IF NOT
+		// EXISTS) plus the p3m.view permission seed for pre-existing databases.
+		SQLite: p3mSchema + `
+			INSERT OR IGNORE INTO permissions (permission_key, permission_name, description, scope) VALUES ('p3m.view', 'View P3M Module', 'Can view the Portfolio, Programme, and Project Management (P3M) module', 'global');`,
+		Postgres: p3mSchemaPostgres + `
+			INSERT INTO permissions (permission_key, permission_name, description, scope, is_system) VALUES ('p3m.view', 'View P3M Module', 'Can view the Portfolio, Programme, and Project Management (P3M) module', 'global', false) ON CONFLICT (permission_key) DO NOTHING;`,
+	},
 }
 
 // applyAssetReportsWorkspacePinned backfills form-mode asset reports that have

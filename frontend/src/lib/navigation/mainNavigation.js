@@ -8,6 +8,7 @@ import IconMessage2Plus from '@tabler/icons-svelte-runes/icons/message-2-plus';
 import IconPackage from '@tabler/icons-svelte-runes/icons/package';
 import IconPhoneCheck from '@tabler/icons-svelte-runes/icons/phone-check';
 import IconSettings from '@tabler/icons-svelte-runes/icons/settings';
+import IconTarget from '@tabler/icons-svelte-runes/icons/target';
 import IconUsers from '@tabler/icons-svelte-runes/icons/users';
 
 /**
@@ -49,6 +50,14 @@ export const mainNavItems = [
     labelKey: 'nav.bigGantt',
     href: '/gantt',
     activeViews: ['big-gantt'],
+  },
+  {
+    id: 'p3m',
+    icon: IconTarget,
+    labelKey: 'nav.p3m',
+    href: '/p3m',
+    activeViews: ['p3m'],
+    permission: 'canAccessP3M',
   },
   {
     id: 'iterations',

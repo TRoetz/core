@@ -9,6 +9,7 @@ export default {
     timeAndProjects: 'Время и проекты',
     milestones: 'Этапы',
     bigGantt: 'Big Gantt',
+    p3m: 'P3M',
     iterations: 'Итерации',
     assets: 'Ресурсы',
     channels: 'Каналы',

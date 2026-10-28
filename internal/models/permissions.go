@@ -62,6 +62,9 @@ const (
 	PermissionCustomersManage = "customers.manage"
 	PermissionActionSetActor  = "action.set_actor" // Configure an action's actor_user_id to impersonate any user at execution time
 
+	// P3M module access (granted per group via global permissions).
+	PermissionP3MView = "p3m.view" // View the Portfolio, Programme, and Project Management module
+
 	// Workspace permissions
 	PermissionWorkspaceAdmin = "workspace.admin" // Manage workspace (administer workspace)
 

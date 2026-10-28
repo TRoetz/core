@@ -90,6 +90,17 @@ function createPermissionStore() {
     }
   );
 
+  // P3M module access is granted per group through the global p3m.view role
+  // permission. System admins always have it.
+  const canAccessP3M = derived(
+    [authStore, userPermissionKeys],
+    ([$authStore, $userPermissionKeys]) => {
+      if (!$authStore.currentUser) return false;
+      if ($authStore.currentUser.is_system_admin) return true;
+      return $userPermissionKeys.has('p3m.view');
+    }
+  );
+
   // Create a combined derived store for easy subscription
   const combined = derived(
     [
@@ -107,6 +118,7 @@ function createPermissionStore() {
       canManageAssets,
       canManageChannels,
       managesAssetSets,
+      canAccessP3M,
     ],
     ([
       $permissions,
@@ -123,6 +135,7 @@ function createPermissionStore() {
       $canManageAssets,
       $canManageChannels,
       $managesAssetSets,
+      $canAccessP3M,
     ]) => ({
       permissions: $permissions,
       userPermissions: $userPermissions,
@@ -138,6 +151,7 @@ function createPermissionStore() {
       canManageAssets: $canManageAssets,
       canManageChannels: $canManageChannels,
       managesAssetSets: $managesAssetSets,
+      canAccessP3M: $canAccessP3M,
     })
   );
 
@@ -197,6 +211,12 @@ function createPermissionStore() {
     get managesAssetSets() {
       let value;
       managesAssetSets.subscribe((v) => (value = v))();
+      return value;
+    },
+
+    get canAccessP3M() {
+      let value;
+      canAccessP3M.subscribe((v) => (value = v))();
       return value;
     },
 
