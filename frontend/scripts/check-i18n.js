@@ -33,6 +33,9 @@ const PLURAL_SUFFIX_PATTERN = /_(zero|one|two|few|many|other)$/;
 // These values intentionally retain product names, code syntax, URLs, or sample identifiers.
 const INTENTIONAL_CARRYOVERS = new Set([
   'about.libCharmbracelet',
+  // Placeholder-only format strings; there is no translatable text.
+  'bigGantt.barTooltip',
+  'bigGantt.milestoneTooltip',
   'channel.microsoftOrGoogle',
   'collections.queryPlaceholder',
   'iterations.iterationNamePlaceholder',

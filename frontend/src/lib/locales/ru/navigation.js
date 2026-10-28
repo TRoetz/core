@@ -8,6 +8,7 @@ export default {
     collections: 'Коллекции',
     timeAndProjects: 'Время и проекты',
     milestones: 'Этапы',
+    bigGantt: 'Big Gantt',
     iterations: 'Итерации',
     assets: 'Ресурсы',
     channels: 'Каналы',

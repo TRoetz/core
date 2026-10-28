@@ -8,6 +8,7 @@ export default {
     collections: 'Sammlungen',
     timeAndProjects: 'Zeit & Projekte',
     milestones: 'Meilensteine',
+    bigGantt: 'Big Gantt',
     iterations: 'Iterationen',
     assets: 'Assets',
     channels: 'Kanäle',

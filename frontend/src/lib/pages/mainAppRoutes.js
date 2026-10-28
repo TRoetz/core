@@ -33,6 +33,7 @@ export const MAIN_APP_COMPONENT_LOADERS = {
   'test-run-detail': () => import('../features/testing/TestRunDetail.svelte'),
   'test-template-detail': () => import('../features/testing/TestTemplateDetail.svelte'),
   milestones: () => import('../features/milestones/Milestones.svelte'),
+  'big-gantt': () => import('../features/gantt/BigGantt.svelte'),
   'milestone-detail': () => import('../features/milestones/MilestoneDetail.svelte'),
   iterations: () => import('../features/iterations/Iterations.svelte'),
   'iteration-detail': () => import('../features/iterations/IterationDetail.svelte'),
@@ -222,6 +223,9 @@ export const MAIN_APP_ROUTE_CONFIG = {
     wrapper: 'none',
   }),
   milestones: route('Loading Milestones...', 'Failed to load Milestones', {
+    wrapper: 'surface-full',
+  }),
+  'big-gantt': route('Loading Big Gantt...', 'Failed to load Big Gantt', {
     wrapper: 'surface-full',
   }),
   'milestone-detail': route('Loading Milestone...', 'Failed to load Milestone', {
