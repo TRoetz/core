@@ -4,6 +4,7 @@ export default {
     collections: '集合',
     timeAndProjects: '时间和项目',
     milestones: '里程碑',
+    bigGantt: 'Big Gantt',
     iterations: '迭代',
     assets: '资产',
     channels: '渠道',

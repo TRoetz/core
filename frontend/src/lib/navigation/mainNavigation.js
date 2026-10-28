@@ -1,3 +1,4 @@
+import GanttChartIcon from '@lucide/svelte/icons/gantt-chart';
 import IconBook from '@tabler/icons-svelte-runes/icons/book';
 import IconCalendar from '@tabler/icons-svelte-runes/icons/calendar';
 import IconClock from '@tabler/icons-svelte-runes/icons/clock';
@@ -41,6 +42,13 @@ export const mainNavItems = [
     labelKey: 'nav.milestones',
     href: '/milestones',
     activeViews: ['milestones', 'milestone-detail'],
+  },
+  {
+    id: 'gantt',
+    icon: GanttChartIcon,
+    labelKey: 'nav.bigGantt',
+    href: '/gantt',
+    activeViews: ['big-gantt'],
   },
   {
     id: 'iterations',

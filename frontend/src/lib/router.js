@@ -128,6 +128,7 @@ const routes = {
   '/workspaces/:id/tests/runs/:runId/print': 'test-run-summary-print',
   '/workspaces/:id/tests/runs/:runId/execute': 'test-execution',
   '/workspaces/:id/tests/reports': 'test-reports',
+  '/gantt': 'big-gantt',
   '/milestones': 'milestones',
   '/milestones/category/:categoryId': 'milestones',
   '/milestones/:id': 'milestone-detail',
