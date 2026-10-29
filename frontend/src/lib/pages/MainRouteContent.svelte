@@ -160,12 +160,20 @@
       {/if}
     </div>
   {:else if wrapper === 'surface-padded'}
-    <div class="p-6" style="background-color: var(--ds-surface);">
-      {@render lazyLoadedComponent(view, routeProps)}
-    </div>
-    {@render routeFooter()}
+    {#if footerLayout}
+      <div class="flex min-h-full flex-col">
+        <div class="p-6" style="background-color: var(--ds-surface);">
+          {@render lazyLoadedComponent(view, routeProps)}
+        </div>
+        {@render routeFooter()}
+      </div>
+    {:else}
+      <div class="p-6" style="background-color: var(--ds-surface);">
+        {@render lazyLoadedComponent(view, routeProps)}
+      </div>
+    {/if}
   {:else if wrapper === 'surface-admin'}
-    <div class="flex-1 overflow-y-auto px-16 py-12" style="background-color: var(--ds-surface);">
+    <div class="h-full min-h-0 overflow-y-auto px-16 py-12" style="background-color: var(--ds-surface);">
       {#if footerLayout}
         <div class="flex min-h-full flex-col">
           {@render lazyLoadedComponent(view, routeProps)}
@@ -176,13 +184,27 @@
       {/if}
     </div>
   {:else if wrapper === 'surface'}
-    <div style="background-color: var(--ds-surface);">
-      {@render lazyLoadedComponent(view, routeProps)}
-    </div>
-    {@render routeFooter()}
+    {#if footerLayout}
+      <div class="flex min-h-full flex-col">
+        <div style="background-color: var(--ds-surface);">
+          {@render lazyLoadedComponent(view, routeProps)}
+        </div>
+        {@render routeFooter()}
+      </div>
+    {:else}
+      <div style="background-color: var(--ds-surface);">
+        {@render lazyLoadedComponent(view, routeProps)}
+      </div>
+    {/if}
   {:else}
-    {@render lazyLoadedComponent(view, routeProps)}
-    {@render routeFooter()}
+    {#if footerLayout}
+      <div class="flex min-h-full flex-col">
+        {@render lazyLoadedComponent(view, routeProps)}
+        {@render routeFooter()}
+      </div>
+    {:else}
+      {@render lazyLoadedComponent(view, routeProps)}
+    {/if}
   {/if}
 {:else}
   {@render lazyLoadedComponent('workspaces', { showAdminHeader: false })}
