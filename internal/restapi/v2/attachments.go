@@ -23,9 +23,9 @@ func registerAttachmentRoutes(builder *routeBuilder, deps Deps) {
 	builder.RawDocument[attachmentUploadForm, models.Attachment](http.MethodPost, "/items/{item_id}/attachments", http.StatusCreated, "multipart/form-data", AuthAuthenticated, []string{"items:write"}, uploadItemAttachment(attachments))
 	builder.RawDocument[attachmentUploadForm, models.Attachment](http.MethodPost, "/workspaces/{workspace_id}/pages/{page_id}/attachments", http.StatusCreated, "multipart/form-data", AuthAuthenticated, []string{"pages:write"}, uploadPageAttachment(deps))
 	builder.Read("/attachments/{attachment_id}", AuthAuthenticated, []string{"items:read"}, getItemAttachment(attachments))
-	builder.RawResponse[[]byte](http.MethodGet, "/attachments/{attachment_id}/content", http.StatusOK, "application/octet-stream", AuthAuthenticated, []string{"items:read"}, serveAttachment(attachments, pageAttachments, attachmentServeContent))
-	builder.RawResponse[[]byte](http.MethodGet, "/attachments/{attachment_id}/download", http.StatusOK, "application/octet-stream", AuthAuthenticated, []string{"items:read"}, serveAttachment(attachments, pageAttachments, attachmentServeDownload))
-	builder.RawResponse[[]byte](http.MethodGet, "/attachments/{attachment_id}/thumbnail", http.StatusOK, "application/octet-stream", AuthAuthenticated, []string{"items:read"}, serveAttachment(attachments, pageAttachments, attachmentServeThumbnail))
+	builder.RawResponseAnyScope[[]byte](http.MethodGet, "/attachments/{attachment_id}/content", http.StatusOK, "application/octet-stream", AuthAuthenticated, nil, []string{"items:read", "pages:read"}, serveAttachment(attachments, pageAttachments, attachmentServeContent))
+	builder.RawResponseAnyScope[[]byte](http.MethodGet, "/attachments/{attachment_id}/download", http.StatusOK, "application/octet-stream", AuthAuthenticated, nil, []string{"items:read", "pages:read"}, serveAttachment(attachments, pageAttachments, attachmentServeDownload))
+	builder.RawResponseAnyScope[[]byte](http.MethodGet, "/attachments/{attachment_id}/thumbnail", http.StatusOK, "application/octet-stream", AuthAuthenticated, nil, []string{"items:read", "pages:read"}, serveAttachment(attachments, pageAttachments, attachmentServeThumbnail))
 	builder.Command(http.MethodDelete, "/attachments/{attachment_id}", AuthAuthenticated, []string{"items:write"}, deleteItemAttachment(deps))
 }
 
