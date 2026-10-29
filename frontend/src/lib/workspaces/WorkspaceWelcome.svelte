@@ -640,6 +640,7 @@
   contextVars={gradientStyles.contextVars}
   class="workspace-welcome-wrapper"
   contentClass="workspace-welcome p-6"
+  testid="workspace-welcome"
 >
     {#if loading}
       <div class="flex items-center justify-center h-64">
