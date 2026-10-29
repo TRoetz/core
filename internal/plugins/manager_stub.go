@@ -24,6 +24,10 @@ type LoadedPlugin struct {
 	Extensions []Extension
 	Path       string
 	Enabled    bool
+	// Licensed mirrors the plugins-build field. The noplugins stub never
+	// loads plugins, so it stays false; it exists so callers that read
+	// LoadedPlugin compile in both build variants.
+	Licensed bool
 }
 
 // Manager handles plugin loading and lifecycle.
