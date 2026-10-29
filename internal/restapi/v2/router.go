@@ -66,15 +66,21 @@ const (
 
 // Route describes one canonical operation and its authentication boundaries.
 type Route struct {
-	Method            string
-	Path              string
-	OperationID       string
-	Tag               string
-	Summary           string
-	Description       string
-	Auth              AuthClass
-	Exposure          Exposure
-	Scopes            []string
+	Method      string
+	Path        string
+	OperationID string
+	Tag         string
+	Summary     string
+	Description string
+	Auth        AuthClass
+	Exposure    Exposure
+	Scopes      []string
+	// ScopesAny lists alternative token scopes: a bearer token satisfies the
+	// route when it satisfies every scope in Scopes and at least one scope in
+	// ScopesAny. Empty means Scopes is the whole requirement. It exists for
+	// shared resources whose owning entity type is only known after the handler
+	// resolves it (e.g. attachment binaries that may belong to an item or a page).
+	ScopesAny         []string
 	RequestType       reflect.Type
 	ResponseType      reflect.Type
 	MetadataType      reflect.Type
@@ -217,7 +223,18 @@ func (b *routeBuilder) JSON[Request, Response any](method, path string, status i
 // RawResponse registers a handler that writes a direct response without the
 // standard data envelope while retaining its public contract metadata.
 func (b *routeBuilder) RawResponse[Response any](method, path string, status int, mediaType string, auth AuthClass, scopes []string, handler Handler) {
+	b.rawResponse[Response](method, path, status, mediaType, auth, scopes, nil, handler)
+}
+
+// RawResponseAnyScope is RawResponse with an alternative scope set: a bearer
+// token is admitted when it satisfies scopes or any single scope in anyScopes.
+func (b *routeBuilder) RawResponseAnyScope[Response any](method, path string, status int, mediaType string, auth AuthClass, scopes, anyScopes []string, handler Handler) {
+	b.rawResponse[Response](method, path, status, mediaType, auth, scopes, anyScopes, handler)
+}
+
+func (b *routeBuilder) rawResponse[Response any](method, path string, status int, mediaType string, auth AuthClass, scopes, anyScopes []string, handler Handler) {
 	metadata := b.metadata(method, path, auth, scopes)
+	metadata.ScopesAny = slices.Clone(anyScopes)
 	metadata.ResponseType = reflect.TypeFor[Response]()
 	metadata.ResponseMediaType = mediaType
 	metadata.SuccessStatus = status
@@ -823,6 +840,7 @@ func Inventory() []Route {
 	for i, item := range routes {
 		inventory[i] = item.Route
 		inventory[i].Scopes = slices.Clone(item.Scopes)
+		inventory[i].ScopesAny = slices.Clone(item.ScopesAny)
 	}
 	return inventory
 }
@@ -1313,14 +1331,14 @@ func validateRouteScopes(routes []route) error {
 				return fmt.Errorf("v2: public route %s %s declares token scopes", item.Method, item.Path)
 			}
 		case AuthAuthenticated:
-			if !bearerExposed && len(item.Scopes) != 0 {
+			if !bearerExposed && (len(item.Scopes) != 0 || len(item.ScopesAny) != 0) {
 				return fmt.Errorf("v2: session-only route %s %s declares token scopes", item.Method, item.Path)
 			}
-			if bearerExposed && len(item.Scopes) == 0 {
+			if bearerExposed && len(item.Scopes) == 0 && len(item.ScopesAny) == 0 {
 				return fmt.Errorf("v2: authenticated route %s %s declares no token scope", item.Method, item.Path)
 			}
 			if bearerExposed {
-				if err := tokenauth.ValidateScopes(item.Scopes); err != nil {
+				if err := tokenauth.ValidateScopes(append(slices.Clone(item.Scopes), item.ScopesAny...)); err != nil {
 					return fmt.Errorf("v2: route %s %s: %w", item.Method, item.Path, err)
 				}
 			}
@@ -1387,7 +1405,7 @@ func registerMount(mux *http.ServeMux, prefix string, routes []route, deps Deps,
 					handler = requireSession(handler)
 				} else {
 					handler = limitConcurrency(deps.Concurrency)(handler)
-					handler = requireBearer(deps.Tokens, selected.Scopes)(handler)
+					handler = requireBearer(deps.Tokens, selected.Scopes, selected.ScopesAny)(handler)
 				}
 			}
 			return handler(w, r)
@@ -1500,7 +1518,7 @@ func hasCRWBearer(header string) bool {
 	return strings.HasPrefix(header, "Bearer crw_")
 }
 
-func requireBearer(tokens tokenAuthenticator, scopes []string) Middleware {
+func requireBearer(tokens tokenAuthenticator, scopes, anyScopes []string) Middleware {
 	return func(next Handler) Handler {
 		return func(w http.ResponseWriter, r *http.Request) error {
 			header := r.Header.Get("Authorization")
@@ -1518,9 +1536,13 @@ func requireBearer(tokens tokenAuthenticator, scopes []string) Middleware {
 			if err != nil || user == nil || token == nil {
 				return bearerError("invalid_token", "Bearer token is invalid")
 			}
-			if !tokens.CheckTokenPermissions(token, scopes) {
+			if !bearerScopesSatisfied(tokens, token, scopes, anyScopes) {
 				apiErr := newError(http.StatusForbidden, "insufficient_permission", "Token lacks a required scope")
-				apiErr.Details = map[string]any{"required": slices.Clone(scopes)}
+				details := map[string]any{"required": slices.Clone(scopes)}
+				if len(anyScopes) > 0 {
+					details["required_any"] = slices.Clone(anyScopes)
+				}
+				apiErr.Details = details
 				return apiErr
 			}
 			ctx := context.WithValue(r.Context(), contextkeys.User, user)
@@ -1529,6 +1551,24 @@ func requireBearer(tokens tokenAuthenticator, scopes []string) Middleware {
 			return next(w, r.WithContext(ctx))
 		}
 	}
+}
+
+// bearerScopesSatisfied applies the route's scope requirement: every scope in
+// scopes must be held, and when anyScopes is non-empty at least one of them
+// must be held as well.
+func bearerScopesSatisfied(tokens tokenAuthenticator, token *models.APIToken, scopes, anyScopes []string) bool {
+	if !tokens.CheckTokenPermissions(token, scopes) {
+		return false
+	}
+	if len(anyScopes) == 0 {
+		return true
+	}
+	for _, scope := range anyScopes {
+		if tokens.CheckTokenPermissions(token, []string{scope}) {
+			return true
+		}
+	}
+	return false
 }
 
 func bearerError(code, message string) *Error {

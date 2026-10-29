@@ -174,8 +174,11 @@ func (s *PageAttachmentUploadService) OpenPageAttachment(ctx context.Context, us
 		return nil, ErrPageAttachmentUploadDisabled
 	}
 	rec, err := repository.NewAttachmentRepository(s.db).GetPageAttachmentRecordByID(attachmentID)
-	if err != nil {
+	if errors.Is(err, repository.ErrNotFound) {
 		return nil, ErrPageAttachmentNotFound
+	}
+	if err != nil {
+		return nil, fmt.Errorf("load page attachment %d: %w", attachmentID, err)
 	}
 	if err := s.checkPageAccess(userID, rec.WorkspaceID, rec.PageID, PageOpView); err != nil {
 		return nil, ErrPageAttachmentNotFound
