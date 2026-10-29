@@ -642,10 +642,10 @@ class CollectionStore {
     return statusIds?.length ? { status_id_not: statusIds.join(',') } : {};
   }
 
-  #fetchMainItems(wsId, colId, limit, boardPartition, collection, isBoard = false) {
-    const fetchPage = (page, pageLimit) =>
+  #fetchMainItems(wsId, colId, limit, boardPartition, collection, isBoard = false, page = 1) {
+    const fetchPage = (fetchPageNumber, pageLimit) =>
       fetchCollectionItems(wsId, colId, {
-        page,
+        page: fetchPageNumber,
         limit: pageLimit,
         sub_ql: this.effectiveSubFilterQL || undefined,
         collection,
@@ -654,7 +654,7 @@ class CollectionStore {
         ...this.#boardExclusionFilter(boardPartition?.statusIds ?? null),
       });
 
-    if (!isBoard) return fetchPage(1, limit);
+    if (!isBoard) return fetchPage(page, limit);
     return fetchPage(1, BOARD_UNFINISHED_PAGE_SIZE);
   }
 
@@ -734,14 +734,24 @@ class CollectionStore {
     };
   }
 
-  async #fetchCompleteMainItems(wsId, colId, limit, boardPartition, collection, loadId, isBoard) {
+  async #fetchCompleteMainItems(
+    wsId,
+    colId,
+    limit,
+    boardPartition,
+    collection,
+    loadId,
+    isBoard,
+    page = 1
+  ) {
     const first = await this.#fetchMainItems(
       wsId,
       colId,
       limit,
       boardPartition,
       collection,
-      isBoard
+      isBoard,
+      page
     );
     const totalPages = first.pagination?.total_pages ?? 1;
     if (!isBoard || totalPages <= 1) return first;
@@ -1049,6 +1059,10 @@ class CollectionStore {
     this.boardBackgroundLoading = false;
 
     const itemsLimit = Math.max(initialItemsPageSize(this.#currentView), this.mainItemsLoadedCount);
+    // Page-based list views replace their rows per page, so a background
+    // refresh must reload the page the user is on instead of jumping to the
+    // first page. Board views keep starting at page 1 and accumulate.
+    const itemsPage = BOARD_VIEWS.has(this.#currentView) ? 1 : (this.itemsPagination?.page ?? 1);
     const backlogLimit = Math.max(DEFAULT_PAGE_SIZE, this.backlogItems.length);
 
     try {
@@ -1074,7 +1088,8 @@ class CollectionStore {
               boardPartition,
               collection,
               loadId,
-              BOARD_VIEWS.has(this.#currentView)
+              BOARD_VIEWS.has(this.#currentView),
+              itemsPage
             )
           : Promise.resolve(null),
         loadsBacklog(this.#currentView)
