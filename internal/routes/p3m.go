@@ -38,6 +38,9 @@ func RegisterP3MRoutes(deps *Deps) {
 	api.HandleH("GET /p3m/projects/{id}", auth(p3mView(http.HandlerFunc(deps.P3M.GetProject))))
 	api.HandleH("PUT /p3m/projects/{id}", auth(p3mView(http.HandlerFunc(deps.P3M.UpdateProject))))
 	api.HandleH("DELETE /p3m/projects/{id}", auth(p3mView(http.HandlerFunc(deps.P3M.DeleteProject))))
+	api.HandleH("GET /p3m/projects/{id}/workspaces", auth(p3mView(http.HandlerFunc(deps.P3M.ListProjectWorkspaces))))
+	api.HandleH("PUT /p3m/projects/{id}/workspaces", auth(p3mView(http.HandlerFunc(deps.P3M.SetProjectWorkspaces))))
+	api.HandleH("GET /p3m/projects/{id}/rollup", auth(p3mView(http.HandlerFunc(deps.P3M.GetProjectRollup))))
 
 	// Governance: stage gates, artifacts, RACI, thresholds, budget approvals.
 	api.HandleH("GET /p3m/stage-gates", auth(p3mView(http.HandlerFunc(deps.P3M.ListStageGates))))

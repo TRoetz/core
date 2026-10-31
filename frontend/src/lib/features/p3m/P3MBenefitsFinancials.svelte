@@ -134,7 +134,7 @@
                 </td>
               </tr>
               {#if open !== undefined}
-                <tr class="border-b border-[var(--color-ds-border,#e5e7eb)] bg-[var(--color-ds-surface-2,rgba(0,0,0,0.02))]">
+                <tr class="border-b border-[var(--color-ds-border,#e5e7eb)] bg-ds-surface-hovered">
                   <td></td>
                   <td colspan="6" class="py-1.5 pr-3 pl-8">
                     {#if open.length === 0}

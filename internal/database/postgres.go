@@ -154,6 +154,12 @@ var incidentsSchemaPostgres string
 //go:embed schema/p3m_postgres.sql
 var p3mSchemaPostgres string
 
+//go:embed schema/srm_postgres.sql
+var srmSchemaPostgres string
+
+//go:embed schema/sms_postgres.sql
+var smsSchemaPostgres string
+
 //go:embed schema/condition_sets_postgres.sql
 var conditionSetsSchemaPostgres string
 
@@ -588,6 +594,8 @@ func (p *PostgresDB) getPostgresSchemaFiles() []schemaFile {
 		{"sla_import_postgres.sql", slaImportSchemaPostgres},
 		{"incidents_postgres.sql", incidentsSchemaPostgres},
 		{"p3m_postgres.sql", p3mSchemaPostgres},
+		{"srm_postgres.sql", srmSchemaPostgres},
+		{"sms_postgres.sql", smsSchemaPostgres},
 		{"condition_sets_postgres.sql", conditionSetsSchemaPostgres},
 		{"approvals_postgres.sql", approvalsSchemaPostgres},
 		{"integrations_postgres.sql", integrationsSchemaPostgres},

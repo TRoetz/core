@@ -6,6 +6,8 @@ export default {
     milestones: '里程碑',
     bigGantt: 'Big Gantt',
     p3m: 'P3M',
+    srm: 'SRM',
+    sms: '利益相关者',
     iterations: '迭代',
     assets: '资产',
     channels: '渠道',

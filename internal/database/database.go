@@ -146,6 +146,12 @@ var incidentsSchema string
 //go:embed schema/p3m.sql
 var p3mSchema string
 
+//go:embed schema/srm.sql
+var srmSchema string
+
+//go:embed schema/sms.sql
+var smsSchema string
+
 //go:embed schema/condition_sets.sql
 var conditionSetsSchema string
 

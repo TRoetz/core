@@ -211,7 +211,9 @@ INSERT INTO permissions (permission_key, permission_name, description, scope, is
 	('action.set_actor', 'Set Action Actor', 'Can configure an action to run as a specific user (impersonation); grants cross-workspace reach', 'global', false),
 	('teams.manage', 'Manage Teams', 'Can create, edit, and delete teams', 'global', false),
 	('public_board.manage', 'Manage Public Boards', 'Can make collections public and configure public board sharing', 'global', false),
-	('p3m.view', 'View P3M Module', 'Can view the Portfolio, Programme, and Project Management (P3M) module', 'global', false)
+	('p3m.view', 'View P3M Module', 'Can view the Portfolio, Programme, and Project Management (P3M) module', 'global', false),
+	('srm.view', 'View SRM Module', 'Can view the Supplier Relationship Management (SRM) module', 'global', false),
+	('sms.view', 'View SMS Module', 'Can view the Stakeholder Management System (SMS) module', 'global', false)
 ON CONFLICT (permission_key) DO NOTHING;
 
 -- Default workspace roles

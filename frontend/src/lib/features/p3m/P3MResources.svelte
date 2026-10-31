@@ -42,13 +42,13 @@
   });
 
   function heatStyle(row) {
-    if (!row || !row.capacity_hours) return 'background: var(--color-ds-surface-2, rgba(0,0,0,0.03))';
+    if (!row || !row.capacity_hours) return 'background: var(--ds-surface-hovered)';
     const ratio = row.demand_hours / row.capacity_hours;
     if (ratio > 1) return 'background: #ef4444; color: white';
     if (ratio >= 0.85) return 'background: #f59e0b; color: white';
     if (ratio >= 0.6) return 'background: #fde68a';
     if (ratio > 0) return 'background: #bbf7d0';
-    return 'background: var(--color-ds-surface-2, rgba(0,0,0,0.03))';
+    return 'background: var(--ds-surface-hovered)';
   }
 
   async function load() {

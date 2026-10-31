@@ -51,6 +51,17 @@ func joinPlaceholders(parts []string) string {
 	return strings.Join(parts, ", ")
 }
 
+// qualifyColumns prefixes every column in an unqualified comma-separated
+// list with alias so the list stays safe inside multi-table SELECTs where
+// shared names (created_at, updated_at) would otherwise be ambiguous.
+func qualifyColumns(alias, cols string) string {
+	parts := strings.Split(cols, ",")
+	for i, p := range parts {
+		parts[i] = alias + "." + strings.TrimSpace(p)
+	}
+	return strings.Join(parts, ", ")
+}
+
 // p3mValidRag reports whether s is one of the three RAG states.
 func p3mValidRag(s string) bool {
 	switch s {

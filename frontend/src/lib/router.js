@@ -130,6 +130,8 @@ const routes = {
   '/workspaces/:id/tests/reports': 'test-reports',
   '/gantt': 'big-gantt',
   '/p3m': 'p3m',
+  '/srm': 'srm',
+  '/sms': 'sms',
   '/milestones': 'milestones',
   '/milestones/category/:categoryId': 'milestones',
   '/milestones/:id': 'milestone-detail',

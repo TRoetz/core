@@ -10,6 +10,8 @@ export default {
     milestones: 'Этапы',
     bigGantt: 'Big Gantt',
     p3m: 'P3M',
+    srm: 'SRM',
+    sms: 'Стейкхолдеры',
     iterations: 'Итерации',
     assets: 'Ресурсы',
     channels: 'Каналы',

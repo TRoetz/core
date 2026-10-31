@@ -15,6 +15,12 @@ export const p3m = {
   programmes: createCrudClient('/p3m/programmes'),
   projects: createCrudClient('/p3m/projects'),
 
+  // Cross-module project detail: financial rollup (budget, tranches, SRM
+  // contract spend, worklog cost), merged stakeholders and attached contracts.
+  getProjectRollup: (projectId) => fetchAPI(`/p3m/projects/${projectId}/rollup`),
+  getProjectWorkspaces: (projectId) => fetchAPI(`/p3m/projects/${projectId}/workspaces`),
+  setProjectWorkspaces: (projectId, workspaceIds) => put(`/p3m/projects/${projectId}/workspaces`, { workspace_ids: workspaceIds }),
+
   // Governance.
   getStageGates: (filters = {}) => fetchAPI(`/p3m/stage-gates${qs(filters)}`),
   createStageGate: (data) => post('/p3m/stage-gates', data),

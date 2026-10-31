@@ -1,6 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import { t } from '../../stores/i18n.svelte.js';
+  import IconX from '@tabler/icons-svelte-runes/icons/x';
   import { p3m as p3mApi } from '../../api/p3m.js';
   import EmptyState from '../../components/EmptyState.svelte';
   import { formatDate, quadrantLabel } from './utils.js';
@@ -76,6 +77,67 @@
     }
     return q;
   });
+
+  // --- Stakeholder creation ---------------------------------------------
+  /** Flat entity picker options derived from the hierarchy. */
+  const entityOptions = $derived.by(() => {
+    const opts = [];
+    for (const pf of portfolios) {
+      opts.push({ type: 'portfolio', id: pf.id, label: pf.title });
+      for (const pg of pf.programmes ?? []) {
+        opts.push({ type: 'programme', id: pg.id, label: `${pf.title} › ${pg.title}` });
+        for (const pr of pg.projects ?? []) opts.push({ type: 'project', id: pr.id, label: `${pf.title} › ${pg.title} › ${pr.title}` });
+      }
+      for (const pr of pf.standalone_projects ?? []) opts.push({ type: 'project', id: pr.id, label: `${pf.title} › ${pr.title}` });
+    }
+    return opts;
+  });
+
+  let showStakeholderForm = $state(false);
+  let stakeholderForm = $state({ entity_key: '', name: '', role_title: '', power_score: 3, interest_score: 3, notes: '' });
+  let savingStakeholder = $state(false);
+  let stakeholderError = $state('');
+
+  async function submitStakeholder() {
+    if (savingStakeholder) return;
+    stakeholderError = '';
+    const [type, idStr] = stakeholderForm.entity_key.split(':');
+    if (!stakeholderForm.name.trim()) {
+      stakeholderError = t('p3m.nameRequired');
+      return;
+    }
+    if (!type || !idStr) {
+      stakeholderError = t('p3m.entityRequired');
+      return;
+    }
+    savingStakeholder = true;
+    try {
+      await p3mApi.stakeholders.create({
+        entity_type: type,
+        entity_id: Number(idStr),
+        name: stakeholderForm.name.trim(),
+        role_title: stakeholderForm.role_title,
+        power_score: Math.max(1, Math.min(5, Number(stakeholderForm.power_score) || 3)),
+        interest_score: Math.max(1, Math.min(5, Number(stakeholderForm.interest_score) || 3)),
+        notes: stakeholderForm.notes,
+      });
+      stakeholderForm = { ...stakeholderForm, name: '', role_title: '', power_score: 3, interest_score: 3, notes: '' };
+      await load();
+    } catch (e) {
+      stakeholderError = e?.message || t('p3m.createFailed');
+    } finally {
+      savingStakeholder = false;
+    }
+  }
+
+  async function removeStakeholder(id) {
+    try {
+      await p3mApi.stakeholders.delete(id);
+      await load();
+    } catch (e) {
+      stakeholderError = e?.message || t('p3m.createFailed');
+    }
+  }
 
   async function load() {
     loading = true;
@@ -154,7 +216,108 @@
 
     <!-- Stakeholder power/interest matrix -->
     <section>
-      <h2 class="mb-2 text-sm font-semibold">{t('p3m.stakeholders')}</h2>
+      <div class="mb-2 flex items-center justify-between">
+        <h2 class="text-sm font-semibold">{t('p3m.stakeholders')}</h2>
+        {#if entityOptions.length > 0}
+          <button type="button" class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] px-2 py-1 text-xs text-[var(--color-ds-text-muted,#6b7280)] hover:text-[var(--color-ds-text,#111827)]" onclick={() => (showStakeholderForm = !showStakeholderForm)}>
+            {t('p3m.addStakeholder')}
+          </button>
+        {/if}
+      </div>
+
+      {#if showStakeholderForm && entityOptions.length > 0}
+        <div class="mb-3 rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-surface-card p-3 text-xs">
+          <div class="grid grid-cols-1 gap-x-6 gap-y-2 md:grid-cols-3">
+            <label class="block">
+              <span>{t('p3m.entityType')}</span>
+              <select
+                class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+                value={stakeholderForm.entity_key}
+                disabled={savingStakeholder}
+                onchange={(e) => (stakeholderForm = { ...stakeholderForm, entity_key: e.target.value })}
+              >
+                <option value="">{t('p3m.noSelection')}</option>
+                {#each entityOptions as opt (opt.type + ':' + opt.id)}
+                  <option value={opt.type + ':' + opt.id}>{opt.label}</option>
+                {/each}
+              </select>
+            </label>
+
+            <label class="block">
+              <span>{t('p3m.stakeholderName')} *</span>
+              <input
+                class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+                value={stakeholderForm.name}
+                disabled={savingStakeholder}
+                oninput={(e) => (stakeholderForm = { ...stakeholderForm, name: e.target.value })}
+              />
+            </label>
+
+            <label class="block">
+              <span>{t('p3m.roleTitle')}</span>
+              <input
+                class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+                value={stakeholderForm.role_title}
+                disabled={savingStakeholder}
+                oninput={(e) => (stakeholderForm = { ...stakeholderForm, role_title: e.target.value })}
+              />
+            </label>
+
+            <div class="grid grid-cols-2 gap-x-4">
+              <label class="block">
+                <span>{t('p3m.powerScore')} (1–5)</span>
+                <select
+                  class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+                  value={stakeholderForm.power_score}
+                  disabled={savingStakeholder}
+                  onchange={(e) => (stakeholderForm = { ...stakeholderForm, power_score: Number(e.target.value) })}
+                >
+                  {#each [1, 2, 3, 4, 5] as n (n)}
+                    <option value={n}>{n}</option>
+                  {/each}
+                </select>
+              </label>
+              <label class="block">
+                <span>{t('p3m.interestScore')} (1–5)</span>
+                <select
+                  class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+                  value={stakeholderForm.interest_score}
+                  disabled={savingStakeholder}
+                  onchange={(e) => (stakeholderForm = { ...stakeholderForm, interest_score: Number(e.target.value) })}
+                >
+                  {#each [1, 2, 3, 4, 5] as n (n)}
+                    <option value={n}>{n}</option>
+                  {/each}
+                </select>
+              </label>
+            </div>
+
+            <label class="block md:col-span-2">
+              <span>{t('p3m.notes')}</span>
+              <input
+                class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+                value={stakeholderForm.notes}
+                disabled={savingStakeholder}
+                oninput={(e) => (stakeholderForm = { ...stakeholderForm, notes: e.target.value })}
+              />
+            </label>
+          </div>
+
+          {#if stakeholderError}
+            <div class="mt-2 rounded-md border border-red-200 bg-red-50 p-2 text-red-700">{stakeholderError}</div>
+          {/if}
+
+          <div class="mt-3 flex items-center gap-2">
+            <button type="button" class="rounded-md bg-[var(--color-ds-accent-blue,#2563eb)] px-3 py-1 font-medium text-white disabled:opacity-50" disabled={savingStakeholder} onclick={submitStakeholder}>
+              {t('p3m.create')}
+            </button>
+            <button type="button" class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] px-3 py-1 text-[var(--color-ds-text-muted,#6b7280)] hover:text-[var(--color-ds-text,#111827)]" onclick={() => (showStakeholderForm = false)}>
+              {t('p3m.cancel')}
+            </button>
+          </div>
+        </div>
+      {/if}
+
       {#if stakeholders.length === 0}
         <div class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] p-4 text-xs text-[var(--color-ds-text-muted,#6b7280)]">
           {t('p3m.noData')}
@@ -182,10 +345,14 @@
                       {#if s.role_title}
                         <span class="text-[var(--color-ds-text-muted,#6b7280)]"> · {s.role_title}</span>
                       {/if}
+                      <div class="text-[10px] text-[var(--color-ds-text-muted,#6b7280)]">{entityLabel(s)}</div>
                     </span>
                     <span class="flex items-center gap-2 whitespace-nowrap text-[var(--color-ds-text-muted,#6b7280)]">
                       <span title={t('p3m.powerScore')}>P{s.power_score}</span>
                       <span title={t('p3m.interestScore')}>I{s.interest_score}</span>
+                      <button type="button" class="hover:text-red-600" title={t('p3m.removeStakeholder')} onclick={() => removeStakeholder(s.id)}>
+                        <IconX size={14} />
+                      </button>
                     </span>
                   </div>
                 {/each}

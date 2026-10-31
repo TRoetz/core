@@ -73,6 +73,8 @@ type Deps struct {
 	Push *handlers.PushHandler
 	SLA  *handlers.SLAHandler
 	P3M  *handlers.P3MHandler
+	SRM  *handlers.SRMHandler
+	SMS  *handlers.SMSHandler
 }
 
 // AuthHandlers groups authentication-related handlers.

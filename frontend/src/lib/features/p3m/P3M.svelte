@@ -28,6 +28,16 @@
   let summary = $state(null);
 
   const portfolioCount = $derived(hierarchy.portfolios.length);
+
+  // Deep link from the SRM projects section (?project=<id>): auto-expand that
+  // project's detail on first load.
+  const initialProjectId = (() => {
+    try {
+      return Number(new URLSearchParams(window.location.search).get('project')) || null;
+    } catch (e) {
+      return null;
+    }
+  })();
   const programmeCount = $derived(
     hierarchy.portfolios.reduce((n, pf) => n + (pf.programmes?.length ?? 0), 0)
   );
@@ -58,7 +68,7 @@
   onMount(load);
 </script>
 
-<PageHeader icon={IconTarget} title={t('p3m.title')} subtitle={t('p3m.subtitle')}>
+<PageHeader icon={IconTarget} title={t('p3m.title')} subtitle={t('p3m.subtitle')} marginClass="mt-4 mb-8">
   {#snippet actions()}
     <div class="flex items-center gap-2 text-xs text-[var(--color-ds-text-muted,#6b7280)]">
       <span>{portfolioCount} {t('p3m.portfolios')}</span>
@@ -93,11 +103,9 @@
     description={error}
     actions={{ label: t('p3m.retry'), onClick: load }}
   />
-{:else if portfolioCount === 0}
-  <EmptyState title={t('p3m.emptyTitle')} description={t('p3m.emptyDescription')} />
 {:else}
   {#if activeTab === 'overview'}
-    <P3MOverview portfolios={hierarchy.portfolios} summary={summary} />
+    <P3MOverview portfolios={hierarchy.portfolios} summary={summary} onChanged={load} initialProjectId={initialProjectId} />
   {:else if activeTab === 'governance'}
     <P3MGovernance />
   {:else if activeTab === 'benefits'}

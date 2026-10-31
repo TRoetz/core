@@ -11,6 +11,8 @@ export default {
     milestones: 'Jalons',
     bigGantt: 'Big Gantt',
     p3m: 'P3M',
+    srm: 'SRM',
+    sms: 'Parties prenantes',
     iterations: 'Itérations',
     assets: 'Ressources',
     channels: 'Canaux',

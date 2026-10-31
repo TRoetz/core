@@ -35,6 +35,8 @@ export const MAIN_APP_COMPONENT_LOADERS = {
   milestones: () => import('../features/milestones/Milestones.svelte'),
   'big-gantt': () => import('../features/gantt/BigGantt.svelte'),
   p3m: () => import('../features/p3m/P3M.svelte'),
+  srm: () => import('../features/srm/SRM.svelte'),
+  sms: () => import('../features/sms/SMS.svelte'),
   'milestone-detail': () => import('../features/milestones/MilestoneDetail.svelte'),
   iterations: () => import('../features/iterations/Iterations.svelte'),
   'iteration-detail': () => import('../features/iterations/IterationDetail.svelte'),
@@ -230,6 +232,12 @@ export const MAIN_APP_ROUTE_CONFIG = {
     wrapper: 'surface-full',
   }),
   p3m: route('Loading P3M...', 'Failed to load P3M', {
+    wrapper: 'surface-full',
+  }),
+  srm: route('Loading SRM...', 'Failed to load SRM', {
+    wrapper: 'surface-full',
+  }),
+  sms: route('Loading SMS...', 'Failed to load SMS', {
     wrapper: 'surface-full',
   }),
   'milestone-detail': route('Loading Milestone...', 'Failed to load Milestone', {
