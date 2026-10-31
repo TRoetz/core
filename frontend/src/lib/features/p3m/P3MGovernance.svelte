@@ -121,7 +121,7 @@
                 <td class="py-1.5 pr-3">{formatDate(gate.review_date) || t('p3m.notSet')}</td>
               </tr>
               {#if open && gate.artifacts?.length}
-                <tr class="border-b border-[var(--color-ds-border,#e5e7eb)] bg-[var(--color-ds-surface-2,rgba(0,0,0,0.02))]">
+                <tr class="border-b border-[var(--color-ds-border,#e5e7eb)] bg-ds-surface-hovered">
                   <td></td>
                   <td colspan="4" class="py-1.5 pr-3 pl-8">
                     {#each gate.artifacts as art (art.id)}
@@ -149,7 +149,7 @@
       <h2 class="mb-2 text-sm font-semibold">{t('p3m.raciMatrix')}</h2>
       <div class="mb-2 flex items-center gap-2">
         <select
-          class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-white px-2 py-1 text-xs"
+          class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1 text-xs"
           value={raciEntityType}
           onchange={(e) => {
             raciEntityType = e.target.value;
@@ -161,21 +161,21 @@
           <option value="project">{t('p3m.projects')}</option>
         </select>
         {#if raciEntityType === 'project'}
-          <select class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-white px-2 py-1 text-xs" value={raciEntityId ?? ''} onchange={(e) => (raciEntityId = e.target.value ? Number(e.target.value) : null)}>
+          <select class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1 text-xs" value={raciEntityId ?? ''} onchange={(e) => (raciEntityId = e.target.value ? Number(e.target.value) : null)}>
             <option value="">—</option>
             {#each allProjects as p (p.id)}
               <option value={p.id}>{p.title}</option>
             {/each}
           </select>
         {:else if raciEntityType === 'programme'}
-          <select class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-white px-2 py-1 text-xs" value={raciEntityId ?? ''} onchange={(e) => (raciEntityId = e.target.value ? Number(e.target.value) : null)}>
+          <select class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1 text-xs" value={raciEntityId ?? ''} onchange={(e) => (raciEntityId = e.target.value ? Number(e.target.value) : null)}>
             <option value="">—</option>
             {#each allProgrammes as p (p.id)}
               <option value={p.id}>{p.title}</option>
             {/each}
           </select>
         {:else}
-          <select class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-white px-2 py-1 text-xs" value={raciEntityId ?? ''} onchange={(e) => (raciEntityId = e.target.value ? Number(e.target.value) : null)}>
+          <select class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1 text-xs" value={raciEntityId ?? ''} onchange={(e) => (raciEntityId = e.target.value ? Number(e.target.value) : null)}>
             <option value="">—</option>
             {#each portfolios as pf (pf.id)}
               <option value={pf.id}>{pf.title}</option>
@@ -183,7 +183,7 @@
           </select>
         {/if}
         {#if raciEntityId}
-          <button type="button" class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] px-2 py-1 text-xs hover:bg-slate-50" onclick={loadRaci}>
+          <button type="button" class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] px-2 py-1 text-xs hover:bg-ds-background-neutral-hovered" onclick={loadRaci}>
             {t('p3m.raciMatrix')}
           </button>
         {/if}

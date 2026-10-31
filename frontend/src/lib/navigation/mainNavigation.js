@@ -4,6 +4,7 @@ import IconCalendar from '@tabler/icons-svelte-runes/icons/calendar';
 import IconClock from '@tabler/icons-svelte-runes/icons/clock';
 import IconFlag from '@tabler/icons-svelte-runes/icons/flag';
 import IconFolderSearch from '@tabler/icons-svelte-runes/icons/folder-search';
+import IconHeartHandshake from '@tabler/icons-svelte-runes/icons/heart-handshake';
 import IconMessage2Plus from '@tabler/icons-svelte-runes/icons/message-2-plus';
 import IconPackage from '@tabler/icons-svelte-runes/icons/package';
 import IconPhoneCheck from '@tabler/icons-svelte-runes/icons/phone-check';
@@ -58,6 +59,22 @@ export const mainNavItems = [
     href: '/p3m',
     activeViews: ['p3m'],
     permission: 'canAccessP3M',
+  },
+  {
+    id: 'srm',
+    icon: IconHeartHandshake,
+    labelKey: 'nav.srm',
+    href: '/srm',
+    activeViews: ['srm'],
+    permission: 'canAccessSRM',
+  },
+  {
+    id: 'sms',
+    icon: IconUsers,
+    labelKey: 'nav.sms',
+    href: '/sms',
+    activeViews: ['sms'],
+    permission: 'canAccessSMS',
   },
   {
     id: 'iterations',

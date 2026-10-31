@@ -3009,12 +3009,101 @@ var Catalog = []Migration{
 		Name:          "Add P3M portfolio, programme, and project management module tables",
 		CheckSQLite:   sqliteTableCheck("p3m_portfolios"),
 		CheckPostgres: pgTableCheck("p3m_portfolios"),
+		// The embedded DDL gained time_project_id and the workspace bridge in
+		// 20261030_p3m_project_links; accept installs stamped with the
+		// pre-change body and restamp them forward. Existing databases get
+		// the new objects from that migration, not a re-run of this one.
+		Superseded: []string{
+			"3f51803f29600ebffa50cc9c8bae1456dbb2829c4139fc1f4966cafbe073e60b", // SQLite, pre time_project_id/workspace bridge
+			"9bcbb72c492fe1e4bc1428f417121a035fe4f4ab2e5c1ed65054da7d41da11ba", // Postgres, pre time_project_id/workspace bridge
+		},
 		// Reuses the embedded fresh-install DDL (idempotent CREATE ... IF NOT
 		// EXISTS) plus the p3m.view permission seed for pre-existing databases.
 		SQLite: p3mSchema + `
 			INSERT OR IGNORE INTO permissions (permission_key, permission_name, description, scope) VALUES ('p3m.view', 'View P3M Module', 'Can view the Portfolio, Programme, and Project Management (P3M) module', 'global');`,
 		Postgres: p3mSchemaPostgres + `
 			INSERT INTO permissions (permission_key, permission_name, description, scope, is_system) VALUES ('p3m.view', 'View P3M Module', 'Can view the Portfolio, Programme, and Project Management (P3M) module', 'global', false) ON CONFLICT (permission_key) DO NOTHING;`,
+	},
+	{
+		Version:       "20261029_srm_module",
+		Name:          "Add SRM supplier relationship management module tables",
+		CheckSQLite:   sqliteTableCheck("srm_suppliers"),
+		CheckPostgres: pgTableCheck("srm_suppliers"),
+		// Reuses the embedded fresh-install DDL (idempotent CREATE ... IF NOT
+		// EXISTS) plus the srm.view permission seed for pre-existing databases.
+		SQLite: srmSchema + `
+			INSERT OR IGNORE INTO permissions (permission_key, permission_name, description, scope) VALUES ('srm.view', 'View SRM Module', 'Can view the Supplier Relationship Management (SRM) module', 'global');`,
+		Postgres: srmSchemaPostgres + `
+			INSERT INTO permissions (permission_key, permission_name, description, scope, is_system) VALUES ('srm.view', 'View SRM Module', 'Can view the Supplier Relationship Management (SRM) module', 'global', false) ON CONFLICT (permission_key) DO NOTHING;`,
+	},
+	{
+		Version:       "20261030_p3m_project_links",
+		Name:          "Link P3M projects to core time projects and workspaces for cross-module tracking",
+		CheckSQLite:   `SELECT (SELECT COUNT(*) FROM pragma_table_info('p3m_projects') WHERE name='time_project_id') * (SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='workspace_p3m_projects')`,
+		CheckPostgres: `SELECT (SELECT COUNT(*) FROM information_schema.columns WHERE table_name='p3m_projects' AND column_name='time_project_id') * (SELECT COUNT(*) FROM information_schema.tables WHERE table_name='workspace_p3m_projects')`,
+		SQLite: `
+			ALTER TABLE p3m_projects ADD COLUMN time_project_id INTEGER REFERENCES time_projects(id) ON DELETE SET NULL;
+			CREATE INDEX IF NOT EXISTS idx_p3m_projects_time_project_id ON p3m_projects(time_project_id);
+			CREATE TABLE IF NOT EXISTS workspace_p3m_projects (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				workspace_id INTEGER NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+				p3m_project_id INTEGER NOT NULL REFERENCES p3m_projects(id) ON DELETE CASCADE,
+				created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+				UNIQUE(workspace_id, p3m_project_id)
+			);
+			CREATE INDEX IF NOT EXISTS idx_workspace_p3m_projects_workspace_id ON workspace_p3m_projects(workspace_id);
+			CREATE INDEX IF NOT EXISTS idx_workspace_p3m_projects_project_id ON workspace_p3m_projects(p3m_project_id);
+		`,
+		Postgres: `
+			ALTER TABLE p3m_projects ADD COLUMN IF NOT EXISTS time_project_id INTEGER REFERENCES time_projects(id) ON DELETE SET NULL;
+			CREATE INDEX IF NOT EXISTS idx_p3m_projects_time_project_id ON p3m_projects(time_project_id);
+			CREATE TABLE IF NOT EXISTS workspace_p3m_projects (
+				id SERIAL PRIMARY KEY,
+				workspace_id INTEGER NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+				p3m_project_id INTEGER NOT NULL REFERENCES p3m_projects(id) ON DELETE CASCADE,
+				created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+				UNIQUE(workspace_id, p3m_project_id)
+			);
+			CREATE INDEX IF NOT EXISTS idx_workspace_p3m_projects_workspace_id ON workspace_p3m_projects(workspace_id);
+			CREATE INDEX IF NOT EXISTS idx_workspace_p3m_projects_project_id ON workspace_p3m_projects(p3m_project_id);
+		`,
+	},
+	{
+		Version:       "20261031_sms_module",
+		Name:          "Add SMS stakeholder management system module tables",
+		CheckSQLite:   sqliteTableCheck("sms_stakeholders"),
+		CheckPostgres: pgTableCheck("sms_stakeholders"),
+		// The embedded DDL gained the engagement-plan channel CHECK in
+		// 20261031_sms_plan_channel_check; accept installs stamped with the
+		// pre-checksum-change body and restamp them forward.
+		Superseded: []string{
+			"268941e8b1c82041ac0f704ccc46d776aefec3950f35c04d6e1fbc3811bc7631", // SQLite, pre channel CHECK
+			"e0e447d2779a9d5701276f460bf3e00f6367cf039eb4ed9202e7c161888ed14e", // Postgres, pre channel CHECK
+		},
+		// Reuses the embedded fresh-install DDL (idempotent CREATE ... IF NOT
+		// EXISTS) plus the sms.view permission seed for pre-existing databases.
+		SQLite: smsSchema + `
+			INSERT OR IGNORE INTO permissions (permission_key, permission_name, description, scope) VALUES ('sms.view', 'View SMS Module', 'Can view the Stakeholder Management System (SMS) module', 'global');`,
+		Postgres: smsSchemaPostgres + `
+			INSERT INTO permissions (permission_key, permission_name, description, scope, is_system) VALUES ('sms.view', 'View SMS Module', 'Can view the Stakeholder Management System (SMS) module', 'global', false) ON CONFLICT (permission_key) DO NOTHING;`,
+	},
+	{
+		Version:       "20261031_sms_plan_channel_check",
+		Name:          "Constrain engagement plan channels to the known enum (SMS)",
+		CheckSQLite:   `SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='sms_engagement_plans' AND sql LIKE '%DEFAULT ''email'' CHECK (channel IN (%'`,
+		CheckPostgres: `SELECT COUNT(*) FROM pg_constraint c JOIN pg_class t ON t.oid = c.conrelid WHERE t.relname='sms_engagement_plans' AND c.contype='c' AND pg_get_constraintdef(c.oid) LIKE '%(channel IN%'`,
+		// Legacy rows with a channel outside the enum (possible before backend
+		// validation existed) are normalized to the 'email' default so the
+		// constraint can be added without aborting startup.
+		Postgres: `
+			UPDATE sms_engagement_plans SET channel='email' WHERE channel NOT IN ('email','phone','meeting','in_person','slack','teams','other');
+			ALTER TABLE sms_engagement_plans ADD CONSTRAINT chk_sms_plan_channel CHECK (channel IN ('email','phone','meeting','in_person','slack','teams','other'));
+		`,
+		// SQLite cannot add a CHECK to an existing column without a table
+		// rebuild. The SQL field stays non-empty so the runner reaches
+		// ApplySQLite instead of stamping the row.
+		SQLite:      "applySQLiteSMSPlanChannelCheck:v1",
+		ApplySQLite: applySQLiteSMSPlanChannelCheck,
 	},
 }
 
@@ -3748,6 +3837,84 @@ func applySQLiteEmailReplyOutboxPerRecipient(db Database) (retErr error) {
 
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("commit email_reply_outbox rebuild: %w", err)
+	}
+	return nil
+}
+
+// applySQLiteSMSPlanChannelCheck rebuilds sms_engagement_plans with the
+// channel CHECK constraint that mirrors sms_communications. SQLite cannot add
+// a CHECK to an existing column in place, so rows are copied into a new table
+// and swapped. Legacy rows whose channel is outside the enum (possible before
+// backend validation existed) are normalized to the 'email' default rather
+// than aborting startup.
+func applySQLiteSMSPlanChannelCheck(db Database) (retErr error) {
+	sqliteDB, ok := db.(*SQLiteDB)
+	if !ok {
+		return fmt.Errorf("expected SQLite database, got %T", db)
+	}
+
+	ctx := context.Background()
+	conn, err := sqliteDB.writeConn.Conn(ctx)
+	if err != nil {
+		return fmt.Errorf("acquire SQLite write connection: %w", err)
+	}
+	defer func() { _ = conn.Close() }()
+
+	var foreignKeysEnabled bool
+	if err := conn.QueryRowContext(ctx, "PRAGMA foreign_keys").Scan(&foreignKeysEnabled); err != nil {
+		return fmt.Errorf("read foreign_keys pragma: %w", err)
+	}
+	if foreignKeysEnabled {
+		if _, err := conn.ExecContext(ctx, "PRAGMA foreign_keys=OFF"); err != nil {
+			return fmt.Errorf("disable foreign keys: %w", err)
+		}
+		defer func() {
+			if _, err := conn.ExecContext(ctx, "PRAGMA foreign_keys=ON"); retErr == nil && err != nil {
+				retErr = fmt.Errorf("restore foreign keys: %w", err)
+			}
+		}()
+	}
+
+	tx, err := conn.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin sms_engagement_plans rebuild: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	statements := []string{
+		`CREATE TABLE sms_engagement_plans_migration (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			stakeholder_id INTEGER NOT NULL,
+			strategy TEXT NOT NULL DEFAULT '',
+			frequency TEXT NOT NULL DEFAULT 'monthly' CHECK (frequency IN ('daily','weekly','biweekly','monthly','quarterly','annual','as_needed')),
+			channel TEXT NOT NULL DEFAULT 'email' CHECK (channel IN ('email','phone','meeting','in_person','slack','teams','other')),
+			status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('draft','active','paused','completed')),
+			start_date DATETIME,
+			end_date DATETIME,
+			notes TEXT NOT NULL DEFAULT '',
+			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			FOREIGN KEY (stakeholder_id) REFERENCES sms_stakeholders(id) ON DELETE CASCADE
+		)`,
+		`INSERT INTO sms_engagement_plans_migration (
+			id, stakeholder_id, strategy, frequency, channel, status, start_date, end_date, notes, created_at, updated_at
+		)
+		SELECT id, stakeholder_id, strategy, frequency,
+			CASE WHEN channel IN ('email','phone','meeting','in_person','slack','teams','other') THEN channel ELSE 'email' END,
+			status, start_date, end_date, notes, created_at, updated_at
+		FROM sms_engagement_plans`,
+		`DROP TABLE sms_engagement_plans`,
+		`ALTER TABLE sms_engagement_plans_migration RENAME TO sms_engagement_plans`,
+		`CREATE INDEX idx_sms_engagement_plans_stakeholder ON sms_engagement_plans(stakeholder_id)`,
+	}
+	for _, statement := range statements {
+		if _, err := tx.ExecContext(ctx, statement); err != nil {
+			return fmt.Errorf("rebuild sms_engagement_plans: %w", err)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit sms_engagement_plans rebuild: %w", err)
 	}
 	return nil
 }

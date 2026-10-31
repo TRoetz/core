@@ -101,6 +101,28 @@ function createPermissionStore() {
     }
   );
 
+  // SRM module access is granted per group through the global srm.view role
+  // permission. System admins always have it.
+  const canAccessSRM = derived(
+    [authStore, userPermissionKeys],
+    ([$authStore, $userPermissionKeys]) => {
+      if (!$authStore.currentUser) return false;
+      if ($authStore.currentUser.is_system_admin) return true;
+      return $userPermissionKeys.has('srm.view');
+    }
+  );
+
+  // SMS module access is granted per group through the global sms.view role
+  // permission. System admins always have it.
+  const canAccessSMS = derived(
+    [authStore, userPermissionKeys],
+    ([$authStore, $userPermissionKeys]) => {
+      if (!$authStore.currentUser) return false;
+      if ($authStore.currentUser.is_system_admin) return true;
+      return $userPermissionKeys.has('sms.view');
+    }
+  );
+
   // Create a combined derived store for easy subscription
   const combined = derived(
     [
@@ -119,6 +141,8 @@ function createPermissionStore() {
       canManageChannels,
       managesAssetSets,
       canAccessP3M,
+      canAccessSRM,
+      canAccessSMS,
     ],
     ([
       $permissions,
@@ -136,6 +160,8 @@ function createPermissionStore() {
       $canManageChannels,
       $managesAssetSets,
       $canAccessP3M,
+      $canAccessSRM,
+      $canAccessSMS,
     ]) => ({
       permissions: $permissions,
       userPermissions: $userPermissions,
@@ -152,6 +178,8 @@ function createPermissionStore() {
       canManageChannels: $canManageChannels,
       managesAssetSets: $managesAssetSets,
       canAccessP3M: $canAccessP3M,
+      canAccessSRM: $canAccessSRM,
+      canAccessSMS: $canAccessSMS,
     })
   );
 

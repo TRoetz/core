@@ -30,6 +30,9 @@
   --color-ds-surface-card: var(--ds-surface-card);
   --color-ds-surface-selected: var(--ds-surface-selected);
 
+  /* Input background (form controls) */
+  --color-ds-background-input: var(--ds-background-input);
+
   /* Text */
   --color-ds-text: var(--ds-text);
   --color-ds-text-subtle: var(--ds-text-subtle);

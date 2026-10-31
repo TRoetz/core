@@ -1657,6 +1657,8 @@ func (s *Server) initialize() error {
 	// Build route dependencies
 	slaHandler := handlers.NewSLAHandler(s.db, s.slaEngine, permService)
 	p3mHandler := handlers.NewP3MHandler(s.db, permService)
+	srmHandler := handlers.NewSRMHandler(s.db)
+	smsHandler := handlers.NewSMSHandler(s.db)
 	routeDeps := &routes.Deps{
 		SLA:       slaHandler,
 		API:       api,
@@ -1849,6 +1851,8 @@ func (s *Server) initialize() error {
 		},
 		Push: pushHandler,
 		P3M:  p3mHandler,
+		SRM:  srmHandler,
+		SMS:  smsHandler,
 	}
 	routes.RegisterAll(routeDeps)
 
@@ -2132,6 +2136,7 @@ func (s *Server) initialize() error {
 			mux.Handle("GET /apple-touch-startup-image-1290x2796.png", revalidatingAssets)
 			mux.Handle("GET /apple-touch-startup-image-2048x2732.png", revalidatingAssets)
 			mux.Handle("GET /forms/widget.js", revalidatingAssets)
+			mux.Handle("GET /images/", revalidatingAssets)
 			mux.Handle("GET /embed/", revalidatingAssets)
 
 			// PWA entry points. These need explicit routes (the SPA fallback at

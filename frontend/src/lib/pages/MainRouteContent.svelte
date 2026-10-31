@@ -125,6 +125,14 @@
       {@render lazyLoadedComponent(view, routeProps)}
     </div>
   </PermissionGuard>
+{:else if view === 'srm'}
+  <!-- SRM module access is granted per group through the global srm.view
+       permission; direct URL visits by non-members get a clean no-access state. -->
+  <PermissionGuard permissionKey="srm.view">
+    <div class="h-full min-h-0 overflow-y-auto" style="background-color: var(--ds-surface);">
+      {@render lazyLoadedComponent(view, routeProps)}
+    </div>
+  </PermissionGuard>
 {:else if routeEntry.config}
   {#if wrapper === 'surface-full'}
     <div class="h-full min-h-0 overflow-y-auto" style="background-color: var(--ds-surface);">

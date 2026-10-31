@@ -27,4 +27,6 @@ func RegisterAll(deps *Deps) {
 	RegisterPushRoutes(deps)
 	RegisterSLARoutes(deps)
 	RegisterP3MRoutes(deps)
+	RegisterSRMRoutes(deps)
+	RegisterSMSRoutes(deps)
 }

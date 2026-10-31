@@ -98,6 +98,7 @@ type P3MProject struct {
 	Title                string     `json:"title"`
 	Description          string     `json:"description"`
 	ManagerID            *int       `json:"manager_id,omitempty"`
+	TimeProjectID        *int       `json:"time_project_id,omitempty"`
 	CurrentStage         string     `json:"current_stage"`
 	BudgetApproved       float64    `json:"budget_approved"`
 	BudgetActual         float64    `json:"budget_actual"`

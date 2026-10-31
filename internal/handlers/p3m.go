@@ -681,11 +681,11 @@ func (h *P3MHandler) programmeRollups(ctx context.Context) (map[int]*models.P3MP
 // Projects (leaf tier; EVM + automatic RAG live here)
 // ---------------------------------------------------------------------------
 
-const p3mProjectColumns = `id, portfolio_id, programme_id, title, description, manager_id, current_stage, budget_approved, budget_actual, progress_percent, start_date, target_completion_date, rag_status, created_at, updated_at`
+const p3mProjectColumns = `id, portfolio_id, programme_id, title, description, manager_id, time_project_id, current_stage, budget_approved, budget_actual, progress_percent, start_date, target_completion_date, rag_status, created_at, updated_at`
 
 func scanP3MProject(row interface{ Scan(...any) error }) (models.P3MProject, error) {
 	var p models.P3MProject
-	err := row.Scan(&p.ID, &p.PortfolioID, &p.ProgrammeID, &p.Title, &p.Description, &p.ManagerID,
+	err := row.Scan(&p.ID, &p.PortfolioID, &p.ProgrammeID, &p.Title, &p.Description, &p.ManagerID, &p.TimeProjectID,
 		&p.CurrentStage, &p.BudgetApproved, &p.BudgetActual, &p.ProgressPercent,
 		&p.StartDate, &p.TargetCompletionDate, &p.RagStatus, &p.CreatedAt, &p.UpdatedAt)
 	return p, err
@@ -790,6 +790,7 @@ func (h *P3MHandler) CreateProject(w http.ResponseWriter, r *http.Request) {
 		Title                string    `json:"title"`
 		Description          string    `json:"description"`
 		ManagerID            *int      `json:"manager_id,omitempty"`
+		TimeProjectID        *int      `json:"time_project_id,omitempty"`
 		CurrentStage         string    `json:"current_stage"`
 		BudgetApproved       float64   `json:"budget_approved"`
 		BudgetActual         float64   `json:"budget_actual"`
@@ -809,6 +810,10 @@ func (h *P3MHandler) CreateProject(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	if in.TimeProjectID != nil && !h.timeProjectExists(r.Context(), *in.TimeProjectID) {
+		respondNotFound(w, r, "time_project")
+		return
+	}
 	if in.CurrentStage == "" {
 		in.CurrentStage = models.P3MStageInitiation
 	}
@@ -819,16 +824,16 @@ func (h *P3MHandler) CreateProject(w http.ResponseWriter, r *http.Request) {
 
 	p := models.P3MProject{
 		PortfolioID: fid, ProgrammeID: pid, Title: in.Title, Description: in.Description, ManagerID: in.ManagerID,
-		CurrentStage: in.CurrentStage, BudgetApproved: in.BudgetApproved, BudgetActual: in.BudgetActual,
+		TimeProjectID: in.TimeProjectID, CurrentStage: in.CurrentStage, BudgetApproved: in.BudgetApproved, BudgetActual: in.BudgetActual,
 		ProgressPercent: in.ProgressPercent, StartDate: nullTime(in.StartDate), TargetCompletionDate: nullTime(in.TargetCompletionDate),
 	}
 	p3mApplyComputed(&p)
 
 	now := time.Now().UTC()
 	res, err := h.db.ExecContext(r.Context(), `
-		INSERT INTO p3m_projects (portfolio_id, programme_id, title, description, manager_id, current_stage, budget_approved, budget_actual, progress_percent, start_date, target_completion_date, rag_status, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		nullInt(p.PortfolioID), nullInt(p.ProgrammeID), p.Title, p.Description, nullInt(p.ManagerID),
+		INSERT INTO p3m_projects (portfolio_id, programme_id, title, description, manager_id, time_project_id, current_stage, budget_approved, budget_actual, progress_percent, start_date, target_completion_date, rag_status, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		nullInt(p.PortfolioID), nullInt(p.ProgrammeID), p.Title, p.Description, nullInt(p.ManagerID), nullInt(p.TimeProjectID),
 		p.CurrentStage, p.BudgetApproved, p.BudgetActual, p.ProgressPercent,
 		nullTimePtr(p.StartDate), nullTimePtr(p.TargetCompletionDate), p.RagStatus, now, now)
 	if err != nil {
@@ -869,6 +874,7 @@ func (h *P3MHandler) UpdateProject(w http.ResponseWriter, r *http.Request) {
 		Title                string    `json:"title"`
 		Description          string    `json:"description"`
 		ManagerID            *int      `json:"manager_id,omitempty"`
+		TimeProjectID        *int      `json:"time_project_id,omitempty"`
 		CurrentStage         string    `json:"current_stage"`
 		BudgetApproved       float64   `json:"budget_approved"`
 		BudgetActual         float64   `json:"budget_actual"`
@@ -888,6 +894,10 @@ func (h *P3MHandler) UpdateProject(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	if in.TimeProjectID != nil && !h.timeProjectExists(r.Context(), *in.TimeProjectID) {
+		respondNotFound(w, r, "time_project")
+		return
+	}
 	if in.CurrentStage == "" {
 		in.CurrentStage = current.CurrentStage
 	}
@@ -902,15 +912,15 @@ func (h *P3MHandler) UpdateProject(w http.ResponseWriter, r *http.Request) {
 
 	p := models.P3MProject{
 		ID: id, PortfolioID: fid, ProgrammeID: pid, Title: in.Title, Description: in.Description, ManagerID: in.ManagerID,
-		CurrentStage: in.CurrentStage, BudgetApproved: in.BudgetApproved, BudgetActual: in.BudgetActual,
+		TimeProjectID: in.TimeProjectID, CurrentStage: in.CurrentStage, BudgetApproved: in.BudgetApproved, BudgetActual: in.BudgetActual,
 		ProgressPercent: in.ProgressPercent, StartDate: nullTime(in.StartDate), TargetCompletionDate: nullTime(in.TargetCompletionDate),
 	}
 	p3mApplyComputed(&p)
 
 	now := time.Now().UTC()
 	_, err = h.db.ExecContext(r.Context(), `
-		UPDATE p3m_projects SET portfolio_id = ?, programme_id = ?, title = ?, description = ?, manager_id = ?, current_stage = ?, budget_approved = ?, budget_actual = ?, progress_percent = ?, start_date = ?, target_completion_date = ?, rag_status = ?, updated_at = ? WHERE id = ?`,
-		nullInt(p.PortfolioID), nullInt(p.ProgrammeID), p.Title, p.Description, nullInt(p.ManagerID),
+		UPDATE p3m_projects SET portfolio_id = ?, programme_id = ?, title = ?, description = ?, manager_id = ?, time_project_id = ?, current_stage = ?, budget_approved = ?, budget_actual = ?, progress_percent = ?, start_date = ?, target_completion_date = ?, rag_status = ?, updated_at = ? WHERE id = ?`,
+		nullInt(p.PortfolioID), nullInt(p.ProgrammeID), p.Title, p.Description, nullInt(p.ManagerID), nullInt(p.TimeProjectID),
 		p.CurrentStage, p.BudgetApproved, p.BudgetActual, p.ProgressPercent,
 		nullTimePtr(p.StartDate), nullTimePtr(p.TargetCompletionDate), p.RagStatus, now, id)
 	if err != nil {
@@ -945,6 +955,333 @@ func (h *P3MHandler) DeleteProject(w http.ResponseWriter, r *http.Request) {
 
 func (h *P3MHandler) getProjectRow(ctx context.Context, id int) (models.P3MProject, error) {
 	return scanP3MProject(h.db.QueryRowContext(ctx, `SELECT `+p3mProjectColumns+` FROM p3m_projects WHERE id = ?`, id))
+}
+
+// timeProjectExists reports whether a core Time & Projects entry with the id exists.
+func (h *P3MHandler) timeProjectExists(ctx context.Context, id int) bool {
+	var n int
+	err := h.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM time_projects WHERE id = ?`, id).Scan(&n)
+	return err == nil && n > 0
+}
+
+// p3mWorkspaceRef is a workspace linked to a P3M project through the
+// workspace_p3m_projects bridge.
+type p3mWorkspaceRef struct {
+	ID   int    `json:"id"`
+	Name string `json:"name"`
+}
+
+func (h *P3MHandler) queryProjectWorkspaces(ctx context.Context, projectID int) ([]p3mWorkspaceRef, error) {
+	rows, err := h.db.QueryContext(ctx, `
+		SELECT w.id, w.name FROM workspace_p3m_projects wpw
+		JOIN workspaces w ON w.id = wpw.workspace_id
+		WHERE wpw.p3m_project_id = ? ORDER BY w.name`, projectID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	out := make([]p3mWorkspaceRef, 0)
+	for rows.Next() {
+		var ref p3mWorkspaceRef
+		if err := rows.Scan(&ref.ID, &ref.Name); err != nil {
+			return nil, err
+		}
+		out = append(out, ref)
+	}
+	return out, rows.Err()
+}
+
+// ListProjectWorkspaces handles GET /api/p3m/projects/{id}/workspaces.
+func (h *P3MHandler) ListProjectWorkspaces(w http.ResponseWriter, r *http.Request) {
+	if _, ok := RequireAuth(w, r); !ok {
+		return
+	}
+	id, ok := requireIDParam(w, r, "id")
+	if !ok {
+		return
+	}
+	out, err := h.queryProjectWorkspaces(r.Context(), id)
+	if err != nil {
+		respondInternalError(w, r, err)
+		return
+	}
+	respondJSONOK(w, out)
+}
+
+// SetProjectWorkspaces handles PUT /api/p3m/projects/{id}/workspaces. It
+// replaces the project's workspace membership with the given list; an empty
+// list unlinks the project from every workspace.
+func (h *P3MHandler) SetProjectWorkspaces(w http.ResponseWriter, r *http.Request) {
+	if _, ok := RequireAuth(w, r); !ok {
+		return
+	}
+	id, ok := requireIDParam(w, r, "id")
+	if !ok {
+		return
+	}
+	var in struct {
+		WorkspaceIDs []int `json:"workspace_ids"`
+	}
+	if err := newJSONDecoder(w, r).Decode(&in); err != nil {
+		respondBadRequest(w, r, "Invalid request body")
+		return
+	}
+
+	seen := make(map[int]bool, len(in.WorkspaceIDs))
+	for _, wsID := range in.WorkspaceIDs {
+		if seen[wsID] {
+			continue
+		}
+		seen[wsID] = true
+		var exists bool
+		err := h.db.QueryRowContext(r.Context(), `SELECT EXISTS(SELECT 1 FROM workspaces WHERE id = ?)`, wsID).Scan(&exists)
+		if err != nil {
+			respondInternalError(w, r, err)
+			return
+		}
+		if !exists {
+			respondNotFound(w, r, "workspace")
+			return
+		}
+	}
+
+	tx, err := h.db.Begin()
+	if err != nil {
+		respondInternalError(w, r, err)
+		return
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	if _, err := tx.Exec(`DELETE FROM workspace_p3m_projects WHERE p3m_project_id = ?`, id); err != nil {
+		respondInternalError(w, r, err)
+		return
+	}
+	for wsID := range seen {
+		if _, err := tx.Exec(`INSERT INTO workspace_p3m_projects (workspace_id, p3m_project_id) VALUES (?, ?)`, wsID, id); err != nil {
+			respondInternalError(w, r, err)
+			return
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		respondInternalError(w, r, err)
+		return
+	}
+
+	h.ListProjectWorkspaces(w, r)
+}
+
+// p3mContractRef is an SRM contract attached to a P3M project through the
+// contracts' polymorphic p3m_entity link.
+type p3mContractRef struct {
+	ID             int     `json:"id"`
+	ContractNumber string  `json:"contract_number"`
+	Title          string  `json:"title"`
+	SupplierName   string  `json:"supplier_name"`
+	Status         string  `json:"status"`
+	TotalValue     float64 `json:"total_value"`
+	Currency       string  `json:"currency"`
+	CommittedSpend float64 `json:"committed_spend"`
+	ActualSpend    float64 `json:"actual_spend"`
+}
+
+// p3mStakeholderRef is one row of the merged per-project stakeholder view;
+// source distinguishes P3M module stakeholders from SRM ones.
+type p3mStakeholderRef struct {
+	Source            string `json:"source"`
+	Name              string `json:"name"`
+	RoleTitle         string `json:"role_title,omitempty"`
+	Organization      string `json:"organization,omitempty"`
+	JobTitle          string `json:"job_title,omitempty"`
+	IsExternal        *bool  `json:"is_external,omitempty"`
+	PowerScore        int    `json:"power_score,omitempty"`
+	InterestScore     int    `json:"interest_score,omitempty"`
+	SupportBand       string `json:"support_band,omitempty"`
+	CurrentEngagement string `json:"current_engagement,omitempty"`
+}
+
+// GetProjectRollup handles GET /api/p3m/projects/{id}/rollup. It aggregates
+// the cross-module picture for one P3M project: linked core time project,
+// workspace memberships, financials (P3M budget and tranches, SRM contract
+// spend, worklog cost), merged stakeholders from both modules, and attached
+// SRM contracts. Powers the per-project tracking views in both modules.
+func (h *P3MHandler) GetProjectRollup(w http.ResponseWriter, r *http.Request) {
+	if _, ok := RequireAuth(w, r); !ok {
+		return
+	}
+	id, ok := requireIDParam(w, r, "id")
+	if !ok {
+		return
+	}
+	ctx := r.Context()
+
+	project, err := h.getProjectRow(ctx, id)
+	if err != nil {
+		if isNotFound(err) {
+			respondNotFound(w, r, "p3m_project")
+			return
+		}
+		respondInternalError(w, r, err)
+		return
+	}
+
+	workspaces, err := h.queryProjectWorkspaces(ctx, id)
+	if err != nil {
+		respondInternalError(w, r, err)
+		return
+	}
+
+	type timeProjectRef struct {
+		ID         int     `json:"id"`
+		Name       string  `json:"name"`
+		HourlyRate float64 `json:"hourly_rate"`
+	}
+	var timeProject *timeProjectRef
+	worklogHours := 0.0
+	worklogCost := 0.0
+	if project.TimeProjectID != nil {
+		var tp timeProjectRef
+		err := h.db.QueryRowContext(ctx, `SELECT id, name, COALESCE(hourly_rate, 0) FROM time_projects WHERE id = ?`, *project.TimeProjectID).Scan(&tp.ID, &tp.Name, &tp.HourlyRate)
+		if err != nil {
+			if isNotFound(err) {
+				timeProject = nil // link dangled (core project deleted); report without it
+			} else {
+				respondInternalError(w, r, err)
+				return
+			}
+		} else {
+			timeProject = &tp
+			var mins int
+			if err := h.db.QueryRowContext(ctx, `SELECT COALESCE(SUM(duration_minutes), 0) FROM time_worklogs WHERE project_id = ?`, *project.TimeProjectID).Scan(&mins); err != nil {
+				respondInternalError(w, r, err)
+				return
+			}
+			worklogHours = float64(mins) / 60.0
+			worklogCost = worklogHours * tp.HourlyRate
+		}
+	}
+
+	var trancheTotal float64
+	if err := h.db.QueryRowContext(ctx, `SELECT COALESCE(SUM(amount), 0) FROM p3m_budget_tranches WHERE entity_type = 'project' AND entity_id = ?`, id).Scan(&trancheTotal); err != nil {
+		respondInternalError(w, r, err)
+		return
+	}
+
+	contracts := make([]p3mContractRef, 0)
+	var contractValue, committedSpend, actualSpend float64
+	crows, err := h.db.QueryContext(ctx, `
+		SELECT c.id, c.contract_number, c.title, s.company_name, c.status, c.total_value, c.currency, c.committed_spend, c.actual_spend
+		FROM srm_contracts c JOIN srm_suppliers s ON s.id = c.supplier_id
+		WHERE c.p3m_entity_type = 'project' AND c.p3m_entity_id = ? ORDER BY c.title`, id)
+	if err != nil {
+		respondInternalError(w, r, err)
+		return
+	}
+	defer crows.Close()
+	for crows.Next() {
+		var c p3mContractRef
+		if err := crows.Scan(&c.ID, &c.ContractNumber, &c.Title, &c.SupplierName, &c.Status, &c.TotalValue, &c.Currency, &c.CommittedSpend, &c.ActualSpend); err != nil {
+			respondInternalError(w, r, err)
+			return
+		}
+		contractValue += c.TotalValue
+		committedSpend += c.CommittedSpend
+		actualSpend += c.ActualSpend
+		contracts = append(contracts, c)
+	}
+	if err := crows.Err(); err != nil {
+		respondInternalError(w, r, err)
+		return
+	}
+
+	stakeholders := make([]p3mStakeholderRef, 0)
+	srows, err := h.db.QueryContext(ctx, `SELECT name, role_title, power_score, interest_score FROM p3m_stakeholders WHERE entity_type = 'project' AND entity_id = ? ORDER BY name`, id)
+	if err != nil {
+		respondInternalError(w, r, err)
+		return
+	}
+	for srows.Next() {
+		var ref p3mStakeholderRef
+		if err := srows.Scan(&ref.Name, &ref.RoleTitle, &ref.PowerScore, &ref.InterestScore); err != nil {
+			srows.Close()
+			respondInternalError(w, r, err)
+			return
+		}
+		ref.Source = "p3m"
+		stakeholders = append(stakeholders, ref)
+	}
+	if err := srows.Err(); err != nil {
+		srows.Close()
+		respondInternalError(w, r, err)
+		return
+	}
+	srows.Close()
+
+	esrows, err := h.db.QueryContext(ctx, `
+		SELECT st.full_name, COALESCE(st.organization, ''), COALESCE(st.job_title, ''), st.is_external, es.power_score, es.interest_score, es.support_band, es.current_engagement
+		FROM srm_entity_stakeholders es JOIN srm_stakeholders st ON st.id = es.stakeholder_id
+		WHERE es.entity_type = 'project' AND es.entity_id = ? ORDER BY st.full_name`, id)
+	if err != nil {
+		respondInternalError(w, r, err)
+		return
+	}
+	defer esrows.Close()
+	for esrows.Next() {
+		var ref p3mStakeholderRef
+		var external bool
+		if err := esrows.Scan(&ref.Name, &ref.Organization, &ref.JobTitle, &external, &ref.PowerScore, &ref.InterestScore, &ref.SupportBand, &ref.CurrentEngagement); err != nil {
+			respondInternalError(w, r, err)
+			return
+		}
+		ref.Source = "srm"
+		ref.IsExternal = &external
+		stakeholders = append(stakeholders, ref)
+	}
+	if err := esrows.Err(); err != nil {
+		respondInternalError(w, r, err)
+		return
+	}
+
+	msrows, err := h.db.QueryContext(ctx, `
+		SELECT st.name, COALESCE(st.organization, ''), COALESCE(st.title, ''), st.influence_level, st.interest_level
+		FROM sms_stakeholder_entities se JOIN sms_stakeholders st ON st.id = se.stakeholder_id
+		WHERE se.entity_type = 'project' AND se.entity_id = ? ORDER BY st.name`, id)
+	if err != nil {
+		respondInternalError(w, r, err)
+		return
+	}
+	defer msrows.Close()
+	for msrows.Next() {
+		var ref p3mStakeholderRef
+		if err := msrows.Scan(&ref.Name, &ref.Organization, &ref.JobTitle, &ref.PowerScore, &ref.InterestScore); err != nil {
+			respondInternalError(w, r, err)
+			return
+		}
+		ref.Source = "sms"
+		stakeholders = append(stakeholders, ref)
+	}
+	if err := msrows.Err(); err != nil {
+		respondInternalError(w, r, err)
+		return
+	}
+
+	respondJSONOK(w, map[string]any{
+		"project_id":   id,
+		"time_project": timeProject,
+		"workspaces":   workspaces,
+		"financials": map[string]float64{
+			"budget_approved":        project.BudgetApproved,
+			"budget_actual":          project.BudgetActual,
+			"tranche_amount_total":   trancheTotal,
+			"contract_value_total":   contractValue,
+			"contract_committed_spend": committedSpend,
+			"contract_actual_spend":  actualSpend,
+			"worklog_hours":          worklogHours,
+			"worklog_cost":           worklogCost,
+		},
+		"stakeholders": stakeholders,
+		"contracts":    contracts,
+	})
 }
 
 // resolveProjectParents validates the portfolio/programme pair of a project

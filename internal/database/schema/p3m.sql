@@ -36,6 +36,9 @@ CREATE TABLE IF NOT EXISTS p3m_projects (
 	title TEXT NOT NULL,
 	description TEXT DEFAULT '',
 	manager_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+	-- Optional link to the core Time & Projects entry for this project. Lets
+	-- worklog financials roll up into P3M/SRM per-project tracking.
+	time_project_id INTEGER REFERENCES time_projects(id) ON DELETE SET NULL,
 	current_stage TEXT NOT NULL DEFAULT 'initiation' CHECK (current_stage IN ('initiation', 'planning', 'execution', 'closure')),
 	budget_approved REAL NOT NULL DEFAULT 0,
 	budget_actual REAL NOT NULL DEFAULT 0,
@@ -234,3 +237,18 @@ CREATE INDEX IF NOT EXISTS idx_p3m_stakeholders_entity ON p3m_stakeholders(entit
 CREATE INDEX IF NOT EXISTS idx_p3m_communications_entity ON p3m_communications(entity_type, entity_id);
 CREATE INDEX IF NOT EXISTS idx_p3m_allocations_resource ON p3m_resource_allocations(resource_id);
 CREATE INDEX IF NOT EXISTS idx_p3m_tranches_entity ON p3m_budget_tranches(entity_type, entity_id);
+CREATE INDEX IF NOT EXISTS idx_p3m_projects_time_project_id ON p3m_projects(time_project_id);
+
+-- Workspace bridge for P3M projects: workspaces relate to the module through
+-- their linked projects, so per-project financials and stakeholders roll up
+-- into workspace views without scoping every module row.
+CREATE TABLE IF NOT EXISTS workspace_p3m_projects (
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	workspace_id INTEGER NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+	p3m_project_id INTEGER NOT NULL REFERENCES p3m_projects(id) ON DELETE CASCADE,
+	created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+	UNIQUE(workspace_id, p3m_project_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_workspace_p3m_projects_workspace_id ON workspace_p3m_projects(workspace_id);
+CREATE INDEX IF NOT EXISTS idx_workspace_p3m_projects_project_id ON workspace_p3m_projects(p3m_project_id);

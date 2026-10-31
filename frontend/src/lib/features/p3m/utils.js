@@ -88,3 +88,17 @@ export function quadrantLabel(quadrant) {
       return quadrant || '';
   }
 }
+
+/** Convert an <input type="date"> value to an RFC3339 timestamp; undefined when empty. */
+export function toISODate(value) {
+  if (!value) return undefined;
+  const d = new Date(`${value}T00:00:00Z`);
+  return Number.isNaN(d.getTime()) ? undefined : d.toISOString();
+}
+
+/** Convert an ISO timestamp (or null) to the YYYY-MM-DD value a date input expects. */
+export function toDateInputValue(iso) {
+  if (!iso) return '';
+  const s = String(iso).slice(0, 10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : '';
+}

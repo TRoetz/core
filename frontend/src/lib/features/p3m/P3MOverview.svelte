@@ -1,14 +1,130 @@
 <script>
   import { t } from '../../stores/i18n.svelte.js';
   import IconChevronRight from '@tabler/icons-svelte-runes/icons/chevron-right';
-  import { formatMoney, formatDate, ragColor, ragLabel, stageLabel } from './utils.js';
+  import IconPlus from '@tabler/icons-svelte-runes/icons/plus';
+  import P3MProjectDetail from './P3MProjectDetail.svelte';
+  import P3MProjectForm from './P3MProjectForm.svelte';
+  import { p3m as p3mApi } from '../../api/p3m.js';
+  import { getUsers } from '../../api/users.js';
+  import { formatMoney, formatDate, ragColor, ragLabel, stageLabel, toISODate } from './utils.js';
 
-  let { portfolios = [], summary = null } = $props();
+  let { portfolios = [], summary = null, onChanged = () => {}, initialProjectId = null } = $props();
 
-  const expanded = $state({}); // node id -> bool; default: portfolios open
+  // node id -> bool; default: portfolios open. A ?project= deep link starts
+  // with that project's detail expanded (parents are open by default).
+  const expanded = $state(initialProjectId ? { [initialProjectId]: true } : {});
 
   function toggle(id) {
     expanded[id] = !expanded[id];
+  }
+
+  // --- Creation forms -----------------------------------------------------
+  const RAGS = ['green', 'amber', 'red'];
+
+  let newPortfolioOpen = $state(false);
+  let portfolioForm = $state(emptyPortfolioForm());
+  let savingPortfolio = $state(false);
+  let portfolioError = $state('');
+
+  /** Portfolio id the programme form is open for, or null. */
+  let programmeFormFor = $state(null);
+  let programmeForm = $state(emptyProgrammeForm());
+  let savingProgramme = $state(false);
+  let programmeError = $state('');
+  /** @type {Array<{id:number,display_name?:string,username?:string}>} */
+  let users = $state([]);
+
+  /** { portfolioId: number, programmeId: number|null } while the project form is open. */
+  let projectFormCtx = $state(null);
+
+  function emptyPortfolioForm() {
+    return { title: '', description: '', strategic_objective: '', budget_allocated: '', rag_status: 'green' };
+  }
+
+  function emptyProgrammeForm() {
+    return { title: '', description: '', manager_id: '', budget_allocated: '', target_start_date: '', target_end_date: '', rag_status: 'green' };
+  }
+
+  function toggleNewPortfolio() {
+    newPortfolioOpen = !newPortfolioOpen;
+    if (newPortfolioOpen) {
+      portfolioForm = emptyPortfolioForm();
+      portfolioError = '';
+    }
+  }
+
+  async function submitPortfolio() {
+    if (savingPortfolio) return;
+    portfolioError = '';
+    if (!portfolioForm.title.trim()) {
+      portfolioError = t('p3m.titleRequired');
+      return;
+    }
+    savingPortfolio = true;
+    try {
+      await p3mApi.portfolios.create({
+        title: portfolioForm.title.trim(),
+        description: portfolioForm.description,
+        strategic_objective: portfolioForm.strategic_objective,
+        budget_allocated: Number(portfolioForm.budget_allocated) || 0,
+        rag_status: portfolioForm.rag_status,
+      });
+      newPortfolioOpen = false;
+      onChanged();
+    } catch (e) {
+      portfolioError = e?.message || t('p3m.createFailed');
+    } finally {
+      savingPortfolio = false;
+    }
+  }
+
+  function openProgrammeForm(pfId) {
+    programmeFormFor = pfId;
+    projectFormCtx = null;
+    programmeForm = emptyProgrammeForm();
+    programmeError = '';
+    if (!users.length) getUsers().then((u) => (users = u || [])).catch(() => {});
+  }
+
+  async function submitProgramme() {
+    if (savingProgramme) return;
+    programmeError = '';
+    if (!programmeForm.title.trim()) {
+      programmeError = t('p3m.titleRequired');
+      return;
+    }
+    savingProgramme = true;
+    try {
+      const payload = {
+        portfolio_id: Number(programmeFormFor),
+        title: programmeForm.title.trim(),
+        description: programmeForm.description,
+        budget_allocated: Number(programmeForm.budget_allocated) || 0,
+        rag_status: programmeForm.rag_status,
+      };
+      if (programmeForm.manager_id) payload.manager_id = Number(programmeForm.manager_id);
+      const start = toISODate(programmeForm.target_start_date);
+      if (start) payload.target_start_date = start;
+      const end = toISODate(programmeForm.target_end_date);
+      if (end) payload.target_end_date = end;
+
+      await p3mApi.programmes.create(payload);
+      programmeFormFor = null;
+      onChanged();
+    } catch (e) {
+      programmeError = e?.message || t('p3m.createFailed');
+    } finally {
+      savingProgramme = false;
+    }
+  }
+
+  function openProjectForm(pfId, pgId = null) {
+    projectFormCtx = { portfolioId: pfId, programmeId: pgId };
+    programmeFormFor = null;
+  }
+
+  function closeProjectForm() {
+    projectFormCtx = null;
   }
 
   const totals = $derived.by(() => {
@@ -86,8 +202,93 @@
     </div>
   </div>
 
+  <!-- New portfolio -->
+  <div class="px-6 pt-4">
+    <button type="button" class="p3m-action p3m-action-primary" onclick={toggleNewPortfolio}>
+      <IconPlus size={14} /> {t('p3m.newPortfolio')}
+    </button>
+
+    {#if newPortfolioOpen}
+      <div class="mt-2 rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-surface-card p-3 text-xs">
+        <div class="grid grid-cols-1 gap-x-6 gap-y-2 md:grid-cols-2">
+          <label class="block">
+            <span>{t('p3m.titleLabel')} *</span>
+            <input
+              class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+              value={portfolioForm.title}
+              disabled={savingPortfolio}
+              oninput={(e) => (portfolioForm = { ...portfolioForm, title: e.target.value })}
+            />
+          </label>
+
+          <label class="block">
+            <span>{t('p3m.ragStatus')}</span>
+            <select
+              class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+              value={portfolioForm.rag_status}
+              disabled={savingPortfolio}
+              onchange={(e) => (portfolioForm = { ...portfolioForm, rag_status: e.target.value })}
+            >
+              {#each RAGS as r (r)}
+                <option value={r}>{ragLabel(r)}</option>
+              {/each}
+            </select>
+          </label>
+
+          <label class="block">
+            <span>{t('p3m.budgetAllocated')}</span>
+            <input
+              type="number" step="any" min="0"
+              class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+              value={portfolioForm.budget_allocated}
+              disabled={savingPortfolio}
+              oninput={(e) => (portfolioForm = { ...portfolioForm, budget_allocated: e.target.value })}
+            />
+          </label>
+
+          <label class="block">
+            <span>{t('p3m.strategicObjective')}</span>
+            <input
+              class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+              value={portfolioForm.strategic_objective}
+              disabled={savingPortfolio}
+              oninput={(e) => (portfolioForm = { ...portfolioForm, strategic_objective: e.target.value })}
+            />
+          </label>
+
+          <label class="block md:col-span-2">
+            <span>{t('p3m.description')}</span>
+            <textarea
+              rows="2"
+              class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+              value={portfolioForm.description}
+              disabled={savingPortfolio}
+              oninput={(e) => (portfolioForm = { ...portfolioForm, description: e.target.value })}
+            ></textarea>
+          </label>
+        </div>
+
+        {#if portfolioError}
+          <div class="mt-2 rounded-md border border-red-200 bg-red-50 p-2 text-red-700">{portfolioError}</div>
+        {/if}
+
+        <div class="mt-3 flex items-center gap-2">
+          <button type="button" class="p3m-submit" disabled={savingPortfolio} onclick={submitPortfolio}>
+            {t('p3m.create')}
+          </button>
+          <button type="button" class="p3m-cancel" onclick={toggleNewPortfolio}>{t('p3m.cancel')}</button>
+        </div>
+      </div>
+    {/if}
+  </div>
+
   <!-- Hierarchy tree -->
   <div class="px-6 py-4">
+    {#if portfolios.length === 0}
+      <div class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] p-4 text-xs text-[var(--color-ds-text-muted,#6b7280)]">
+        {t('p3m.emptyTitle')} — {t('p3m.emptyDescription')}
+      </div>
+    {:else}
     {#each portfolios as pf (pf.id)}
       {@const open = expanded[pf.id] !== false}
       <div class="mb-2 overflow-hidden rounded-lg border border-[var(--color-ds-border,#e5e7eb)]">
@@ -102,9 +303,131 @@
         </button>
 
         {#if open}
-          <div class="border-t border-[var(--color-ds-border,#e5e7eb)] bg-[var(--color-ds-surface-2,rgba(0,0,0,0.02))]">
+          <div class="border-t border-[var(--color-ds-border,#e5e7eb)] bg-ds-surface-hovered">
             {#if pf.strategic_objective}
               <div class="px-10 py-2 text-xs italic text-[var(--color-ds-text-muted,#6b7280)]">{pf.strategic_objective}</div>
+            {/if}
+
+            <!-- Create actions -->
+            <div class="flex items-center gap-2 px-10 py-2">
+              <button type="button" class="p3m-action" onclick={() => openProgrammeForm(pf.id)}>
+                <IconPlus size={14} /> {t('p3m.addProgramme')}
+              </button>
+              <button type="button" class="p3m-action" onclick={() => openProjectForm(pf.id, null)}>
+                <IconPlus size={14} /> {t('p3m.addProject')}
+              </button>
+            </div>
+
+            {#if programmeFormFor === pf.id}
+              <div class="mx-10 mb-2 rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-surface-card p-3 text-xs">
+                <div class="grid grid-cols-1 gap-x-6 gap-y-2 md:grid-cols-2">
+                  <label class="block">
+                    <span>{t('p3m.titleLabel')} *</span>
+                    <input
+                      class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+                      value={programmeForm.title}
+                      disabled={savingProgramme}
+                      oninput={(e) => (programmeForm = { ...programmeForm, title: e.target.value })}
+                    />
+                  </label>
+
+                  <label class="block">
+                    <span>{t('p3m.manager')}</span>
+                    <select
+                      class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+                      value={programmeForm.manager_id}
+                      disabled={savingProgramme}
+                      onchange={(e) => (programmeForm = { ...programmeForm, manager_id: e.target.value })}
+                    >
+                      <option value="">{t('p3m.noSelection')}</option>
+                      {#each users as u (u.id)}
+                        <option value={u.id}>{u.display_name || u.username}</option>
+                      {/each}
+                    </select>
+                  </label>
+
+                  <label class="block">
+                    <span>{t('p3m.budgetAllocated')}</span>
+                    <input
+                      type="number" step="any" min="0"
+                      class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+                      value={programmeForm.budget_allocated}
+                      disabled={savingProgramme}
+                      oninput={(e) => (programmeForm = { ...programmeForm, budget_allocated: e.target.value })}
+                    />
+                  </label>
+
+                  <label class="block">
+                    <span>{t('p3m.ragStatus')}</span>
+                    <select
+                      class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+                      value={programmeForm.rag_status}
+                      disabled={savingProgramme}
+                      onchange={(e) => (programmeForm = { ...programmeForm, rag_status: e.target.value })}
+                    >
+                      {#each RAGS as r (r)}
+                        <option value={r}>{ragLabel(r)}</option>
+                      {/each}
+                    </select>
+                  </label>
+
+                  <div class="grid grid-cols-2 gap-x-4">
+                    <label class="block">
+                      <span>{t('p3m.startDate')}</span>
+                      <input
+                        type="date"
+                        class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+                        value={programmeForm.target_start_date}
+                        disabled={savingProgramme}
+                        oninput={(e) => (programmeForm = { ...programmeForm, target_start_date: e.target.value })}
+                      />
+                    </label>
+                    <label class="block">
+                      <span>{t('p3m.targetCompletionDate')}</span>
+                      <input
+                        type="date"
+                        class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+                        value={programmeForm.target_end_date}
+                        disabled={savingProgramme}
+                        oninput={(e) => (programmeForm = { ...programmeForm, target_end_date: e.target.value })}
+                      />
+                    </label>
+                  </div>
+
+                  <label class="block md:col-span-2">
+                    <span>{t('p3m.description')}</span>
+                    <textarea
+                      rows="2"
+                      class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+                      value={programmeForm.description}
+                      disabled={savingProgramme}
+                      oninput={(e) => (programmeForm = { ...programmeForm, description: e.target.value })}
+                    ></textarea>
+                  </label>
+                </div>
+
+                {#if programmeError}
+                  <div class="mt-2 rounded-md border border-red-200 bg-red-50 p-2 text-red-700">{programmeError}</div>
+                {/if}
+
+                <div class="mt-3 flex items-center gap-2">
+                  <button type="button" class="p3m-submit" disabled={savingProgramme} onclick={submitProgramme}>
+                    {t('p3m.create')}
+                  </button>
+                  <button type="button" class="p3m-cancel" onclick={() => (programmeFormFor = null)}>{t('p3m.cancel')}</button>
+                </div>
+              </div>
+            {/if}
+
+            {#if projectFormCtx && projectFormCtx.portfolioId === pf.id && projectFormCtx.programmeId === null}
+              <div class="mx-10 mb-2">
+                <P3MProjectForm
+                  portfolios={portfolios}
+                  defaultPortfolioId={pf.id}
+                  onCreated={() => { closeProjectForm(); onChanged(); }}
+                  onCancel={closeProjectForm}
+                />
+              </div>
             {/if}
 
             {#each pf.programmes ?? [] as pg (pg.id)}
@@ -119,6 +442,24 @@
 
               {#if pgOpen}
                 <div class="border-l-2 border-[var(--color-ds-border,#e5e7eb)] ml-10">
+                  <div class="flex items-center gap-2 px-4 py-1.5">
+                    <button type="button" class="p3m-action" onclick={() => openProjectForm(pf.id, pg.id)}>
+                      <IconPlus size={14} /> {t('p3m.addProject')}
+                    </button>
+                  </div>
+
+                  {#if projectFormCtx && projectFormCtx.portfolioId === pf.id && projectFormCtx.programmeId === pg.id}
+                    <div class="px-4 pb-2">
+                      <P3MProjectForm
+                        portfolios={portfolios}
+                        defaultPortfolioId={pf.id}
+                        defaultProgrammeId={pg.id}
+                        onCreated={() => { closeProjectForm(); onChanged(); }}
+                        onCancel={closeProjectForm}
+                      />
+                    </div>
+                  {/if}
+
                   {#each pg.projects ?? [] as pr (pr.id)}
                     {@const prOpen = expanded[pr.id] === true}
                     <button type="button" class="p3m-node-row p3m-pr" onclick={() => toggle(pr.id)}>
@@ -133,21 +474,7 @@
                     </button>
 
                     {#if prOpen}
-                      <div class="mb-2 ml-10 grid grid-cols-2 gap-x-8 gap-y-1 rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-white p-3 text-xs md:grid-cols-4">
-                        <div><span class="text-[var(--color-ds-text-muted,#6b7280)]">{t('p3m.currentStage')}:</span> {stageLabel(pr.current_stage)}</div>
-                        <div><span class="text-[var(--color-ds-text-muted,#6b7280)]">{t('p3m.ragStatus')}:</span> {ragLabel(pr.rag_status)}</div>
-                        <div><span class="text-[var(--color-ds-text-muted,#6b7280)]">{t('p3m.budgetApproved')}:</span> {formatMoney(pr.budget_approved)}</div>
-                        <div><span class="text-[var(--color-ds-text-muted,#6b7280)]">{t('p3m.progressPercent')}:</span> {pr.progress_percent}%</div>
-                        <div><span class="text-[var(--color-ds-text-muted,#6b7280)]">{t('p3m.startDate')}:</span> {formatDate(pr.start_date) || t('p3m.notSet')}</div>
-                        <div><span class="text-[var(--color-ds-text-muted,#6b7280)]">{t('p3m.targetCompletionDate')}:</span> {formatDate(pr.target_completion_date) || t('p3m.notSet')}</div>
-                        {#if pr.evm}
-                          <div><span class="text-[var(--color-ds-text-muted,#6b7280)]">SPI:</span> {pr.evm.spi.toFixed(2)}</div>
-                          <div><span class="text-[var(--color-ds-text-muted,#6b7280)]">CPI:</span> {pr.evm.cpi.toFixed(2)}</div>
-                        {/if}
-                        {#if pr.description}
-                          <div class="col-span-2 md:col-span-4 text-[var(--color-ds-text-muted,#6b7280)]">{pr.description}</div>
-                        {/if}
-                      </div>
+                      <P3MProjectDetail project={pr} onChanged={onChanged} onClose={() => toggle(pr.id)} />
                     {/if}
                   {/each}
                 </div>
@@ -168,21 +495,7 @@
               </button>
 
               {#if prOpen}
-                <div class="mb-2 ml-10 grid grid-cols-2 gap-x-8 gap-y-1 rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-white p-3 text-xs md:grid-cols-4">
-                  <div><span class="text-[var(--color-ds-text-muted,#6b7280)]">{t('p3m.currentStage')}:</span> {stageLabel(pr.current_stage)}</div>
-                  <div><span class="text-[var(--color-ds-text-muted,#6b7280)]">{t('p3m.ragStatus')}:</span> {ragLabel(pr.rag_status)}</div>
-                  <div><span class="text-[var(--color-ds-text-muted,#6b7280)]">{t('p3m.budgetApproved')}:</span> {formatMoney(pr.budget_approved)}</div>
-                  <div><span class="text-[var(--color-ds-text-muted,#6b7280)]">{t('p3m.progressPercent')}:</span> {pr.progress_percent}%</div>
-                  <div><span class="text-[var(--color-ds-text-muted,#6b7280)]">{t('p3m.startDate')}:</span> {formatDate(pr.start_date) || t('p3m.notSet')}</div>
-                  <div><span class="text-[var(--color-ds-text-muted,#6b7280)]">{t('p3m.targetCompletionDate')}:</span> {formatDate(pr.target_completion_date) || t('p3m.notSet')}</div>
-                  {#if pr.evm}
-                    <div><span class="text-[var(--color-ds-text-muted,#6b7280)]">SPI:</span> {pr.evm.spi.toFixed(2)}</div>
-                    <div><span class="text-[var(--color-ds-text-muted,#6b7280)]">CPI:</span> {pr.evm.cpi.toFixed(2)}</div>
-                  {/if}
-                  {#if pr.description}
-                    <div class="col-span-2 md:col-span-4 text-[var(--color-ds-text-muted,#6b7280)]">{pr.description}</div>
-                  {/if}
-                </div>
+                <P3MProjectDetail project={pr} onChanged={onChanged} onClose={() => toggle(pr.id)} />
               {/if}
             {/each}
 
@@ -193,6 +506,7 @@
         {/if}
       </div>
     {/each}
+    {/if}
   </div>
 </div>
 
@@ -211,7 +525,7 @@
   }
 
   .p3m-node-row:hover {
-    background: var(--color-ds-surface-2, rgba(0, 0, 0, 0.03));
+    background: var(--ds-surface-hovered);
   }
 
   .p3m-pf {
@@ -250,5 +564,57 @@
     position: absolute;
     inset: 0 auto 0 0;
     border-radius: 3px;
+  }
+
+  .p3m-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.125rem 0.5rem;
+    font-size: 0.75rem;
+    color: var(--color-ds-text-muted, #6b7280);
+    background: none;
+    border: 1px solid var(--color-ds-border, #e5e7eb);
+    border-radius: 0.375rem;
+    cursor: pointer;
+  }
+
+  .p3m-action:hover {
+    color: var(--color-ds-text, #111827);
+  }
+
+  .p3m-action-primary {
+    color: var(--color-ds-accent-blue, #2563eb);
+    border-color: var(--color-ds-accent-blue, #2563eb);
+  }
+
+  .p3m-submit {
+    padding: 0.25rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: white;
+    background: var(--color-ds-accent-blue, #2563eb);
+    border: none;
+    border-radius: 0.375rem;
+    cursor: pointer;
+  }
+
+  .p3m-submit:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+
+  .p3m-cancel {
+    padding: 0.25rem 0.75rem;
+    font-size: 0.75rem;
+    color: var(--color-ds-text-muted, #6b7280);
+    background: none;
+    border: 1px solid var(--color-ds-border, #e5e7eb);
+    border-radius: 0.375rem;
+    cursor: pointer;
+  }
+
+  .p3m-cancel:hover {
+    color: var(--color-ds-text, #111827);
   }
 </style>
