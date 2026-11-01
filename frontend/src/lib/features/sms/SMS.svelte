@@ -42,15 +42,17 @@
   onMount(load);
 </script>
 
-<PageHeader icon={IconUsers} title={t('sms.title')} subtitle={t('sms.subtitle')} marginClass="mt-4 mb-8">
-  {#snippet actions()}
-    <div class="flex items-center gap-2 text-xs text-[var(--color-ds-text-muted,#6b7280)]">
-      <span>{stakeholderTotal} {t('sms.statStakeholders')}</span>
-      <span aria-hidden="true">·</span>
-      <span>{openIssues} {t('sms.statOpenIssues')}</span>
-    </div>
-  {/snippet}
-</PageHeader>
+<div class="px-6">
+  <PageHeader icon={IconUsers} title={t('sms.title')} subtitle={t('sms.subtitle')} marginClass="mt-4 mb-8">
+    {#snippet actions()}
+      <div class="flex items-center gap-2 text-xs text-[var(--color-ds-text-muted,#6b7280)]">
+        <span>{stakeholderTotal} {t('sms.statStakeholders')}</span>
+        <span aria-hidden="true">·</span>
+        <span>{openIssues} {t('sms.statOpenIssues')}</span>
+      </div>
+    {/snippet}
+  </PageHeader>
+</div>
 
 <div class="flex gap-1 border-b border-[var(--color-ds-border,#e5e7eb)] px-6 pt-2">
   {#each TABS as tab (tab.id)}
