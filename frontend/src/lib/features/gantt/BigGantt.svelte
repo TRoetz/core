@@ -102,6 +102,7 @@
     items = [];
     truncated = false;
     totalItems = null;
+    lastScrolledEpoch = ''; // re-center on today once this load settles
     try {
       const seen = new Set();
       let page = 1;
@@ -316,11 +317,26 @@
     itemModalStore.open(item.id, item.workspace_id ?? null);
   }
 
-  function scrollToToday() {
+  function scrollToToday(smooth = true) {
     if (!scrollEl || !timeline) return;
     const x = (todayIndex - timeline.min) * dayWidth - scrollEl.clientWidth / 2;
-    scrollEl.scrollTo({ left: Math.max(0, x), behavior: 'smooth' });
+    scrollEl.scrollTo({ left: Math.max(0, x), behavior: smooth ? 'smooth' : 'auto' });
   }
+
+  // The date range can stretch far into the past or future; opening at the
+  // left edge hides all current work. Re-center today whenever a new range is
+  // established (initial load or type-filter switch); manual scrolling and
+  // search in between are preserved because this only fires on epoch change.
+  const scrollEpoch = $derived(loading ? 'loading' : `${typeFilter}:${items.length}`);
+  let lastScrolledEpoch = '';
+  $effect(() => {
+    const epoch = scrollEpoch;
+    if (epoch === 'loading' || !timeline) return;
+    if (epoch === lastScrolledEpoch) return;
+    lastScrolledEpoch = epoch;
+    let raf = requestAnimationFrame(() => scrollToToday(false));
+    return () => cancelAnimationFrame(raf);
+  });
 
   const workspaceCount = $derived(groups.length);
 </script>
