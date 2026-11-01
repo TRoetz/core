@@ -776,14 +776,14 @@
   {:else if baseError}
     <div class="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
       {baseError}
-      <button type="button" class={btnCls} onClick={() => loadBase()}>{t('srm.retry')}</button>
+      <button type="button" class={btnCls} onclick={() => loadBase()}>{t('srm.retry')}</button>
     </div>
   {:else}
     <div class="flex gap-1 border-b border-[var(--color-ds-border,#e5e7eb)] pb-0">
       {#each SECTIONS as s (s.id)}
         <button
           type="button"
-          onClick={() => openSection(s.id)}
+          onclick={() => openSection(s.id)}
           class="cursor-pointer border-b-2 px-3 py-2 text-xs font-medium {section === s.id ? 'border-[var(--color-ds-accent,#2563eb)] text-[var(--color-ds-text,#111827)]' : 'border-transparent text-[var(--color-ds-text-muted,#6b7280)] hover:text-[var(--color-ds-text,#111827)]'}"
         >
           {t(s.labelKey)}
@@ -845,7 +845,7 @@
                 {#each DATA_SOURCES as d (d.value)}<option value={d.value}>{t(d.key)}</option>{/each}
               </select>
             </label>
-            <button type="button" class={btnCls} onClick={() => addMetric()} disabled={!mContractId || !mName.trim()}>
+            <button type="button" class={btnCls} onclick={() => addMetric()} disabled={!mContractId || !mName.trim()}>
               {t('srm.create')}
             </button>
           </div>
@@ -865,7 +865,7 @@
             {#each metrics as m (m.id)}
               <tr
                 class="cursor-pointer border-b border-[var(--color-ds-border,#e5e7eb)] hover:bg-ds-surface-hovered {selectedMetricId === m.id ? 'bg-ds-surface-selected' : ''}"
-                onClick={() => selectMetric(m.id)}
+                onclick={() => selectMetric(m.id)}
               >
                 <td class="py-1.5 pr-2 font-medium">{m.name}</td>
                 <td class="py-1.5 pr-2">{contracts.find((c) => c.id === m.contract_id)?.contract_number ?? `#${m.contract_id}`}</td>
@@ -893,7 +893,7 @@
                 {t('srm.actualValue')}
                 <input type="number" step="any" class={inputCls} bind:value={rActual} />
               </label>
-              <button type="button" class={btnCls} onClick={() => addResult()} disabled={!rPeriod || rActual === ''}>
+              <button type="button" class={btnCls} onclick={() => addResult()} disabled={!rPeriod || rActual === ''}>
                 {t('srm.recordResult')}
               </button>
             </div>
@@ -953,7 +953,7 @@
               {t('srm.periodEnd')}
               <input type="date" class={inputCls} bind:value={scPeriodEnd} />
             </label>
-            <button type="button" class={btnCls} onClick={() => addScorecard()} disabled={!scContractId || !scPeriodStart || !scPeriodEnd}>
+            <button type="button" class={btnCls} onclick={() => addScorecard()} disabled={!scContractId || !scPeriodStart || !scPeriodEnd}>
               {t('srm.create')}
             </button>
           </div>
@@ -973,7 +973,7 @@
             {#each scorecards as s (s.id)}
               <tr
                 class="cursor-pointer border-b border-[var(--color-ds-border,#e5e7eb)] hover:bg-ds-surface-hovered {selectedScId === s.id ? 'bg-ds-surface-selected' : ''}"
-                onClick={() => selectScorecard(s.id)}
+                onclick={() => selectScorecard(s.id)}
               >
                 <td class="py-1.5 pr-2 font-medium">{s.supplier_name || supplierName(s.supplier_id)}</td>
                 <td class="py-1.5 pr-2">{contracts.find((c) => c.id === s.contract_id)?.contract_number ?? `#${s.contract_id}`}</td>
@@ -998,7 +998,7 @@
                 {scDetail.supplier_name || supplierName(scDetail.supplier_id)} — {formatDate(scDetail.period_start)} → {formatDate(scDetail.period_end)}
               </h3>
               {#if scDetail.status === 'open'}
-                <button type="button" class={btnCls} onClick={() => closeScorecard()}>{t('srm.closeScorecard')}</button>
+                <button type="button" class={btnCls} onclick={() => closeScorecard()}>{t('srm.closeScorecard')}</button>
               {:else}
                 <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">{scDetail.status}</span>
               {/if}
@@ -1050,7 +1050,7 @@
                   </label>
                 </div>
                 {#if scDetail.status !== 'closed'}
-                  <button type="button" class={btnCls} onClick={() => saveDimension(d.value)}>{t('srm.save')}</button>
+                  <button type="button" class={btnCls} onclick={() => saveDimension(d.value)}>{t('srm.save')}</button>
                 {/if}
               </div>
             {/each}
@@ -1082,7 +1082,7 @@
                 {#each SURVEY_DIRECTIONS as d (d.value)}<option value={d.value}>{t(d.key)}</option>{/each}
               </select>
             </label>
-            <button type="button" class={btnCls} onClick={() => addSurvey()} disabled={!svSupplierId}>{t('srm.create')}</button>
+            <button type="button" class={btnCls} onclick={() => addSurvey()} disabled={!svSupplierId}>{t('srm.create')}</button>
           </div>
         </div>
 
@@ -1099,7 +1099,7 @@
             {#each surveys as s (s.id)}
               <tr
                 class="cursor-pointer border-b border-[var(--color-ds-border,#e5e7eb)] hover:bg-ds-surface-hovered {selectedSvId === s.id ? 'bg-ds-surface-selected' : ''}"
-                onClick={() => selectSurvey(s.id)}
+                onclick={() => selectSurvey(s.id)}
               >
                 <td class="py-1.5 pr-2 font-medium">{s.supplier_name || supplierName(s.supplier_id)}</td>
                 <td class="py-1.5 pr-2">
@@ -1143,7 +1143,7 @@
                 {t('srm.notes')}
                 <input class="{inputCls} w-64" bind:value={vNotes} />
               </label>
-              <button type="button" class={btnCls} onClick={() => recordResponse()}>{t('srm.save')}</button>
+              <button type="button" class={btnCls} onclick={() => recordResponse()}>{t('srm.save')}</button>
             </div>
 
             {#if (svDetail.responses ?? []).length > 0}
@@ -1200,7 +1200,7 @@
                 {#each INNOVATION_SOURCES as s (s.value)}<option value={s.value}>{t(s.key)}</option>{/each}
               </select>
             </label>
-            <button type="button" class={btnCls} onClick={() => addInnovation()} disabled={!iContractId || !iName.trim()}>
+            <button type="button" class={btnCls} onclick={() => addInnovation()} disabled={!iContractId || !iName.trim()}>
               {t('srm.create')}
             </button>
           </div>
@@ -1224,7 +1224,7 @@
             {#each innovations as i (i.id)}
               <tr
                 class="cursor-pointer border-b border-[var(--color-ds-border,#e5e7eb)] hover:bg-ds-surface-hovered {selectedInnoId === i.id ? 'bg-ds-surface-selected' : ''}"
-                onClick={() => selectInnovation(i.id)}
+                onclick={() => selectInnovation(i.id)}
               >
                 <td class="py-1.5 pr-2 font-mono">{i.idea_code ?? `#${i.id}`}</td>
                 <td class="py-1.5 pr-2 font-medium">{i.name}</td>
@@ -1249,7 +1249,7 @@
               <select
                 class={inputCls}
                 value={innoDetail.status}
-                onChange={(e) => setInnovationStatus(e.target.value)}
+                onchange={(e) => setInnovationStatus(e.target.value)}
               >
                 {#each INNOVATION_STATUSES as s (s.value)}<option value={s.value}>{t(s.key)}</option>{/each}
               </select>
@@ -1296,7 +1296,7 @@
                   {#each [1, 2, 3, 4, 5] as n (n)}<option value={n}>{n}</option>{/each}
                 </select>
               </label>
-              <button type="button" class={btnCls} onClick={() => saveFactor()} disabled={!fFactor.trim()}>{t('srm.save')}</button>
+              <button type="button" class={btnCls} onclick={() => saveFactor()} disabled={!fFactor.trim()}>{t('srm.save')}</button>
             </div>
 
             <!-- Recommendation -->
@@ -1334,7 +1334,7 @@
               {t('srm.justification')}
               <textarea class="{inputCls} w-full" rows="2" bind:value={recJustification}></textarea>
             </label>
-            <button type="button" class={btnCls} onClick={() => saveRecommendation()} disabled={!recJustification.trim()}>
+            <button type="button" class={btnCls} onclick={() => saveRecommendation()} disabled={!recJustification.trim()}>
               {t('srm.save')}
             </button>
 
@@ -1352,7 +1352,7 @@
                   {t('srm.realisedValue')} ($)
                   <input type="number" step="any" class={inputCls} bind:value={of.realised_value} />
                 </label>
-                <button type="button" class={btnCls} onClick={() => saveObjective(o.id)}>{t('srm.save')}</button>
+                <button type="button" class={btnCls} onclick={() => saveObjective(o.id)}>{t('srm.save')}</button>
               </div>
             {:else}
               <p class="text-xs text-[var(--color-ds-text-muted,#6b7280)]">{t('srm.noRecords')}</p>
@@ -1362,7 +1362,7 @@
                 {t('srm.objective')}
                 <input class="{inputCls} w-96" bind:value={objText} />
               </label>
-              <button type="button" class={btnCls} onClick={() => addObjective()} disabled={!objText.trim()}>{t('srm.create')}</button>
+              <button type="button" class={btnCls} onclick={() => addObjective()} disabled={!objText.trim()}>{t('srm.create')}</button>
             </div>
 
             <!-- Tasks -->
@@ -1406,7 +1406,7 @@
                   {#each SIDES as s (s.value)}<option value={s.value}>{t(s.key)}</option>{/each}
                 </select>
               </label>
-              <button type="button" class={btnCls} onClick={() => addTask()} disabled={!tName.trim()}>{t('srm.create')}</button>
+              <button type="button" class={btnCls} onclick={() => addTask()} disabled={!tName.trim()}>{t('srm.create')}</button>
             </div>
           </div>
         {/if}
@@ -1465,7 +1465,7 @@
           <button
             type="button"
             class={btnCls}
-            onClick={() => addSip()}
+            onclick={() => addSip()}
             disabled={!pContractId || !pTitle.trim() || !pOwner || !pProblem.trim() || !pSmart.trim() || !pExit.trim()}
           >
             {t('srm.create')}
@@ -1485,7 +1485,7 @@
             {#each sips as p (p.id)}
               <tr
                 class="cursor-pointer border-b border-[var(--color-ds-border,#e5e7eb)] hover:bg-ds-surface-hovered {selectedSipId === p.id ? 'bg-ds-surface-selected' : ''}"
-                onClick={() => selectSip(p.id)}
+                onclick={() => selectSip(p.id)}
               >
                 <td class="py-1.5 pr-2 font-medium">{p.title}</td>
                 <td class="py-1.5 pr-2">{p.supplier_name || supplierName(p.supplier_id)}</td>
@@ -1506,7 +1506,7 @@
           <div class="mt-4 rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-surface-card p-4">
             <div class="mb-3 flex items-center gap-2">
               <h3 class="text-xs font-semibold uppercase tracking-wide text-[var(--color-ds-text-muted,#6b7280)]">{sipDetail.title}</h3>
-              <select class={inputCls} value={sipDetail.status} onChange={(e) => setSipStatus(e.target.value)}>
+              <select class={inputCls} value={sipDetail.status} onchange={(e) => setSipStatus(e.target.value)}>
                 {#each SIP_STATUSES as s (s.value)}<option value={s.value}>{t(s.key)}</option>{/each}
               </select>
             </div>
@@ -1554,7 +1554,7 @@
                 {t('srm.owner')}
                 <input class={inputCls} bind:value={dOwner} />
               </label>
-              <button type="button" class={btnCls} onClick={() => addDeliverable()} disabled={!dKey.trim()}>{t('srm.create')}</button>
+              <button type="button" class={btnCls} onclick={() => addDeliverable()} disabled={!dKey.trim()}>{t('srm.create')}</button>
             </div>
           </div>
         {/if}
@@ -1582,7 +1582,7 @@
               {t('srm.description')}
               <input class="{inputCls} w-96" bind:value={dpDescription} />
             </label>
-            <button type="button" class={btnCls} onClick={() => addDispute()} disabled={!dpContractId || !dpDescription.trim()}>
+            <button type="button" class={btnCls} onclick={() => addDispute()} disabled={!dpContractId || !dpDescription.trim()}>
               {t('srm.create')}
             </button>
           </div>
@@ -1601,7 +1601,7 @@
             {#each disputes as d (d.id)}
               <tr
                 class="cursor-pointer border-b border-[var(--color-ds-border,#e5e7eb)] hover:bg-ds-surface-hovered {selectedDpId === d.id ? 'bg-ds-surface-selected' : ''}"
-                onClick={() => selectDispute(d.id)}
+                onclick={() => selectDispute(d.id)}
               >
                 <td class="py-1.5 pr-2 font-medium">{d.supplier_name || supplierName(d.supplier_id)}</td>
                 <td class="max-w-md truncate py-1.5 pr-2" title={d.description}>{d.description}</td>
@@ -1649,7 +1649,7 @@
                   {t('srm.notes')}
                   <input class="{inputCls} w-64" bind:value={eNotes} />
                 </label>
-                <button type="button" class={btnCls} onClick={() => addEscalation()}>{t('srm.create')}</button>
+                <button type="button" class={btnCls} onclick={() => addEscalation()}>{t('srm.create')}</button>
               </div>
             {/if}
 
@@ -1696,17 +1696,17 @@
                   {t('srm.dueDate')}
                   <input type="date" class={inputCls} bind:value={row.due_date} />
                 </label>
-                <button type="button" class="cursor-pointer text-xs text-red-600 hover:underline" onClick={() => timetableRows.splice(idx, 1)}>
+                <button type="button" class="cursor-pointer text-xs text-red-600 hover:underline" onclick={() => timetableRows.splice(idx, 1)}>
                   {t('srm.delete')}
                 </button>
               </div>
             {/each}
             <div class="flex items-end gap-2">
-              <button type="button" class="cursor-pointer text-xs hover:underline" onClick={() => addTimetableRow()}>{t('srm.addTimetableRow')}</button>
+              <button type="button" class="cursor-pointer text-xs hover:underline" onclick={() => addTimetableRow()}>{t('srm.addTimetableRow')}</button>
               <button
                 type="button"
                 class={btnCls}
-                onClick={() => saveRemedyPlan()}
+                onclick={() => saveRemedyPlan()}
                 disabled={!rpForm.non_performance_issue.trim() || !rpForm.corrective_action.trim() || !rpForm.target_date}
               >
                 {t('srm.save')}
