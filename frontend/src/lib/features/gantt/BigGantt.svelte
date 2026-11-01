@@ -344,6 +344,7 @@
 <PageHeader
   icon={GanttChartIcon}
   title={t('bigGantt.title')}
+  marginClass="mt-4 mb-8"
   subtitle={
     loading
       ? t('bigGantt.loading')
