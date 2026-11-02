@@ -5,6 +5,7 @@ import IconClock from '@tabler/icons-svelte-runes/icons/clock';
 import IconFlag from '@tabler/icons-svelte-runes/icons/flag';
 import IconFolderSearch from '@tabler/icons-svelte-runes/icons/folder-search';
 import IconHeartHandshake from '@tabler/icons-svelte-runes/icons/heart-handshake';
+import IconMap from '@tabler/icons-svelte-runes/icons/map';
 import IconMessage2Plus from '@tabler/icons-svelte-runes/icons/message-2-plus';
 import IconPackage from '@tabler/icons-svelte-runes/icons/package';
 import IconPhoneCheck from '@tabler/icons-svelte-runes/icons/phone-check';
@@ -51,6 +52,14 @@ export const mainNavItems = [
     labelKey: 'nav.bigGantt',
     href: '/gantt',
     activeViews: ['big-gantt'],
+  },
+  {
+    id: 'plans',
+    icon: IconMap,
+    labelKey: 'nav.plans',
+    href: '/plans',
+    activeViews: ['plans', 'plan-detail'],
+    permission: 'canAccessPlans',
   },
   {
     id: 'p3m',

@@ -2,10 +2,12 @@
   import { onMount } from 'svelte';
   import { t } from '../../stores/i18n.svelte.js';
   import { p3m as p3mApi } from '../../api/p3m.js';
+  import { plans as plansApi } from '../../api/plans.js';
   import PageHeader from '../../layout/PageHeader.svelte';
   import EmptyState from '../../components/EmptyState.svelte';
   import IconTarget from '@tabler/icons-svelte-runes/icons/target';
   import P3MOverview from './P3MOverview.svelte';
+  import P3MHierarchyGuide from './P3MHierarchyGuide.svelte';
   import P3MGovernance from './P3MGovernance.svelte';
   import P3MBenefitsFinancials from './P3MBenefitsFinancials.svelte';
   import P3MRiskStakeholders from './P3MRiskStakeholders.svelte';
@@ -26,6 +28,12 @@
   let hierarchy = $state({ portfolios: [] });
   /** @type {any} */
   let summary = $state(null);
+  /**
+   * "${entity_type}:${entity_id}" -> [{ plan_id, plan_name, plan_color }]
+   * (from /plans/p3m-map) so each P3M node can show its linked plans.
+   * @type {Map<string, Array<{plan_id:number, plan_name:string, plan_color:string}>>}
+   */
+  let planMap = $state(new Map());
 
   const portfolioCount = $derived(hierarchy.portfolios.length);
 
@@ -51,6 +59,26 @@
     )
   );
 
+  async function loadPlanMap() {
+    try {
+      const res = await plansApi.getP3MMap();
+      const pairs = res?.data ?? (Array.isArray(res) ? res : []);
+      const m = new Map();
+      for (const p of pairs) {
+        const key = `${p.entity_type}:${p.entity_id}`;
+        let arr = m.get(key);
+        if (!arr) {
+          arr = [];
+          m.set(key, arr);
+        }
+        arr.push({ plan_id: p.plan_id, plan_name: p.plan_name, plan_color: p.plan_color });
+      }
+      planMap = m;
+    } catch (e) {
+      // Plans are optional; the P3M views simply show no linked-plan chips.
+    }
+  }
+
   async function load() {
     loading = true;
     error = '';
@@ -63,6 +91,7 @@
     } finally {
       loading = false;
     }
+    loadPlanMap();
   }
 
   onMount(load);
@@ -81,6 +110,8 @@
     {/snippet}
   </PageHeader>
 </div>
+
+<P3MHierarchyGuide />
 
 <div class="flex gap-1 border-b border-[var(--color-ds-border,#e5e7eb)] px-6 pt-2">
   {#each TABS as tab (tab.id)}
@@ -107,7 +138,7 @@
   />
 {:else}
   {#if activeTab === 'overview'}
-    <P3MOverview portfolios={hierarchy.portfolios} summary={summary} onChanged={load} initialProjectId={initialProjectId} />
+    <P3MOverview portfolios={hierarchy.portfolios} summary={summary} onChanged={load} initialProjectId={initialProjectId} planMap={planMap} />
   {:else if activeTab === 'governance'}
     <P3MGovernance />
   {:else if activeTab === 'benefits'}

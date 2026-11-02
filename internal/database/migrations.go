@@ -3105,6 +3105,19 @@ var Catalog = []Migration{
 		SQLite:      "applySQLiteSMSPlanChannelCheck:v1",
 		ApplySQLite: applySQLiteSMSPlanChannelCheck,
 	},
+	{
+		Version:       "20261120_plans_module",
+		Name:          "Add Plans module tables (cross-workspace plan grouping)",
+		CheckSQLite:   sqliteTableCheck("plans"),
+		CheckPostgres: pgTableCheck("plans"),
+		// Reuses the embedded fresh-install DDL (idempotent CREATE ... IF NOT
+		// EXISTS) plus the plans.view permission seed for pre-existing
+		// databases.
+		SQLite: plansSchema + `
+			INSERT OR IGNORE INTO permissions (permission_key, permission_name, description, scope) VALUES ('plans.view', 'View Plans Module', 'Can view the Plans module, which groups workspaces, P3M entities, and stakeholders into delivery plans', 'global');`,
+		Postgres: plansSchemaPostgres + `
+			INSERT INTO permissions (permission_key, permission_name, description, scope, is_system) VALUES ('plans.view', 'View Plans Module', 'Can view the Plans module, which groups workspaces, P3M entities, and stakeholders into delivery plans', 'global', false) ON CONFLICT (permission_key) DO NOTHING;`,
+	},
 }
 
 // applyAssetReportsWorkspacePinned backfills form-mode asset reports that have

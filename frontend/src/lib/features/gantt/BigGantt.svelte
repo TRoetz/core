@@ -2,6 +2,8 @@
   import { onMount } from 'svelte';
   import { t } from '../../stores/i18n.svelte.js';
   import { items as itemsApi } from '../../api/items.js';
+  import { plans as plansApi } from '../../api/plans.js';
+  import { p3m as p3mApi } from '../../api/p3m.js';
   import { itemModalStore } from '../../stores/itemModalStore.svelte.js';
   import PageHeader from '../../layout/PageHeader.svelte';
   import EmptyState from '../../components/EmptyState.svelte';
@@ -36,23 +38,94 @@
   let search = $state('');
   let zoom = $state('auto'); // 'auto' | 'day' | 'week' | 'month'
   let typeFilter = $state('all'); // 'all' or an item_type_name
+  let groupBy = $state('workspace'); // 'workspace' | 'plan' | 'epic' | 'project' | 'p3m-programme'
 
-  const collapsedWorkspaces = $state({});
-  /** Workspace -> item tree, preserving first-seen order. */
-  const groups = $derived.by(() => {
-    const wsMap = new Map();
-    for (const item of visibleItems) {
-      const wsName = item.workspace_name || t('bigGantt.unknownWorkspace');
-      let ws = wsMap.get(wsName);
-      if (!ws) {
-        ws = { name: wsName, items: [], count: 0 };
-        wsMap.set(wsName, ws);
-      }
-      ws.items.push(item);
-      ws.count += 1;
+  /** workspace_id -> [{ plan_id, plan_name }] (from /plans/workspace-map). */
+  let planMap = $state(new Map());
+  /** workspace_id -> P3M programme title (via the workspace's P3M project). */
+  let p3mProgrammeMap = $state(new Map());
+
+  const collapsedGroups = $state({});
+
+  const itemById = $derived(new Map(items.map((i) => [i.id, i])));
+
+  /** First ancestor of the given item type name, walking up parent_id. */
+  function findAncestorType(item, typeName) {
+    let cur = item;
+    const visited = new Set();
+    while (cur && cur.parent_id != null && !visited.has(cur.id)) {
+      visited.add(cur.id);
+      const parent = itemById.get(cur.parent_id);
+      if (!parent) break;
+      if (parent.item_type_name === typeName) return parent;
+      cur = parent;
     }
-    return [...wsMap.values()].map((ws, i) => ({
-      ...ws,
+    return null;
+  }
+
+  /** The workspace root item (top of the hierarchy chain), or the item itself. */
+  function findRoot(item) {
+    let cur = item;
+    const visited = new Set();
+    while (cur && cur.parent_id != null && !visited.has(cur.id)) {
+      visited.add(cur.id);
+      const parent = itemById.get(cur.parent_id);
+      if (!parent) break;
+      cur = parent;
+    }
+    return cur;
+  }
+
+  /** Group key/label for an item under the active grouping dimension. */
+  function itemGroups(item) {
+    switch (groupBy) {
+      case 'plan': {
+        const plans = planMap.get(item.workspace_id) ?? [];
+        if (plans.length === 0) {
+          return [{ key: 'plan:none', name: t('bigGantt.noPlan') }];
+        }
+        return plans.map((p) => ({ key: `plan:${p.plan_id}`, name: p.plan_name }));
+      }
+      case 'epic': {
+        const epic = findAncestorType(item, 'Epic');
+        return epic
+          ? [{ key: `epic:${epic.id}`, name: epic.title || epic.key }]
+          : [{ key: 'epic:none', name: t('bigGantt.noEpic') }];
+      }
+      case 'project': {
+        const root = findRoot(item);
+        return [{ key: `project:${root.id}`, name: root.title || root.key }];
+      }
+      case 'p3m-programme': {
+        const name = p3mProgrammeMap.get(item.workspace_id);
+        return name
+          ? [{ key: `p3m:${name}`, name }]
+          : [{ key: 'p3m:none', name: t('bigGantt.noP3MProgramme') }];
+      }
+      default:
+        return [
+          { key: `ws:${item.workspace_id ?? item.workspace_name}`, name: item.workspace_name || t('bigGantt.unknownWorkspace') },
+        ];
+    }
+  }
+
+  /** Grouped view, preserving first-seen order; an item may appear in
+   * several groups (e.g. its workspace belongs to multiple plans). */
+  const groups = $derived.by(() => {
+    const gMap = new Map();
+    for (const item of visibleItems) {
+      for (const g of itemGroups(item)) {
+        let group = gMap.get(g.key);
+        if (!group) {
+          group = { key: g.key, name: g.name, items: [], count: 0 };
+          gMap.set(g.key, group);
+        }
+        group.items.push(item);
+        group.count += 1;
+      }
+    }
+    return [...gMap.values()].map((g, i) => ({
+      ...g,
       color: WS_PALETTE[i % WS_PALETTE.length],
     }));
   });
@@ -134,8 +207,51 @@
     }
   }
 
+  // --- grouping data (plans + P3M programmes) --------------------------------
+
+  async function loadGroupingData() {
+    try {
+      const mapRes = await plansApi.getWorkspaceMap();
+      const pairs = mapRes?.data ?? (Array.isArray(mapRes) ? mapRes : []);
+      const m = new Map();
+      for (const p of pairs) {
+        let arr = m.get(p.workspace_id);
+        if (!arr) {
+          arr = [];
+          m.set(p.workspace_id, arr);
+        }
+        arr.push({ plan_id: p.plan_id, plan_name: p.plan_name });
+      }
+      planMap = m;
+    } catch (e) {
+      // Plans are optional; grouping by plan simply reports "no plan".
+    }
+    try {
+      const [projectsRes, programmesRes] = await Promise.all([p3mApi.projects.getAll({}), p3mApi.programmes.getAll({})]);
+      const projects = projectsRes?.data ?? (Array.isArray(projectsRes) ? projectsRes : []);
+      const programmes = programmesRes?.data ?? (Array.isArray(programmesRes) ? programmesRes : []);
+      const programmeTitles = new Map(programmes.map((p) => [p.id, p.title]));
+      const m = new Map();
+      for (const project of projects) {
+        const title = programmeTitles.get(project.programme_id);
+        if (!title) continue;
+        try {
+          const wsRes = await p3mApi.getProjectWorkspaces(project.id);
+          const wss = wsRes?.data ?? (Array.isArray(wsRes) ? wsRes : []);
+          for (const ws of wss) m.set(ws.id ?? ws.workspace_id, title);
+        } catch (e) {
+          // skip projects whose workspace links fail
+        }
+      }
+      p3mProgrammeMap = m;
+    } catch (e) {
+      // P3M data is optional.
+    }
+  }
+
   onMount(() => {
     loadItems();
+    loadGroupingData();
   });
 
   // --- filtering & grouping -------------------------------------------------
@@ -299,7 +415,7 @@
     let n = 0;
     for (const ws of groups) {
       n += 1; // workspace row
-      if (!collapsedWorkspaces[ws.name]) n += ws.items.length;
+      if (!collapsedGroups[ws.key]) n += ws.items.length;
     }
     return n;
   });
@@ -308,8 +424,8 @@
 
   // --- actions ---------------------------------------------------------------
 
-  function toggleWorkspace(name) {
-    collapsedWorkspaces[name] = !collapsedWorkspaces[name];
+  function toggleGroup(key) {
+    collapsedGroups[key] = !collapsedGroups[key];
   }
 
 
@@ -358,6 +474,18 @@
 >
   {#snippet actions()}
     <div class="flex items-center gap-2">
+      <select
+        value={groupBy}
+        onchange={(e) => (groupBy = e.currentTarget.value)}
+        class="h-8 rounded-md border border-[var(--color-ds-border,#d1d5db)] bg-[var(--color-ds-surface,#fff)] px-2 text-sm outline-none focus:border-[var(--color-ds-accent-blue,#3b82f6)]"
+        aria-label={t('bigGantt.groupByLabel')}
+      >
+        <option value="workspace">{t('bigGantt.groupWorkspace')}</option>
+        <option value="plan">{t('bigGantt.groupPlan')}</option>
+        <option value="epic">{t('bigGantt.groupEpic')}</option>
+        <option value="project">{t('bigGantt.groupProject')}</option>
+        <option value="p3m-programme">{t('bigGantt.groupP3MProgramme')}</option>
+      </select>
       <select
         value={typeFilter}
         onchange={(e) => (typeFilter = e.currentTarget.value)}
@@ -491,17 +619,17 @@
         ></div>
 
         <!-- Rows -->
-        {#each groups as ws (ws.name)}
+        {#each groups as ws (ws.key)}
           <div class="gantt-row gantt-row-ws">
             <button
               type="button"
               class="row-label sticky left-0 z-10 flex h-9 items-center gap-1.5 border-b border-r border-[var(--color-ds-border,#d1d5db)] bg-[var(--color-ds-surface,#fff)] px-3 text-left hover:bg-[var(--color-ds-surface-hover,#f3f4f6)]"
               style="width: {LABEL_W}px"
-              onclick={() => toggleWorkspace(ws.name)}
+              onclick={() => toggleGroup(ws.key)}
             >
               <IconChevronRight
                 size={14}
-                class="shrink-0 text-[var(--color-ds-text-muted,#9ca3af)] transition-transform {collapsedWorkspaces[ws.name] ? '' : 'rotate-90'}"
+                class="shrink-0 text-[var(--color-ds-text-muted,#9ca3af)] transition-transform {collapsedGroups[ws.key] ? '' : 'rotate-90'}"
               />
               <span class="h-2.5 w-2.5 shrink-0 rounded-full" style="background: {ws.color}"></span>
               <span class="truncate text-sm font-semibold">{ws.name}</span>
@@ -512,7 +640,7 @@
             <div class="gantt-tl h-9 border-b border-[var(--color-ds-border,#d1d5db)]" style="width: {totalWidth}px"></div>
           </div>
 
-          {#if !collapsedWorkspaces[ws.name]}
+          {#if !collapsedGroups[ws.key]}
             {#each ws.items as item (item.id)}
               {@const span = activeSpan(item)}
               <div class="gantt-row gantt-row-item">

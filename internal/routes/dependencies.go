@@ -70,11 +70,12 @@ type Deps struct {
 	Pages        PageHandlers
 
 	// Standalone handlers (no domain group)
-	Push *handlers.PushHandler
-	SLA  *handlers.SLAHandler
-	P3M  *handlers.P3MHandler
-	SRM  *handlers.SRMHandler
-	SMS  *handlers.SMSHandler
+	Push  *handlers.PushHandler
+	SLA   *handlers.SLAHandler
+	P3M   *handlers.P3MHandler
+	SRM   *handlers.SRMHandler
+	SMS   *handlers.SMSHandler
+	Plans *handlers.PlanHandler
 }
 
 // AuthHandlers groups authentication-related handlers.

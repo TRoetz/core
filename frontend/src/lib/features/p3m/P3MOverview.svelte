@@ -6,9 +6,15 @@
   import P3MProjectForm from './P3MProjectForm.svelte';
   import { p3m as p3mApi } from '../../api/p3m.js';
   import { getUsers } from '../../api/users.js';
+  import { navigate } from '../../router.js';
   import { formatMoney, formatDate, ragColor, ragLabel, stageLabel, toISODate } from './utils.js';
 
-  let { portfolios = [], summary = null, onChanged = () => {}, initialProjectId = null } = $props();
+  let { portfolios = [], summary = null, onChanged = () => {}, initialProjectId = null, planMap = new Map() } = $props();
+
+  /** Plans linked to a P3M entity (from /plans/p3m-map). */
+  function plansFor(entityType, entityId) {
+    return planMap.get(`${entityType}:${entityId}`) ?? [];
+  }
 
   // node id -> bool; default: portfolios open. A ?project= deep link starts
   // with that project's detail expanded (parents are open by default).
@@ -292,15 +298,31 @@
     {#each portfolios as pf (pf.id)}
       {@const open = expanded[pf.id] !== false}
       <div class="mb-2 overflow-hidden rounded-lg border border-[var(--color-ds-border,#e5e7eb)]">
-        <button type="button" class="p3m-node-row p3m-pf" onclick={() => toggle(pf.id)}>
-          <IconChevronRight class={open ? 'rotated' : ''} size={16} />
-          <span class="inline-block h-2.5 w-2.5 shrink-0 rounded-full" style="background: {ragColor(pf.rollup?.rag_status ?? pf.rag_status)}"></span>
-          <span class="font-medium">{pf.title}</span>
-          <span class="p3m-meta">
-            {pf.programmes?.length ?? 0} {t('p3m.programmes')} · {(pf.standalone_projects?.length ?? 0) + (pf.programmes?.reduce((n, pg) => n + (pg.projects?.length ?? 0), 0) ?? 0)} {t('p3m.projects')}
-          </span>
-          <span class="p3m-meta ml-auto">{formatMoney(pf.budget_allocated)}</span>
-        </button>
+        <div class="flex items-center">
+          <button type="button" class="p3m-node-row p3m-pf min-w-0 flex-1" onclick={() => toggle(pf.id)}>
+            <IconChevronRight class={open ? 'rotated' : ''} size={16} />
+            <span class="inline-block h-2.5 w-2.5 shrink-0 rounded-full" style="background: {ragColor(pf.rollup?.rag_status ?? pf.rag_status)}"></span>
+            <span class="font-medium">{pf.title}</span>
+            <span class="p3m-meta">
+              {pf.programmes?.length ?? 0} {t('p3m.programmes')} · {(pf.standalone_projects?.length ?? 0) + (pf.programmes?.reduce((n, pg) => n + (pg.projects?.length ?? 0), 0) ?? 0)} {t('p3m.projects')}
+            </span>
+            <span class="p3m-meta ml-auto">{formatMoney(pf.budget_allocated)}</span>
+          </button>
+          {#if plansFor('portfolio', pf.id).length > 0}
+            <div class="flex shrink-0 items-center gap-1 pr-2">
+              {#each plansFor('portfolio', pf.id) as plan (plan.plan_id)}
+                <span
+                  class="p3m-plan-chip"
+                  style="border-color: {plan.plan_color || 'var(--color-ds-border,#e5e7eb)'}"
+                  onclick={() => navigate(`/plans/${plan.plan_id}?tab=p3m`)}
+                  title={t('p3m.openPlan')}
+                >
+                  {plan.plan_name}
+                </span>
+              {/each}
+            </div>
+          {/if}
+        </div>
 
         {#if open}
           <div class="border-t border-[var(--color-ds-border,#e5e7eb)] bg-ds-surface-hovered">
@@ -432,13 +454,29 @@
 
             {#each pf.programmes ?? [] as pg (pg.id)}
               {@const pgOpen = expanded[pg.id] !== false}
-              <button type="button" class="p3m-node-row p3m-pg" onclick={() => toggle(pg.id)}>
-                <IconChevronRight class={pgOpen ? 'rotated' : ''} size={14} />
-                <span class="inline-block h-2 w-2 shrink-0 rounded-full" style="background: {ragColor(pg.rollup?.rag_status ?? pg.rag_status)}"></span>
-                <span>{pg.title}</span>
-                <span class="p3m-meta">{pg.projects?.length ?? 0} {t('p3m.projects')}</span>
-                <span class="p3m-meta ml-auto">{formatMoney(pg.budget_allocated)}</span>
-              </button>
+              <div class="flex items-center">
+                <button type="button" class="p3m-node-row p3m-pg min-w-0 flex-1" onclick={() => toggle(pg.id)}>
+                  <IconChevronRight class={pgOpen ? 'rotated' : ''} size={14} />
+                  <span class="inline-block h-2 w-2 shrink-0 rounded-full" style="background: {ragColor(pg.rollup?.rag_status ?? pg.rag_status)}"></span>
+                  <span>{pg.title}</span>
+                  <span class="p3m-meta">{pg.projects?.length ?? 0} {t('p3m.projects')}</span>
+                  <span class="p3m-meta ml-auto">{formatMoney(pg.budget_allocated)}</span>
+                </button>
+                {#if plansFor('programme', pg.id).length > 0}
+                  <div class="flex shrink-0 items-center gap-1 pr-2">
+                    {#each plansFor('programme', pg.id) as plan (plan.plan_id)}
+                      <span
+                        class="p3m-plan-chip"
+                        style="border-color: {plan.plan_color || 'var(--color-ds-border,#e5e7eb)'}"
+                        onclick={() => navigate(`/plans/${plan.plan_id}?tab=p3m`)}
+                        title={t('p3m.openPlan')}
+                      >
+                        {plan.plan_name}
+                      </span>
+                    {/each}
+                  </div>
+                {/if}
+              </div>
 
               {#if pgOpen}
                 <div class="border-l-2 border-[var(--color-ds-border,#e5e7eb)] ml-10">
@@ -462,16 +500,32 @@
 
                   {#each pg.projects ?? [] as pr (pr.id)}
                     {@const prOpen = expanded[pr.id] === true}
-                    <button type="button" class="p3m-node-row p3m-pr" onclick={() => toggle(pr.id)}>
-                      <IconChevronRight class={prOpen ? 'rotated' : ''} size={14} />
-                      <span class="inline-block h-2 w-2 shrink-0 rounded-full" style="background: {ragColor(pr.rag_status)}"></span>
-                      <span>{pr.title}</span>
-                      <span class="p3m-meta">{stageLabel(pr.current_stage)}</span>
-                      <span class="p3m-progress">
-                        <span class="p3m-progress-fill" style="width: {pr.progress_percent}%; background: {progressColor(pr.progress_percent)}"></span>
-                      </span>
-                      <span class="p3m-meta">{pr.progress_percent}%</span>
-                    </button>
+                    <div class="flex items-center">
+                      <button type="button" class="p3m-node-row p3m-pr min-w-0 flex-1" onclick={() => toggle(pr.id)}>
+                        <IconChevronRight class={prOpen ? 'rotated' : ''} size={14} />
+                        <span class="inline-block h-2 w-2 shrink-0 rounded-full" style="background: {ragColor(pr.rag_status)}"></span>
+                        <span>{pr.title}</span>
+                        <span class="p3m-meta">{stageLabel(pr.current_stage)}</span>
+                        <span class="p3m-progress">
+                          <span class="p3m-progress-fill" style="width: {pr.progress_percent}%; background: {progressColor(pr.progress_percent)}"></span>
+                        </span>
+                        <span class="p3m-meta">{pr.progress_percent}%</span>
+                      </button>
+                      {#if plansFor('project', pr.id).length > 0}
+                        <div class="flex shrink-0 items-center gap-1 pr-2">
+                          {#each plansFor('project', pr.id) as plan (plan.plan_id)}
+                            <span
+                              class="p3m-plan-chip"
+                              style="border-color: {plan.plan_color || 'var(--color-ds-border,#e5e7eb)'}"
+                              onclick={() => navigate(`/plans/${plan.plan_id}?tab=p3m`)}
+                              title={t('p3m.openPlan')}
+                            >
+                              {plan.plan_name}
+                            </span>
+                          {/each}
+                        </div>
+                      {/if}
+                    </div>
 
                     {#if prOpen}
                       <P3MProjectDetail project={pr} onChanged={onChanged} onClose={() => toggle(pr.id)} />
@@ -615,6 +669,26 @@
   }
 
   .p3m-cancel:hover {
+    color: var(--color-ds-text, #111827);
+  }
+
+  .p3m-plan-chip {
+    max-width: 11rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding: 0.0625rem 0.5rem;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    color: var(--color-ds-text-secondary, #4b5563);
+    background: var(--ds-surface-card, #fff);
+    border: 1px solid var(--color-ds-border, #e5e7eb);
+    border-radius: 9999px;
+    cursor: pointer;
+  }
+
+  .p3m-plan-chip:hover {
+    background: var(--ds-surface-hovered);
     color: var(--color-ds-text, #111827);
   }
 </style>

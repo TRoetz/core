@@ -785,7 +785,7 @@ export default {
       "noItemTypes": "아직 설정된 작업 유형이 없습니다.",
       "noConfigurationSets": "구성 집합이 없습니다",
       "defaultConfiguration": "기본 구성",
-      "namePlaceholder": "예: 에픽, 스토리, 작업, 버그",
+      "namePlaceholder": "예: 이니셔티브, 에픽, 작업",
       "descriptionPlaceholder": "이 작업 유형에 대한 간단한 설명",
       "levelLabel": "수준 {level} — {name}",
       "levelOnly": "수준 {level}",
@@ -793,7 +793,6 @@ export default {
       "defaults": {
         "initiative": "이니셔티브",
         "epic": "에픽",
-        "story": "스토리",
         "task": "작업",
         "bug": "버그",
         "subtask": "하위 작업"
@@ -817,7 +816,7 @@ export default {
       "negativeLevel": "계층 수준은 0보다 낮게 이동할 수 없습니다.",
       "empty": "아직 설정된 계층 수준이 없습니다.",
       "numericHint": "숫자 계층 수준(0 = 최상위)",
-      "namePlaceholder": "예: 이니셔티브, 에픽, 스토리, 작업",
+      "namePlaceholder": "예: 이니셔티브, 에픽, 작업",
       "descriptionPlaceholder": "이 계층 수준에 대한 간단한 설명",
       "createTitle": "계층 수준 만들기",
       "editTitle": "계층 수준 편집",
@@ -829,20 +828,12 @@ export default {
         },
         "epic": {
           "name": "에픽",
-          "description": "스토리로 나눌 수 있는 큰 작업"
-        },
-        "story": {
-          "name": "스토리",
-          "description": "가치를 제공하는 사용자 스토리 또는 기능"
+          "description": "작업으로 나눌 수 있는 큰 작업"
         },
         "task": {
           "name": "작업",
           "description": "개별 작업 또는 기술 과제"
         },
-        "activity": {
-          "name": "활동",
-          "description": "작업 내의 개별 활동"
-        }
       }
     },
     "modules": {

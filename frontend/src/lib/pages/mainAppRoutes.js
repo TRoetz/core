@@ -34,6 +34,8 @@ export const MAIN_APP_COMPONENT_LOADERS = {
   'test-template-detail': () => import('../features/testing/TestTemplateDetail.svelte'),
   milestones: () => import('../features/milestones/Milestones.svelte'),
   'big-gantt': () => import('../features/gantt/BigGantt.svelte'),
+  plans: () => import('../features/plans/Plans.svelte'),
+  'plan-detail': () => import('../features/plans/PlanDetail.svelte'),
   p3m: () => import('../features/p3m/P3M.svelte'),
   srm: () => import('../features/srm/SRM.svelte'),
   sms: () => import('../features/sms/SMS.svelte'),
@@ -230,6 +232,15 @@ export const MAIN_APP_ROUTE_CONFIG = {
   }),
   'big-gantt': route('Loading Big Gantt...', 'Failed to load Big Gantt', {
     wrapper: 'surface-full',
+  }),
+  plans: route('Loading Plans...', 'Failed to load Plans', {
+    wrapper: 'surface-full',
+  }),
+  'plan-detail': route('Loading Plan...', 'Failed to load Plan', {
+    wrapper: 'surface-full',
+    getProps: (currentRoute) => ({
+      id: Number(currentRoute.params.id),
+    }),
   }),
   p3m: route('Loading P3M...', 'Failed to load P3M', {
     wrapper: 'surface-full',

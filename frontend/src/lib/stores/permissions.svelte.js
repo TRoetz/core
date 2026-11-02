@@ -101,6 +101,17 @@ function createPermissionStore() {
     }
   );
 
+  // Plans module access is granted per group through the global plans.view
+  // role permission. System admins always have it.
+  const canAccessPlans = derived(
+    [authStore, userPermissionKeys],
+    ([$authStore, $userPermissionKeys]) => {
+      if (!$authStore.currentUser) return false;
+      if ($authStore.currentUser.is_system_admin) return true;
+      return $userPermissionKeys.has('plans.view');
+    }
+  );
+
   // SRM module access is granted per group through the global srm.view role
   // permission. System admins always have it.
   const canAccessSRM = derived(
@@ -141,6 +152,7 @@ function createPermissionStore() {
       canManageChannels,
       managesAssetSets,
       canAccessP3M,
+      canAccessPlans,
       canAccessSRM,
       canAccessSMS,
     ],
@@ -160,6 +172,7 @@ function createPermissionStore() {
       $canManageChannels,
       $managesAssetSets,
       $canAccessP3M,
+      $canAccessPlans,
       $canAccessSRM,
       $canAccessSMS,
     ]) => ({
@@ -178,6 +191,7 @@ function createPermissionStore() {
       canManageChannels: $canManageChannels,
       managesAssetSets: $managesAssetSets,
       canAccessP3M: $canAccessP3M,
+      canAccessPlans: $canAccessPlans,
       canAccessSRM: $canAccessSRM,
       canAccessSMS: $canAccessSMS,
     })
@@ -245,6 +259,12 @@ function createPermissionStore() {
     get canAccessP3M() {
       let value;
       canAccessP3M.subscribe((v) => (value = v))();
+      return value;
+    },
+
+    get canAccessPlans() {
+      let value;
+      canAccessPlans.subscribe((v) => (value = v))();
       return value;
     },
 

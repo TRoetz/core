@@ -152,6 +152,9 @@ var srmSchema string
 //go:embed schema/sms.sql
 var smsSchema string
 
+//go:embed schema/plans.sql
+var plansSchema string
+
 //go:embed schema/condition_sets.sql
 var conditionSetsSchema string
 

@@ -5,6 +5,7 @@ export default {
     timeAndProjects: '时间和项目',
     milestones: '里程碑',
     bigGantt: 'Big Gantt',
+    plans: '计划',
     p3m: 'P3M',
     srm: 'SRM',
     sms: '利益相关者',

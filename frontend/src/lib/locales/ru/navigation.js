@@ -9,6 +9,7 @@ export default {
     timeAndProjects: 'Время и проекты',
     milestones: 'Этапы',
     bigGantt: 'Big Gantt',
+    plans: 'Планы',
     p3m: 'P3M',
     srm: 'SRM',
     sms: 'Стейкхолдеры',
