@@ -457,10 +457,11 @@
   const workspaceCount = $derived(groups.length);
 </script>
 
-<PageHeader
-  icon={GanttChartIcon}
-  title={t('bigGantt.title')}
-  marginClass="mt-4 mb-8"
+<div class="px-6">
+  <PageHeader
+    icon={GanttChartIcon}
+    title={t('bigGantt.title')}
+    marginClass="mt-4 mb-8"
   subtitle={
     loading
       ? t('bigGantt.loading')
@@ -529,7 +530,8 @@
       </button>
     </div>
   {/snippet}
-</PageHeader>
+  </PageHeader>
+</div>
 
 {#if loading}
   <div class="flex h-64 items-center justify-center text-sm text-[var(--color-ds-text-muted,#6b7280)]">
