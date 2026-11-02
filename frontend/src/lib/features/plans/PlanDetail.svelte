@@ -17,11 +17,23 @@
   import IconArrowLeft from '@tabler/icons-svelte-runes/icons/arrow-left';
   import IconX from '@tabler/icons-svelte-runes/icons/x';
 
+  import PlanSummaryView from './views/PlanSummaryView.svelte';
+  import PlanTimelineView from './views/PlanTimelineView.svelte';
+  import PlanListView from './views/PlanListView.svelte';
+  import PlanBoardView from './views/PlanBoardView.svelte';
+  import PlanCalendarView from './views/PlanCalendarView.svelte';
+  import PlanTeamsView from './views/PlanTeamsView.svelte';
+  import PlanDependenciesView from './views/PlanDependenciesView.svelte';
+  import PlanScenariosView from './views/PlanScenariosView.svelte';
+
   let { id } = $props();
 
   let detail = $state(null);
   let loading = $state(true);
   let error = $state('');
+  // Top-level view switcher (spec: horizontal navigation between plan views).
+  let activeView = $state('summary');
+  // Sub-tabs inside the Sources view (workspace/P3M/stakeholder management).
   let activeTab = $state('workspaces');
 
   // Edit modal
@@ -68,6 +80,18 @@
     }
   }
 
+  const VIEW_TABS = [
+    { id: 'summary', labelKey: 'plans.tabSummary' },
+    { id: 'timeline', labelKey: 'plans.tabTimeline' },
+    { id: 'list', labelKey: 'plans.tabList' },
+    { id: 'board', labelKey: 'plans.tabBoard' },
+    { id: 'calendar', labelKey: 'plans.tabCalendar' },
+    { id: 'teams', labelKey: 'plans.tabTeams' },
+    { id: 'dependencies', labelKey: 'plans.tabDependencies' },
+    { id: 'scenarios', labelKey: 'plans.tabScenarios' },
+    { id: 'sources', labelKey: 'plans.tabSources' },
+  ];
+
   const TABS = [
     { id: 'workspaces', labelKey: 'plans.tabWorkspaces' },
     { id: 'add-workspaces', labelKey: 'plans.tabAddWorkspace' },
@@ -76,9 +100,13 @@
     { id: 'overview', labelKey: 'plans.tabOverview' },
   ];
 
-  // Support deep links like /plans/:id?tab=workspaces (used by the plan cards).
-  const queryTab = new URLSearchParams(window.location.search).get('tab');
-  if (TABS.some((tab) => tab.id === queryTab)) activeTab = queryTab;
+  // Support deep links like /plans/:id?view=board or ?tab=workspaces (used by the plan cards).
+  const qs = new URLSearchParams(window.location.search);
+  if (VIEW_TABS.some((v) => v.id === qs.get('view'))) activeView = qs.get('view');
+  if (TABS.some((tab) => tab.id === qs.get('tab'))) {
+    activeTab = qs.get('tab');
+    activeView = 'sources';
+  }
 
   async function load() {
     loading = true;
@@ -312,6 +340,15 @@
     </PageHeader>
   </div>
 
+  <div class="flex items-center gap-1 overflow-x-auto border-b border-[var(--color-ds-border,#e5e7eb)] px-6 pt-2">
+    {#each VIEW_TABS as v (v.id)}
+      <button type="button" class="plan-tab" class:active={activeView === v.id} onclick={() => (activeView = v.id)}>
+        {t(v.labelKey)}
+      </button>
+    {/each}
+  </div>
+
+  {#if activeView === 'sources'}
   <div class="flex gap-1 border-b border-[var(--color-ds-border,#e5e7eb)] px-6 pt-2">
     {#each TABS as tab (tab.id)}
       <button type="button" class="plan-tab" class:active={activeTab === tab.id} onclick={() => (activeTab = tab.id)}>
@@ -502,6 +539,27 @@
       </div>
     {/if}
   </div>
+  {:else}
+    <div class="px-6 py-6">
+      {#if activeView === 'summary'}
+        <PlanSummaryView planId={id} />
+      {:else if activeView === 'timeline'}
+        <PlanTimelineView planId={id} />
+      {:else if activeView === 'list'}
+        <PlanListView planId={id} />
+      {:else if activeView === 'board'}
+        <PlanBoardView planId={id} />
+      {:else if activeView === 'calendar'}
+        <PlanCalendarView planId={id} />
+      {:else if activeView === 'teams'}
+        <PlanTeamsView planId={id} />
+      {:else if activeView === 'dependencies'}
+        <PlanDependenciesView planId={id} />
+      {:else}
+        <PlanScenariosView planId={id} />
+      {/if}
+    </div>
+  {/if}
 {/if}
 
 {#if showEdit}
