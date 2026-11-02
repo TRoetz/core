@@ -200,3 +200,14 @@ blog/
 /cmd/ws/ws
 /playground
 /CONTEXT.md
+
+# Windshift test-environment seed data - contains real HCC project data,
+# must never be pushed. The structural schema (windshift-seed.schema.json)
+# stays committable.
+/windshift-seed.json
+/windshift-seed.v1.bak.json
+/windshift-seed.schema.md
+/scripts/windshift-seed.json
+/nul
+/explore_sources.js
+/data-test/

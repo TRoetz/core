@@ -132,10 +132,8 @@ type defaultHierarchyLevel struct {
 
 var defaultHierarchyLevels = []defaultHierarchyLevel{
 	{"initiative", 0, "Initiative", "High-level strategic work spanning multiple epics"},
-	{"epic", 1, "Epic", "Large work item that can be broken down into stories"},
-	{"story", 2, "Story", "User story or feature that delivers value"},
-	{"task", 3, "Task", "Individual work item or technical task"},
-	{"activity", 4, "Activity", "Discrete activity within a task"},
+	{"epic", 1, "Epic", "Large work item that can be broken down into tasks"},
+	{"task", 2, "Task", "Individual work item or technical task"},
 }
 
 type defaultItemType struct {
@@ -151,13 +149,12 @@ type defaultItemType struct {
 var defaultItemTypes = []defaultItemType{
 	{"initiative", "Initiative", "Strategic initiative spanning multiple teams", "Target", "#7c3aed", 0, 1},
 	{"epic", "Epic", "Large feature or capability", "Zap", "#2563eb", 1, 1},
-	{"story", "Story", "User story delivering value to end users", "BookOpen", "#059669", 2, 1},
-	{"task", "Task", "Development or operational task", "CheckSquare", "#dc2626", 3, 1},
-	{"bug", "Bug", "Software defect that needs fixing", "Bug", "#ea580c", 3, 2},
+	{"task", "Task", "Development or operational task", "CheckSquare", "#dc2626", 2, 1},
+	{"bug", "Bug", "Software defect that needs fixing", "Bug", "#ea580c", 2, 2},
 	{"subtask", "Sub-task", "Small work item below any regular hierarchy level", "Minus", "#6b7280", -1, 1},
 }
 
-var defaultItemTypeBindings = []string{"Epic", "Story", "Task", "Bug", "Sub-task"}
+var defaultItemTypeBindings = []string{"Initiative", "Epic", "Task", "Bug", "Sub-task"}
 
 const defaultNotificationChannelConfig = `{
 	"smtp_host": "",

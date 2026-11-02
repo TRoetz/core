@@ -132,6 +132,8 @@ const routes = {
   '/p3m': 'p3m',
   '/srm': 'srm',
   '/sms': 'sms',
+  '/plans': 'plans',
+  '/plans/:id': 'plan-detail',
   '/milestones': 'milestones',
   '/milestones/category/:categoryId': 'milestones',
   '/milestones/:id': 'milestone-detail',

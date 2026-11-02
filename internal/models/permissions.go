@@ -66,6 +66,7 @@ const (
 	PermissionP3MView = "p3m.view" // View the Portfolio, Programme, and Project Management module
 	PermissionSRMView = "srm.view" // View the Supplier Relationship Management module
 	PermissionSMSView = "sms.view" // View the Stakeholder Management System module
+	PermissionPlansView = "plans.view" // View the Plans module (cross-workspace plan grouping)
 
 	// Workspace permissions
 	PermissionWorkspaceAdmin = "workspace.admin" // Manage workspace (administer workspace)

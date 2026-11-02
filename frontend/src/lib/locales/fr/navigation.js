@@ -10,6 +10,7 @@ export default {
     timeAndProjects: 'Temps et projets',
     milestones: 'Jalons',
     bigGantt: 'Big Gantt',
+    plans: 'Plans',
     p3m: 'P3M',
     srm: 'SRM',
     sms: 'Parties prenantes',

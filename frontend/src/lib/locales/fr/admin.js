@@ -763,7 +763,6 @@ export default {
       defaults: {
         initiative: 'Initiative',
         epic: 'Épopée',
-        story: 'Récit utilisateur',
         task: 'Tâche',
         bug: 'Bogue',
         subtask: 'Sous-tâche',
@@ -802,19 +801,11 @@ export default {
         },
         epic: {
           name: 'Épopée',
-          description: 'Grand élément de travail pouvant être décomposé en récits utilisateur',
-        },
-        story: {
-          name: 'Récit utilisateur',
-          description: 'Récit utilisateur ou fonctionnalité apportant de la valeur',
+          description: 'Grand élément de travail pouvant être décomposé en tâches',
         },
         task: {
           name: 'Tâche',
           description: 'Élément de travail individuel ou tâche technique',
-        },
-        activity: {
-          name: 'Activité',
-          description: 'Activité distincte au sein d\'une tâche',
         },
       },
     },

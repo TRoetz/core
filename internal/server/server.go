@@ -1659,6 +1659,7 @@ func (s *Server) initialize() error {
 	p3mHandler := handlers.NewP3MHandler(s.db, permService)
 	srmHandler := handlers.NewSRMHandler(s.db)
 	smsHandler := handlers.NewSMSHandler(s.db)
+	plansHandler := handlers.NewPlanHandler(s.db)
 	routeDeps := &routes.Deps{
 		SLA:       slaHandler,
 		API:       api,
@@ -1850,9 +1851,10 @@ func (s *Server) initialize() error {
 			KnowledgeSearch: knowledgeSearchHandler,
 		},
 		Push: pushHandler,
-		P3M:  p3mHandler,
-		SRM:  srmHandler,
-		SMS:  smsHandler,
+		P3M:   p3mHandler,
+		SRM:   srmHandler,
+		SMS:   smsHandler,
+		Plans: plansHandler,
 	}
 	routes.RegisterAll(routeDeps)
 

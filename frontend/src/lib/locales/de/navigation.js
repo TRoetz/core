@@ -9,6 +9,7 @@ export default {
     timeAndProjects: 'Zeit & Projekte',
     milestones: 'Meilensteine',
     bigGantt: 'Big Gantt',
+    plans: 'Pläne',
     p3m: 'P3M',
     srm: 'SRM',
     sms: 'Interessenten',

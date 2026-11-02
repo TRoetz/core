@@ -1,0 +1,100 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Windshift Seed Data",
+  "description": "Seed data for the Windshift test environment. v3.0: the workspace IS the project (named \"[Owner:Title]\", one per Excel work-plan row); inside each workspace the hierarchy is Initiative : Epic : Task : SubTask.",
+  "type": "object",
+  "properties": {
+    "version": {"const": "3.0"},
+    "generated": {"type": "string", "format": "date-time"},
+    "sources": {"type": "object"},
+    "hierarchy": {
+      "type": "array",
+      "items": {"type": "string"},
+      "minItems": 5,
+      "maxItems": 5
+    },
+    "workspaces": {
+      "type": "array",
+      "description": "One workspace per Excel work-plan row, named \"[Delivery Owner:Title]\". Each workspace contains the initiative/epic/task/subtask tree for that project.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {"type": "string"},
+          "key": {"type": "string"},
+          "description": {"type": "string"},
+          "priority": {"type": ["integer", "null"]},
+          "project_type": {"type": ["string", "null"]},
+          "where_lives": {"type": ["string", "null"]},
+          "phase": {"type": ["string", "null"]},
+          "rag_status": {"type": ["string", "null"]},
+          "why": {"type": ["string", "null"]},
+          "assignees": {"type": "array", "items": {"type": "string"}},
+          "quarters": {"type": "array", "items": {"type": "string"}},
+          "web_team_care": {"type": ["string", "null"]},
+          "initiatives": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {"type": "string"},
+                "epics": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {"type": "string"},
+                      "tasks": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "name": {"type": "string"},
+                            "subtasks": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "name": {"type": "string"}
+                                },
+                                "required": ["name"]
+                              }
+                            }
+                          },
+                          "required": ["name", "subtasks"]
+                        }
+                      }
+                    },
+                    "required": ["name", "tasks"]
+                  }
+                }
+              },
+              "required": ["name", "epics"]
+            }
+          }
+        },
+        "required": ["name", "key", "description", "initiatives"]
+      }
+    },
+    "users": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "integer"},
+          "name": {"type": "string"},
+          "email": {"type": "string"},
+          "role": {"type": "string"}
+        }
+      }
+    },
+    "architecture": {
+      "type": "object",
+      "description": "Enterprise architecture context from eamap.db"
+    },
+    "mappings": {
+      "type": "object",
+      "description": "Field mappings between Excel values and Windshift fields"
+    }
+  },
+  "required": ["version", "generated", "hierarchy", "workspaces"]
+}

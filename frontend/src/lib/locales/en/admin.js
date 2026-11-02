@@ -806,7 +806,7 @@ export default {
       noItemTypes: 'No item types configured yet.',
       noConfigurationSets: 'No configuration sets',
       defaultConfiguration: 'Default Configuration',
-      namePlaceholder: 'e.g. Epic, Story, Task, Bug',
+      namePlaceholder: 'e.g. Initiative, Epic, Task',
       descriptionPlaceholder: 'Brief description of this item type',
       levelLabel: 'Level {level} — {name}',
       levelOnly: 'Level {level}',
@@ -814,7 +814,6 @@ export default {
       defaults: {
         initiative: 'Initiative',
         epic: 'Epic',
-        story: 'Story',
         task: 'Task',
         bug: 'Bug',
         subtask: 'Sub-task',
@@ -841,7 +840,7 @@ export default {
       negativeLevel: 'A hierarchy level cannot be moved below 0.',
       empty: 'No hierarchy levels configured yet.',
       numericHint: 'Numeric hierarchy level (0 = highest)',
-      namePlaceholder: 'e.g. Initiative, Epic, Story, Task',
+      namePlaceholder: 'e.g. Initiative, Epic, Task',
       descriptionPlaceholder: 'Brief description of this hierarchy level',
       createTitle: 'Create hierarchy level',
       editTitle: 'Edit hierarchy level',
@@ -853,19 +852,11 @@ export default {
         },
         epic: {
           name: 'Epic',
-          description: 'Large work item that can be broken down into stories',
-        },
-        story: {
-          name: 'Story',
-          description: 'User story or feature that delivers value',
+          description: 'Large work item that can be broken down into tasks',
         },
         task: {
           name: 'Task',
           description: 'Individual work item or technical task',
-        },
-        activity: {
-          name: 'Activity',
-          description: 'Discrete activity within a task',
         },
       },
     },

@@ -29,4 +29,5 @@ func RegisterAll(deps *Deps) {
 	RegisterP3MRoutes(deps)
 	RegisterSRMRoutes(deps)
 	RegisterSMSRoutes(deps)
+	RegisterPlansRoutes(deps)
 }

@@ -649,7 +649,6 @@ export default {
       defaults: {
         initiative: '计划',
         epic: '史诗',
-        story: '故事',
         task: '任务',
         bug: '缺陷',
         subtask: '子任务',
@@ -687,19 +686,11 @@ export default {
         },
         epic: {
           name: '史诗',
-          description: '可拆分为多个故事的大型工作项',
-        },
-        story: {
-          name: '故事',
-          description: '能够交付价值的用户故事或功能',
+          description: '可拆分为多个任务的大型工作项',
         },
         task: {
           name: '任务',
           description: '单个工作项或技术任务',
-        },
-        activity: {
-          name: '活动',
-          description: '任务中的具体活动',
         },
       },
     },
