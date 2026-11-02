@@ -10,6 +10,7 @@ package handlers
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -428,6 +429,29 @@ func (h *PlanHandler) GetPlanDetail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	detail.Stakeholders = sh
+
+	fRows, err := h.db.QueryContext(r.Context(), `SELECT id, plan_id, name, cql_query, created_at FROM plan_filters WHERE plan_id = ? ORDER BY name COLLATE NOCASE`, id)
+	if err != nil {
+		respondInternalError(w, r, fmt.Errorf("list plan filters: %w", err))
+		return
+	}
+	filters := make([]models.PlanFilter, 0)
+	for fRows.Next() {
+		var f models.PlanFilter
+		if err := fRows.Scan(&f.ID, &f.PlanID, &f.Name, &f.CQLQuery, &f.CreatedAt); err != nil {
+			fRows.Close()
+			respondInternalError(w, r, fmt.Errorf("scan plan filter: %w", err))
+			return
+		}
+		filters = append(filters, f)
+	}
+	err = fRows.Err()
+	fRows.Close()
+	if err != nil {
+		respondInternalError(w, r, err)
+		return
+	}
+	detail.Filters = filters
 
 	respondJSONOK(w, detail)
 }

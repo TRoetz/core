@@ -36,6 +36,33 @@ func RegisterPlansRoutes(deps *Deps) {
 	api.HandleH("POST /plans/{id}/stakeholders", auth(plansView(http.HandlerFunc(deps.Plans.AddPlanStakeholder))))
 	api.HandleH("DELETE /plans/{id}/stakeholders/{stakeholder_id}", auth(plansView(http.HandlerFunc(deps.Plans.RemovePlanStakeholder))))
 
+	// Plan work items (aggregated across the plan's sources) + summary.
+	api.HandleH("GET /plans/{id}/items", auth(plansView(http.HandlerFunc(deps.Plans.ListPlanItems))))
+	api.HandleH("GET /plans/{id}/summary", auth(plansView(http.HandlerFunc(deps.Plans.GetPlanSummary))))
+
+	// Plan filters (custom CQL sources).
+	api.HandleH("GET /plans/{id}/filters", auth(plansView(http.HandlerFunc(deps.Plans.ListPlanFilters))))
+	api.HandleH("POST /plans/{id}/filters", auth(plansView(http.HandlerFunc(deps.Plans.AddPlanFilter))))
+	api.HandleH("PUT /plans/{id}/filters/{filter_id}", auth(plansView(http.HandlerFunc(deps.Plans.UpdatePlanFilter))))
+	api.HandleH("DELETE /plans/{id}/filters/{filter_id}", auth(plansView(http.HandlerFunc(deps.Plans.RemovePlanFilter))))
+
+	// Item dependencies (blocks/related) inside the plan.
+	api.HandleH("GET /plans/{id}/dependencies", auth(plansView(http.HandlerFunc(deps.Plans.ListPlanDependencies))))
+	api.HandleH("POST /plans/{id}/items/{item_id}/dependencies", auth(plansView(http.HandlerFunc(deps.Plans.AddItemDependency))))
+	api.HandleH("DELETE /plans/{id}/items/{item_id}/dependencies/{dep_id}", auth(plansView(http.HandlerFunc(deps.Plans.RemoveItemDependency))))
+
+	// Teams: workload per team + capacity management.
+	api.HandleH("GET /plans/{id}/teams", auth(plansView(http.HandlerFunc(deps.Plans.GetPlanTeams))))
+	api.HandleH("PUT /plans/{id}/teams/{team_id}/capacity", auth(plansView(http.HandlerFunc(deps.Plans.SetTeamCapacity))))
+
+	// Scenarios ("what if" planning with dependency ripple impact).
+	api.HandleH("GET /plans/{id}/scenarios", auth(plansView(http.HandlerFunc(deps.Plans.ListPlanScenarios))))
+	api.HandleH("POST /plans/{id}/scenarios", auth(plansView(http.HandlerFunc(deps.Plans.CreatePlanScenario))))
+	api.HandleH("PUT /plans/{id}/scenarios/{sid}", auth(plansView(http.HandlerFunc(deps.Plans.UpdatePlanScenario))))
+	api.HandleH("DELETE /plans/{id}/scenarios/{sid}", auth(plansView(http.HandlerFunc(deps.Plans.DeletePlanScenario))))
+	api.HandleH("GET /plans/{id}/scenarios/{sid}/detail", auth(plansView(http.HandlerFunc(deps.Plans.GetPlanScenarioDetail))))
+	api.HandleH("PUT /plans/{id}/scenarios/{sid}/items", auth(plansView(http.HandlerFunc(deps.Plans.UpsertScenarioItems))))
+
 	// Flat plan/workspace pairs for Big Gantt plan grouping.
 	api.HandleH("GET /plans/workspace-map", auth(plansView(http.HandlerFunc(deps.Plans.GetWorkspaceMap))))
 

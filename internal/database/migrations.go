@@ -3118,6 +3118,122 @@ var Catalog = []Migration{
 		Postgres: plansSchemaPostgres + `
 			INSERT INTO permissions (permission_key, permission_name, description, scope, is_system) VALUES ('plans.view', 'View Plans Module', 'Can view the Plans module, which groups workspaces, P3M entities, and stakeholders into delivery plans', 'global', false) ON CONFLICT (permission_key) DO NOTHING;`,
 	},
+	{
+		Version:         "20261121_plans_planning",
+		Name:            "Add plan planning tables (filter sources, item dependencies, scenarios, team capacity)",
+		CheckSQLiteFn:   sqliteAllTablesCheck("plan_filters", "item_dependencies", "plan_scenarios", "plan_scenario_items", "team_capacities"),
+		CheckPostgresFn: pgAllTablesCheck("plan_filters", "item_dependencies", "plan_scenarios", "plan_scenario_items", "team_capacities"),
+		SQLite: `
+			CREATE TABLE IF NOT EXISTS plan_filters (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				plan_id INTEGER NOT NULL REFERENCES plans(id) ON DELETE CASCADE,
+				name TEXT NOT NULL,
+				cql_query TEXT NOT NULL DEFAULT '',
+				created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+				UNIQUE(plan_id, name)
+			);
+			CREATE INDEX IF NOT EXISTS idx_plan_filters_plan ON plan_filters(plan_id);
+
+			CREATE TABLE IF NOT EXISTS item_dependencies (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				source_item_id INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+				target_item_id INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+				dep_type TEXT NOT NULL DEFAULT 'blocks' CHECK (dep_type IN ('blocks', 'related')),
+				created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+				UNIQUE(source_item_id, target_item_id),
+				CHECK (source_item_id <> target_item_id)
+			);
+			CREATE INDEX IF NOT EXISTS idx_item_dependencies_source ON item_dependencies(source_item_id);
+			CREATE INDEX IF NOT EXISTS idx_item_dependencies_target ON item_dependencies(target_item_id);
+
+			CREATE TABLE IF NOT EXISTS plan_scenarios (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				plan_id INTEGER NOT NULL REFERENCES plans(id) ON DELETE CASCADE,
+				name TEXT NOT NULL,
+				description TEXT NOT NULL DEFAULT '',
+				status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'active', 'archived')),
+				created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+				updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+				UNIQUE(plan_id, name)
+			);
+			CREATE INDEX IF NOT EXISTS idx_plan_scenarios_plan ON plan_scenarios(plan_id);
+
+			CREATE TABLE IF NOT EXISTS plan_scenario_items (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				scenario_id INTEGER NOT NULL REFERENCES plan_scenarios(id) ON DELETE CASCADE,
+				item_id INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+				start_date DATE,
+				end_date DATE,
+				due_date DATE,
+				notes TEXT NOT NULL DEFAULT '',
+				UNIQUE(scenario_id, item_id)
+			);
+			CREATE INDEX IF NOT EXISTS idx_plan_scenario_items_item ON plan_scenario_items(item_id);
+
+			CREATE TABLE IF NOT EXISTS team_capacities (
+				team_id INTEGER PRIMARY KEY REFERENCES teams(id) ON DELETE CASCADE,
+				unit TEXT NOT NULL DEFAULT 'hours' CHECK (unit IN ('points', 'days', 'hours')),
+				weekly_value REAL NOT NULL DEFAULT 0,
+				updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+			);
+		`,
+		Postgres: `
+			CREATE TABLE IF NOT EXISTS plan_filters (
+				id SERIAL PRIMARY KEY,
+				plan_id INTEGER NOT NULL REFERENCES plans(id) ON DELETE CASCADE,
+				name TEXT NOT NULL,
+				cql_query TEXT NOT NULL DEFAULT '',
+				created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+				UNIQUE(plan_id, name)
+			);
+			CREATE INDEX IF NOT EXISTS idx_plan_filters_plan ON plan_filters(plan_id);
+
+			CREATE TABLE IF NOT EXISTS item_dependencies (
+				id SERIAL PRIMARY KEY,
+				source_item_id INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+				target_item_id INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+				dep_type TEXT NOT NULL DEFAULT 'blocks' CHECK (dep_type IN ('blocks', 'related')),
+				created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+				UNIQUE(source_item_id, target_item_id),
+				CHECK (source_item_id <> target_item_id)
+			);
+			CREATE INDEX IF NOT EXISTS idx_item_dependencies_source ON item_dependencies(source_item_id);
+			CREATE INDEX IF NOT EXISTS idx_item_dependencies_target ON item_dependencies(target_item_id);
+
+			CREATE TABLE IF NOT EXISTS plan_scenarios (
+				id SERIAL PRIMARY KEY,
+				plan_id INTEGER NOT NULL REFERENCES plans(id) ON DELETE CASCADE,
+				name TEXT NOT NULL,
+				description TEXT NOT NULL DEFAULT '',
+				status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'active', 'archived')),
+				created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+				updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+				UNIQUE(plan_id, name)
+			);
+			CREATE INDEX IF NOT EXISTS idx_plan_scenarios_plan ON plan_scenarios(plan_id);
+
+			CREATE TABLE IF NOT EXISTS plan_scenario_items (
+				id SERIAL PRIMARY KEY,
+				scenario_id INTEGER NOT NULL REFERENCES plan_scenarios(id) ON DELETE CASCADE,
+				item_id INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+				start_date DATE,
+				end_date DATE,
+				due_date DATE,
+				notes TEXT NOT NULL DEFAULT '',
+				UNIQUE(scenario_id, item_id)
+			);
+			CREATE INDEX IF NOT EXISTS idx_plan_scenario_items_item ON plan_scenario_items(item_id);
+
+			CREATE TABLE IF NOT EXISTS team_capacities (
+				team_id INTEGER PRIMARY KEY REFERENCES teams(id) ON DELETE CASCADE,
+				unit TEXT NOT NULL DEFAULT 'hours' CHECK (unit IN ('points', 'days', 'hours')),
+				weekly_value REAL NOT NULL DEFAULT 0,
+				updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+			);
+		`,
+	},
 }
 
 // applyAssetReportsWorkspacePinned backfills form-mode asset reports that have
