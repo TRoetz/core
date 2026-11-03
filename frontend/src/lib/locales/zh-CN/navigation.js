@@ -10,6 +10,7 @@ export default {
     srm: 'SRM',
     sms: '利益相关者',
     iterations: '迭代',
+    pages: '页面',
     assets: '资产',
     channels: '渠道',
     portalHub: '门户中心',

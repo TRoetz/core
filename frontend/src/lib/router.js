@@ -147,6 +147,8 @@ const routes = {
   '/assets': 'assets',
   '/assets/settings': 'asset-settings',
   '/assets/:id': 'asset-detail',
+  // Cross-workspace knowledge-page browser.
+  '/pages': 'org-pages',
   '/teams': 'teams-list',
   '/teams/:id': 'team-detail',
   '/teams/:id/:section': 'team-detail',

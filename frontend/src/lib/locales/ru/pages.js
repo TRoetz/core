@@ -4,6 +4,9 @@
 
 export default {
   pages: {
+    subtitle: 'Страницы знаний из всех доступных рабочих пространств',
+    searchPlaceholder: 'Поиск по названиям страниц…',
+    noPages: 'Видимые страницы не найдены.',
     backWorkspace: 'Рабочее пространство',
     treeHeading: 'Страницы',
     addPageAria: 'Добавить страницу',

@@ -4,6 +4,8 @@
   import { time } from '../../api/time.js';
   import { workspaces as wsApi } from '../../api/workspaces.js';
   import IconX from '@tabler/icons-svelte-runes/icons/x';
+  import P3MCriticalPath from './P3MCriticalPath.svelte';
+  import P3MProjectRegisters from './P3MProjectRegisters.svelte';
   import { formatMoney, formatDate, ragColor, ragLabel, stageLabel } from './utils.js';
 
   let { project = null, onChanged = () => {}, onClose = () => {} } = $props();
@@ -188,6 +190,14 @@
         </tbody>
       </table>
     {/if}
+
+    <!-- Critical path: CPM over the dated work items in linked workspaces -->
+    <h3 class="mb-1 mt-4 font-semibold">{t('p3m.criticalPath')}</h3>
+    <P3MCriticalPath entityType="project" id={project.id} />
+
+    <!-- Per-project risk and decision registers (feed the CPM badges above) -->
+    <h3 class="mb-1 mt-4 font-semibold">{t('p3m.registers')}</h3>
+    <P3MProjectRegisters project={project} />
 
     <!-- Merged stakeholders (P3M + SRM) -->
     <h3 class="mb-1 mt-4 font-semibold">

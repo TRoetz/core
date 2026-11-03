@@ -8,6 +8,11 @@
  */
 export default {
   pages: {
+    // Cross-workspace browser (/pages)
+    subtitle: 'Knowledge pages across all workspaces you can access',
+    searchPlaceholder: 'Search page titles...',
+    noPages: 'No visible pages found.',
+
     // Sidebar / drilldown nav
     backWorkspace: 'Workspace',
     treeHeading: 'Pages',

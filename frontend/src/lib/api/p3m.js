@@ -21,11 +21,27 @@ export const p3m = {
   getProjectWorkspaces: (projectId) => fetchAPI(`/p3m/projects/${projectId}/workspaces`),
   setProjectWorkspaces: (projectId, workspaceIds) => put(`/p3m/projects/${projectId}/workspaces`, { workspace_ids: workspaceIds }),
 
+  // Critical path: CPM schedule analysis over the dated work items in the
+  // entity's linked workspaces. Cycle errors arrive as API error strings.
+  getProjectCriticalPath: (projectId) => fetchAPI(`/p3m/projects/${projectId}/critical-path`),
+  getProgrammeCriticalPath: (programmeId) =>
+    fetchAPI(`/p3m/programmes/${programmeId}/critical-path`),
+
+  // Leave impact: active user leaves overlapping resource allocations and
+  // critical-path tasks. Visibility only - no rescheduling is performed.
+  getProjectLeaveImpact: (projectId) => fetchAPI(`/p3m/projects/${projectId}/leave-impact`),
+  getProgrammeLeaveImpact: (programmeId) =>
+    fetchAPI(`/p3m/programmes/${programmeId}/leave-impact`),
+
   // Governance.
   getStageGates: (filters = {}) => fetchAPI(`/p3m/stage-gates${qs(filters)}`),
   createStageGate: (data) => post('/p3m/stage-gates', data),
   decideStageGate: (id, data) => post(`/p3m/stage-gates/${id}/decision`, data),
   updateGateArtifact: (id, data) => put(`/p3m/gate-artifacts/${id}`, data),
+
+  // Architecture review board.
+  architectureReviews: createCrudClient('/p3m/architecture-reviews'),
+  decideArchitectureReview: (id, data) => post(`/p3m/architecture-reviews/${id}/decision`, data),
 
   getRaciMatrix: (filters = {}) => fetchAPI(`/p3m/raci${qs(filters)}`),
   upsertRaciAssignment: (data) => put('/p3m/raci', data),

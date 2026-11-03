@@ -14,6 +14,7 @@ export default {
     srm: 'SRM',
     sms: 'Interessenten',
     iterations: 'Iterationen',
+    pages: 'Seiten',
     assets: 'Assets',
     channels: 'Kanäle',
     portalHub: 'Portal Hub',

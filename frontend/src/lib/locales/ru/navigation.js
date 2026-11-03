@@ -14,6 +14,7 @@ export default {
     srm: 'SRM',
     sms: 'Стейкхолдеры',
     iterations: 'Итерации',
+    pages: 'Страницы',
     assets: 'Ресурсы',
     channels: 'Каналы',
     portalHub: 'Центр порталов',

@@ -190,6 +190,9 @@ scripts/*
 !scripts/openapi-convert/**
 !scripts/openapi-v2-check/
 !scripts/openapi-v2-check/**
+!scripts/demo/
+scripts/demo/*
+!scripts/demo/seed-p3m-suite.js
 .golangci-report.json
 blog/
 .fallow/

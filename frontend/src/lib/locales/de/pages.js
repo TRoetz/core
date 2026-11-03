@@ -4,6 +4,9 @@
  */
 export default {
   "pages": {
+    "subtitle": "Wissensseiten aus allen zugänglichen Arbeitsbereichen",
+    "searchPlaceholder": "Seitentitel durchsuchen…",
+    "noPages": "Keine sichtbaren Seiten gefunden.",
     "backWorkspace": "Arbeitsbereich",
     "treeHeading": "Seiten",
     "addPageAria": "Seite hinzufügen",

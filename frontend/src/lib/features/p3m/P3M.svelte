@@ -140,7 +140,7 @@
   {#if activeTab === 'overview'}
     <P3MOverview portfolios={hierarchy.portfolios} summary={summary} onChanged={load} initialProjectId={initialProjectId} planMap={planMap} />
   {:else if activeTab === 'governance'}
-    <P3MGovernance />
+    <P3MGovernance portfolios={hierarchy.portfolios} />
   {:else if activeTab === 'benefits'}
     <P3MBenefitsFinancials />
   {:else if activeTab === 'risk'}
