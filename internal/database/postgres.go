@@ -596,9 +596,11 @@ func (p *PostgresDB) getPostgresSchemaFiles() []schemaFile {
 		{"sla_warning_thresholds_postgres.sql", slaWarningThresholdsSchemaPostgres},
 		{"sla_import_postgres.sql", slaImportSchemaPostgres},
 		{"incidents_postgres.sql", incidentsSchemaPostgres},
+		// sms must precede p3m/srm: their stakeholder tables carry FK links to
+		// the SMS register (system of record).
+		{"sms_postgres.sql", smsSchemaPostgres},
 		{"p3m_postgres.sql", p3mSchemaPostgres},
 		{"srm_postgres.sql", srmSchemaPostgres},
-		{"sms_postgres.sql", smsSchemaPostgres},
 		{"plans_postgres.sql", plansSchemaPostgres},
 		{"condition_sets_postgres.sql", conditionSetsSchemaPostgres},
 		{"approvals_postgres.sql", approvalsSchemaPostgres},

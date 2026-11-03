@@ -29,6 +29,13 @@
   let filterEngagement = $state('');
   let filterLifecycle = $state('');
   let filterRelationship = $state('');
+  let filterGroup = $state('');
+
+  // Groups (named collections for engagement planning).
+  /** @type {Array<Record<string, any>>} */
+  let groups = $state([]);
+  let groupForm = $state({ name: '', description: '' });
+  let savingGroup = $state(false);
 
   // Quick-create form.
   let newName = $state('');
@@ -45,6 +52,11 @@
       if (filterEngagement && s.engagement_status !== filterEngagement) return false;
       if (filterLifecycle && s.lifecycle_stage !== filterLifecycle) return false;
       if (filterRelationship && s.relationship_status !== filterRelationship) return false;
+      if (filterGroup) {
+        const g = groups.find((x) => x.id === Number(filterGroup));
+        const ids = new Set((g?.members ?? []).map((m) => m.id));
+        if (!ids.has(s.id)) return false;
+      }
       return true;
     })
   );
@@ -58,6 +70,38 @@
       error = e?.message || 'error';
     } finally {
       loading = false;
+    }
+  }
+
+  async function loadGroups() {
+    try {
+      groups = (await smsApi.getGroups()) ?? [];
+    } catch {
+      groups = [];
+    }
+  }
+
+  async function createGroup() {
+    if (!groupForm.name.trim() || savingGroup) return;
+    savingGroup = true;
+    try {
+      await smsApi.createGroup({ name: groupForm.name.trim(), description: groupForm.description });
+      groupForm = { name: '', description: '' };
+      await loadGroups();
+    } catch (e) {
+      error = e?.message || 'error';
+    } finally {
+      savingGroup = false;
+    }
+  }
+
+  async function removeGroup(id) {
+    try {
+      await smsApi.deleteGroup(id);
+      if (filterGroup === String(id)) filterGroup = '';
+      await loadGroups();
+    } catch (e) {
+      error = e?.message || 'error';
     }
   }
 
@@ -75,7 +119,10 @@
     }
   }
 
-  onMount(load);
+  onMount(() => {
+    load();
+    loadGroups();
+  });
 </script>
 
 <div class="space-y-4 px-6 py-4">
@@ -108,6 +155,10 @@
         <option value="">{t('sms.allRelationships')}</option>
         {#each RELATIONSHIP_STATUSES as s (s)}<option value={s}>{relationshipLabel(s)}</option>{/each}
       </select>
+      <select class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1 text-xs" value={filterGroup} onchange={(e) => (filterGroup = e.target.value)}>
+        <option value="">{t('sms.allGroups')}</option>
+        {#each groups as g (g.id)}<option value={g.id}>{g.name}</option>{/each}
+      </select>
 
       <span class="mx-1 h-5 w-px bg-[var(--color-ds-border,#e5e7eb)]" aria-hidden="true"></span>
 
@@ -124,6 +175,32 @@
         {t('sms.add')}
       </button>
     </div>
+
+    <!-- Groups management -->
+    <details class="rounded-md border border-[var(--color-ds-border,#e5e7eb)]">
+      <summary class="cursor-pointer px-3 py-2 text-xs font-medium">{t('sms.groups')}</summary>
+      <div class="space-y-2 border-t border-[var(--color-ds-border,#e5e7eb)] p-3">
+        {#if groups.length === 0}
+          <div class="text-xs text-[var(--color-ds-text-muted,#6b7280)]">{t('sms.noRecords')}</div>
+        {:else}
+          <ul class="space-y-1">
+            {#each groups as g (g.id)}
+              <li class="flex items-center gap-2 text-xs">
+                <span class="font-medium">{g.name}</span>
+                <span class="text-[var(--color-ds-text-muted,#6b7280)]">{t('sms.membersCount', { count: g.member_count ?? 0 })}</span>
+                {#if g.description}<span class="truncate text-[var(--color-ds-text-muted,#6b7280)]">— {g.description}</span>{/if}
+                <button type="button" class="ml-auto text-xs text-red-600 hover:underline" onclick={() => removeGroup(g.id)}>{t('common.delete')}</button>
+              </li>
+            {/each}
+          </ul>
+        {/if}
+        <div class="flex flex-wrap items-center gap-2">
+          <input class="w-48 rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1 text-xs" placeholder={t('sms.groupName')} value={groupForm.name} oninput={(e) => (groupForm = { ...groupForm, name: e.target.value })} />
+          <input class="w-64 rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1 text-xs" placeholder={t('sms.groupDescription')} value={groupForm.description} oninput={(e) => (groupForm = { ...groupForm, description: e.target.value })} />
+          <button type="button" class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] px-2 py-1 text-xs hover:bg-ds-background-neutral-hovered" disabled={savingGroup || !groupForm.name.trim()} onclick={createGroup}>{t('sms.createGroup')}</button>
+        </div>
+      </div>
+    </details>
 
     <!-- List -->
     {#if filtered.length === 0}

@@ -8,12 +8,15 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"windshift/internal/models"
 )
 
 // GetCommunications returns the cross-stakeholder communication feed with
 // stakeholder names joined in. Supports ?limit= (default 200, max 500).
 func (h *SMSHandler) GetCommunications(w http.ResponseWriter, r *http.Request) {
-	if _, ok := RequireAuth(w, r); !ok {
+	user, ok := RequireAuth(w, r)
+	if !ok {
 		return
 	}
 	limit := 200
@@ -24,7 +27,7 @@ func (h *SMSHandler) GetCommunications(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	query := `SELECT c.id, c.stakeholder_id, s.name, c.channel, c.direction, c.subject, c.body, c.sentiment, c.created_at FROM sms_communications c JOIN sms_stakeholders s ON s.id = c.stakeholder_id`
+	query := `SELECT c.id, c.stakeholder_id, s.name, s.info_classification, c.channel, c.direction, c.subject, c.body, c.sentiment, c.created_at FROM sms_communications c JOIN sms_stakeholders s ON s.id = c.stakeholder_id`
 	args := make([]any, 0, 2)
 	if sid, ok := parseQueryInt(r.URL.Query().Get("stakeholder_id")); ok && sid > 0 {
 		query += ` WHERE c.stakeholder_id = ?`
@@ -44,6 +47,7 @@ func (h *SMSHandler) GetCommunications(w http.ResponseWriter, r *http.Request) {
 		ID              int       `json:"id"`
 		StakeholderID   int       `json:"stakeholder_id"`
 		StakeholderName string    `json:"stakeholder_name"`
+		infoClass       string
 		Channel         string    `json:"channel"`
 		Direction       string    `json:"direction"`
 		Subject         string    `json:"subject"`
@@ -52,13 +56,19 @@ func (h *SMSHandler) GetCommunications(w http.ResponseWriter, r *http.Request) {
 		CreatedAt       time.Time `json:"created_at"`
 	}
 
+	canSensitive := h.smsCanViewSensitive(r.Context(), user.ID)
+	maskedCount := 0
 	out := make([]commRow, 0)
 	for rows.Next() {
 		var c commRow
-		if err := rows.Scan(&c.ID, &c.StakeholderID, &c.StakeholderName, &c.Channel, &c.Direction, &c.Subject, &c.Body, &c.Sentiment, &c.CreatedAt); err != nil {
+		if err := rows.Scan(&c.ID, &c.StakeholderID, &c.StakeholderName, &c.infoClass, &c.Channel, &c.Direction, &c.Subject, &c.Body, &c.Sentiment, &c.CreatedAt); err != nil {
 			rows.Close()
 			respondInternalError(w, r, err)
 			return
+		}
+		if !canSensitive && c.infoClass == models.SMSInfoRestricted {
+			c.Body = ""
+			maskedCount++
 		}
 		out = append(out, c)
 	}
@@ -66,6 +76,9 @@ func (h *SMSHandler) GetCommunications(w http.ResponseWriter, r *http.Request) {
 		rows.Close()
 		respondInternalError(w, r, err)
 		return
+	}
+	if maskedCount > 0 {
+		smsAudit(h, r, user, "sms_restricted_access", "sms_communication", nil, fmt.Sprintf("feed(%d)", maskedCount), map[string]any{"masked_fields": []string{"body"}})
 	}
 	respondJSONOK(w, out)
 }
@@ -84,7 +97,7 @@ func (h *SMSHandler) ListEngagementPlans(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	query := `SELECT p.id, p.stakeholder_id, s.name, p.strategy, p.frequency, p.channel, p.status, p.start_date, p.end_date, p.notes FROM sms_engagement_plans p JOIN sms_stakeholders s ON s.id = p.stakeholder_id`
+	query := `SELECT p.id, p.stakeholder_id, s.name, p.strategy, p.objective, p.approach, p.key_messages, p.success_measures, p.frequency, p.channel, p.status, p.entity_type, p.entity_id, p.start_date, p.end_date, p.notes FROM sms_engagement_plans p JOIN sms_stakeholders s ON s.id = p.stakeholder_id`
 	args := make([]any, 0, 1)
 	if status != "" {
 		query += ` WHERE p.status = ?`
@@ -99,23 +112,10 @@ func (h *SMSHandler) ListEngagementPlans(w http.ResponseWriter, r *http.Request)
 	}
 	defer rows.Close()
 
-	type planRow struct {
-		ID              int        `json:"id"`
-		StakeholderID   int        `json:"stakeholder_id"`
-		StakeholderName string     `json:"stakeholder_name"`
-		Strategy        string     `json:"strategy"`
-		Frequency       string     `json:"frequency"`
-		Channel         string     `json:"channel"`
-		Status          string     `json:"status"`
-		StartDate       *time.Time `json:"start_date,omitempty"`
-		EndDate         *time.Time `json:"end_date,omitempty"`
-		Notes           string     `json:"notes"`
-	}
-
-	out := make([]planRow, 0)
+	out := make([]models.SMSEngagementPlan, 0)
 	for rows.Next() {
-		var p planRow
-		if err := rows.Scan(&p.ID, &p.StakeholderID, &p.StakeholderName, &p.Strategy, &p.Frequency, &p.Channel, &p.Status, &p.StartDate, &p.EndDate, &p.Notes); err != nil {
+		var p models.SMSEngagementPlan
+		if err := rows.Scan(&p.ID, &p.StakeholderID, &p.StakeholderName, &p.Strategy, &p.Objective, &p.Approach, &p.KeyMessages, &p.SuccessMeasures, &p.Frequency, &p.Channel, &p.Status, &p.EntityType, &p.EntityID, &p.StartDate, &p.EndDate, &p.Notes); err != nil {
 			rows.Close()
 			respondInternalError(w, r, err)
 			return
@@ -124,6 +124,10 @@ func (h *SMSHandler) ListEngagementPlans(w http.ResponseWriter, r *http.Request)
 	}
 	if err := rows.Err(); err != nil {
 		rows.Close()
+		respondInternalError(w, r, err)
+		return
+	}
+	if err := h.smsFillPlanMembers(r.Context(), out); err != nil {
 		respondInternalError(w, r, err)
 		return
 	}
@@ -314,6 +318,32 @@ func (h *SMSHandler) GetTimeline(w http.ResponseWriter, r *http.Request) {
 	}
 	rows.Close()
 
+	rows, err = h.db.QueryContext(ctx, `SELECT id, title, COALESCE(decision, ''), COALESCE(decided_at, created_at) FROM sms_decisions WHERE stakeholder_id = ? ORDER BY COALESCE(decided_at, created_at) DESC LIMIT ?`, id, limit)
+	if err != nil {
+		respondInternalError(w, r, err)
+		return
+	}
+	for rows.Next() {
+		var (
+			did      int
+			title    string
+			decision string
+			at       time.Time
+		)
+		if err := rows.Scan(&did, &title, &decision, &at); err != nil {
+			rows.Close()
+			respondInternalError(w, r, err)
+			return
+		}
+		entries = append(entries, timelineEntry{Type: "decision", ID: did, Title: title, Summary: decision, At: at})
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		respondInternalError(w, r, err)
+		return
+	}
+	rows.Close()
+
 	sort.SliceStable(entries, func(i, j int) bool { return entries[i].At.After(entries[j].At) })
 	if len(entries) > limit {
 		entries = entries[:limit]
@@ -328,7 +358,8 @@ func (h *SMSHandler) GetTimeline(w http.ResponseWriter, r *http.Request) {
 // health scores) or the full communication log. Only ?scope=stakeholders and
 // ?scope=communications are supported; format must be empty or "csv".
 func (h *SMSHandler) ExportCSV(w http.ResponseWriter, r *http.Request) {
-	if _, ok := RequireAuth(w, r); !ok {
+	user, ok := RequireAuth(w, r)
+	if !ok {
 		return
 	}
 	scope := r.URL.Query().Get("scope")
@@ -339,11 +370,13 @@ func (h *SMSHandler) ExportCSV(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := r.Context()
+	rowCount := 0
 	var filename string
 	switch scope {
 	case "stakeholders":
 		filename = "sms-stakeholders.csv"
-		rows, err := h.db.QueryContext(ctx, `SELECT id, name, title, organization, email, phone, role_classification, influence_level, interest_level, interests, engagement_status, lifecycle_stage, relationship_status, communication_preferences, custom_fields, notes, created_at, updated_at FROM sms_stakeholders ORDER BY name COLLATE NOCASE`)
+		canSensitive := h.smsCanViewSensitive(ctx, user.ID)
+		rows, err := h.db.QueryContext(ctx, `SELECT id, name, title, organization, email, phone, role_classification, influence_level, interest_level, interests, engagement_status, lifecycle_stage, relationship_status, info_classification, communication_preferences, custom_fields, notes, created_at, updated_at FROM sms_stakeholders ORDER BY name COLLATE NOCASE`)
 		if err != nil {
 			respondInternalError(w, r, err)
 			return
@@ -375,16 +408,22 @@ func (h *SMSHandler) ExportCSV(w http.ResponseWriter, r *http.Request) {
 				engagement              string
 				lifecycle               string
 				relationship            string
+				infoClass               string
 				prefs                   string
 				customFields            string
 				notes                   string
 				createdAt, updatedAt    time.Time
 			)
-			if err := rows.Scan(&id, &name, &title, &org, &email, &phone, &classification, &influence, &interest, &interests, &engagement, &lifecycle, &relationship, &prefs, &customFields, &notes, &createdAt, &updatedAt); err != nil {
+			if err := rows.Scan(&id, &name, &title, &org, &email, &phone, &classification, &influence, &interest, &interests, &engagement, &lifecycle, &relationship, &infoClass, &prefs, &customFields, &notes, &createdAt, &updatedAt); err != nil {
 				return
+			}
+			if infoClass == models.SMSInfoRestricted && !canSensitive {
+				notes = ""
+				customFields = "{}"
 			}
 			health := smsHealthScore(relationship, engagement, critMap[id], escMap[id])
 			record := []string{strconv.Itoa(id), name, title, org, email, phone, classification, strconv.Itoa(influence), strconv.Itoa(interest), interests, engagement, lifecycle, relationship, prefs, customFields, notes, strconv.Itoa(health), createdAt.Format(time.RFC3339), updatedAt.Format(time.RFC3339)}
+			rowCount++
 			if err := cw.Write(record); err != nil {
 				return
 			}
@@ -393,7 +432,8 @@ func (h *SMSHandler) ExportCSV(w http.ResponseWriter, r *http.Request) {
 
 	case "communications":
 		filename = "sms-communications.csv"
-		rows, err := h.db.QueryContext(ctx, `SELECT c.id, s.name, c.channel, c.direction, c.subject, c.body, c.sentiment, c.created_at FROM sms_communications c JOIN sms_stakeholders s ON s.id = c.stakeholder_id ORDER BY c.created_at DESC`)
+		canSensitive := h.smsCanViewSensitive(ctx, user.ID)
+		rows, err := h.db.QueryContext(ctx, `SELECT c.id, s.name, s.info_classification, c.channel, c.direction, c.subject, c.body, c.sentiment, c.created_at FROM sms_communications c JOIN sms_stakeholders s ON s.id = c.stakeholder_id ORDER BY c.created_at DESC`)
 		if err != nil {
 			respondInternalError(w, r, err)
 			return
@@ -410,6 +450,7 @@ func (h *SMSHandler) ExportCSV(w http.ResponseWriter, r *http.Request) {
 			var (
 				cid       int
 				name      string
+				infoClass string
 				channel   string
 				direction string
 				subject   string
@@ -417,10 +458,14 @@ func (h *SMSHandler) ExportCSV(w http.ResponseWriter, r *http.Request) {
 				sentiment *string
 				createdAt time.Time
 			)
-			if err := rows.Scan(&cid, &name, &channel, &direction, &subject, &body, &sentiment, &createdAt); err != nil {
+			if err := rows.Scan(&cid, &name, &infoClass, &channel, &direction, &subject, &body, &sentiment, &createdAt); err != nil {
 				return
 			}
+			if infoClass == models.SMSInfoRestricted && !canSensitive {
+				body = ""
+			}
 			record := []string{strconv.Itoa(cid), name, channel, direction, subject, body, smsNullableString(sentiment), createdAt.Format(time.RFC3339)}
+			rowCount++
 			if err := cw.Write(record); err != nil {
 				return
 			}
@@ -430,6 +475,7 @@ func (h *SMSHandler) ExportCSV(w http.ResponseWriter, r *http.Request) {
 	default:
 		respondBadRequest(w, r, "scope must be 'stakeholders' or 'communications'")
 	}
+	smsAudit(h, r, user, "sms_export", "sms_stakeholder", nil, filename, map[string]any{"scope": scope, "rows": rowCount})
 }
 
 // smsNullableString renders a nullable string column for CSV output.

@@ -158,6 +158,7 @@ type Server struct {
 	approvalEscalationSweeper    *services.ApprovalEscalationSweeper
 	incidentEscalationSweeper    *services.IncidentEscalationSweeper
 	actionInactivitySweeper      *services.ActionInactivitySweeper
+	smsReminderSweeper           *services.SMSReminderSweeper
 	slaEngine                    *sla.Engine
 	slaLoop                      *sla.Loop
 	slaLoopCancel                context.CancelFunc
@@ -1282,6 +1283,10 @@ func (s *Server) initialize() error {
 	s.actionInactivitySweeper = services.NewActionInactivitySweeper(s.db, s.actionService, services.DefaultActionInactivitySweeperConfig())
 	s.actionInactivitySweeper.Start()
 
+	// Posts due-date reminders for SMS commitments, engagements and reviews.
+	s.smsReminderSweeper = services.NewSMSReminderSweeper(s.db, services.DefaultSMSReminderSweeperConfig())
+	s.smsReminderSweeper.Start()
+
 	// SLA evaluation runs inline with item facts, and one process-wide
 	// goroutine fires deadline and recalculation jobs. Under the e2e test hook
 	// a manually advanced clock drives derivation and the loop stays off, so a
@@ -1659,6 +1664,7 @@ func (s *Server) initialize() error {
 	p3mHandler := handlers.NewP3MHandler(s.db, permService)
 	srmHandler := handlers.NewSRMHandler(s.db)
 	smsHandler := handlers.NewSMSHandler(s.db)
+	smsHandler.SetLLMManager(llmManager) // AI assist (WI-6.5), off until an LLM connection resolves for "sms_assist"
 	plansHandler := handlers.NewPlanHandler(s.db)
 	routeDeps := &routes.Deps{
 		SLA:       slaHandler,
@@ -2432,6 +2438,11 @@ func (s *Server) Shutdown(ctx context.Context) error {
 	if s.approvalEscalationSweeper != nil {
 		slog.Info("stopping approval escalation sweeper")
 		s.approvalEscalationSweeper.Stop()
+	}
+
+	if s.smsReminderSweeper != nil {
+		slog.Info("stopping sms reminder sweeper")
+		s.smsReminderSweeper.Stop()
 	}
 
 	if s.incidentEscalationSweeper != nil {

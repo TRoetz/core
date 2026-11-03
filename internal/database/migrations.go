@@ -3323,6 +3323,193 @@ var Catalog = []Migration{
 			CREATE INDEX IF NOT EXISTS idx_p3m_arch_reviews_project ON p3m_architecture_reviews(project_id);
 		`,
 	},
+	{
+		Version:         "20261123_sms_register_v2",
+		Name:            "SMS register v2 for HCC SRM gap closure (register fields, relationship entities, permission split)",
+		CheckSQLiteFn:   checkSMSRegisterV2SQLite,
+		CheckPostgresFn: checkSMSRegisterV2Postgres,
+		// SQLite cannot add a CHECK to an existing column without a table
+		// rebuild; the SQL field stays non-empty so the runner reaches
+		// ApplySQLite instead of stamping the row.
+		SQLite:      "applySQLiteSMSRegisterV2:v1",
+		ApplySQLite: applySQLiteSMSRegisterV2,
+		Postgres: `
+			-- Map legacy relationship_status values onto the HCC scale (Std §8).
+			UPDATE sms_stakeholders SET relationship_status = CASE relationship_status
+				WHEN 'positive' THEN 'supportive'
+				WHEN 'tense' THEN 'concerned'
+				ELSE relationship_status END;
+			DO $$ BEGIN
+				IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'sms_stakeholders_relationship_status_check') THEN
+					ALTER TABLE sms_stakeholders DROP CONSTRAINT sms_stakeholders_relationship_status_check;
+				END IF;
+			END $$;
+			ALTER TABLE sms_stakeholders ADD CONSTRAINT chk_sms_stakeholder_rel_status CHECK (relationship_status IN ('advocate','supportive','neutral','concerned','opposed'));
+			ALTER TABLE sms_stakeholders ADD COLUMN IF NOT EXISTS external_id TEXT UNIQUE;
+			ALTER TABLE sms_stakeholders ADD COLUMN IF NOT EXISTS stakeholder_type TEXT CHECK (stakeholder_type IS NULL OR stakeholder_type IN ('mana_whenua','elected_member','government_agency','regional_authority','regulatory_partner','infrastructure_partner','business','developer','business_association','strategic_supplier','utility_provider','community_organisation','industry_group','advocacy_group','educational_institution','major_landowner','project_stakeholder','other'));
+			ALTER TABLE sms_stakeholders ADD COLUMN IF NOT EXISTS category TEXT NOT NULL DEFAULT '';
+			ALTER TABLE sms_stakeholders ADD COLUMN IF NOT EXISTS tier TEXT NOT NULL DEFAULT 'tier_3' CHECK (tier IN ('tier_1','tier_2','tier_3','tier_4'));
+			ALTER TABLE sms_stakeholders ADD COLUMN IF NOT EXISTS business_unit TEXT NOT NULL DEFAULT '';
+			ALTER TABLE sms_stakeholders ADD COLUMN IF NOT EXISTS backup_owner_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL;
+			ALTER TABLE sms_stakeholders ADD COLUMN IF NOT EXISTS executive_sponsor_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL;
+			ALTER TABLE sms_stakeholders ADD COLUMN IF NOT EXISTS risk_rating TEXT CHECK (risk_rating IS NULL OR risk_rating IN ('low','medium','high','critical'));
+			ALTER TABLE sms_stakeholders ADD COLUMN IF NOT EXISTS trust_level TEXT CHECK (trust_level IS NULL OR trust_level IN ('very_high','high','moderate','low','critical'));
+			ALTER TABLE sms_stakeholders ADD COLUMN IF NOT EXISTS last_engagement_at TIMESTAMPTZ;
+			ALTER TABLE sms_stakeholders ADD COLUMN IF NOT EXISTS next_engagement_at TIMESTAMPTZ;
+			ALTER TABLE sms_stakeholders ADD COLUMN IF NOT EXISTS info_classification TEXT NOT NULL DEFAULT 'internal' CHECK (info_classification IN ('public','internal','confidential','restricted'));
+			ALTER TABLE sms_stakeholders ADD COLUMN IF NOT EXISTS consent_status TEXT NOT NULL DEFAULT 'not_required' CHECK (consent_status IN ('not_required','granted','declined','withdrawn','unknown'));
+			ALTER TABLE sms_stakeholders ADD COLUMN IF NOT EXISTS retention_category TEXT NOT NULL DEFAULT '';
+			ALTER TABLE sms_stakeholders ADD COLUMN IF NOT EXISTS last_reviewed_at TIMESTAMPTZ;
+			ALTER TABLE sms_stakeholders ADD COLUMN IF NOT EXISTS review_cadence TEXT NOT NULL DEFAULT 'quarterly' CHECK (review_cadence IN ('monthly','quarterly','semi_annual','annual'));
+			ALTER TABLE sms_stakeholders ADD COLUMN IF NOT EXISTS location_lat REAL;
+			ALTER TABLE sms_stakeholders ADD COLUMN IF NOT EXISTS location_lon REAL;
+			ALTER TABLE sms_stakeholders ADD COLUMN IF NOT EXISTS location_text TEXT NOT NULL DEFAULT '';
+			CREATE INDEX IF NOT EXISTS idx_sms_stakeholders_tier ON sms_stakeholders(tier);
+			-- Engagement plan upgrade (Std §14).
+			ALTER TABLE sms_engagement_plans ADD COLUMN IF NOT EXISTS objective TEXT NOT NULL DEFAULT '';
+			ALTER TABLE sms_engagement_plans ADD COLUMN IF NOT EXISTS approach TEXT CHECK (approach IS NULL OR approach IN ('inform','consult','involve','collaborate','partner'));
+			ALTER TABLE sms_engagement_plans ADD COLUMN IF NOT EXISTS key_messages TEXT NOT NULL DEFAULT '';
+			ALTER TABLE sms_engagement_plans ADD COLUMN IF NOT EXISTS success_measures TEXT NOT NULL DEFAULT '';
+			ALTER TABLE sms_engagement_plans ADD COLUMN IF NOT EXISTS entity_type TEXT;
+			ALTER TABLE sms_engagement_plans ADD COLUMN IF NOT EXISTS entity_id INTEGER;
+			CREATE TABLE IF NOT EXISTS sms_engagement_plan_stakeholders (
+				id SERIAL PRIMARY KEY,
+				plan_id INTEGER NOT NULL REFERENCES sms_engagement_plans(id) ON DELETE CASCADE,
+				stakeholder_id INTEGER NOT NULL REFERENCES sms_stakeholders(id) ON DELETE CASCADE,
+				UNIQUE (plan_id, stakeholder_id)
+			);
+			CREATE INDEX IF NOT EXISTS idx_sms_plan_stakeholders_stakeholder ON sms_engagement_plan_stakeholders(stakeholder_id);
+			-- Migrate existing per-stakeholder plans into single-member plans.
+			INSERT INTO sms_engagement_plan_stakeholders (plan_id, stakeholder_id)
+			SELECT id, stakeholder_id FROM sms_engagement_plans ON CONFLICT DO NOTHING;
+			-- Issue/risk category taxonomy (Std §15).
+			ALTER TABLE sms_issues ADD COLUMN IF NOT EXISTS category TEXT NOT NULL DEFAULT 'other' CHECK (category IN ('relationship','reputation','delivery','communication','dependency','knowledge_loss','commitment','other'));
+			ALTER TABLE sms_issues ADD COLUMN IF NOT EXISTS escalation_path TEXT NOT NULL DEFAULT '';
+			CREATE TABLE IF NOT EXISTS sms_commitments (
+				id SERIAL PRIMARY KEY,
+				stakeholder_id INTEGER NOT NULL REFERENCES sms_stakeholders(id) ON DELETE CASCADE,
+				direction TEXT NOT NULL DEFAULT 'from_them' CHECK (direction IN ('from_us','from_them','mutual')),
+				title TEXT NOT NULL,
+				description TEXT NOT NULL DEFAULT '',
+				owner_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				due_date TIMESTAMPTZ,
+				status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open','in_progress','at_risk','completed','cancelled')),
+				escalated BOOLEAN NOT NULL DEFAULT false,
+				escalation_level INTEGER NOT NULL DEFAULT 0,
+				source_communication_id INTEGER REFERENCES sms_communications(id) ON DELETE SET NULL,
+				linked_issue_id INTEGER REFERENCES sms_issues(id) ON DELETE SET NULL,
+				notes TEXT NOT NULL DEFAULT '',
+				created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+				updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE INDEX IF NOT EXISTS idx_sms_commitments_stakeholder ON sms_commitments(stakeholder_id);
+			CREATE INDEX IF NOT EXISTS idx_sms_commitments_due ON sms_commitments(due_date);
+			CREATE TABLE IF NOT EXISTS sms_grievances (
+				id SERIAL PRIMARY KEY,
+				stakeholder_id INTEGER NOT NULL REFERENCES sms_stakeholders(id) ON DELETE CASCADE,
+				title TEXT NOT NULL,
+				description TEXT NOT NULL DEFAULT '',
+				category TEXT NOT NULL DEFAULT '',
+				severity TEXT NOT NULL DEFAULT 'medium' CHECK (severity IN ('low','medium','high','critical')),
+				status TEXT NOT NULL DEFAULT 'received' CHECK (status IN ('received','acknowledged','investigating','responded','closed')),
+				escalated BOOLEAN NOT NULL DEFAULT false,
+				escalation_level INTEGER NOT NULL DEFAULT 0,
+				acknowledged_at TIMESTAMPTZ,
+				response_due_at TIMESTAMPTZ,
+				response TEXT NOT NULL DEFAULT '',
+				resolution TEXT NOT NULL DEFAULT '',
+				created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+				updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE INDEX IF NOT EXISTS idx_sms_grievances_stakeholder ON sms_grievances(stakeholder_id);
+			CREATE TABLE IF NOT EXISTS sms_decisions (
+				id SERIAL PRIMARY KEY,
+				stakeholder_id INTEGER NOT NULL REFERENCES sms_stakeholders(id) ON DELETE CASCADE,
+				title TEXT NOT NULL,
+				decision TEXT NOT NULL DEFAULT '',
+				context TEXT NOT NULL DEFAULT '',
+				decided_at TIMESTAMPTZ,
+				decided_by_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				entity_type TEXT,
+				entity_id INTEGER,
+				created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE INDEX IF NOT EXISTS idx_sms_decisions_stakeholder ON sms_decisions(stakeholder_id);
+			CREATE TABLE IF NOT EXISTS sms_stakeholder_groups (
+				id SERIAL PRIMARY KEY,
+				name TEXT NOT NULL UNIQUE,
+				description TEXT NOT NULL DEFAULT '',
+				created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE TABLE IF NOT EXISTS sms_stakeholder_group_members (
+				id SERIAL PRIMARY KEY,
+				group_id INTEGER NOT NULL REFERENCES sms_stakeholder_groups(id) ON DELETE CASCADE,
+				stakeholder_id INTEGER NOT NULL REFERENCES sms_stakeholders(id) ON DELETE CASCADE,
+				UNIQUE (group_id, stakeholder_id)
+			);
+			CREATE INDEX IF NOT EXISTS idx_sms_group_members_stakeholder ON sms_stakeholder_group_members(stakeholder_id);
+			CREATE TABLE IF NOT EXISTS sms_stakeholder_links (
+				id SERIAL PRIMARY KEY,
+				source_id INTEGER NOT NULL REFERENCES sms_stakeholders(id) ON DELETE CASCADE,
+				target_id INTEGER NOT NULL REFERENCES sms_stakeholders(id) ON DELETE CASCADE,
+				relation_type TEXT NOT NULL DEFAULT '',
+				notes TEXT NOT NULL DEFAULT '',
+				created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+				UNIQUE (source_id, target_id)
+			);
+			CREATE INDEX IF NOT EXISTS idx_sms_links_target ON sms_stakeholder_links(target_id);
+			CREATE TABLE IF NOT EXISTS sms_ownership_transfers (
+				id SERIAL PRIMARY KEY,
+				stakeholder_id INTEGER NOT NULL REFERENCES sms_stakeholders(id) ON DELETE CASCADE,
+				from_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				to_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				reason TEXT NOT NULL DEFAULT '',
+				history_reviewed BOOLEAN NOT NULL DEFAULT false,
+				risks_reviewed BOOLEAN NOT NULL DEFAULT false,
+				commitments_reviewed BOOLEAN NOT NULL DEFAULT false,
+				notes TEXT NOT NULL DEFAULT '',
+				completed_at TIMESTAMPTZ,
+				created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE INDEX IF NOT EXISTS idx_sms_transfers_stakeholder ON sms_ownership_transfers(stakeholder_id);
+			CREATE TABLE IF NOT EXISTS sms_pilot_baselines (
+				metric_key TEXT PRIMARY KEY,
+				baseline_value REAL,
+				target_value REAL,
+				set_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+			);
+			INSERT INTO permissions (permission_key, permission_name, description, scope, is_system) VALUES
+				('sms.manage', 'Manage SMS Module', 'Can create and modify Stakeholder Management System records', 'global', false),
+				('sms.sensitive.view', 'View Sensitive SMS Data', 'Can view restricted stakeholder fields and communications in the SMS module', 'global', false)
+			ON CONFLICT (permission_key) DO NOTHING;
+		`,
+	},
+	{
+		Version:       "20261124_sms_sot_links",
+		Name:          "Link P3M and SRM stakeholder rows to the SMS register (single source of truth)",
+		CheckSQLite:   `SELECT (SELECT COUNT(*) FROM pragma_table_info('p3m_stakeholders') WHERE name='sms_stakeholder_id') * (SELECT COUNT(*) FROM pragma_table_info('srm_stakeholders') WHERE name='sms_stakeholder_id')`,
+		CheckPostgres: `SELECT (SELECT COUNT(*) FROM information_schema.columns WHERE table_name='p3m_stakeholders' AND column_name='sms_stakeholder_id') * (SELECT COUNT(*) FROM information_schema.columns WHERE table_name='srm_stakeholders' AND column_name='sms_stakeholder_id')`,
+		SQLite: `
+			ALTER TABLE p3m_stakeholders ADD COLUMN sms_stakeholder_id INTEGER REFERENCES sms_stakeholders(id) ON DELETE SET NULL;
+			CREATE INDEX IF NOT EXISTS idx_p3m_stakeholders_sms ON p3m_stakeholders(sms_stakeholder_id);
+			ALTER TABLE srm_stakeholders ADD COLUMN sms_stakeholder_id INTEGER REFERENCES sms_stakeholders(id) ON DELETE SET NULL;
+			CREATE INDEX IF NOT EXISTS idx_srm_stakeholders_sms ON srm_stakeholders(sms_stakeholder_id);
+			-- Backfill: SRM rows match on exact email (case-insensitive).
+			UPDATE srm_stakeholders SET sms_stakeholder_id = (SELECT MIN(id) FROM sms_stakeholders WHERE lower(email) = lower(srm_stakeholders.email)) WHERE email <> '' AND EXISTS (SELECT 1 FROM sms_stakeholders WHERE lower(email) = lower(srm_stakeholders.email));
+			-- Backfill: P3M rows carry no email; link only unambiguous exact name matches.
+			UPDATE p3m_stakeholders SET sms_stakeholder_id = (SELECT MIN(id) FROM sms_stakeholders WHERE lower(name) = lower(p3m_stakeholders.name)) WHERE (SELECT COUNT(*) FROM sms_stakeholders WHERE lower(name) = lower(p3m_stakeholders.name)) = 1;
+		`,
+		Postgres: `
+			ALTER TABLE p3m_stakeholders ADD COLUMN IF NOT EXISTS sms_stakeholder_id INTEGER REFERENCES sms_stakeholders(id) ON DELETE SET NULL;
+			CREATE INDEX IF NOT EXISTS idx_p3m_stakeholders_sms ON p3m_stakeholders(sms_stakeholder_id);
+			ALTER TABLE srm_stakeholders ADD COLUMN IF NOT EXISTS sms_stakeholder_id INTEGER REFERENCES sms_stakeholders(id) ON DELETE SET NULL;
+			CREATE INDEX IF NOT EXISTS idx_srm_stakeholders_sms ON srm_stakeholders(sms_stakeholder_id);
+			UPDATE srm_stakeholders ss SET sms_stakeholder_id = (SELECT MIN(id) FROM sms_stakeholders WHERE lower(email) = lower(ss.email)) WHERE email <> '' AND EXISTS (SELECT 1 FROM sms_stakeholders WHERE lower(email) = lower(ss.email));
+			UPDATE p3m_stakeholders ps SET sms_stakeholder_id = (SELECT MIN(id) FROM sms_stakeholders WHERE lower(name) = lower(ps.name)) WHERE (SELECT COUNT(*) FROM sms_stakeholders WHERE lower(name) = lower(ps.name)) = 1;
+		`,
+	},
 }
 
 // checkP3MDecisionARBSQLite reports whether the P3M decision/ARB migration's
@@ -5144,6 +5331,274 @@ func applySQLiteQueuesCollectionScope(db Database) (retErr error) {
 
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("commit queues scope rebuild: %w", err)
+	}
+	return nil
+}
+
+// checkSMSRegisterV2SQLite reports whether the SMS register v2 migration's
+// effect is fully present: sms_stakeholders carries external_id and all
+// relationship-entity tables exist. Fresh installs get everything from the
+// schema files, so this stamps them as applied.
+func checkSMSRegisterV2SQLite(db Database) (bool, error) {
+	var count int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM pragma_table_info('sms_stakeholders') WHERE name = 'external_id'`).Scan(&count); err != nil || count == 0 {
+		return false, err
+	}
+	return sqliteAllTablesCheck(
+		"sms_engagement_plan_stakeholders", "sms_commitments", "sms_grievances", "sms_decisions",
+		"sms_stakeholder_groups", "sms_stakeholder_group_members", "sms_stakeholder_links",
+		"sms_ownership_transfers", "sms_pilot_baselines",
+	)(db)
+}
+
+// checkSMSRegisterV2Postgres is the Postgres twin of checkSMSRegisterV2SQLite.
+func checkSMSRegisterV2Postgres(db Database) (bool, error) {
+	var count int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM information_schema.columns WHERE table_name = 'sms_stakeholders' AND column_name = 'external_id'`).Scan(&count); err != nil || count == 0 {
+		return false, err
+	}
+	return pgAllTablesCheck(
+		"sms_engagement_plan_stakeholders", "sms_commitments", "sms_grievances", "sms_decisions",
+		"sms_stakeholder_groups", "sms_stakeholder_group_members", "sms_stakeholder_links",
+		"sms_ownership_transfers", "sms_pilot_baselines",
+	)(db)
+}
+
+// applySQLiteSMSRegisterV2 rebuilds sms_stakeholders with the register v2
+// columns (SQLite cannot add a CHECK to an existing column in place), maps
+// legacy relationship_status values onto the HCC scale, upgrades engagement
+// plans and issues, creates the relationship-entity tables, and seeds the
+// permission split. IDs are preserved so every referencing row stays valid;
+// smsRegisterV2Statements returns the DDL/DML statements applied by
+// applySQLiteSMSRegisterV2, in order.
+func smsRegisterV2Statements() []string {
+	return []string{
+		`CREATE TABLE sms_stakeholders_migration (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			external_id TEXT UNIQUE,
+			name TEXT NOT NULL,
+			title TEXT NOT NULL DEFAULT '',
+			organization TEXT NOT NULL DEFAULT '',
+			email TEXT NOT NULL DEFAULT '',
+			phone TEXT NOT NULL DEFAULT '',
+			stakeholder_type TEXT CHECK (stakeholder_type IS NULL OR stakeholder_type IN ('mana_whenua','elected_member','government_agency','regional_authority','regulatory_partner','infrastructure_partner','business','developer','business_association','strategic_supplier','utility_provider','community_organisation','industry_group','advocacy_group','educational_institution','major_landowner','project_stakeholder','other')),
+			category TEXT NOT NULL DEFAULT '',
+			tier TEXT NOT NULL DEFAULT 'tier_3' CHECK (tier IN ('tier_1','tier_2','tier_3','tier_4')),
+			business_unit TEXT NOT NULL DEFAULT '',
+			role_classification TEXT NOT NULL DEFAULT 'support' CHECK (role_classification IN ('key','decision_maker','support','influencer','observer')),
+			influence_level INTEGER NOT NULL DEFAULT 3 CHECK (influence_level BETWEEN 1 AND 5),
+			interest_level INTEGER NOT NULL DEFAULT 3 CHECK (interest_level BETWEEN 1 AND 5),
+			interests TEXT NOT NULL DEFAULT '',
+			engagement_status TEXT NOT NULL DEFAULT 'passive' CHECK (engagement_status IN ('passive','engaged','active','disengaged')),
+			lifecycle_stage TEXT NOT NULL DEFAULT 'onboarding' CHECK (lifecycle_stage IN ('onboarding','active','retained','exited')),
+			relationship_status TEXT NOT NULL DEFAULT 'neutral' CHECK (relationship_status IN ('advocate','supportive','neutral','concerned','opposed')),
+			trust_level TEXT CHECK (trust_level IS NULL OR trust_level IN ('very_high','high','moderate','low','critical')),
+			risk_rating TEXT CHECK (risk_rating IS NULL OR risk_rating IN ('low','medium','high','critical')),
+			communication_preferences TEXT NOT NULL DEFAULT '',
+			owner_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+			backup_owner_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+			executive_sponsor_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+			last_engagement_at DATETIME,
+			next_engagement_at DATETIME,
+			info_classification TEXT NOT NULL DEFAULT 'internal' CHECK (info_classification IN ('public','internal','confidential','restricted')),
+			consent_status TEXT NOT NULL DEFAULT 'not_required' CHECK (consent_status IN ('not_required','granted','declined','withdrawn','unknown')),
+			retention_category TEXT NOT NULL DEFAULT '',
+			last_reviewed_at DATETIME,
+			review_cadence TEXT NOT NULL DEFAULT 'quarterly' CHECK (review_cadence IN ('monthly','quarterly','semi_annual','annual')),
+			location_lat REAL,
+			location_lon REAL,
+			location_text TEXT NOT NULL DEFAULT '',
+			custom_fields TEXT NOT NULL DEFAULT '{}',
+			notes TEXT NOT NULL DEFAULT '',
+			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+		)`,
+		`INSERT INTO sms_stakeholders_migration (
+			id, name, title, organization, email, phone, role_classification, influence_level, interest_level, interests,
+			engagement_status, lifecycle_stage, relationship_status, communication_preferences, owner_user_id, custom_fields, notes, created_at, updated_at
+		)
+		SELECT id, name, title, organization, email, phone, role_classification, influence_level, interest_level, interests,
+			engagement_status, lifecycle_stage,
+			CASE relationship_status WHEN 'positive' THEN 'supportive' WHEN 'tense' THEN 'concerned' ELSE relationship_status END,
+			communication_preferences, owner_user_id, custom_fields, notes, created_at, updated_at
+		FROM sms_stakeholders`,
+		`DROP TABLE sms_stakeholders`,
+		`ALTER TABLE sms_stakeholders_migration RENAME TO sms_stakeholders`,
+		`CREATE INDEX IF NOT EXISTS idx_sms_stakeholders_classification ON sms_stakeholders(role_classification)`,
+		`CREATE INDEX IF NOT EXISTS idx_sms_stakeholders_owner ON sms_stakeholders(owner_user_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_sms_stakeholders_tier ON sms_stakeholders(tier)`,
+		// Engagement plan upgrade (Std §14).
+		`ALTER TABLE sms_engagement_plans ADD COLUMN objective TEXT NOT NULL DEFAULT ''`,
+		`ALTER TABLE sms_engagement_plans ADD COLUMN approach TEXT CHECK (approach IS NULL OR approach IN ('inform','consult','involve','collaborate','partner'))`,
+		`ALTER TABLE sms_engagement_plans ADD COLUMN key_messages TEXT NOT NULL DEFAULT ''`,
+		`ALTER TABLE sms_engagement_plans ADD COLUMN success_measures TEXT NOT NULL DEFAULT ''`,
+		`ALTER TABLE sms_engagement_plans ADD COLUMN entity_type TEXT`,
+		`ALTER TABLE sms_engagement_plans ADD COLUMN entity_id INTEGER`,
+		`CREATE TABLE IF NOT EXISTS sms_engagement_plan_stakeholders (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			plan_id INTEGER NOT NULL REFERENCES sms_engagement_plans(id) ON DELETE CASCADE,
+			stakeholder_id INTEGER NOT NULL REFERENCES sms_stakeholders(id) ON DELETE CASCADE,
+			UNIQUE (plan_id, stakeholder_id)
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_sms_plan_stakeholders_stakeholder ON sms_engagement_plan_stakeholders(stakeholder_id)`,
+		// Migrate existing per-stakeholder plans into single-member plans.
+		// (INSERT OR IGNORE: SQLite's parser rejects ON CONFLICT after a
+		// SELECT ... FROM source.)
+		`INSERT OR IGNORE INTO sms_engagement_plan_stakeholders (plan_id, stakeholder_id) SELECT id, stakeholder_id FROM sms_engagement_plans`,
+		// Issue/risk category taxonomy (Std §15).
+		`ALTER TABLE sms_issues ADD COLUMN category TEXT NOT NULL DEFAULT 'other' CHECK (category IN ('relationship','reputation','delivery','communication','dependency','knowledge_loss','commitment','other'))`,
+		`ALTER TABLE sms_issues ADD COLUMN escalation_path TEXT NOT NULL DEFAULT ''`,
+		// Relationship entities.
+		`CREATE TABLE IF NOT EXISTS sms_commitments (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			stakeholder_id INTEGER NOT NULL REFERENCES sms_stakeholders(id) ON DELETE CASCADE,
+			direction TEXT NOT NULL DEFAULT 'from_them' CHECK (direction IN ('from_us','from_them','mutual')),
+			title TEXT NOT NULL,
+			description TEXT NOT NULL DEFAULT '',
+			owner_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+			due_date DATETIME,
+			status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open','in_progress','at_risk','completed','cancelled')),
+			escalated BOOLEAN NOT NULL DEFAULT false,
+			escalation_level INTEGER NOT NULL DEFAULT 0,
+			source_communication_id INTEGER REFERENCES sms_communications(id) ON DELETE SET NULL,
+			linked_issue_id INTEGER REFERENCES sms_issues(id) ON DELETE SET NULL,
+			notes TEXT NOT NULL DEFAULT '',
+			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_sms_commitments_stakeholder ON sms_commitments(stakeholder_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_sms_commitments_due ON sms_commitments(due_date)`,
+		`CREATE TABLE IF NOT EXISTS sms_grievances (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			stakeholder_id INTEGER NOT NULL REFERENCES sms_stakeholders(id) ON DELETE CASCADE,
+			title TEXT NOT NULL,
+			description TEXT NOT NULL DEFAULT '',
+			category TEXT NOT NULL DEFAULT '',
+			severity TEXT NOT NULL DEFAULT 'medium' CHECK (severity IN ('low','medium','high','critical')),
+			status TEXT NOT NULL DEFAULT 'received' CHECK (status IN ('received','acknowledged','investigating','responded','closed')),
+			escalated BOOLEAN NOT NULL DEFAULT false,
+			escalation_level INTEGER NOT NULL DEFAULT 0,
+			acknowledged_at DATETIME,
+			response_due_at DATETIME,
+			response TEXT NOT NULL DEFAULT '',
+			resolution TEXT NOT NULL DEFAULT '',
+			created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_sms_grievances_stakeholder ON sms_grievances(stakeholder_id)`,
+		`CREATE TABLE IF NOT EXISTS sms_decisions (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			stakeholder_id INTEGER NOT NULL REFERENCES sms_stakeholders(id) ON DELETE CASCADE,
+			title TEXT NOT NULL,
+			decision TEXT NOT NULL DEFAULT '',
+			context TEXT NOT NULL DEFAULT '',
+			decided_at DATETIME,
+			decided_by_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+			entity_type TEXT,
+			entity_id INTEGER,
+			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_sms_decisions_stakeholder ON sms_decisions(stakeholder_id)`,
+		`CREATE TABLE IF NOT EXISTS sms_stakeholder_groups (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			name TEXT NOT NULL UNIQUE,
+			description TEXT NOT NULL DEFAULT '',
+			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+		)`,
+		`CREATE TABLE IF NOT EXISTS sms_stakeholder_group_members (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			group_id INTEGER NOT NULL REFERENCES sms_stakeholder_groups(id) ON DELETE CASCADE,
+			stakeholder_id INTEGER NOT NULL REFERENCES sms_stakeholders(id) ON DELETE CASCADE,
+			UNIQUE (group_id, stakeholder_id)
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_sms_group_members_stakeholder ON sms_stakeholder_group_members(stakeholder_id)`,
+		`CREATE TABLE IF NOT EXISTS sms_stakeholder_links (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			source_id INTEGER NOT NULL REFERENCES sms_stakeholders(id) ON DELETE CASCADE,
+			target_id INTEGER NOT NULL REFERENCES sms_stakeholders(id) ON DELETE CASCADE,
+			relation_type TEXT NOT NULL DEFAULT '',
+			notes TEXT NOT NULL DEFAULT '',
+			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			UNIQUE (source_id, target_id)
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_sms_links_target ON sms_stakeholder_links(target_id)`,
+		`CREATE TABLE IF NOT EXISTS sms_ownership_transfers (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			stakeholder_id INTEGER NOT NULL REFERENCES sms_stakeholders(id) ON DELETE CASCADE,
+			from_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+			to_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+			reason TEXT NOT NULL DEFAULT '',
+			history_reviewed BOOLEAN NOT NULL DEFAULT false,
+			risks_reviewed BOOLEAN NOT NULL DEFAULT false,
+			commitments_reviewed BOOLEAN NOT NULL DEFAULT false,
+			notes TEXT NOT NULL DEFAULT '',
+			completed_at DATETIME,
+			created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_sms_transfers_stakeholder ON sms_ownership_transfers(stakeholder_id)`,
+		`CREATE TABLE IF NOT EXISTS sms_pilot_baselines (
+			metric_key TEXT PRIMARY KEY,
+			baseline_value REAL,
+			target_value REAL,
+			set_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+		)`,
+		// Permission split: sms.view stays read; writes move to sms.manage.
+		`INSERT OR IGNORE INTO permissions (permission_key, permission_name, description, scope) VALUES ('sms.manage', 'Manage SMS Module', 'Can create and modify Stakeholder Management System records', 'global')`,
+		`INSERT OR IGNORE INTO permissions (permission_key, permission_name, description, scope) VALUES ('sms.sensitive.view', 'View Sensitive SMS Data', 'Can view restricted stakeholder fields and communications in the SMS module', 'global')`,
+	}
+}
+
+// applySQLiteSMSRegisterV2 rebuilds sms_stakeholders with the register v2
+// columns (SQLite cannot add a CHECK to an existing column in place), maps
+// legacy relationship_status values onto the HCC scale, upgrades engagement
+// plans and issues, creates the relationship-entity tables, and seeds the
+// permission split. IDs are preserved so every referencing row stays valid;
+// foreign_keys is disabled for the rebuild window only.
+func applySQLiteSMSRegisterV2(db Database) (retErr error) {
+	sqliteDB, ok := db.(*SQLiteDB)
+	if !ok {
+		return fmt.Errorf("expected SQLite database, got %T", db)
+	}
+
+	ctx := context.Background()
+	conn, err := sqliteDB.writeConn.Conn(ctx)
+	if err != nil {
+		return fmt.Errorf("acquire SQLite write connection: %w", err)
+	}
+	defer func() { _ = conn.Close() }()
+
+	var foreignKeysEnabled bool
+	if err := conn.QueryRowContext(ctx, "PRAGMA foreign_keys").Scan(&foreignKeysEnabled); err != nil {
+		return fmt.Errorf("read foreign_keys pragma: %w", err)
+	}
+	if foreignKeysEnabled {
+		if _, err := conn.ExecContext(ctx, "PRAGMA foreign_keys=OFF"); err != nil {
+			return fmt.Errorf("disable foreign keys: %w", err)
+		}
+		defer func() {
+			if _, err := conn.ExecContext(ctx, "PRAGMA foreign_keys=ON"); retErr == nil && err != nil {
+				retErr = fmt.Errorf("restore foreign keys: %w", err)
+			}
+		}()
+	}
+
+	tx, err := conn.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin sms_stakeholders rebuild: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	statements := smsRegisterV2Statements()
+	for _, statement := range statements {
+		if _, err := tx.ExecContext(ctx, statement); err != nil {
+			return fmt.Errorf("apply sms register v2: %w", err)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit sms_stakeholders rebuild: %w", err)
 	}
 	return nil
 }
