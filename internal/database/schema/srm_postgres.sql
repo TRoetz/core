@@ -243,8 +243,10 @@ CREATE TABLE IF NOT EXISTS srm_stakeholders (
 	business_area TEXT DEFAULT '',
 	is_external BOOLEAN NOT NULL DEFAULT false,
 	supplier_id INTEGER REFERENCES srm_suppliers(id) ON DELETE SET NULL,
+	sms_stakeholder_id INTEGER REFERENCES sms_stakeholders(id) ON DELETE SET NULL,  -- identity resolves to the SMS register (system of record)
 	created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
+CREATE INDEX IF NOT EXISTS idx_srm_stakeholders_sms ON srm_stakeholders(sms_stakeholder_id);
 
 -- Polymorphic binding to portfolio/programme/project/contract. Influence and
 -- support bands, the 3x3 quadrant and the salience class are derived

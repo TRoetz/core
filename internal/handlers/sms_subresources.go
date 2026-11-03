@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"context"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -22,19 +24,35 @@ func scanSMSCommunication(row interface{ Scan(dest ...any) error }) (*models.SMS
 
 // ListStakeholderCommunications returns the interaction log for one stakeholder.
 func (h *SMSHandler) ListStakeholderCommunications(w http.ResponseWriter, r *http.Request) {
-	if _, ok := RequireAuth(w, r); !ok {
+	user, ok := RequireAuth(w, r)
+	if !ok {
 		return
 	}
 	id, ok := requireIDParam(w, r, "id")
 	if !ok {
 		return
 	}
-	rows, err := h.db.QueryContext(r.Context(), `SELECT `+smsCommunicationColumns+` FROM sms_communications WHERE stakeholder_id = ? ORDER BY created_at DESC, id DESC`, id)
+	ctx := r.Context()
+
+	var infoClass string
+	err := h.db.QueryRowContext(ctx, `SELECT info_classification FROM sms_stakeholders WHERE id = ?`, id).Scan(&infoClass)
+	if isNotFound(err) {
+		respondJSONOK(w, []models.SMSCommunication{})
+		return
+	} else if err != nil {
+		respondInternalError(w, r, err)
+		return
+	}
+
+	rows, err := h.db.QueryContext(ctx, `SELECT `+smsCommunicationColumns+` FROM sms_communications WHERE stakeholder_id = ? ORDER BY created_at DESC, id DESC`, id)
 	if err != nil {
 		respondInternalError(w, r, err)
 		return
 	}
 	defer rows.Close()
+
+	canSensitive := h.smsCanViewSensitive(ctx, user.ID)
+	maskedCount := 0
 	out := make([]models.SMSCommunication, 0)
 	for rows.Next() {
 		c, err := scanSMSCommunication(rows)
@@ -43,6 +61,10 @@ func (h *SMSHandler) ListStakeholderCommunications(w http.ResponseWriter, r *htt
 			respondInternalError(w, r, err)
 			return
 		}
+		if !canSensitive && infoClass == models.SMSInfoRestricted {
+			c.Body = ""
+			maskedCount++
+		}
 		out = append(out, *c)
 	}
 	if err := rows.Err(); err != nil {
@@ -50,12 +72,16 @@ func (h *SMSHandler) ListStakeholderCommunications(w http.ResponseWriter, r *htt
 		respondInternalError(w, r, err)
 		return
 	}
+	if maskedCount > 0 {
+		smsAudit(h, r, user, "sms_restricted_access", "sms_communication", nil, fmt.Sprintf("list(%d)", maskedCount), map[string]any{"masked_fields": []string{"body"}})
+	}
 	respondJSONOK(w, out)
 }
 
 // CreateCommunication logs one interaction with a stakeholder.
 func (h *SMSHandler) CreateCommunication(w http.ResponseWriter, r *http.Request) {
-	if _, ok := RequireAuth(w, r); !ok {
+	user, ok := RequireAuth(w, r)
+	if !ok {
 		return
 	}
 	id, ok := requireIDParam(w, r, "id")
@@ -116,27 +142,36 @@ func (h *SMSHandler) CreateCommunication(w http.ResponseWriter, r *http.Request)
 		respondInternalError(w, r, err)
 		return
 	}
+	smsAudit(h, r, user, "sms_communication_created", "sms_communication", &c.ID, c.Subject, nil)
 	respondJSONCreated(w, c)
 }
 
 // DeleteCommunication removes one logged interaction.
 func (h *SMSHandler) DeleteCommunication(w http.ResponseWriter, r *http.Request) {
-	if _, ok := RequireAuth(w, r); !ok {
+	user, ok := RequireAuth(w, r)
+	if !ok {
 		return
 	}
 	id, ok := requireIDParam(w, r, "cid")
 	if !ok {
 		return
 	}
-	res, err := h.db.ExecContext(r.Context(), `DELETE FROM sms_communications WHERE id = ?`, id)
+	var name string
+	err := h.db.QueryRowContext(r.Context(), `SELECT subject FROM sms_communications WHERE id = ?`, id).Scan(&name)
+	if isNotFound(err) {
+		respondNotFound(w, r, "Communication not found")
+		return
+	} else if err != nil {
+		respondInternalError(w, r, err)
+		return
+	}
+
+	_, err = h.db.ExecContext(r.Context(), `DELETE FROM sms_communications WHERE id = ?`, id)
 	if err != nil {
 		respondInternalError(w, r, err)
 		return
 	}
-	if n, _ := res.RowsAffected(); n == 0 {
-		respondNotFound(w, r, "Communication not found")
-		return
-	}
+	smsAudit(h, r, user, "sms_communication_deleted", "sms_communication", &id, name, nil)
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -144,12 +179,55 @@ func (h *SMSHandler) DeleteCommunication(w http.ResponseWriter, r *http.Request)
 // Engagement plans.
 // ---------------------------------------------------------------------------
 
-const smsPlanColumns = `id, stakeholder_id, strategy, frequency, channel, status, start_date, end_date, notes, created_at, updated_at`
+const smsPlanColumns = `id, stakeholder_id, strategy, objective, approach, key_messages, success_measures, frequency, channel, status, entity_type, entity_id, start_date, end_date, notes, created_at, updated_at`
 
 func scanSMSPlan(row interface{ Scan(dest ...any) error }) (*models.SMSEngagementPlan, error) {
 	p := &models.SMSEngagementPlan{}
-	err := row.Scan(&p.ID, &p.StakeholderID, &p.Strategy, &p.Frequency, &p.Channel, &p.Status, &p.StartDate, &p.EndDate, &p.Notes, &p.CreatedAt, &p.UpdatedAt)
+	err := row.Scan(&p.ID, &p.StakeholderID, &p.Strategy, &p.Objective, &p.Approach, &p.KeyMessages, &p.SuccessMeasures, &p.Frequency, &p.Channel, &p.Status, &p.EntityType, &p.EntityID, &p.StartDate, &p.EndDate, &p.Notes, &p.CreatedAt, &p.UpdatedAt)
 	return p, err
+}
+
+// smsFillPlanMembers populates MemberIDs (lead + explicit membership rows) for
+// a batch of plans from sms_engagement_plan_stakeholders.
+func (h *SMSHandler) smsFillPlanMembers(ctx context.Context, plans []models.SMSEngagementPlan) error {
+	if len(plans) == 0 {
+		return nil
+	}
+	ids := make([]any, 0, len(plans))
+	ph := make([]string, len(plans))
+	for i := range plans {
+		ids = append(ids, plans[i].ID)
+		ph[i] = "?"
+	}
+	rows, err := h.db.QueryContext(ctx, `SELECT plan_id, stakeholder_id FROM sms_engagement_plan_stakeholders WHERE plan_id IN (`+joinPlaceholders(ph)+`)`, ids...)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	members := make(map[int][]int)
+	for rows.Next() {
+		var pid, sid int
+		if err := rows.Scan(&pid, &sid); err != nil {
+			return err
+		}
+		members[pid] = append(members[pid], sid)
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	for i := range plans {
+		p := &plans[i]
+		seen := map[int]bool{p.StakeholderID: true}
+		out := []int{p.StakeholderID}
+		for _, sid := range members[p.ID] {
+			if !seen[sid] {
+				seen[sid] = true
+				out = append(out, sid)
+			}
+		}
+		p.MemberIDs = out
+	}
+	return nil
 }
 
 // ListStakeholderPlans returns the engagement plans for one stakeholder.
@@ -182,12 +260,17 @@ func (h *SMSHandler) ListStakeholderPlans(w http.ResponseWriter, r *http.Request
 		respondInternalError(w, r, err)
 		return
 	}
+	if err := h.smsFillPlanMembers(r.Context(), out); err != nil {
+		respondInternalError(w, r, err)
+		return
+	}
 	respondJSONOK(w, out)
 }
 
 // CreatePlan adds an engagement plan for one stakeholder.
 func (h *SMSHandler) CreatePlan(w http.ResponseWriter, r *http.Request) {
-	if _, ok := RequireAuth(w, r); !ok {
+	user, ok := RequireAuth(w, r)
+	if !ok {
 		return
 	}
 	id, ok := requireIDParam(w, r, "id")
@@ -195,13 +278,20 @@ func (h *SMSHandler) CreatePlan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var in struct {
-		Strategy  string     `json:"strategy"`
-		Frequency string     `json:"frequency"`
-		Channel   string     `json:"channel"`
-		Status    string     `json:"status"`
-		StartDate *time.Time `json:"start_date,omitempty"`
-		EndDate   *time.Time `json:"end_date,omitempty"`
-		Notes     string     `json:"notes"`
+		Strategy        string     `json:"strategy"`
+		Objective       string     `json:"objective"`
+		Approach        *string    `json:"approach,omitempty"`
+		KeyMessages     string     `json:"key_messages"`
+		SuccessMeasures string     `json:"success_measures"`
+		Frequency       string     `json:"frequency"`
+		Channel         string     `json:"channel"`
+		Status          string     `json:"status"`
+		EntityType      *string    `json:"entity_type,omitempty"`
+		EntityID        *int       `json:"entity_id,omitempty"`
+		StartDate       *time.Time `json:"start_date,omitempty"`
+		EndDate         *time.Time `json:"end_date,omitempty"`
+		MemberIDs       []int      `json:"member_ids,omitempty"`
+		Notes           string     `json:"notes"`
 	}
 	if err := newJSONDecoder(w, r).Decode(&in); err != nil {
 		respondBadRequest(w, r, "Invalid request body")
@@ -219,6 +309,14 @@ func (h *SMSHandler) CreatePlan(w http.ResponseWriter, r *http.Request) {
 		respondBadRequest(w, r, "invalid status")
 		return
 	}
+	if in.Approach != nil && !smsValidEnum(*in.Approach, smsApproaches...) {
+		respondBadRequest(w, r, "invalid approach")
+		return
+	}
+	if in.EntityType != nil && !smsValidEnum(*in.EntityType, models.SMSEntityPortfolio, models.SMSEntityProgramme, models.SMSEntityProject) {
+		respondBadRequest(w, r, "invalid entity_type")
+		return
+	}
 
 	ctx := r.Context()
 	exists, err := h.smsStakeholderExists(ctx, id)
@@ -231,27 +329,44 @@ func (h *SMSHandler) CreatePlan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	res, err := h.db.ExecContext(ctx, `INSERT INTO sms_engagement_plans (stakeholder_id, strategy, frequency, channel, status, start_date, end_date, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-		id, in.Strategy, orKeepStr(in.Frequency, models.SMSFrequencyMonthly), orKeepStr(in.Channel, models.SMSChannelEmail), orKeepStr(in.Status, models.SMSPlanStatusActive), in.StartDate, in.EndDate, in.Notes)
+	res, err := h.db.ExecContext(ctx, `INSERT INTO sms_engagement_plans (stakeholder_id, strategy, objective, approach, key_messages, success_measures, frequency, channel, status, entity_type, entity_id, start_date, end_date, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		id, in.Strategy, in.Objective, in.Approach, in.KeyMessages, in.SuccessMeasures,
+		orKeepStr(in.Frequency, models.SMSFrequencyMonthly), orKeepStr(in.Channel, models.SMSChannelEmail), orKeepStr(in.Status, models.SMSPlanStatusActive),
+		in.EntityType, nullInt(in.EntityID), in.StartDate, in.EndDate, in.Notes)
 	if err != nil {
 		respondInternalError(w, r, err)
 		return
 	}
 	pid, _ := res.LastInsertId()
 
+	for _, sid := range in.MemberIDs {
+		if sid == id || sid <= 0 {
+			continue
+		}
+		if _, err := h.db.ExecContext(ctx, `INSERT INTO sms_engagement_plan_stakeholders (plan_id, stakeholder_id) VALUES (?, ?) ON CONFLICT DO NOTHING`, pid, sid); err != nil {
+			respondInternalError(w, r, err)
+			return
+		}
+	}
+
 	var p models.SMSEngagementPlan
-	err = h.db.QueryRowContext(ctx, `SELECT `+smsPlanColumns+` FROM sms_engagement_plans WHERE id = ?`, pid).
-		Scan(&p.ID, &p.StakeholderID, &p.Strategy, &p.Frequency, &p.Channel, &p.Status, &p.StartDate, &p.EndDate, &p.Notes, &p.CreatedAt, &p.UpdatedAt)
-	if err != nil {
+	if err := h.db.QueryRowContext(ctx, `SELECT `+smsPlanColumns+` FROM sms_engagement_plans WHERE id = ?`, pid).Scan(&p.ID, &p.StakeholderID, &p.Strategy, &p.Objective, &p.Approach, &p.KeyMessages, &p.SuccessMeasures, &p.Frequency, &p.Channel, &p.Status, &p.EntityType, &p.EntityID, &p.StartDate, &p.EndDate, &p.Notes, &p.CreatedAt, &p.UpdatedAt); err != nil {
 		respondInternalError(w, r, err)
 		return
 	}
-	respondJSONCreated(w, p)
+	one := []models.SMSEngagementPlan{p}
+	if err := h.smsFillPlanMembers(ctx, one); err != nil {
+		respondInternalError(w, r, err)
+		return
+	}
+	smsAudit(h, r, user, "sms_plan_created", "sms_engagement_plan", &one[0].ID, one[0].Strategy, nil)
+	respondJSONCreated(w, one[0])
 }
 
 // UpdatePlan applies a partial update to one engagement plan.
 func (h *SMSHandler) UpdatePlan(w http.ResponseWriter, r *http.Request) {
-	if _, ok := RequireAuth(w, r); !ok {
+	user, ok := RequireAuth(w, r)
+	if !ok {
 		return
 	}
 	id, ok := requireIDParam(w, r, "pid")
@@ -262,7 +377,7 @@ func (h *SMSHandler) UpdatePlan(w http.ResponseWriter, r *http.Request) {
 
 	var existing models.SMSEngagementPlan
 	err := h.db.QueryRowContext(ctx, `SELECT `+smsPlanColumns+` FROM sms_engagement_plans WHERE id = ?`, id).
-		Scan(&existing.ID, &existing.StakeholderID, &existing.Strategy, &existing.Frequency, &existing.Channel, &existing.Status, &existing.StartDate, &existing.EndDate, &existing.Notes, &existing.CreatedAt, &existing.UpdatedAt)
+		Scan(&existing.ID, &existing.StakeholderID, &existing.Strategy, &existing.Objective, &existing.Approach, &existing.KeyMessages, &existing.SuccessMeasures, &existing.Frequency, &existing.Channel, &existing.Status, &existing.EntityType, &existing.EntityID, &existing.StartDate, &existing.EndDate, &existing.Notes, &existing.CreatedAt, &existing.UpdatedAt)
 	if isNotFound(err) {
 		respondNotFound(w, r, "Engagement plan not found")
 		return
@@ -273,13 +388,19 @@ func (h *SMSHandler) UpdatePlan(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var in struct {
-		Strategy  *string    `json:"strategy,omitempty"`
-		Frequency *string    `json:"frequency,omitempty"`
-		Channel   *string    `json:"channel,omitempty"`
-		Status    *string    `json:"status,omitempty"`
-		StartDate *time.Time `json:"start_date,omitempty"`
-		EndDate   *time.Time `json:"end_date,omitempty"`
-		Notes     *string    `json:"notes,omitempty"`
+		Strategy        *string    `json:"strategy,omitempty"`
+		Objective       *string    `json:"objective,omitempty"`
+		Approach        *string    `json:"approach,omitempty"`
+		KeyMessages     *string    `json:"key_messages,omitempty"`
+		SuccessMeasures *string    `json:"success_measures,omitempty"`
+		Frequency       *string    `json:"frequency,omitempty"`
+		Channel         *string    `json:"channel,omitempty"`
+		Status          *string    `json:"status,omitempty"`
+		EntityType      *string    `json:"entity_type,omitempty"`
+		EntityID        *int       `json:"entity_id,omitempty"`
+		StartDate       *time.Time `json:"start_date,omitempty"`
+		EndDate         *time.Time `json:"end_date,omitempty"`
+		Notes           *string    `json:"notes,omitempty"`
 	}
 	if err := newJSONDecoder(w, r).Decode(&in); err != nil {
 		respondBadRequest(w, r, "Invalid request body")
@@ -297,6 +418,14 @@ func (h *SMSHandler) UpdatePlan(w http.ResponseWriter, r *http.Request) {
 		respondBadRequest(w, r, "invalid status")
 		return
 	}
+	if in.Approach != nil && !smsValidEnum(*in.Approach, smsApproaches...) {
+		respondBadRequest(w, r, "invalid approach")
+		return
+	}
+	if in.EntityType != nil && !smsValidEnum(*in.EntityType, models.SMSEntityPortfolio, models.SMSEntityProgramme, models.SMSEntityProject) {
+		respondBadRequest(w, r, "invalid entity_type")
+		return
+	}
 
 	startDate := existing.StartDate
 	if in.StartDate != nil {
@@ -307,8 +436,12 @@ func (h *SMSHandler) UpdatePlan(w http.ResponseWriter, r *http.Request) {
 		endDate = in.EndDate
 	}
 
-	_, err = h.db.ExecContext(ctx, `UPDATE sms_engagement_plans SET strategy = ?, frequency = ?, channel = ?, status = ?, start_date = ?, end_date = ?, notes = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
-		orKeep(in.Strategy, existing.Strategy), orKeep(in.Frequency, existing.Frequency), orKeep(in.Channel, existing.Channel), orKeep(in.Status, existing.Status), startDate, endDate, orKeep(in.Notes, existing.Notes), id)
+	_, err = h.db.ExecContext(ctx, `UPDATE sms_engagement_plans SET strategy = ?, objective = ?, approach = ?, key_messages = ?, success_measures = ?, frequency = ?, channel = ?, status = ?, entity_type = ?, entity_id = ?, start_date = ?, end_date = ?, notes = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+		orKeep(in.Strategy, existing.Strategy), orKeep(in.Objective, existing.Objective),
+		orPtrStr(in.Approach, existing.Approach), orKeep(in.KeyMessages, existing.KeyMessages), orKeep(in.SuccessMeasures, existing.SuccessMeasures),
+		orKeep(in.Frequency, existing.Frequency), orKeep(in.Channel, existing.Channel), orKeep(in.Status, existing.Status),
+		orPtrStr(in.EntityType, existing.EntityType), nullInt(orPtrInt(in.EntityID, existing.EntityID)),
+		startDate, endDate, orKeep(in.Notes, existing.Notes), id)
 	if err != nil {
 		respondInternalError(w, r, err)
 		return
@@ -316,32 +449,46 @@ func (h *SMSHandler) UpdatePlan(w http.ResponseWriter, r *http.Request) {
 
 	var p models.SMSEngagementPlan
 	err = h.db.QueryRowContext(ctx, `SELECT `+smsPlanColumns+` FROM sms_engagement_plans WHERE id = ?`, id).
-		Scan(&p.ID, &p.StakeholderID, &p.Strategy, &p.Frequency, &p.Channel, &p.Status, &p.StartDate, &p.EndDate, &p.Notes, &p.CreatedAt, &p.UpdatedAt)
+		Scan(&p.ID, &p.StakeholderID, &p.Strategy, &p.Objective, &p.Approach, &p.KeyMessages, &p.SuccessMeasures, &p.Frequency, &p.Channel, &p.Status, &p.EntityType, &p.EntityID, &p.StartDate, &p.EndDate, &p.Notes, &p.CreatedAt, &p.UpdatedAt)
 	if err != nil {
 		respondInternalError(w, r, err)
 		return
 	}
-	respondJSONOK(w, p)
+	one := []models.SMSEngagementPlan{p}
+	if err := h.smsFillPlanMembers(ctx, one); err != nil {
+		respondInternalError(w, r, err)
+		return
+	}
+	smsAudit(h, r, user, "sms_plan_updated", "sms_engagement_plan", &one[0].ID, one[0].Strategy, map[string]any{"status": one[0].Status})
+	respondJSONOK(w, one[0])
 }
 
 // DeletePlan removes one engagement plan.
 func (h *SMSHandler) DeletePlan(w http.ResponseWriter, r *http.Request) {
-	if _, ok := RequireAuth(w, r); !ok {
+	user, ok := RequireAuth(w, r)
+	if !ok {
 		return
 	}
 	id, ok := requireIDParam(w, r, "pid")
 	if !ok {
 		return
 	}
-	res, err := h.db.ExecContext(r.Context(), `DELETE FROM sms_engagement_plans WHERE id = ?`, id)
+	var name string
+	err := h.db.QueryRowContext(r.Context(), `SELECT strategy FROM sms_engagement_plans WHERE id = ?`, id).Scan(&name)
+	if isNotFound(err) {
+		respondNotFound(w, r, "Engagement plan not found")
+		return
+	} else if err != nil {
+		respondInternalError(w, r, err)
+		return
+	}
+
+	_, err = h.db.ExecContext(r.Context(), `DELETE FROM sms_engagement_plans WHERE id = ?`, id)
 	if err != nil {
 		respondInternalError(w, r, err)
 		return
 	}
-	if n, _ := res.RowsAffected(); n == 0 {
-		respondNotFound(w, r, "Engagement plan not found")
-		return
-	}
+	smsAudit(h, r, user, "sms_plan_deleted", "sms_engagement_plan", &id, name, nil)
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -349,11 +496,11 @@ func (h *SMSHandler) DeletePlan(w http.ResponseWriter, r *http.Request) {
 // Issues & risks.
 // ---------------------------------------------------------------------------
 
-const smsIssueColumns = `id, stakeholder_id, kind, title, description, priority, impact, likelihood, status, escalation_level, mitigation, resolution_notes, resolved_at, created_at, updated_at`
+const smsIssueColumns = `id, stakeholder_id, kind, category, title, description, priority, impact, likelihood, status, escalation_level, escalation_path, mitigation, resolution_notes, resolved_at, created_at, updated_at`
 
 func scanSMSIssue(row interface{ Scan(dest ...any) error }) (*models.SMSIssue, error) {
 	i := &models.SMSIssue{}
-	err := row.Scan(&i.ID, &i.StakeholderID, &i.Kind, &i.Title, &i.Description, &i.Priority, &i.Impact, &i.Likelihood, &i.Status, &i.EscalationLevel, &i.Mitigation, &i.ResolutionNotes, &i.ResolvedAt, &i.CreatedAt, &i.UpdatedAt)
+	err := row.Scan(&i.ID, &i.StakeholderID, &i.Kind, &i.Category, &i.Title, &i.Description, &i.Priority, &i.Impact, &i.Likelihood, &i.Status, &i.EscalationLevel, &i.EscalationPath, &i.Mitigation, &i.ResolutionNotes, &i.ResolvedAt, &i.CreatedAt, &i.UpdatedAt)
 	return i, err
 }
 
@@ -392,7 +539,8 @@ func (h *SMSHandler) ListStakeholderIssues(w http.ResponseWriter, r *http.Reques
 
 // CreateIssue adds one issue or risk to a stakeholder's register.
 func (h *SMSHandler) CreateIssue(w http.ResponseWriter, r *http.Request) {
-	if _, ok := RequireAuth(w, r); !ok {
+	user, ok := RequireAuth(w, r)
+	if !ok {
 		return
 	}
 	id, ok := requireIDParam(w, r, "id")
@@ -400,14 +548,16 @@ func (h *SMSHandler) CreateIssue(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var in struct {
-		Kind        string `json:"kind"`
-		Title       string `json:"title"`
-		Description string `json:"description"`
-		Priority    string `json:"priority"`
-		Impact      int    `json:"impact"`
-		Likelihood  int    `json:"likelihood"`
-		Status      string `json:"status"`
-		Mitigation  string `json:"mitigation"`
+		Kind           string `json:"kind"`
+		Category       string `json:"category"`
+		Title          string `json:"title"`
+		Description    string `json:"description"`
+		Priority       string `json:"priority"`
+		Impact         int    `json:"impact"`
+		Likelihood     int    `json:"likelihood"`
+		Status         string `json:"status"`
+		EscalationPath string `json:"escalation_path"`
+		Mitigation     string `json:"mitigation"`
 	}
 	if err := newJSONDecoder(w, r).Decode(&in); err != nil {
 		respondBadRequest(w, r, "Invalid request body")
@@ -420,6 +570,10 @@ func (h *SMSHandler) CreateIssue(w http.ResponseWriter, r *http.Request) {
 	}
 	if in.Kind != "" && !smsValidEnum(in.Kind, smsIssueKinds...) {
 		respondBadRequest(w, r, "invalid kind")
+		return
+	}
+	if in.Category != "" && !smsValidEnum(in.Category, smsIssueCategories...) {
+		respondBadRequest(w, r, "invalid category")
 		return
 	}
 	if in.Priority != "" && !smsValidEnum(in.Priority, smsPriorities...) {
@@ -448,30 +602,30 @@ func (h *SMSHandler) CreateIssue(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	res, err := h.db.ExecContext(ctx, `INSERT INTO sms_issues (stakeholder_id, kind, title, description, priority, impact, likelihood, status, mitigation) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		id, orKeepStr(in.Kind, models.SMSIssueKindIssue), in.Title, in.Description,
+	res, err := h.db.ExecContext(ctx, `INSERT INTO sms_issues (stakeholder_id, kind, category, title, description, priority, impact, likelihood, status, escalation_path, mitigation) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		id, orKeepStr(in.Kind, models.SMSIssueKindIssue), orKeepStr(in.Category, models.SMSCategoryOther), in.Title, in.Description,
 		orKeepStr(in.Priority, models.SMSPriorityMedium), smsLevelOrDefault(in.Impact), smsLevelOrDefault(in.Likelihood),
-		orKeepStr(in.Status, models.SMSIssueStatusOpen), in.Mitigation)
+		orKeepStr(in.Status, models.SMSIssueStatusOpen), in.EscalationPath, in.Mitigation)
 	if err != nil {
 		respondInternalError(w, r, err)
 		return
 	}
 	iid, _ := res.LastInsertId()
 
-	var i models.SMSIssue
-	err = h.db.QueryRowContext(ctx, `SELECT `+smsIssueColumns+` FROM sms_issues WHERE id = ?`, iid).
-		Scan(&i.ID, &i.StakeholderID, &i.Kind, &i.Title, &i.Description, &i.Priority, &i.Impact, &i.Likelihood, &i.Status, &i.EscalationLevel, &i.Mitigation, &i.ResolutionNotes, &i.ResolvedAt, &i.CreatedAt, &i.UpdatedAt)
+	i, err := scanSMSIssue(h.db.QueryRowContext(ctx, `SELECT `+smsIssueColumns+` FROM sms_issues WHERE id = ?`, iid))
 	if err != nil {
 		respondInternalError(w, r, err)
 		return
 	}
+	smsAudit(h, r, user, "sms_issue_created", "sms_issue", &i.ID, i.Title, nil)
 	respondJSONCreated(w, i)
 }
 
 // UpdateIssue applies a partial update to one issue/risk. Moving the status to
 // 'resolved' stamps resolved_at; leaving it clears the stamp.
 func (h *SMSHandler) UpdateIssue(w http.ResponseWriter, r *http.Request) {
-	if _, ok := RequireAuth(w, r); !ok {
+	user, ok := RequireAuth(w, r)
+	if !ok {
 		return
 	}
 	id, ok := requireIDParam(w, r, "iid")
@@ -482,7 +636,7 @@ func (h *SMSHandler) UpdateIssue(w http.ResponseWriter, r *http.Request) {
 
 	var existing models.SMSIssue
 	err := h.db.QueryRowContext(ctx, `SELECT `+smsIssueColumns+` FROM sms_issues WHERE id = ?`, id).
-		Scan(&existing.ID, &existing.StakeholderID, &existing.Kind, &existing.Title, &existing.Description, &existing.Priority, &existing.Impact, &existing.Likelihood, &existing.Status, &existing.EscalationLevel, &existing.Mitigation, &existing.ResolutionNotes, &existing.ResolvedAt, &existing.CreatedAt, &existing.UpdatedAt)
+		Scan(&existing.ID, &existing.StakeholderID, &existing.Kind, &existing.Category, &existing.Title, &existing.Description, &existing.Priority, &existing.Impact, &existing.Likelihood, &existing.Status, &existing.EscalationLevel, &existing.EscalationPath, &existing.Mitigation, &existing.ResolutionNotes, &existing.ResolvedAt, &existing.CreatedAt, &existing.UpdatedAt)
 	if isNotFound(err) {
 		respondNotFound(w, r, "Issue not found")
 		return
@@ -494,12 +648,14 @@ func (h *SMSHandler) UpdateIssue(w http.ResponseWriter, r *http.Request) {
 
 	var in struct {
 		Kind            *string `json:"kind,omitempty"`
+		Category        *string `json:"category,omitempty"`
 		Title           *string `json:"title,omitempty"`
 		Description     *string `json:"description,omitempty"`
 		Priority        *string `json:"priority,omitempty"`
 		Impact          *int    `json:"impact,omitempty"`
 		Likelihood      *int    `json:"likelihood,omitempty"`
 		Status          *string `json:"status,omitempty"`
+		EscalationPath  *string `json:"escalation_path,omitempty"`
 		Mitigation      *string `json:"mitigation,omitempty"`
 		ResolutionNotes *string `json:"resolution_notes,omitempty"`
 	}
@@ -514,6 +670,10 @@ func (h *SMSHandler) UpdateIssue(w http.ResponseWriter, r *http.Request) {
 	}
 	if in.Kind != nil && !smsValidEnum(*in.Kind, smsIssueKinds...) {
 		respondBadRequest(w, r, "invalid kind")
+		return
+	}
+	if in.Category != nil && !smsValidEnum(*in.Category, smsIssueCategories...) {
+		respondBadRequest(w, r, "invalid category")
 		return
 	}
 	if in.Priority != nil && !smsValidEnum(*in.Priority, smsPriorities...) {
@@ -540,28 +700,31 @@ func (h *SMSHandler) UpdateIssue(w http.ResponseWriter, r *http.Request) {
 		resolvedAt = nil
 	}
 
-	_, err = h.db.ExecContext(ctx, `UPDATE sms_issues SET kind = ?, title = ?, description = ?, priority = ?, impact = ?, likelihood = ?, status = ?, mitigation = ?, resolution_notes = ?, resolved_at = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
-		orKeep(in.Kind, existing.Kind), title, orKeep(in.Description, existing.Description), orKeep(in.Priority, existing.Priority),
+	_, err = h.db.ExecContext(ctx, `UPDATE sms_issues SET kind = ?, category = ?, title = ?, description = ?, priority = ?, impact = ?, likelihood = ?, status = ?, escalation_path = ?, mitigation = ?, resolution_notes = ?, resolved_at = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+		orKeep(in.Kind, existing.Kind), orKeep(in.Category, existing.Category), title, orKeep(in.Description, existing.Description), orKeep(in.Priority, existing.Priority),
 		intOr(in.Impact, existing.Impact), intOr(in.Likelihood, existing.Likelihood), newStatus,
+		orKeep(in.EscalationPath, existing.EscalationPath),
 		orKeep(in.Mitigation, existing.Mitigation), orKeep(in.ResolutionNotes, existing.ResolutionNotes), resolvedAt, id)
 	if err != nil {
 		respondInternalError(w, r, err)
 		return
 	}
 
-	var i models.SMSIssue
-	err = h.db.QueryRowContext(ctx, `SELECT `+smsIssueColumns+` FROM sms_issues WHERE id = ?`, id).
-		Scan(&i.ID, &i.StakeholderID, &i.Kind, &i.Title, &i.Description, &i.Priority, &i.Impact, &i.Likelihood, &i.Status, &i.EscalationLevel, &i.Mitigation, &i.ResolutionNotes, &i.ResolvedAt, &i.CreatedAt, &i.UpdatedAt)
+	i, err := scanSMSIssue(h.db.QueryRowContext(ctx, `SELECT `+smsIssueColumns+` FROM sms_issues WHERE id = ?`, id))
 	if err != nil {
 		respondInternalError(w, r, err)
 		return
 	}
+	smsAudit(h, r, user, "sms_issue_updated", "sms_issue", &i.ID, i.Title, map[string]any{"status": i.Status})
 	respondJSONOK(w, i)
 }
 
 // EscalateIssue marks an issue as escalated and bumps its escalation level.
+// An optional body.escalation_path records where the item sits on the
+// project → programme → business unit → enterprise path (Std §25.7).
 func (h *SMSHandler) EscalateIssue(w http.ResponseWriter, r *http.Request) {
-	if _, ok := RequireAuth(w, r); !ok {
+	user, ok := RequireAuth(w, r)
+	if !ok {
 		return
 	}
 	id, ok := requireIDParam(w, r, "iid")
@@ -570,7 +733,24 @@ func (h *SMSHandler) EscalateIssue(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx := r.Context()
 
-	res, err := h.db.ExecContext(ctx, `UPDATE sms_issues SET status = 'escalated', escalation_level = escalation_level + 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, id)
+	var in struct {
+		EscalationPath *string `json:"escalation_path,omitempty"`
+	}
+	if err := newJSONDecoder(w, r).Decode(&in); err != nil {
+		respondBadRequest(w, r, "Invalid request body")
+		return
+	}
+
+	query := `UPDATE sms_issues SET status = 'escalated', escalation_level = escalation_level + 1, updated_at = CURRENT_TIMESTAMP`
+	var args []any
+	if in.EscalationPath != nil {
+		query += `, escalation_path = ?`
+		args = append(args, *in.EscalationPath)
+	}
+	query += ` WHERE id = ?`
+	args = append(args, id)
+
+	res, err := h.db.ExecContext(ctx, query, args...)
 	if err != nil {
 		respondInternalError(w, r, err)
 		return
@@ -580,34 +760,41 @@ func (h *SMSHandler) EscalateIssue(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var i models.SMSIssue
-	err = h.db.QueryRowContext(ctx, `SELECT `+smsIssueColumns+` FROM sms_issues WHERE id = ?`, id).
-		Scan(&i.ID, &i.StakeholderID, &i.Kind, &i.Title, &i.Description, &i.Priority, &i.Impact, &i.Likelihood, &i.Status, &i.EscalationLevel, &i.Mitigation, &i.ResolutionNotes, &i.ResolvedAt, &i.CreatedAt, &i.UpdatedAt)
+	i, err := scanSMSIssue(h.db.QueryRowContext(ctx, `SELECT `+smsIssueColumns+` FROM sms_issues WHERE id = ?`, id))
 	if err != nil {
 		respondInternalError(w, r, err)
 		return
 	}
+	smsAudit(h, r, user, "sms_issue_escalated", "sms_issue", &i.ID, i.Title, map[string]any{"escalation_level": i.EscalationLevel})
 	respondJSONOK(w, i)
 }
 
 // DeleteIssue removes one issue/risk entry.
 func (h *SMSHandler) DeleteIssue(w http.ResponseWriter, r *http.Request) {
-	if _, ok := RequireAuth(w, r); !ok {
+	user, ok := RequireAuth(w, r)
+	if !ok {
 		return
 	}
 	id, ok := requireIDParam(w, r, "iid")
 	if !ok {
 		return
 	}
-	res, err := h.db.ExecContext(r.Context(), `DELETE FROM sms_issues WHERE id = ?`, id)
+	var name string
+	err := h.db.QueryRowContext(r.Context(), `SELECT title FROM sms_issues WHERE id = ?`, id).Scan(&name)
+	if isNotFound(err) {
+		respondNotFound(w, r, "Issue not found")
+		return
+	} else if err != nil {
+		respondInternalError(w, r, err)
+		return
+	}
+
+	_, err = h.db.ExecContext(r.Context(), `DELETE FROM sms_issues WHERE id = ?`, id)
 	if err != nil {
 		respondInternalError(w, r, err)
 		return
 	}
-	if n, _ := res.RowsAffected(); n == 0 {
-		respondNotFound(w, r, "Issue not found")
-		return
-	}
+	smsAudit(h, r, user, "sms_issue_deleted", "sms_issue", &id, name, nil)
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -658,7 +845,8 @@ func (h *SMSHandler) ListStakeholderTasks(w http.ResponseWriter, r *http.Request
 
 // CreateTask adds one task for a stakeholder.
 func (h *SMSHandler) CreateTask(w http.ResponseWriter, r *http.Request) {
-	if _, ok := RequireAuth(w, r); !ok {
+	user, ok := RequireAuth(w, r)
+	if !ok {
 		return
 	}
 	id, ok := requireIDParam(w, r, "id")
@@ -666,11 +854,11 @@ func (h *SMSHandler) CreateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var in struct {
-		Title              string     `json:"title"`
-		Description        string     `json:"description"`
-		AssignedToUserID   *int       `json:"assigned_to_user_id,omitempty"`
-		DueDate            *time.Time `json:"due_date,omitempty"`
-		Status             string     `json:"status"`
+		Title            string     `json:"title"`
+		Description      string     `json:"description"`
+		AssignedToUserID *int       `json:"assigned_to_user_id,omitempty"`
+		DueDate          *time.Time `json:"due_date,omitempty"`
+		Status           string     `json:"status"`
 	}
 	if err := newJSONDecoder(w, r).Decode(&in); err != nil {
 		respondBadRequest(w, r, "Invalid request body")
@@ -719,13 +907,15 @@ func (h *SMSHandler) CreateTask(w http.ResponseWriter, r *http.Request) {
 		respondInternalError(w, r, err)
 		return
 	}
+	smsAudit(h, r, user, "sms_task_created", "sms_task", &t.ID, t.Title, nil)
 	respondJSONCreated(w, t)
 }
 
 // UpdateTask applies a partial update to one task. Setting status 'done'
 // stamps completed_at; any other status clears it.
 func (h *SMSHandler) UpdateTask(w http.ResponseWriter, r *http.Request) {
-	if _, ok := RequireAuth(w, r); !ok {
+	user, ok := RequireAuth(w, r)
+	if !ok {
 		return
 	}
 	id, ok := requireIDParam(w, r, "tid")
@@ -747,11 +937,11 @@ func (h *SMSHandler) UpdateTask(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var in struct {
-		Title              *string    `json:"title,omitempty"`
-		Description        *string    `json:"description,omitempty"`
-		AssignedToUserID   *int       `json:"assigned_to_user_id,omitempty"`
-		DueDate            *time.Time `json:"due_date,omitempty"`
-		Status             *string    `json:"status,omitempty"`
+		Title            *string    `json:"title,omitempty"`
+		Description      *string    `json:"description,omitempty"`
+		AssignedToUserID *int       `json:"assigned_to_user_id,omitempty"`
+		DueDate          *time.Time `json:"due_date,omitempty"`
+		Status           *string    `json:"status,omitempty"`
 	}
 	if err := newJSONDecoder(w, r).Decode(&in); err != nil {
 		respondBadRequest(w, r, "Invalid request body")
@@ -795,27 +985,36 @@ func (h *SMSHandler) UpdateTask(w http.ResponseWriter, r *http.Request) {
 		respondInternalError(w, r, err)
 		return
 	}
+	smsAudit(h, r, user, "sms_task_updated", "sms_task", &t.ID, t.Title, map[string]any{"status": t.Status})
 	respondJSONOK(w, t)
 }
 
 // DeleteTask removes one task.
 func (h *SMSHandler) DeleteTask(w http.ResponseWriter, r *http.Request) {
-	if _, ok := RequireAuth(w, r); !ok {
+	user, ok := RequireAuth(w, r)
+	if !ok {
 		return
 	}
 	id, ok := requireIDParam(w, r, "tid")
 	if !ok {
 		return
 	}
-	res, err := h.db.ExecContext(r.Context(), `DELETE FROM sms_tasks WHERE id = ?`, id)
+	var name string
+	err := h.db.QueryRowContext(r.Context(), `SELECT title FROM sms_tasks WHERE id = ?`, id).Scan(&name)
+	if isNotFound(err) {
+		respondNotFound(w, r, "Task not found")
+		return
+	} else if err != nil {
+		respondInternalError(w, r, err)
+		return
+	}
+
+	_, err = h.db.ExecContext(r.Context(), `DELETE FROM sms_tasks WHERE id = ?`, id)
 	if err != nil {
 		respondInternalError(w, r, err)
 		return
 	}
-	if n, _ := res.RowsAffected(); n == 0 {
-		respondNotFound(w, r, "Task not found")
-		return
-	}
+	smsAudit(h, r, user, "sms_task_deleted", "sms_task", &id, name, nil)
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -866,7 +1065,8 @@ func (h *SMSHandler) ListStakeholderFeedback(w http.ResponseWriter, r *http.Requ
 
 // CreateFeedback records one feedback entry for a stakeholder.
 func (h *SMSHandler) CreateFeedback(w http.ResponseWriter, r *http.Request) {
-	if _, ok := RequireAuth(w, r); !ok {
+	user, ok := RequireAuth(w, r)
+	if !ok {
 		return
 	}
 	id, ok := requireIDParam(w, r, "id")
@@ -923,12 +1123,14 @@ func (h *SMSHandler) CreateFeedback(w http.ResponseWriter, r *http.Request) {
 		respondInternalError(w, r, err)
 		return
 	}
+	smsAudit(h, r, user, "sms_feedback_created", "sms_feedback", &f.ID, f.Category, nil)
 	respondJSONCreated(w, f)
 }
 
 // UpdateFeedback applies a partial update to one feedback entry.
 func (h *SMSHandler) UpdateFeedback(w http.ResponseWriter, r *http.Request) {
-	if _, ok := RequireAuth(w, r); !ok {
+	user, ok := RequireAuth(w, r)
+	if !ok {
 		return
 	}
 	id, ok := requireIDParam(w, r, "fid")
@@ -989,27 +1191,36 @@ func (h *SMSHandler) UpdateFeedback(w http.ResponseWriter, r *http.Request) {
 		respondInternalError(w, r, err)
 		return
 	}
+	smsAudit(h, r, user, "sms_feedback_updated", "sms_feedback", &f.ID, f.Category, map[string]any{"resolution_status": f.ResolutionStatus})
 	respondJSONOK(w, f)
 }
 
 // DeleteFeedback removes one feedback entry.
 func (h *SMSHandler) DeleteFeedback(w http.ResponseWriter, r *http.Request) {
-	if _, ok := RequireAuth(w, r); !ok {
+	user, ok := RequireAuth(w, r)
+	if !ok {
 		return
 	}
 	id, ok := requireIDParam(w, r, "fid")
 	if !ok {
 		return
 	}
-	res, err := h.db.ExecContext(r.Context(), `DELETE FROM sms_feedback WHERE id = ?`, id)
+	var name string
+	err := h.db.QueryRowContext(r.Context(), `SELECT category FROM sms_feedback WHERE id = ?`, id).Scan(&name)
+	if isNotFound(err) {
+		respondNotFound(w, r, "Feedback not found")
+		return
+	} else if err != nil {
+		respondInternalError(w, r, err)
+		return
+	}
+
+	_, err = h.db.ExecContext(r.Context(), `DELETE FROM sms_feedback WHERE id = ?`, id)
 	if err != nil {
 		respondInternalError(w, r, err)
 		return
 	}
-	if n, _ := res.RowsAffected(); n == 0 {
-		respondNotFound(w, r, "Feedback not found")
-		return
-	}
+	smsAudit(h, r, user, "sms_feedback_deleted", "sms_feedback", &id, name, nil)
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -1060,7 +1271,8 @@ func (h *SMSHandler) ListStakeholderGoals(w http.ResponseWriter, r *http.Request
 
 // CreateGoal adds one relationship goal/KPI for a stakeholder.
 func (h *SMSHandler) CreateGoal(w http.ResponseWriter, r *http.Request) {
-	if _, ok := RequireAuth(w, r); !ok {
+	user, ok := RequireAuth(w, r)
+	if !ok {
 		return
 	}
 	id, ok := requireIDParam(w, r, "id")
@@ -1114,12 +1326,14 @@ func (h *SMSHandler) CreateGoal(w http.ResponseWriter, r *http.Request) {
 		respondInternalError(w, r, err)
 		return
 	}
+	smsAudit(h, r, user, "sms_goal_created", "sms_relationship_goal", &g.ID, g.Goal, nil)
 	respondJSONCreated(w, g)
 }
 
 // UpdateGoal applies a partial update to one relationship goal.
 func (h *SMSHandler) UpdateGoal(w http.ResponseWriter, r *http.Request) {
-	if _, ok := RequireAuth(w, r); !ok {
+	user, ok := RequireAuth(w, r)
+	if !ok {
 		return
 	}
 	id, ok := requireIDParam(w, r, "gid")
@@ -1175,26 +1389,35 @@ func (h *SMSHandler) UpdateGoal(w http.ResponseWriter, r *http.Request) {
 		respondInternalError(w, r, err)
 		return
 	}
+	smsAudit(h, r, user, "sms_goal_updated", "sms_relationship_goal", &g.ID, g.Goal, map[string]any{"status": g.Status})
 	respondJSONOK(w, g)
 }
 
 // DeleteGoal removes one relationship goal.
 func (h *SMSHandler) DeleteGoal(w http.ResponseWriter, r *http.Request) {
-	if _, ok := RequireAuth(w, r); !ok {
+	user, ok := RequireAuth(w, r)
+	if !ok {
 		return
 	}
 	id, ok := requireIDParam(w, r, "gid")
 	if !ok {
 		return
 	}
-	res, err := h.db.ExecContext(r.Context(), `DELETE FROM sms_relationship_goals WHERE id = ?`, id)
+	var name string
+	err := h.db.QueryRowContext(r.Context(), `SELECT goal FROM sms_relationship_goals WHERE id = ?`, id).Scan(&name)
+	if isNotFound(err) {
+		respondNotFound(w, r, "Goal not found")
+		return
+	} else if err != nil {
+		respondInternalError(w, r, err)
+		return
+	}
+
+	_, err = h.db.ExecContext(r.Context(), `DELETE FROM sms_relationship_goals WHERE id = ?`, id)
 	if err != nil {
 		respondInternalError(w, r, err)
 		return
 	}
-	if n, _ := res.RowsAffected(); n == 0 {
-		respondNotFound(w, r, "Goal not found")
-		return
-	}
+	smsAudit(h, r, user, "sms_goal_deleted", "sms_relationship_goal", &id, name, nil)
 	w.WriteHeader(http.StatusNoContent)
 }

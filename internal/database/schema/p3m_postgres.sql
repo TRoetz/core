@@ -186,10 +186,12 @@ CREATE TABLE IF NOT EXISTS p3m_stakeholders (
 	role_title TEXT DEFAULT '',
 	power_score INTEGER NOT NULL DEFAULT 3 CHECK (power_score BETWEEN 1 AND 5),
 	interest_score INTEGER NOT NULL DEFAULT 3 CHECK (interest_score BETWEEN 1 AND 5),
+	sms_stakeholder_id INTEGER REFERENCES sms_stakeholders(id) ON DELETE SET NULL,  -- identity resolves to the SMS register (system of record)
 	notes TEXT DEFAULT '',
 	created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
 	updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
+CREATE INDEX IF NOT EXISTS idx_p3m_stakeholders_sms ON p3m_stakeholders(sms_stakeholder_id);
 
 CREATE TABLE IF NOT EXISTS p3m_communications (
 	id SERIAL PRIMARY KEY,
