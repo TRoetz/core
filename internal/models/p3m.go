@@ -31,6 +31,19 @@ const (
 	P3MEntityProject    = "project"
 )
 
+// P3MRAIDItemTypeDecision is the decision-register item type: decisions reuse
+// p3m_raid_items with impact/probability scores defaulting to 1.
+const P3MRAIDItemTypeDecision = "decision"
+
+// P3M architecture review board (ARB) lifecycle: a review starts as work in
+// progress, is submitted for ARB, and ends approved or needs_work.
+const (
+	P3MARBStatusWIP       = "wip"
+	P3MARBStatusInReview  = "in_review"
+	P3MARBStatusNeedsWork = "needs_work"
+	P3MARBStatusApproved  = "approved"
+)
+
 // P3MPortfolio is the top tier: a collection of investments aligned to
 // corporate strategy.
 type P3MPortfolio struct {
@@ -230,7 +243,8 @@ type P3MRaidItem struct {
 	ID                int        `json:"id"`
 	EntityType        string     `json:"entity_type"` // portfolio | programme | project
 	EntityID          int        `json:"entity_id"`
-	ItemType          string     `json:"item_type"`   // risk | assumption | issue | dependency
+	ItemType          string     `json:"item_type"`   // risk | assumption | issue | dependency | decision
+	ItemID            *int       `json:"item_id,omitempty"`
 	Title             string     `json:"title"`
 	Description       string     `json:"description"`
 	ImpactScore       int        `json:"impact_score"`      // 1-5
@@ -358,4 +372,127 @@ type P3MUpcomingGate struct {
 	ProjectID int    `json:"project_id"`
 	Title     string `json:"title"`
 	Stage     string `json:"stage"` // current stage awaiting its next gate
+}
+
+// P3MCriticalPathTask is one dated work item in a CPM schedule analysis.
+// Dates are whole days (UTC midnight); *_finish fields are inclusive last
+// working days, so duration_days = finish - start + 1 for the planned window.
+type P3MCriticalPathTask struct {
+	ItemID         int       `json:"item_id"`
+	Title          string    `json:"title"`
+	WorkspaceID    int       `json:"workspace_id"`
+	StartDate      time.Time `json:"start_date"`
+	EndDate        time.Time `json:"end_date"`
+	DurationDays   float64   `json:"duration_days"`
+	EarliestStart  time.Time `json:"earliest_start"`
+	EarliestFinish time.Time `json:"earliest_finish"`
+	LatestStart    time.Time `json:"latest_start"`
+	LatestFinish   time.Time `json:"latest_finish"`
+	TotalFloatDays float64   `json:"total_float_days"`
+	IsCritical     bool      `json:"is_critical"`
+
+	// Register exposure: open risks and pending decisions linked to this work
+	// item via p3m_raid_items.item_id (populated by the CPM endpoints).
+	OpenRisks        int `json:"open_risks"`
+	PendingDecisions int `json:"pending_decisions"`
+}
+
+// P3MCriticalPath is the CPM result for a project or programme: every dated
+// work item in its linked workspaces, scheduled with forward and backward
+// passes over "blocks" dependencies. A task is critical when its total float
+// is zero; critical_task_ids lists the critical tasks in topological order so
+// they read as the path that determines the entity's completion date.
+type P3MCriticalPath struct {
+	GeneratedAt        time.Time               `json:"generated_at"`
+	EntityType         string                  `json:"entity_type"` // project | programme
+	EntityID           int                     `json:"entity_id"`
+	Title              string                  `json:"title"`
+	ItemCount          int                     `json:"item_count"`
+	DependencyCount    int                     `json:"dependency_count"`
+	ProjectStart       *time.Time              `json:"project_start,omitempty"`
+	ProjectEnd         *time.Time              `json:"project_end,omitempty"`
+	CriticalPathDays   float64                 `json:"critical_path_days"`
+	Tasks              []P3MCriticalPathTask   `json:"tasks"`
+	CriticalTaskIDs    []int                   `json:"critical_task_ids"`
+}
+
+// P3MCPMCycleError is returned by the CPM scheduler when "blocks" dependencies
+// form a cycle. ItemIDs holds one concrete cycle in edge order, starting from
+// its lowest item id.
+type P3MCPMCycleError struct {
+	ItemIDs []int `json:"item_ids"`
+}
+
+func (e *P3MCPMCycleError) Error() string {
+	return "dependency cycle detected among work items"
+}
+
+// P3MArchitectureReview is one Architecture Review Board entry for a project.
+// Status follows the ARB lifecycle; an approved review must reference its
+// architecture page, and a needs_work decision stores the id of the
+// decision-register entry written on rejection.
+type P3MArchitectureReview struct {
+	ID                 int        `json:"id"`
+	ProjectID          int        `json:"project_id"`
+	Title              string     `json:"title"`
+	Description        string     `json:"description"`
+	Status             string     `json:"status"` // wip | in_review | needs_work | approved
+	ReviewerID         *int       `json:"reviewer_id,omitempty"`
+	DecidedAt          *time.Time `json:"decided_at,omitempty"`
+	Comments           string     `json:"comments"`
+	ArchitecturePageID *int       `json:"architecture_page_id,omitempty"`
+	DecisionItemID     *int       `json:"decision_item_id,omitempty"`
+	CreatedBy          int        `json:"created_by"`
+	CreatedAt          time.Time  `json:"created_at"`
+	UpdatedAt          time.Time  `json:"updated_at"`
+}
+
+// P3MLeavePeriodRef is one active leave period overlapping a task or resource
+// allocation window, with the substitute's name when one was named.
+type P3MLeavePeriodRef struct {
+	StartDate      time.Time `json:"start_date"`
+	EndDate        time.Time `json:"end_date"`
+	SubstituteName string    `json:"substitute_name,omitempty"`
+}
+
+// P3MLeaveResourceRow is a user-backed resource allocation whose window
+// overlaps active leave; LostHours is the allocation's weekly hours scaled by
+// the overlap fraction of the week.
+type P3MLeaveResourceRow struct {
+	ResourceID          int                 `json:"resource_id"`
+	Name                string              `json:"name"`
+	UserID              *int                `json:"user_id,omitempty"`
+	UserName            string              `json:"user_name,omitempty"`
+	AllocationStart     time.Time           `json:"allocation_start"`
+	AllocationEnd       time.Time           `json:"allocation_end"`
+	HoursPerWeek        int                 `json:"hours_per_week"`
+	LeavePeriods        []P3MLeavePeriodRef `json:"leave_periods"`
+	OverlapDays         float64             `json:"overlap_days"`
+	LostHours           float64             `json:"lost_hours"` // hours_per_week * overlap_days / 7
+	CoveredBySubstitute bool                `json:"covered_by_substitute"`
+}
+
+// P3MLeaveTaskRow is a CPM task whose assignee has active leave overlapping the
+// task's planned window.
+type P3MLeaveTaskRow struct {
+	ItemID       int                 `json:"item_id"`
+	Title        string              `json:"title"`
+	StartDate    time.Time           `json:"start_date"` // CPM planned window (inclusive)
+	EndDate      time.Time           `json:"end_date"`
+	IsCritical   bool                `json:"is_critical"`
+	AssigneeID   *int                `json:"assignee_id,omitempty"`
+	AssigneeName string              `json:"assignee_name,omitempty"`
+	LeavePeriods []P3MLeavePeriodRef `json:"leave_periods"`
+	OverlapDays  float64             `json:"overlap_days"`
+}
+
+// P3MLeaveImpact is the leave-impact analysis for a project or programme: which
+// resource allocations and critical-path tasks are hit by active user leaves.
+type P3MLeaveImpact struct {
+	GeneratedAt time.Time             `json:"generated_at"`
+	EntityType  string                `json:"entity_type"` // project | programme
+	EntityID    int                   `json:"entity_id"`
+	Title       string                `json:"title"`
+	Resources   []P3MLeaveResourceRow `json:"resources"`
+	Tasks       []P3MLeaveTaskRow     `json:"tasks"`
 }

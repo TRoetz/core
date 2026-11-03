@@ -4,6 +4,9 @@
  */
 export default {
   "pages": {
+    "subtitle": "您有权访问的所有工作区中的知识页面",
+    "searchPlaceholder": "搜索页面标题...",
+    "noPages": "未找到可见页面。",
     "backWorkspace": "工作区",
     "treeHeading": "页面",
     "addPageAria": "添加页面",

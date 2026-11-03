@@ -148,7 +148,7 @@ CREATE TABLE IF NOT EXISTS p3m_raid_items (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
 	entity_type TEXT NOT NULL CHECK (entity_type IN ('portfolio', 'programme', 'project')),
 	entity_id INTEGER NOT NULL,
-	item_type TEXT NOT NULL CHECK (item_type IN ('risk', 'assumption', 'issue', 'dependency')),
+	item_type TEXT NOT NULL CHECK (item_type IN ('risk', 'assumption', 'issue', 'dependency', 'decision')),
 	title TEXT NOT NULL,
 	description TEXT DEFAULT '',
 	impact_score INTEGER NOT NULL DEFAULT 1 CHECK (impact_score BETWEEN 1 AND 5),
@@ -156,6 +156,26 @@ CREATE TABLE IF NOT EXISTS p3m_raid_items (
 	mitigation_plan TEXT DEFAULT '',
 	owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
 	status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'mitigating', 'closed', 'escalated')),
+	item_id INTEGER REFERENCES items(id) ON DELETE SET NULL,
+	created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+	updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Architecture Review Board tracking: per-project architecture sign-off. A
+-- review moves wip -> in_review -> approved | needs_work; approval requires a
+-- linked architecture page, rejection writes a decision-register entry.
+CREATE TABLE IF NOT EXISTS p3m_architecture_reviews (
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	project_id INTEGER NOT NULL REFERENCES p3m_projects(id) ON DELETE CASCADE,
+	title TEXT NOT NULL,
+	description TEXT DEFAULT '',
+	status TEXT NOT NULL DEFAULT 'wip' CHECK (status IN ('wip', 'in_review', 'needs_work', 'approved')),
+	reviewer_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+	decided_at DATETIME,
+	comments TEXT DEFAULT '',
+	architecture_page_id INTEGER REFERENCES pages(id) ON DELETE SET NULL,
+	decision_item_id INTEGER REFERENCES p3m_raid_items(id) ON DELETE SET NULL,
+	created_by INTEGER NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
 	created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 	updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
@@ -233,6 +253,8 @@ CREATE INDEX IF NOT EXISTS idx_p3m_raci_entity ON p3m_raci_assignments(entity_ty
 CREATE INDEX IF NOT EXISTS idx_p3m_budget_approvals_project ON p3m_budget_approvals(project_id);
 CREATE INDEX IF NOT EXISTS idx_p3m_baselines_project ON p3m_baselines(project_id);
 CREATE INDEX IF NOT EXISTS idx_p3m_raid_entity ON p3m_raid_items(entity_type, entity_id);
+CREATE INDEX IF NOT EXISTS idx_p3m_raid_item ON p3m_raid_items(item_id);
+CREATE INDEX IF NOT EXISTS idx_p3m_arch_reviews_project ON p3m_architecture_reviews(project_id);
 CREATE INDEX IF NOT EXISTS idx_p3m_stakeholders_entity ON p3m_stakeholders(entity_type, entity_id);
 CREATE INDEX IF NOT EXISTS idx_p3m_communications_entity ON p3m_communications(entity_type, entity_id);
 CREATE INDEX IF NOT EXISTS idx_p3m_allocations_resource ON p3m_resource_allocations(resource_id);

@@ -17,12 +17,12 @@ import (
 // RAID items (risk / assumption / issue / dependency).
 // ---------------------------------------------------------------------------
 
-const p3mRaidColumns = `id, entity_type, entity_id, item_type, title, description, impact_score, probability_score, mitigation_plan, owner_id, status, created_at, updated_at`
+const p3mRaidColumns = `id, entity_type, entity_id, item_type, title, description, impact_score, probability_score, mitigation_plan, owner_id, status, item_id, created_at, updated_at`
 
 // scanP3MRaidItem reads one p3m_raid_items row.
 func scanP3MRaidItem(row interface{ Scan(...any) error }) (models.P3MRaidItem, error) {
 	var item models.P3MRaidItem
-	err := row.Scan(&item.ID, &item.EntityType, &item.EntityID, &item.ItemType, &item.Title, &item.Description, &item.ImpactScore, &item.ProbabilityScore, &item.MitigationPlan, &item.OwnerID, &item.Status, &item.CreatedAt, &item.UpdatedAt)
+	err := row.Scan(&item.ID, &item.EntityType, &item.EntityID, &item.ItemType, &item.Title, &item.Description, &item.ImpactScore, &item.ProbabilityScore, &item.MitigationPlan, &item.OwnerID, &item.Status, &item.ItemID, &item.CreatedAt, &item.UpdatedAt)
 	return item, err
 }
 
@@ -32,10 +32,10 @@ func (h *P3MHandler) getRaidItemRow(ctx context.Context, id int) (models.P3MRaid
 	return scanP3MRaidItem(row)
 }
 
-// p3mValidRaidItemType reports whether itemType is one of the four RAID item types.
+// p3mValidRaidItemType reports whether itemType is one of the RAID item types.
 func p3mValidRaidItemType(itemType string) bool {
 	switch itemType {
-	case "risk", "assumption", "issue", "dependency":
+	case "risk", "assumption", "issue", "dependency", models.P3MRAIDItemTypeDecision:
 		return true
 	default:
 		return false
@@ -149,6 +149,7 @@ func (h *P3MHandler) CreateRaidItem(w http.ResponseWriter, r *http.Request) {
 		MitigationPlan   string `json:"mitigation_plan"`
 		OwnerID          int    `json:"owner_id"`
 		Status           string `json:"status"`
+		ItemID           *int   `json:"item_id,omitempty"`
 	}
 	if err := newJSONDecoder(w, r).Decode(&in); err != nil {
 		respondBadRequest(w, r, "Invalid request body")
@@ -158,7 +159,7 @@ func (h *P3MHandler) CreateRaidItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !p3mValidRaidItemType(in.ItemType) {
-		respondValidationError(w, r, "item_type must be one of risk, assumption, issue or dependency")
+		respondValidationError(w, r, "item_type must be one of risk, assumption, issue, dependency or decision")
 		return
 	}
 	if in.ImpactScore < 1 || in.ImpactScore > 5 {
@@ -174,6 +175,13 @@ func (h *P3MHandler) CreateRaidItem(w http.ResponseWriter, r *http.Request) {
 		respondNotFound(w, r, "user")
 		return
 	}
+	if in.ItemID != nil {
+		var itemCount int
+		if err := h.db.QueryRowContext(r.Context(), `SELECT COUNT(*) FROM items WHERE id = ?`, *in.ItemID).Scan(&itemCount); err != nil || itemCount == 0 {
+			respondNotFound(w, r, "item")
+			return
+		}
+	}
 	if in.Status == "" {
 		in.Status = "open"
 	}
@@ -183,8 +191,8 @@ func (h *P3MHandler) CreateRaidItem(w http.ResponseWriter, r *http.Request) {
 	}
 
 	now := time.Now().UTC()
-	res, err := h.db.ExecContext(r.Context(), `INSERT INTO p3m_raid_items (entity_type, entity_id, item_type, title, description, impact_score, probability_score, mitigation_plan, owner_id, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		in.EntityType, in.EntityID, in.ItemType, in.Title, in.Description, in.ImpactScore, in.ProbabilityScore, in.MitigationPlan, in.OwnerID, in.Status, now, now)
+	res, err := h.db.ExecContext(r.Context(), `INSERT INTO p3m_raid_items (entity_type, entity_id, item_type, title, description, impact_score, probability_score, mitigation_plan, owner_id, status, item_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		in.EntityType, in.EntityID, in.ItemType, in.Title, in.Description, in.ImpactScore, in.ProbabilityScore, in.MitigationPlan, in.OwnerID, in.Status, in.ItemID, now, now)
 	if err != nil {
 		respondInternalError(w, r, err)
 		return
@@ -221,6 +229,7 @@ func (h *P3MHandler) UpdateRaidItem(w http.ResponseWriter, r *http.Request) {
 		MitigationPlan   string `json:"mitigation_plan"`
 		OwnerID          int    `json:"owner_id"`
 		Status           string `json:"status"`
+		ItemID           *int   `json:"item_id,omitempty"`
 	}
 	if err := newJSONDecoder(w, r).Decode(&in); err != nil {
 		respondBadRequest(w, r, "Invalid request body")
@@ -230,7 +239,7 @@ func (h *P3MHandler) UpdateRaidItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !p3mValidRaidItemType(in.ItemType) {
-		respondValidationError(w, r, "item_type must be one of risk, assumption, issue or dependency")
+		respondValidationError(w, r, "item_type must be one of risk, assumption, issue, dependency or decision")
 		return
 	}
 	if in.ImpactScore < 1 || in.ImpactScore > 5 {
@@ -246,14 +255,21 @@ func (h *P3MHandler) UpdateRaidItem(w http.ResponseWriter, r *http.Request) {
 		respondNotFound(w, r, "user")
 		return
 	}
+	if in.ItemID != nil {
+		var itemCount int
+		if err := h.db.QueryRowContext(r.Context(), `SELECT COUNT(*) FROM items WHERE id = ?`, *in.ItemID).Scan(&itemCount); err != nil || itemCount == 0 {
+			respondNotFound(w, r, "item")
+			return
+		}
+	}
 	if !p3mValidRaidStatus(in.Status) {
 		respondValidationError(w, r, "status must be one of open, mitigating, closed or escalated")
 		return
 	}
 
 	now := time.Now().UTC()
-	res, err := h.db.ExecContext(r.Context(), `UPDATE p3m_raid_items SET entity_type = ?, entity_id = ?, item_type = ?, title = ?, description = ?, impact_score = ?, probability_score = ?, mitigation_plan = ?, owner_id = ?, status = ?, updated_at = ? WHERE id = ?`,
-		in.EntityType, in.EntityID, in.ItemType, in.Title, in.Description, in.ImpactScore, in.ProbabilityScore, in.MitigationPlan, in.OwnerID, in.Status, now, id)
+	res, err := h.db.ExecContext(r.Context(), `UPDATE p3m_raid_items SET entity_type = ?, entity_id = ?, item_type = ?, title = ?, description = ?, impact_score = ?, probability_score = ?, mitigation_plan = ?, owner_id = ?, status = ?, item_id = ?, updated_at = ? WHERE id = ?`,
+		in.EntityType, in.EntityID, in.ItemType, in.Title, in.Description, in.ImpactScore, in.ProbabilityScore, in.MitigationPlan, in.OwnerID, in.Status, in.ItemID, now, id)
 	if err != nil {
 		respondInternalError(w, r, err)
 		return
@@ -372,8 +388,8 @@ func (h *P3MHandler) EscalateRaidItem(w http.ResponseWriter, r *http.Request) {
 	}
 
 	now := time.Now().UTC()
-	res, err := h.db.ExecContext(r.Context(), `INSERT INTO p3m_raid_items (entity_type, entity_id, item_type, title, description, impact_score, probability_score, mitigation_plan, owner_id, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'escalated', ?, ?)`,
-		targetType, targetID, item.ItemType, item.Title, item.Description, item.ImpactScore, item.ProbabilityScore, item.MitigationPlan, item.OwnerID, now, now)
+	res, err := h.db.ExecContext(r.Context(), `INSERT INTO p3m_raid_items (entity_type, entity_id, item_type, title, description, impact_score, probability_score, mitigation_plan, owner_id, status, item_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'escalated', ?, ?, ?)`,
+		targetType, targetID, item.ItemType, item.Title, item.Description, item.ImpactScore, item.ProbabilityScore, item.MitigationPlan, item.OwnerID, item.ItemID, now, now)
 	if err != nil {
 		respondInternalError(w, r, err)
 		return

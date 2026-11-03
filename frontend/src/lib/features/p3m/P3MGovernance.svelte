@@ -4,6 +4,7 @@
   import { p3m as p3mApi } from '../../api/p3m.js';
   import EmptyState from '../../components/EmptyState.svelte';
   import IconChevronRight from '@tabler/icons-svelte-runes/icons/chevron-right';
+  import P3MArchitectureReviews from './P3MArchitectureReviews.svelte';
   import { formatMoney, formatDate, stageLabel } from './utils.js';
 
   let { portfolios = [] } = $props();
@@ -143,6 +144,9 @@
         </table>
       {/if}
     </section>
+
+    <!-- Architecture review board -->
+    <P3MArchitectureReviews portfolios={portfolios} />
 
     <!-- RACI matrix -->
     <section>

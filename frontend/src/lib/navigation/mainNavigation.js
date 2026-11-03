@@ -7,6 +7,7 @@ import IconFolderSearch from '@tabler/icons-svelte-runes/icons/folder-search';
 import IconHeartHandshake from '@tabler/icons-svelte-runes/icons/heart-handshake';
 import IconMap from '@tabler/icons-svelte-runes/icons/map';
 import IconMessage2Plus from '@tabler/icons-svelte-runes/icons/message-2-plus';
+import IconNotebook from '@tabler/icons-svelte-runes/icons/notebook';
 import IconPackage from '@tabler/icons-svelte-runes/icons/package';
 import IconPhoneCheck from '@tabler/icons-svelte-runes/icons/phone-check';
 import IconSettings from '@tabler/icons-svelte-runes/icons/settings';
@@ -99,6 +100,13 @@ export const mainNavItems = [
     href: '/logbook',
     activeViews: ['logbook', 'logbook-document'],
     permission: 'canAccessLogbook',
+  },
+  {
+    id: 'pages',
+    icon: IconNotebook,
+    labelKey: 'nav.pages',
+    href: '/pages',
+    activeViews: ['org-pages'],
   },
   {
     id: 'assets',

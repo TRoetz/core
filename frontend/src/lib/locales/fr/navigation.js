@@ -15,6 +15,7 @@ export default {
     srm: 'SRM',
     sms: 'Parties prenantes',
     iterations: 'Itérations',
+    pages: 'Pages',
     assets: 'Ressources',
     channels: 'Canaux',
     portalHub: 'Centre des portails',

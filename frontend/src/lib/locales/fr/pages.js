@@ -423,4 +423,11 @@ export default {
     noWorkspacesAvailable:
       'Aucun espace de travail n’est disponible pour le moment. Veuillez contacter votre administrateur pour obtenir l’accès à un espace de travail.',
   },
+
+  // Knowledge pages (wiki) — cross-workspace browser (/pages).
+  pages: {
+    subtitle: "Pages de connaissance de tous les espaces accessibles",
+    searchPlaceholder: 'Rechercher un titre…',
+    noPages: 'Aucune page visible trouvée.',
+  },
 };

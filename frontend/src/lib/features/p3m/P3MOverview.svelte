@@ -2,6 +2,7 @@
   import { t } from '../../stores/i18n.svelte.js';
   import IconChevronRight from '@tabler/icons-svelte-runes/icons/chevron-right';
   import IconPlus from '@tabler/icons-svelte-runes/icons/plus';
+  import P3MCriticalPath from './P3MCriticalPath.svelte';
   import P3MProjectDetail from './P3MProjectDetail.svelte';
   import P3MProjectForm from './P3MProjectForm.svelte';
   import { p3m as p3mApi } from '../../api/p3m.js';
@@ -484,6 +485,12 @@
                     <button type="button" class="p3m-action" onclick={() => openProjectForm(pf.id, pg.id)}>
                       <IconPlus size={14} /> {t('p3m.addProject')}
                     </button>
+                  </div>
+
+                  <!-- Programme critical path: CPM over every project's workspaces -->
+                  <div class="px-4 py-1.5">
+                    <h3 class="mb-1 text-xs font-semibold">{t('p3m.criticalPath')}</h3>
+                    <P3MCriticalPath entityType="programme" id={pg.id} />
                   </div>
 
                   {#if projectFormCtx && projectFormCtx.portfolioId === pf.id && projectFormCtx.programmeId === pg.id}

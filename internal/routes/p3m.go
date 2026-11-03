@@ -31,6 +31,8 @@ func RegisterP3MRoutes(deps *Deps) {
 	api.HandleH("GET /p3m/programmes/{id}", auth(p3mView(http.HandlerFunc(deps.P3M.GetProgramme))))
 	api.HandleH("PUT /p3m/programmes/{id}", auth(p3mView(http.HandlerFunc(deps.P3M.UpdateProgramme))))
 	api.HandleH("DELETE /p3m/programmes/{id}", auth(p3mView(http.HandlerFunc(deps.P3M.DeleteProgramme))))
+	api.HandleH("GET /p3m/programmes/{id}/critical-path", auth(p3mView(http.HandlerFunc(deps.P3M.GetProgrammeCriticalPath))))
+	api.HandleH("GET /p3m/programmes/{id}/leave-impact", auth(p3mView(http.HandlerFunc(deps.P3M.GetProgrammeLeaveImpact))))
 
 	// Projects.
 	api.HandleH("GET /p3m/projects", auth(p3mView(http.HandlerFunc(deps.P3M.ListProjects))))
@@ -41,12 +43,21 @@ func RegisterP3MRoutes(deps *Deps) {
 	api.HandleH("GET /p3m/projects/{id}/workspaces", auth(p3mView(http.HandlerFunc(deps.P3M.ListProjectWorkspaces))))
 	api.HandleH("PUT /p3m/projects/{id}/workspaces", auth(p3mView(http.HandlerFunc(deps.P3M.SetProjectWorkspaces))))
 	api.HandleH("GET /p3m/projects/{id}/rollup", auth(p3mView(http.HandlerFunc(deps.P3M.GetProjectRollup))))
+	api.HandleH("GET /p3m/projects/{id}/critical-path", auth(p3mView(http.HandlerFunc(deps.P3M.GetProjectCriticalPath))))
+	api.HandleH("GET /p3m/projects/{id}/leave-impact", auth(p3mView(http.HandlerFunc(deps.P3M.GetProjectLeaveImpact))))
 
 	// Governance: stage gates, artifacts, RACI, thresholds, budget approvals.
 	api.HandleH("GET /p3m/stage-gates", auth(p3mView(http.HandlerFunc(deps.P3M.ListStageGates))))
 	api.HandleH("POST /p3m/stage-gates", auth(p3mView(http.HandlerFunc(deps.P3M.CreateStageGate))))
 	api.HandleH("POST /p3m/stage-gates/{id}/decision", auth(p3mView(http.HandlerFunc(deps.P3M.DecideStageGate))))
 	api.HandleH("PUT /p3m/gate-artifacts/{id}", auth(p3mView(http.HandlerFunc(deps.P3M.UpdateGateArtifact))))
+
+	// Architecture review board.
+	api.HandleH("GET /p3m/architecture-reviews", auth(p3mView(http.HandlerFunc(deps.P3M.ListArchitectureReviews))))
+	api.HandleH("POST /p3m/architecture-reviews", auth(p3mView(http.HandlerFunc(deps.P3M.CreateArchitectureReview))))
+	api.HandleH("PUT /p3m/architecture-reviews/{id}", auth(p3mView(http.HandlerFunc(deps.P3M.UpdateArchitectureReview))))
+	api.HandleH("DELETE /p3m/architecture-reviews/{id}", auth(p3mView(http.HandlerFunc(deps.P3M.DeleteArchitectureReview))))
+	api.HandleH("POST /p3m/architecture-reviews/{id}/decision", auth(p3mView(http.HandlerFunc(deps.P3M.DecideArchitectureReview))))
 
 	api.HandleH("GET /p3m/raci", auth(p3mView(http.HandlerFunc(deps.P3M.GetRaciMatrix))))
 	api.HandleH("PUT /p3m/raci", auth(p3mView(http.HandlerFunc(deps.P3M.UpsertRaciAssignment))))

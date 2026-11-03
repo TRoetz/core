@@ -58,6 +58,7 @@ export const MAIN_APP_COMPONENT_LOADERS = {
   'workspace-roadmap': () => import('../features/collections/CollectionRoadmap.svelte'),
   'workspace-pages': () => import('../features/pages/PagesView.svelte'),
   'workspace-pages-archived': () => import('../features/pages/ArchivedPagesPage.svelte'),
+  'org-pages': () => import('../features/pages/OrgPagesView.svelte'),
   'collection-board': () => import('../features/collections/CollectionBoard.svelte'),
   'collection-board-config': () => import('../settings/BoardConfigurationPage.svelte'),
   'collection-nav-config': () => import('../workspaces/NavigationConfigPage.svelte'),
@@ -243,6 +244,9 @@ export const MAIN_APP_ROUTE_CONFIG = {
     }),
   }),
   p3m: route('Loading P3M...', 'Failed to load P3M', {
+    wrapper: 'surface-full',
+  }),
+  'org-pages': route('Loading pages...', 'Failed to load pages', {
     wrapper: 'surface-full',
   }),
   srm: route('Loading SRM...', 'Failed to load SRM', {
@@ -546,6 +550,7 @@ export const MAIN_APP_FOOTER_VIEWS = new Set([
   'collection-nav-config',
   'asset-settings',
   'logbook-document',
+  'org-pages',
 ]);
 
 export const WORKSPACE_SETTINGS_TABS = {

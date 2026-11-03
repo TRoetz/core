@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"log/slog"
 	"slices"
+	"strings"
 )
 
 // pgJSONBColumnsCheck reports whether every named column already has the
@@ -3234,6 +3235,138 @@ var Catalog = []Migration{
 			);
 		`,
 	},
+	{
+		// The decision register reuses p3m_raid_items with item_type='decision'
+		// and links entries to work items; ARB reviews track per-project
+		// architecture sign-off. SQLite cannot alter a CHECK in place, so the
+		// RAID table is rebuilt with the widened constraint plus the new
+		// item_id column (P3M expansion).
+		Version:         "20261122_p3m_decision_arb",
+		Name:            "Add P3M decision register linkage and architecture review board tracking",
+		CheckSQLiteFn:   checkP3MDecisionARBSQLite,
+		CheckPostgresFn: checkP3MDecisionARBPostgres,
+		SQLite: `
+			CREATE TABLE p3m_raid_items_rebuild (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				entity_type TEXT NOT NULL CHECK (entity_type IN ('portfolio', 'programme', 'project')),
+				entity_id INTEGER NOT NULL,
+				item_type TEXT NOT NULL CHECK (item_type IN ('risk', 'assumption', 'issue', 'dependency', 'decision')),
+				title TEXT NOT NULL,
+				description TEXT DEFAULT '',
+				impact_score INTEGER NOT NULL DEFAULT 1 CHECK (impact_score BETWEEN 1 AND 5),
+				probability_score INTEGER NOT NULL DEFAULT 1 CHECK (probability_score BETWEEN 1 AND 5),
+				mitigation_plan TEXT DEFAULT '',
+				owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+				status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'mitigating', 'closed', 'escalated')),
+				item_id INTEGER REFERENCES items(id) ON DELETE SET NULL,
+				created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+				updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+			);
+			INSERT INTO p3m_raid_items_rebuild (id, entity_type, entity_id, item_type, title, description, impact_score, probability_score, mitigation_plan, owner_id, status, created_at, updated_at)
+				SELECT id, entity_type, entity_id, item_type, title, description, impact_score, probability_score, mitigation_plan, owner_id, status, created_at, updated_at FROM p3m_raid_items;
+			DROP TABLE p3m_raid_items;
+			ALTER TABLE p3m_raid_items_rebuild RENAME TO p3m_raid_items;
+			CREATE INDEX IF NOT EXISTS idx_p3m_raid_entity ON p3m_raid_items(entity_type, entity_id);
+			CREATE INDEX IF NOT EXISTS idx_p3m_raid_item ON p3m_raid_items(item_id);
+
+			CREATE TABLE IF NOT EXISTS p3m_architecture_reviews (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				project_id INTEGER NOT NULL REFERENCES p3m_projects(id) ON DELETE CASCADE,
+				title TEXT NOT NULL,
+				description TEXT DEFAULT '',
+				status TEXT NOT NULL DEFAULT 'wip' CHECK (status IN ('wip', 'in_review', 'needs_work', 'approved')),
+				reviewer_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				decided_at DATETIME,
+				comments TEXT DEFAULT '',
+				architecture_page_id INTEGER REFERENCES pages(id) ON DELETE SET NULL,
+				decision_item_id INTEGER REFERENCES p3m_raid_items(id) ON DELETE SET NULL,
+				created_by INTEGER NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+				created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+				updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE INDEX IF NOT EXISTS idx_p3m_arch_reviews_project ON p3m_architecture_reviews(project_id);
+		`,
+		Postgres: `
+			ALTER TABLE p3m_raid_items ADD COLUMN IF NOT EXISTS item_id INTEGER REFERENCES items(id) ON DELETE SET NULL;
+			CREATE INDEX IF NOT EXISTS idx_p3m_raid_item ON p3m_raid_items(item_id);
+
+			DO $$
+			DECLARE con record;
+			BEGIN
+				FOR con IN
+					SELECT c.conname AS name
+					FROM pg_constraint c
+					JOIN pg_class t ON t.oid = c.conrelid
+					WHERE t.relname = 'p3m_raid_items' AND c.contype = 'c'
+					  AND pg_get_constraintdef(c.oid) LIKE '%item_type%'
+				LOOP
+					EXECUTE format('ALTER TABLE p3m_raid_items DROP CONSTRAINT %I', con.name);
+				END LOOP;
+			END $$;
+			ALTER TABLE p3m_raid_items ADD CONSTRAINT p3m_raid_items_item_type_check CHECK (item_type IN ('risk', 'assumption', 'issue', 'dependency', 'decision'));
+
+			CREATE TABLE IF NOT EXISTS p3m_architecture_reviews (
+				id SERIAL PRIMARY KEY,
+				project_id INTEGER NOT NULL REFERENCES p3m_projects(id) ON DELETE CASCADE,
+				title TEXT NOT NULL,
+				description TEXT DEFAULT '',
+				status TEXT NOT NULL DEFAULT 'wip' CHECK (status IN ('wip', 'in_review', 'needs_work', 'approved')),
+				reviewer_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				decided_at TIMESTAMPTZ,
+				comments TEXT DEFAULT '',
+				architecture_page_id INTEGER REFERENCES pages(id) ON DELETE SET NULL,
+				decision_item_id INTEGER REFERENCES p3m_raid_items(id) ON DELETE SET NULL,
+				created_by INTEGER NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+				created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+				updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE INDEX IF NOT EXISTS idx_p3m_arch_reviews_project ON p3m_architecture_reviews(project_id);
+		`,
+	},
+}
+
+// checkP3MDecisionARBSQLite reports whether the P3M decision/ARB migration's
+// effect is fully present: p3m_raid_items carries item_id, its item_type CHECK
+// admits 'decision', and p3m_architecture_reviews exists. Fresh installs get
+// all three from the schema files, so this stamps them as applied.
+func checkP3MDecisionARBSQLite(db Database) (bool, error) {
+	var count int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM pragma_table_info('p3m_raid_items') WHERE name = 'item_id'`).Scan(&count); err != nil || count == 0 {
+		return false, err
+	}
+	var tableSQL string
+	if err := db.QueryRow(`SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'p3m_raid_items'`).Scan(&tableSQL); err != nil {
+		return false, err
+	}
+	if !strings.Contains(tableSQL, "'decision'") {
+		return false, nil
+	}
+	var tables int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'p3m_architecture_reviews'`).Scan(&tables); err != nil || tables == 0 {
+		return false, err
+	}
+	return true, nil
+}
+
+// checkP3MDecisionARBPostgres is the PostgreSQL counterpart of
+// checkP3MDecisionARBSQLite.
+func checkP3MDecisionARBPostgres(db Database) (bool, error) {
+	var count int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'p3m_raid_items' AND column_name = 'item_id'`).Scan(&count); err != nil || count == 0 {
+		return false, err
+	}
+	var def string
+	if err := db.QueryRow(`SELECT pg_get_constraintdef(c.oid) FROM pg_constraint c JOIN pg_class t ON t.oid = c.conrelid WHERE t.relname = 'p3m_raid_items' AND c.contype = 'c' AND pg_get_constraintdef(c.oid) LIKE '%item_type%'`).Scan(&def); err != nil {
+		return false, err
+	}
+	if !strings.Contains(def, "'decision'") {
+		return false, nil
+	}
+	var tables int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = current_schema() AND table_name = 'p3m_architecture_reviews'`).Scan(&tables); err != nil || tables == 0 {
+		return false, err
+	}
+	return true, nil
 }
 
 // applyAssetReportsWorkspacePinned backfills form-mode asset reports that have

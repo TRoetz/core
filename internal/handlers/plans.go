@@ -543,16 +543,31 @@ func (h *PlanHandler) AddPlanWorkspace(w http.ResponseWriter, r *http.Request) {
 		respondNotFound(w, r, "workspace")
 		return
 	}
-	res, err := h.db.ExecContext(r.Context(),
-		`INSERT OR IGNORE INTO plan_workspaces (plan_id, workspace_id, created_at) VALUES (?, ?, ?)`,
-		id, wsID, time.Now().UTC())
+
+	// Idempotent: linking an already-linked workspace succeeds silently.
+	var linked bool
+	err = h.db.QueryRowContext(r.Context(), `SELECT EXISTS(SELECT 1 FROM plan_workspaces WHERE plan_id = ? AND workspace_id = ?)`, id, wsID).Scan(&linked)
 	if err != nil {
 		respondInternalError(w, r, err)
 		return
 	}
-	if n, _ := res.RowsAffected(); n == 0 {
-		respondNotFound(w, r, "plan")
-		return
+	if !linked {
+		var planExists bool
+		err = h.db.QueryRowContext(r.Context(), `SELECT EXISTS(SELECT 1 FROM plans WHERE id = ?)`, id).Scan(&planExists)
+		if err != nil {
+			respondInternalError(w, r, err)
+			return
+		}
+		if !planExists {
+			respondNotFound(w, r, "plan")
+			return
+		}
+		if _, err := h.db.ExecContext(r.Context(),
+			`INSERT INTO plan_workspaces (plan_id, workspace_id, created_at) VALUES (?, ?, ?)`,
+			id, wsID, time.Now().UTC()); err != nil {
+			respondInternalError(w, r, err)
+			return
+		}
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
