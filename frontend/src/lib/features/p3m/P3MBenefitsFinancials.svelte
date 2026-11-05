@@ -2,9 +2,13 @@
   import { onMount } from 'svelte';
   import { t } from '../../stores/i18n.svelte.js';
   import { p3m as p3mApi } from '../../api/p3m.js';
+  import { getUsers } from '../../api/users.js';
   import EmptyState from '../../components/EmptyState.svelte';
   import IconChevronRight from '@tabler/icons-svelte-runes/icons/chevron-right';
-  import { formatMoney, formatDate } from './utils.js';
+  import IconPlus from '@tabler/icons-svelte-runes/icons/plus';
+  import IconX from '@tabler/icons-svelte-runes/icons/x';
+  import { confirm } from '../../composables/useConfirm.js';
+  import { formatMoney, formatDate, toISODate, toDateInputValue } from './utils.js';
 
   let { portfolios = [] } = $props();
 
@@ -17,6 +21,9 @@
   const expandedBenefits = $state({}); // benefit id -> realizations[] | undefined (loading)
   const realizationCache = $state({});
 
+  /** @type {Array<{id:number,display_name?:string,username?:string}>} */
+  let users = $state([]);
+
   const entityTitleById = $derived.by(() => {
     const m = new Map();
     for (const pf of portfolios) {
@@ -25,9 +32,26 @@
         m.set(`programme:${pg.id}`, `${pf.title} › ${pg.title}`);
         for (const pr of pg.projects ?? []) m.set(`project:${pr.id}`, `${pf.title} › ${pg.title} › ${pr.title}`);
       }
+      for (const pr of pf.standalone_projects ?? []) m.set(`project:${pr.id}`, `${pf.title} › ${pr.title}`);
     }
     return m;
   });
+
+  /** Projects and programmes as flat pickers (benefit parents, tranche entities). */
+  const projectOptions = $derived.by(() => {
+    const out = [];
+    for (const pf of portfolios) {
+      for (const pg of pf.programmes ?? []) {
+        for (const pr of pg.projects ?? []) out.push({ id: pr.id, title: `${pf.title} › ${pg.title} › ${pr.title}` });
+      }
+      for (const pr of pf.standalone_projects ?? []) out.push({ id: pr.id, title: `${pf.title} › ${pr.title}` });
+    }
+    return out;
+  });
+
+  const programmeOptions = $derived.by(() =>
+    portfolios.flatMap((pf) => (pf.programmes ?? []).map((pg) => ({ id: pg.id, title: `${pf.title} › ${pg.title}` })))
+  );
 
   function entityLabel(b) {
     if (b.project_id != null) return entityTitleById.get(`project:${b.project_id}`) ?? `#${b.project_id}`;
@@ -72,9 +96,268 @@
     }
   }
 
+  // --- Benefit create / edit ---------------------------------------------------
+  const BENEFIT_TYPES = ['financial', 'non_financial', 'strategic', 'compliance'];
+  let benefitFormOpen = $state(false);
+  /** Benefit being edited in place, or null when creating. */
+  let editingBenefit = $state(null);
+  let savingBenefit = $state(false);
+  const emptyBenefitForm = () => ({
+    title: '',
+    benefit_type: 'financial',
+    entity_kind: projectOptions.length > 0 ? 'project' : 'programme',
+    project_id: '',
+    programme_id: '',
+    target_value: '',
+    baseline_value: '',
+    unit_of_measure: '',
+    target_realization_date: '',
+    owner_id: '',
+  });
+  let benefitForm = $state(emptyBenefitForm());
+
+  function openBenefitCreate() {
+    editingBenefit = null;
+    benefitForm = emptyBenefitForm();
+    error = '';
+    benefitFormOpen = true;
+  }
+
+  function openBenefitEdit(b) {
+    editingBenefit = b;
+    benefitForm = {
+      title: b.title ?? '',
+      benefit_type: b.benefit_type ?? 'financial',
+      entity_kind: b.project_id != null ? 'project' : 'programme',
+      project_id: b.project_id != null ? String(b.project_id) : '',
+      programme_id: b.programme_id != null ? String(b.programme_id) : '',
+      target_value: b.target_value != null ? String(b.target_value) : '',
+      baseline_value: b.baseline_value != null ? String(b.baseline_value) : '',
+      unit_of_measure: b.unit_of_measure ?? '',
+      target_realization_date: toDateInputValue(b.target_realization_date),
+      owner_id: b.owner_id != null ? String(b.owner_id) : '',
+    };
+    error = '';
+    benefitFormOpen = true;
+  }
+
+  function closeBenefitForm() {
+    benefitFormOpen = false;
+    editingBenefit = null;
+  }
+
+  async function submitBenefit() {
+    if (savingBenefit) return;
+    error = '';
+    const parentKind = benefitForm.entity_kind;
+    const parentId = Number(parentKind === 'project' ? benefitForm.project_id : benefitForm.programme_id);
+    if (!benefitForm.title.trim()) {
+      error = t('p3m.createFailed');
+      return;
+    }
+    if (!parentId) {
+      error = t('p3m.entityRequired');
+      return;
+    }
+    const owner = Number(benefitForm.owner_id);
+    if (!owner) {
+      error = t('p3m.ownerRequired');
+      return;
+    }
+    const date = toISODate(benefitForm.target_realization_date);
+    if (!date) {
+      error = t('p3m.createFailed');
+      return;
+    }
+    savingBenefit = true;
+    try {
+      const payload = {
+        project_id: parentKind === 'project' ? parentId : null,
+        programme_id: parentKind === 'programme' ? parentId : null,
+        title: benefitForm.title.trim(),
+        benefit_type: benefitForm.benefit_type,
+        target_value: Number(benefitForm.target_value) || 0,
+        baseline_value: Number(benefitForm.baseline_value) || 0,
+        unit_of_measure: benefitForm.unit_of_measure,
+        target_realization_date: date,
+        owner_id: owner,
+      };
+      if (editingBenefit) await p3mApi.benefits.update(editingBenefit.id, payload);
+      else await p3mApi.benefits.create(payload);
+      closeBenefitForm();
+      await load();
+    } catch (e) {
+      error = e?.message || t('p3m.updateFailed');
+    } finally {
+      savingBenefit = false;
+    }
+  }
+
+  async function deleteBenefit(b) {
+    if (!(await confirm({ title: t('p3m.delete'), message: t('p3m.confirmDeleteBenefit') }))) return;
+    try {
+      await p3mApi.benefits.delete(b.id);
+      await load();
+    } catch (e) {
+      error = e?.message || t('p3m.deleteFailed');
+    }
+  }
+
+  // --- Benefit realizations ------------------------------------------------------
+  /** benefit id -> draft realization form. */
+  const realizationForms = $state({});
+  let savingRealizationId = $state(null);
+
+  function realizationDraft(bid) {
+    return realizationForms[bid] ?? { value: '', notes: '' };
+  }
+
+  async function recordRealization(b) {
+    if (savingRealizationId === b.id) return;
+    error = '';
+    const draft = realizationDraft(b.id);
+    const value = Number(draft.value);
+    if (!Number.isFinite(value)) {
+      error = t('p3m.invalidAmount');
+      return;
+    }
+    savingRealizationId = b.id;
+    try {
+      await p3mApi.createBenefitRealization(b.id, {
+        recorded_date: new Date().toISOString(),
+        realized_value: value,
+        notes: draft.notes,
+      });
+      realizationForms[b.id] = { value: '', notes: '' };
+      const rows = (await p3mApi.getBenefitRealizations(b.id)) ?? [];
+      realizationCache[b.id] = rows;
+      expandedBenefits[b.id] = rows;
+      await load(); // refresh latest_realized_value + progress bars
+    } catch (e) {
+      error = e?.message || t('p3m.createFailed');
+    } finally {
+      savingRealizationId = null;
+    }
+  }
+
+  async function deleteRealization(b, r) {
+    try {
+      await p3mApi.deleteBenefitRealization(b.id, r.id);
+      const rows = (await p3mApi.getBenefitRealizations(b.id)) ?? [];
+      realizationCache[b.id] = rows;
+      expandedBenefits[b.id] = rows;
+      await load();
+    } catch (e) {
+      error = e?.message || t('p3m.deleteFailed');
+    }
+  }
+
+  // --- Tranche create / edit -------------------------------------------------------
+  const TRANCHE_STATUSES = ['proposed', 'approved', 'released'];
+  let trancheFormOpen = $state(false);
+  /** Tranche being edited in place, or null when creating. */
+  let editingTranche = $state(null);
+  let savingTranche = $state(false);
+  const emptyTrancheForm = () => ({
+    entity_type: 'project',
+    entity_id: '',
+    title: '',
+    amount: '',
+    expenditure_type: 'capex',
+    planned_date: '',
+    status: 'proposed',
+  });
+  let trancheForm = $state(emptyTrancheForm());
+
+  function openTrancheCreate() {
+    editingTranche = null;
+    trancheForm = emptyTrancheForm();
+    error = '';
+    trancheFormOpen = true;
+  }
+
+  function openTrancheEdit(tr) {
+    editingTranche = tr;
+    trancheForm = {
+      entity_type: tr.entity_type ?? 'project',
+      entity_id: String(tr.entity_id),
+      title: tr.title ?? '',
+      amount: tr.amount != null ? String(tr.amount) : '',
+      expenditure_type: tr.expenditure_type ?? 'capex',
+      planned_date: toDateInputValue(tr.planned_date),
+      status: tr.status ?? 'proposed',
+    };
+    error = '';
+    trancheFormOpen = true;
+  }
+
+  function closeTrancheForm() {
+    trancheFormOpen = false;
+    editingTranche = null;
+  }
+
+  /** Entity options for the selected tranche entity type. */
+  const trancheEntityOptions = $derived.by(() => {
+    if (trancheForm.entity_type === 'programme') return programmeOptions;
+    if (trancheForm.entity_type === 'portfolio') return portfolios.map((pf) => ({ id: pf.id, title: pf.title }));
+    return projectOptions;
+  });
+
+  async function submitTranche() {
+    if (savingTranche) return;
+    error = '';
+    const entityId = Number(trancheForm.entity_id);
+    if (!trancheForm.title.trim()) {
+      error = t('p3m.createFailed');
+      return;
+    }
+    if (!entityId) {
+      error = t('p3m.entityRequired');
+      return;
+    }
+    const date = toISODate(trancheForm.planned_date);
+    if (!date) {
+      error = t('p3m.createFailed');
+      return;
+    }
+    savingTranche = true;
+    try {
+      const payload = {
+        entity_type: trancheForm.entity_type,
+        entity_id: entityId,
+        title: trancheForm.title.trim(),
+        amount: Number(trancheForm.amount) || 0,
+        expenditure_type: trancheForm.expenditure_type,
+        planned_date: date,
+        status: trancheForm.status,
+      };
+      if (editingTranche) await p3mApi.tranches.update(editingTranche.id, payload);
+      else await p3mApi.tranches.create(payload);
+      closeTrancheForm();
+      await load();
+    } catch (e) {
+      error = e?.message || t('p3m.updateFailed');
+    } finally {
+      savingTranche = false;
+    }
+  }
+
+  async function deleteTranche(tr) {
+    if (!(await confirm({ title: t('p3m.delete'), message: t('p3m.confirmDeleteTranche') }))) return;
+    try {
+      await p3mApi.tranches.delete(tr.id);
+      await load();
+    } catch (e) {
+      error = e?.message || t('p3m.deleteFailed');
+    }
+  }
+
   const maxForecastValue = $derived(forecast.reduce((m, p) => Math.max(m, p.capex_total ?? 0, p.opex_total ?? 0), 0));
 
-  onMount(load);
+  onMount(() => {
+    load();
+    getUsers().then((u) => (users = u || [])).catch(() => {});
+  });
 </script>
 
 {#if loading}
@@ -87,7 +370,152 @@
   <div class="space-y-6 px-6 py-4">
     <!-- Benefits -->
     <section>
-      <h2 class="mb-2 text-sm font-semibold">{t('p3m.benefits')}</h2>
+      <div class="mb-2 flex items-center justify-between">
+        <h2 class="text-sm font-semibold">{t('p3m.benefits')}</h2>
+        {#if projectOptions.length > 0 || programmeOptions.length > 0}
+          <button type="button" class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] px-2 py-1 text-xs text-[var(--color-ds-text-muted,#6b7280)] hover:text-[var(--color-ds-text,#111827)]" onclick={openBenefitCreate}>
+            <IconPlus size={14} class="inline" /> {t('p3m.newBenefit')}
+          </button>
+        {/if}
+      </div>
+
+      {#if error && !benefitFormOpen && !trancheFormOpen}
+        <div class="mb-2 rounded-md border border-red-200 bg-red-50 p-2 text-xs text-red-700">{error}</div>
+      {/if}
+
+      {#if benefitFormOpen}
+        <div class="mb-3 rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-surface-card p-3 text-xs">
+          <div class="grid grid-cols-1 gap-x-6 gap-y-2 md:grid-cols-3">
+            <label class="block md:col-span-2">
+              <span>{t('p3m.title')} *</span>
+              <input
+                class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+                value={benefitForm.title}
+                disabled={savingBenefit}
+                oninput={(e) => (benefitForm = { ...benefitForm, title: e.target.value })}
+              />
+            </label>
+
+            <label class="block">
+              <span>{t('p3m.benefitType')}</span>
+              <select
+                class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+                value={benefitForm.benefit_type}
+                disabled={savingBenefit}
+                onchange={(e) => (benefitForm = { ...benefitForm, benefit_type: e.target.value })}
+              >
+                {#each BENEFIT_TYPES as bt (bt)}
+                  <option value={bt}>{bt}</option>
+                {/each}
+              </select>
+            </label>
+
+            <label class="block">
+              <span>{t('p3m.benefitEntity')} *</span>
+              <div class="mt-0.5 flex gap-2">
+                <select
+                  class="w-28 rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+                  value={benefitForm.entity_kind}
+                  disabled={savingBenefit || (projectOptions.length === 0 && benefitForm.entity_kind === 'project') || (programmeOptions.length === 0 && benefitForm.entity_kind === 'programme')}
+                  onchange={(e) => (benefitForm = { ...benefitForm, entity_kind: e.target.value, project_id: '', programme_id: '' })}
+                >
+                  {#if projectOptions.length > 0}
+                    <option value="project">{t('p3m.projects')}</option>
+                  {/if}
+                  {#if programmeOptions.length > 0}
+                    <option value="programme">{t('p3m.programmes')}</option>
+                  {/if}
+                </select>
+                {#if benefitForm.entity_kind === 'project'}
+                  <select class="min-w-0 flex-1 rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1" value={benefitForm.project_id} disabled={savingBenefit} onchange={(e) => (benefitForm = { ...benefitForm, project_id: e.target.value })}>
+                    <option value="">{t('p3m.noSelection')}</option>
+                    {#each projectOptions as p (p.id)}
+                      <option value={p.id}>{p.title}</option>
+                    {/each}
+                  </select>
+                {:else}
+                  <select class="min-w-0 flex-1 rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1" value={benefitForm.programme_id} disabled={savingBenefit} onchange={(e) => (benefitForm = { ...benefitForm, programme_id: e.target.value })}>
+                    <option value="">{t('p3m.noSelection')}</option>
+                    {#each programmeOptions as p (p.id)}
+                      <option value={p.id}>{p.title}</option>
+                    {/each}
+                  </select>
+                {/if}
+              </div>
+            </label>
+
+            <label class="block">
+              <span>{t('p3m.owner')} *</span>
+              <select
+                class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+                value={benefitForm.owner_id}
+                disabled={savingBenefit}
+                onchange={(e) => (benefitForm = { ...benefitForm, owner_id: e.target.value })}
+              >
+                <option value="">{t('p3m.noSelection')}</option>
+                {#each users as u (u.id)}
+                  <option value={u.id}>{u.display_name || u.username}</option>
+                {/each}
+              </select>
+            </label>
+
+            <label class="block">
+              <span>{t('p3m.targetValue')}</span>
+              <input
+                type="number"
+                step="any"
+                class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+                value={benefitForm.target_value}
+                disabled={savingBenefit}
+                oninput={(e) => (benefitForm = { ...benefitForm, target_value: e.target.value })}
+              />
+            </label>
+
+            <label class="block">
+              <span>{t('p3m.baselineValue')}</span>
+              <input
+                type="number"
+                step="any"
+                class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+                value={benefitForm.baseline_value}
+                disabled={savingBenefit}
+                oninput={(e) => (benefitForm = { ...benefitForm, baseline_value: e.target.value })}
+              />
+            </label>
+
+            <label class="block">
+              <span>{t('p3m.unitOfMeasure')}</span>
+              <input
+                class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+                value={benefitForm.unit_of_measure}
+                disabled={savingBenefit}
+                oninput={(e) => (benefitForm = { ...benefitForm, unit_of_measure: e.target.value })}
+              />
+            </label>
+
+            <label class="block">
+              <span>{t('p3m.targetRealizationDate')} *</span>
+              <input
+                type="date"
+                class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+                value={benefitForm.target_realization_date}
+                disabled={savingBenefit}
+                oninput={(e) => (benefitForm = { ...benefitForm, target_realization_date: e.target.value })}
+              />
+            </label>
+          </div>
+
+          <div class="mt-3 flex items-center gap-2">
+            <button type="button" class="rounded-md bg-[var(--color-ds-accent-blue,#2563eb)] px-3 py-1 font-medium text-white disabled:opacity-50" disabled={savingBenefit} onclick={submitBenefit}>
+              {editingBenefit ? t('p3m.save') : t('p3m.create')}
+            </button>
+            <button type="button" class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] px-3 py-1 text-[var(--color-ds-text-muted,#6b7280)] hover:text-[var(--color-ds-text,#111827)]" onclick={closeBenefitForm}>
+              {t('p3m.cancel')}
+            </button>
+          </div>
+        </div>
+      {/if}
+
       {#if benefits.length === 0}
         <div class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] p-4 text-xs text-[var(--color-ds-text-muted,#6b7280)]">
           {t('p3m.noData')}
@@ -103,6 +531,7 @@
               <th class="py-1.5 pr-3">{t('p3m.baselineValue')}</th>
               <th class="py-1.5 pr-3">{t('p3m.latestRealized')}</th>
               <th class="w-28 py-1.5 pr-3"></th>
+              <th class="py-1.5 pr-3"></th>
             </tr>
           </thead>
           <tbody>
@@ -132,21 +561,53 @@
                     <div class="h-full rounded" style="width: {benefitProgress(b)}%; background: #2563eb"></div>
                   </div>
                 </td>
+                <td class="py-1.5 pr-3">
+                  <div class="flex items-center gap-1">
+                    <button type="button" class="text-[var(--color-ds-text-muted,#6b7280)] hover:text-[var(--color-ds-text,#111827)]" title={t('p3m.edit')} onclick={() => openBenefitEdit(b)}>
+                      {t('p3m.edit')}
+                    </button>
+                    <button type="button" class="text-[var(--color-ds-text-muted,#6b7280)] hover:text-red-600" title={t('p3m.delete')} onclick={() => deleteBenefit(b)}>
+                      <IconX size={14} />
+                    </button>
+                  </div>
+                </td>
               </tr>
               {#if open !== undefined}
                 <tr class="border-b border-[var(--color-ds-border,#e5e7eb)] bg-ds-surface-hovered">
                   <td></td>
-                  <td colspan="6" class="py-1.5 pr-3 pl-8">
+                  <td colspan="7" class="py-1.5 pr-3 pl-8">
+                    <div class="mb-2 flex items-center gap-2">
+                      <input
+                        type="number"
+                        step="any"
+                        class="w-32 rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-0.5"
+                        placeholder={t('p3m.realizedValue')}
+                        value={realizationDraft(b.id).value}
+                        oninput={(e) => (realizationForms[b.id] = { ...realizationDraft(b.id), value: e.target.value })}
+                      />
+                      <input
+                        class="w-48 rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-0.5"
+                        placeholder={t('p3m.notes')}
+                        value={realizationDraft(b.id).notes}
+                        oninput={(e) => (realizationForms[b.id] = { ...realizationDraft(b.id), notes: e.target.value })}
+                      />
+                      <button type="button" class="rounded-md bg-[var(--color-ds-accent-blue,#2563eb)] px-2 py-0.5 font-medium text-white disabled:opacity-40" disabled={savingRealizationId === b.id || realizationDraft(b.id).value === ''} onclick={() => recordRealization(b)}>
+                        {t('p3m.newRealization')}
+                      </button>
+                    </div>
                     {#if open.length === 0}
                       <span class="text-[var(--color-ds-text-muted,#6b7280)]">{t('p3m.noData')}</span>
                     {:else}
-                      {#each [...open].sort((x, y) => (x.recorded_at > y.recorded_at ? -1 : 1)) as r (r.id)}
+                      {#each [...open].sort((x, y) => (x.recorded_date > y.recorded_date ? -1 : 1)) as r (r.id)}
                         <div class="flex items-center gap-3 py-0.5">
-                          <span>{formatDate(r.recorded_at)}</span>
+                          <span>{formatDate(r.recorded_date)}</span>
                           <span class="font-medium">{formatMoney(r.realized_value)}</span>
                           {#if r.notes}
                             <span class="text-[var(--color-ds-text-muted,#6b7280)]">{r.notes}</span>
                           {/if}
+                          <button type="button" class="ml-auto text-[var(--color-ds-text-muted,#6b7280)] hover:text-red-600" title={t('p3m.delete')} onclick={() => deleteRealization(b, r)}>
+                            <IconX size={12} />
+                          </button>
                         </div>
                       {/each}
                     {/if}
@@ -161,7 +622,116 @@
 
     <!-- Tranches -->
     <section>
-      <h2 class="mb-2 text-sm font-semibold">{t('p3m.tranches')}</h2>
+      <div class="mb-2 flex items-center justify-between">
+        <h2 class="text-sm font-semibold">{t('p3m.tranches')}</h2>
+        {#if portfolios.length > 0}
+          <button type="button" class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] px-2 py-1 text-xs text-[var(--color-ds-text-muted,#6b7280)] hover:text-[var(--color-ds-text,#111827)]" onclick={openTrancheCreate}>
+            <IconPlus size={14} class="inline" /> {t('p3m.addTranche')}
+          </button>
+        {/if}
+      </div>
+
+      {#if trancheFormOpen}
+        <div class="mb-3 rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-surface-card p-3 text-xs">
+          <div class="grid grid-cols-1 gap-x-6 gap-y-2 md:grid-cols-3">
+            <label class="block">
+              <span>{t('p3m.entityType')} *</span>
+              <div class="mt-0.5 flex gap-2">
+                <select
+                  class="w-28 rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+                  value={trancheForm.entity_type}
+                  disabled={savingTranche || (projectOptions.length === 0 && trancheForm.entity_type === 'project') || (programmeOptions.length === 0 && trancheForm.entity_type === 'programme')}
+                  onchange={(e) => (trancheForm = { ...trancheForm, entity_type: e.target.value, entity_id: '' })}
+                >
+                  <option value="portfolio">{t('p3m.portfolios')}</option>
+                  {#if programmeOptions.length > 0}
+                    <option value="programme">{t('p3m.programmes')}</option>
+                  {/if}
+                  {#if projectOptions.length > 0}
+                    <option value="project">{t('p3m.projects')}</option>
+                  {/if}
+                </select>
+                <select class="min-w-0 flex-1 rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1" value={trancheForm.entity_id} disabled={savingTranche} onchange={(e) => (trancheForm = { ...trancheForm, entity_id: e.target.value })}>
+                  <option value="">{t('p3m.noSelection')}</option>
+                  {#each trancheEntityOptions as p (p.id)}
+                    <option value={p.id}>{p.title}</option>
+                  {/each}
+                </select>
+              </div>
+            </label>
+
+            <label class="block md:col-span-2">
+              <span>{t('p3m.title')} *</span>
+              <input
+                class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+                value={trancheForm.title}
+                disabled={savingTranche}
+                oninput={(e) => (trancheForm = { ...trancheForm, title: e.target.value })}
+              />
+            </label>
+
+            <label class="block">
+              <span>{t('p3m.amount')}</span>
+              <input
+                type="number"
+                step="any"
+                class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+                value={trancheForm.amount}
+                disabled={savingTranche}
+                oninput={(e) => (trancheForm = { ...trancheForm, amount: e.target.value })}
+              />
+            </label>
+
+            <label class="block">
+              <span>{t('p3m.expenditureType')}</span>
+              <select
+                class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+                value={trancheForm.expenditure_type}
+                disabled={savingTranche}
+                onchange={(e) => (trancheForm = { ...trancheForm, expenditure_type: e.target.value })}
+              >
+                <option value="capex">{t('p3m.capex')}</option>
+                <option value="opex">{t('p3m.opex')}</option>
+              </select>
+            </label>
+
+            <label class="block">
+              <span>{t('p3m.plannedDate')} *</span>
+              <input
+                type="date"
+                class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+                value={trancheForm.planned_date}
+                disabled={savingTranche}
+                oninput={(e) => (trancheForm = { ...trancheForm, planned_date: e.target.value })}
+              />
+            </label>
+
+            <label class="block">
+              <span>{t('p3m.trancheStatus')}</span>
+              <select
+                class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+                value={trancheForm.status}
+                disabled={savingTranche}
+                onchange={(e) => (trancheForm = { ...trancheForm, status: e.target.value })}
+              >
+                <option value="proposed">{t('p3m.trancheProposed')}</option>
+                <option value="approved">{t('p3m.trancheApproved')}</option>
+                <option value="released">{t('p3m.trancheReleased')}</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="mt-3 flex items-center gap-2">
+            <button type="button" class="rounded-md bg-[var(--color-ds-accent-blue,#2563eb)] px-3 py-1 font-medium text-white disabled:opacity-50" disabled={savingTranche} onclick={submitTranche}>
+              {editingTranche ? t('p3m.save') : t('p3m.create')}
+            </button>
+            <button type="button" class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] px-3 py-1 text-[var(--color-ds-text-muted,#6b7280)] hover:text-[var(--color-ds-text,#111827)]" onclick={closeTrancheForm}>
+              {t('p3m.cancel')}
+            </button>
+          </div>
+        </div>
+      {/if}
+
       {#if tranches.length === 0}
         <div class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] p-4 text-xs text-[var(--color-ds-text-muted,#6b7280)]">
           {t('p3m.noData')}
@@ -176,6 +746,7 @@
               <th class="py-1.5 pr-3">{t('p3m.expenditureType')}</th>
               <th class="py-1.5 pr-3">{t('p3m.plannedDate')}</th>
               <th class="py-1.5 pr-3">Status</th>
+              <th class="py-1.5 pr-3"></th>
             </tr>
           </thead>
           <tbody>
@@ -191,6 +762,16 @@
                 </td>
                 <td class="py-1.5 pr-3">{formatDate(tr.planned_date)}</td>
                 <td class="py-1.5 pr-3 capitalize">{tr.status}</td>
+                <td class="py-1.5 pr-3">
+                  <div class="flex items-center gap-1">
+                    <button type="button" class="text-[var(--color-ds-text-muted,#6b7280)] hover:text-[var(--color-ds-text,#111827)]" title={t('p3m.edit')} onclick={() => openTrancheEdit(tr)}>
+                      {t('p3m.edit')}
+                    </button>
+                    <button type="button" class="text-[var(--color-ds-text-muted,#6b7280)] hover:text-red-600" title={t('p3m.delete')} onclick={() => deleteTranche(tr)}>
+                      <IconX size={14} />
+                    </button>
+                  </div>
+                </td>
               </tr>
             {/each}
           </tbody>

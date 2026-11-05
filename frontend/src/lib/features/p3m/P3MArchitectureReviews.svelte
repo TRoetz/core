@@ -117,9 +117,9 @@
     }
     saving = true;
     try {
+      // No GET /{id} endpoint exists for architecture reviews; refresh the list.
       await p3mApi.architectureReviews.update(review.id, { architecture_page_id: pageId });
-      const fresh = (await p3mApi.architectureReviews.get(review.id)) ?? null;
-      reviews = reviews.map((r) => (r.id === review.id ? fresh : r));
+      await load();
     } catch (e) {
       error = e?.message || t('p3m.createFailed');
     } finally {
