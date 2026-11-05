@@ -91,9 +91,11 @@ export const sms = {
   createLink: (data) => post('/sms/links', data),
   deleteLink: (id) => del(`/sms/links/${id}`),
 
-  // Ownership transfers (handover).
+  // Ownership transfers (handover). Completing all three review checkboxes
+  // finalises the transfer server-side and moves ownership.
   getTransfers: (stakeholderId) => fetchAPI(`/sms/stakeholders/${stakeholderId}/transfers`),
   createTransfer: (stakeholderId, data) => post(`/sms/stakeholders/${stakeholderId}/transfers`, data),
+  updateTransfer: (id, data) => put(`/sms/transfers/${id}`, data),
 
   // Tasks, feedback and relationship goals.
   tasks: createCrudClient('/tasks', {

@@ -2,8 +2,12 @@
   import { onMount } from 'svelte';
   import { t } from '../../stores/i18n.svelte.js';
   import { p3m as p3mApi } from '../../api/p3m.js';
+  import { getUsers } from '../../api/users.js';
   import EmptyState from '../../components/EmptyState.svelte';
-  import { formatMoney, formatDate } from './utils.js';
+  import IconPlus from '@tabler/icons-svelte-runes/icons/plus';
+  import IconX from '@tabler/icons-svelte-runes/icons/x';
+  import { confirm } from '../../composables/useConfirm.js';
+  import { formatMoney, formatDate, toISODate, toDateInputValue } from './utils.js';
 
   let { portfolios = [] } = $props();
 
@@ -13,6 +17,9 @@
   let loading = $state(true);
   let error = $state('');
 
+  /** @type {Array<{id:number,display_name?:string,username?:string}>} */
+  let users = $state([]);
+
   const resourceNameById = $derived(new Map(resources.map((r) => [r.id, r.name])));
 
   const projectTitleById = $derived.by(() => {
@@ -21,9 +28,13 @@
       for (const pg of pf.programmes ?? []) {
         for (const pr of pg.projects ?? []) m.set(pr.id, `${pf.title} › ${pg.title} › ${pr.title}`);
       }
+      for (const pr of pf.standalone_projects ?? []) m.set(pr.id, `${pf.title} › ${pr.title}`);
     }
     return m;
   });
+
+  /** Flat project picker options for allocations. */
+  const projectOptions = $derived.by(() => [...projectTitleById].map(([id, title]) => ({ id, title })));
 
   /** Distinct months present in capacity rows, sorted. */
   const months = $derived.by(() => {
@@ -66,7 +77,160 @@
     }
   }
 
-  onMount(load);
+  // --- Resource create / edit ---------------------------------------------------
+  let resourceFormOpen = $state(false);
+  /** Resource being edited in place, or null when creating. */
+  let editingResource = $state(null);
+  let savingResource = $state(false);
+  const emptyResourceForm = () => ({ name: '', user_id: '', skills: '', cost_rate: '', capacity_hours_per_week: '' });
+  let resourceForm = $state(emptyResourceForm());
+
+  function openResourceCreate() {
+    editingResource = null;
+    resourceForm = emptyResourceForm();
+    error = '';
+    resourceFormOpen = true;
+  }
+
+  function openResourceEdit(r) {
+    editingResource = r;
+    resourceForm = {
+      name: r.name ?? '',
+      user_id: r.user_id != null ? String(r.user_id) : '',
+      skills: (r.skills ?? []).join(', '),
+      cost_rate: r.cost_rate != null ? String(r.cost_rate) : '',
+      capacity_hours_per_week: r.capacity_hours_per_week != null ? String(r.capacity_hours_per_week) : '',
+    };
+    error = '';
+    resourceFormOpen = true;
+  }
+
+  function closeResourceForm() {
+    resourceFormOpen = false;
+    editingResource = null;
+  }
+
+  async function submitResource() {
+    if (savingResource) return;
+    error = '';
+    if (!resourceForm.name.trim()) {
+      error = t('p3m.createFailed');
+      return;
+    }
+    savingResource = true;
+    try {
+      const payload = {
+        name: resourceForm.name.trim(),
+        user_id: resourceForm.user_id ? Number(resourceForm.user_id) : null,
+        skills: resourceForm.skills.split(',').map((s) => s.trim()).filter(Boolean),
+        cost_rate: Number(resourceForm.cost_rate) || 0,
+        capacity_hours_per_week: Math.max(0, Math.round(Number(resourceForm.capacity_hours_per_week) || 0)),
+      };
+      if (editingResource) await p3mApi.resources.update(editingResource.id, payload);
+      else await p3mApi.resources.create(payload);
+      closeResourceForm();
+      await load();
+    } catch (e) {
+      error = e?.message || t('p3m.updateFailed');
+    } finally {
+      savingResource = false;
+    }
+  }
+
+  async function deleteResource(r) {
+    if (!(await confirm({ title: t('p3m.delete'), message: t('p3m.confirmDeleteResource') }))) return;
+    try {
+      await p3mApi.resources.delete(r.id);
+      await load();
+    } catch (e) {
+      error = e?.message || t('p3m.deleteFailed');
+    }
+  }
+
+  // --- Allocation create / edit ----------------------------------------------------
+  let allocationFormOpen = $state(false);
+  /** Allocation being edited in place, or null when creating. */
+  let editingAllocation = $state(null);
+  let savingAllocation = $state(false);
+  const emptyAllocationForm = () => ({ resource_id: '', project_id: '', start_date: '', end_date: '', hours_per_week: '', booking_type: 'soft' });
+  let allocationForm = $state(emptyAllocationForm());
+
+  function openAllocationCreate() {
+    editingAllocation = null;
+    allocationForm = emptyAllocationForm();
+    error = '';
+    allocationFormOpen = true;
+  }
+
+  function openAllocationEdit(a) {
+    editingAllocation = a;
+    allocationForm = {
+      resource_id: String(a.resource_id),
+      project_id: a.project_id != null ? String(a.project_id) : '',
+      start_date: toDateInputValue(a.start_date),
+      end_date: toDateInputValue(a.end_date),
+      hours_per_week: a.hours_per_week != null ? String(a.hours_per_week) : '',
+      booking_type: a.booking_type ?? 'soft',
+    };
+    error = '';
+    allocationFormOpen = true;
+  }
+
+  function closeAllocationForm() {
+    allocationFormOpen = false;
+    editingAllocation = null;
+  }
+
+  async function submitAllocation() {
+    if (savingAllocation) return;
+    error = '';
+    const resourceId = Number(allocationForm.resource_id);
+    const projectId = Number(allocationForm.project_id);
+    if (!resourceId || !projectId) {
+      error = t('p3m.entityRequired');
+      return;
+    }
+    const start = toISODate(allocationForm.start_date);
+    const end = toISODate(allocationForm.end_date);
+    if (!start || !end) {
+      error = t('p3m.createFailed');
+      return;
+    }
+    savingAllocation = true;
+    try {
+      const payload = {
+        resource_id: resourceId,
+        project_id: projectId,
+        start_date: start,
+        end_date: end,
+        hours_per_week: Math.max(0, Math.round(Number(allocationForm.hours_per_week) || 0)),
+        booking_type: allocationForm.booking_type,
+      };
+      if (editingAllocation) await p3mApi.resourceAllocations.update(editingAllocation.id, payload);
+      else await p3mApi.resourceAllocations.create(payload);
+      closeAllocationForm();
+      await load();
+    } catch (e) {
+      error = e?.message || t('p3m.updateFailed');
+    } finally {
+      savingAllocation = false;
+    }
+  }
+
+  async function deleteAllocation(a) {
+    if (!(await confirm({ title: t('p3m.delete'), message: t('p3m.confirmDeleteAllocation') }))) return;
+    try {
+      await p3mApi.resourceAllocations.delete(a.id);
+      await load();
+    } catch (e) {
+      error = e?.message || t('p3m.deleteFailed');
+    }
+  }
+
+  onMount(() => {
+    load();
+    getUsers().then((u) => (users = u || [])).catch(() => {});
+  });
 </script>
 
 {#if loading}
@@ -79,7 +243,95 @@
   <div class="space-y-6 px-6 py-4">
     <!-- Resource inventory -->
     <section>
-      <h2 class="mb-2 text-sm font-semibold">{t('p3m.resources')}</h2>
+      <div class="mb-2 flex items-center justify-between">
+        <h2 class="text-sm font-semibold">{t('p3m.resources')}</h2>
+        <button type="button" class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] px-2 py-1 text-xs text-[var(--color-ds-text-muted,#6b7280)] hover:text-[var(--color-ds-text,#111827)]" onclick={openResourceCreate}>
+          <IconPlus size={14} class="inline" /> {t('p3m.newResource')}
+        </button>
+      </div>
+
+      {#if error && !resourceFormOpen && !allocationFormOpen}
+        <div class="mb-2 rounded-md border border-red-200 bg-red-50 p-2 text-xs text-red-700">{error}</div>
+      {/if}
+
+      {#if resourceFormOpen}
+        <div class="mb-3 rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-surface-card p-3 text-xs">
+          <div class="grid grid-cols-1 gap-x-6 gap-y-2 md:grid-cols-4">
+            <label class="block">
+              <span>{t('p3m.title')} *</span>
+              <input
+                class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+                value={resourceForm.name}
+                disabled={savingResource}
+                oninput={(e) => (resourceForm = { ...resourceForm, name: e.target.value })}
+              />
+            </label>
+
+            <label class="block">
+              <span>{t('p3m.owner')}</span>
+              <select
+                class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+                value={resourceForm.user_id}
+                disabled={savingResource}
+                onchange={(e) => (resourceForm = { ...resourceForm, user_id: e.target.value })}
+              >
+                <option value="">{t('p3m.noSelection')}</option>
+                {#each users as u (u.id)}
+                  <option value={u.id}>{u.display_name || u.username}</option>
+                {/each}
+              </select>
+            </label>
+
+            <label class="block">
+              <span>{t('p3m.skills')}</span>
+              <input
+                class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+                placeholder="Go, SQL, K8s"
+                value={resourceForm.skills}
+                disabled={savingResource}
+                oninput={(e) => (resourceForm = { ...resourceForm, skills: e.target.value })}
+              />
+            </label>
+
+            <div class="grid grid-cols-2 gap-x-3">
+              <label class="block">
+                <span>{t('p3m.costRate')}</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="any"
+                  class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+                  value={resourceForm.cost_rate}
+                  disabled={savingResource}
+                  oninput={(e) => (resourceForm = { ...resourceForm, cost_rate: e.target.value })}
+                />
+              </label>
+              <label class="block">
+                <span>{t('p3m.capacityHoursPerWeek')}</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+                  value={resourceForm.capacity_hours_per_week}
+                  disabled={savingResource}
+                  oninput={(e) => (resourceForm = { ...resourceForm, capacity_hours_per_week: e.target.value })}
+                />
+              </label>
+            </div>
+          </div>
+
+          <div class="mt-3 flex items-center gap-2">
+            <button type="button" class="rounded-md bg-[var(--color-ds-accent-blue,#2563eb)] px-3 py-1 font-medium text-white disabled:opacity-50" disabled={savingResource} onclick={submitResource}>
+              {editingResource ? t('p3m.save') : t('p3m.create')}
+            </button>
+            <button type="button" class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] px-3 py-1 text-[var(--color-ds-text-muted,#6b7280)] hover:text-[var(--color-ds-text,#111827)]" onclick={closeResourceForm}>
+              {t('p3m.cancel')}
+            </button>
+          </div>
+        </div>
+      {/if}
+
       {#if resources.length === 0}
         <div class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] p-4 text-xs text-[var(--color-ds-text-muted,#6b7280)]">
           {t('p3m.noData')}
@@ -92,6 +344,7 @@
               <th class="py-1.5 pr-3">{t('p3m.skills')}</th>
               <th class="py-1.5 pr-3">{t('p3m.costRate')}</th>
               <th class="py-1.5 pr-3">{t('p3m.capacityHoursPerWeek')}</th>
+              <th class="py-1.5 pr-3"></th>
             </tr>
           </thead>
           <tbody>
@@ -105,6 +358,16 @@
                 </td>
                 <td class="py-1.5 pr-3">{formatMoney(r.cost_rate)}/h</td>
                 <td class="py-1.5 pr-3">{r.capacity_hours_per_week} h</td>
+                <td class="py-1.5 pr-3">
+                  <div class="flex items-center gap-1">
+                    <button type="button" class="text-[var(--color-ds-text-muted,#6b7280)] hover:text-[var(--color-ds-text,#111827)]" title={t('p3m.edit')} onclick={() => openResourceEdit(r)}>
+                      {t('p3m.edit')}
+                    </button>
+                    <button type="button" class="text-[var(--color-ds-text-muted,#6b7280)] hover:text-red-600" title={t('p3m.delete')} onclick={() => deleteResource(r)}>
+                      <IconX size={14} />
+                    </button>
+                  </div>
+                </td>
               </tr>
             {/each}
           </tbody>
@@ -114,7 +377,110 @@
 
     <!-- Allocations -->
     <section>
-      <h2 class="mb-2 text-sm font-semibold">{t('p3m.allocations')}</h2>
+      <div class="mb-2 flex items-center justify-between">
+        <h2 class="text-sm font-semibold">{t('p3m.allocations')}</h2>
+        {#if resources.length > 0 && projectOptions.length > 0}
+          <button type="button" class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] px-2 py-1 text-xs text-[var(--color-ds-text-muted,#6b7280)] hover:text-[var(--color-ds-text,#111827)]" onclick={openAllocationCreate}>
+            <IconPlus size={14} class="inline" /> {t('p3m.newAllocation')}
+          </button>
+        {/if}
+      </div>
+
+      {#if allocationFormOpen}
+        <div class="mb-3 rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-surface-card p-3 text-xs">
+          <div class="grid grid-cols-1 gap-x-6 gap-y-2 md:grid-cols-4">
+            <label class="block">
+              <span>{t('p3m.resources')} *</span>
+              <select
+                class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+                value={allocationForm.resource_id}
+                disabled={savingAllocation}
+                onchange={(e) => (allocationForm = { ...allocationForm, resource_id: e.target.value })}
+              >
+                <option value="">{t('p3m.noSelection')}</option>
+                {#each resources as r (r.id)}
+                  <option value={r.id}>{r.name}</option>
+                {/each}
+              </select>
+            </label>
+
+            <label class="block">
+              <span>{t('p3m.projects')} *</span>
+              <select
+                class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+                value={allocationForm.project_id}
+                disabled={savingAllocation}
+                onchange={(e) => (allocationForm = { ...allocationForm, project_id: e.target.value })}
+              >
+                <option value="">{t('p3m.noSelection')}</option>
+                {#each projectOptions as p (p.id)}
+                  <option value={p.id}>{p.title}</option>
+                {/each}
+              </select>
+            </label>
+
+            <div class="grid grid-cols-2 gap-x-3">
+              <label class="block">
+                <span>{t('p3m.startDate')} *</span>
+                <input
+                  type="date"
+                  class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+                  value={allocationForm.start_date}
+                  disabled={savingAllocation}
+                  oninput={(e) => (allocationForm = { ...allocationForm, start_date: e.target.value })}
+                />
+              </label>
+              <label class="block">
+                <span>{t('p3m.endDate')} *</span>
+                <input
+                  type="date"
+                  class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+                  value={allocationForm.end_date}
+                  disabled={savingAllocation}
+                  oninput={(e) => (allocationForm = { ...allocationForm, end_date: e.target.value })}
+                />
+              </label>
+            </div>
+
+            <div class="grid grid-cols-2 gap-x-3">
+              <label class="block">
+                <span>{t('p3m.hoursPerWeek')}</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+                  value={allocationForm.hours_per_week}
+                  disabled={savingAllocation}
+                  oninput={(e) => (allocationForm = { ...allocationForm, hours_per_week: e.target.value })}
+                />
+              </label>
+              <label class="block">
+                <span>{t('p3m.bookingType')}</span>
+                <select
+                  class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+                  value={allocationForm.booking_type}
+                  disabled={savingAllocation}
+                  onchange={(e) => (allocationForm = { ...allocationForm, booking_type: e.target.value })}
+                >
+                  <option value="soft">soft</option>
+                  <option value="hard">hard</option>
+                </select>
+              </label>
+            </div>
+          </div>
+
+          <div class="mt-3 flex items-center gap-2">
+            <button type="button" class="rounded-md bg-[var(--color-ds-accent-blue,#2563eb)] px-3 py-1 font-medium text-white disabled:opacity-50" disabled={savingAllocation} onclick={submitAllocation}>
+              {editingAllocation ? t('p3m.save') : t('p3m.create')}
+            </button>
+            <button type="button" class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] px-3 py-1 text-[var(--color-ds-text-muted,#6b7280)] hover:text-[var(--color-ds-text,#111827)]" onclick={closeAllocationForm}>
+              {t('p3m.cancel')}
+            </button>
+          </div>
+        </div>
+      {/if}
+
       {#if allocations.length === 0}
         <div class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] p-4 text-xs text-[var(--color-ds-text-muted,#6b7280)]">
           {t('p3m.noData')}
@@ -128,6 +494,7 @@
               <th class="py-1.5 pr-3">{t('p3m.startDate')} → {t('p3m.endDate')}</th>
               <th class="py-1.5 pr-3">{t('p3m.hoursPerWeek')}</th>
               <th class="py-1.5 pr-3">{t('p3m.bookingType')}</th>
+              <th class="py-1.5 pr-3"></th>
             </tr>
           </thead>
           <tbody>
@@ -141,6 +508,16 @@
                   <span class={a.booking_type === 'hard' ? 'rounded bg-blue-100 px-1.5 py-0.5 text-[10px] text-blue-700' : 'rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-600'}>
                     {a.booking_type}
                   </span>
+                </td>
+                <td class="py-1.5 pr-3">
+                  <div class="flex items-center gap-1">
+                    <button type="button" class="text-[var(--color-ds-text-muted,#6b7280)] hover:text-[var(--color-ds-text,#111827)]" title={t('p3m.edit')} onclick={() => openAllocationEdit(a)}>
+                      {t('p3m.edit')}
+                    </button>
+                    <button type="button" class="text-[var(--color-ds-text-muted,#6b7280)] hover:text-red-600" title={t('p3m.delete')} onclick={() => deleteAllocation(a)}>
+                      <IconX size={14} />
+                    </button>
+                  </div>
                 </td>
               </tr>
             {/each}

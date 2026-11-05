@@ -24,6 +24,11 @@
   let savingLinks = $state(false);
   let linksSaved = $state(false);
 
+  /** @type {Array<{id:number,label:string,snapshot:Record<string,any>,created_at:string}>} */
+  let baselines = $state([]);
+  let baselineLabel = $state('');
+  let savingBaseline = $state(false);
+
   const timeProjectName = $derived(rollup?.time_project?.name ?? '');
 
   async function load() {
@@ -34,19 +39,43 @@
     checkedWorkspaceIds = new Set();
     linksSaved = false;
     try {
-      const [r, tps, wss] = await Promise.all([
+      const [r, tps, wss, bls] = await Promise.all([
         p3mApi.getProjectRollup(project.id),
         time.projects.getAll().catch(() => []),
         wsApi.getAll().catch(() => []),
+        p3mApi.getProjectBaselines(project.id).catch(() => []),
       ]);
       rollup = r ?? null;
       timeProjects = Array.isArray(tps) ? tps : [];
       allWorkspaces = Array.isArray(wss) ? wss : [];
       checkedWorkspaceIds = new Set((r?.workspaces ?? []).map((w) => w.id));
+      baselines = Array.isArray(bls) ? bls : [];
     } catch (e) {
       error = e?.message || 'error';
     } finally {
       loadingRollup = false;
+    }
+  }
+
+  async function takeBaseline() {
+    if (!project || savingBaseline) return;
+    const label = baselineLabel.trim();
+    if (!label) {
+      error = t('p3m.labelRequired');
+      return;
+    }
+    savingBaseline = true;
+    error = '';
+    try {
+      await p3mApi.createProjectBaseline(project.id, { label });
+      baselineLabel = '';
+      const bls = await p3mApi.getProjectBaselines(project.id);
+      baselines = Array.isArray(bls) ? bls : [];
+      onChanged();
+    } catch (e) {
+      error = e?.message || 'error';
+    } finally {
+      savingBaseline = false;
     }
   }
 
@@ -185,6 +214,49 @@
             <tr class="border-b border-[var(--color-ds-border,#e5e7eb)] last:border-0">
               <td class="py-1 pr-3 text-[var(--color-ds-text-muted,#6b7280)]">{row.label}</td>
               <td class="py-1 font-medium">{row.value}</td>
+            </tr>
+          {/each}
+        </tbody>
+      </table>
+    {/if}
+
+    <!-- Baselines: immutable snapshots of budget/schedule at a point in time -->
+    <h3 class="mb-1 mt-4 font-semibold">{t('p3m.baselines')}</h3>
+    <div class="flex items-end gap-2">
+      <label class="block w-56">
+        <span class="text-[var(--color-ds-text-muted,#6b7280)]">{t('p3m.baselineLabel')}</span>
+        <input
+          type="text"
+          class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+          placeholder={t('p3m.baselineLabel')}
+          value={baselineLabel}
+          disabled={savingBaseline}
+          oninput={(e) => (baselineLabel = e.target.value)}
+        />
+      </label>
+      <button type="button" class="rounded-md bg-[var(--color-ds-accent-blue,#2563eb)] px-3 py-1 font-medium text-white disabled:opacity-50" disabled={savingBaseline} onclick={takeBaseline}>
+        {t('p3m.takeBaseline')}
+      </button>
+    </div>
+    {#if baselines.length === 0}
+      <div class="mt-2 rounded-md border border-[var(--color-ds-border,#e5e7eb)] p-3 text-[var(--color-ds-text-muted,#6b7280)]">{t('p3m.noBaselines')}</div>
+    {:else}
+      <table class="mt-2 w-full max-w-lg text-left">
+        <thead>
+          <tr class="border-b border-[var(--color-ds-border,#e5e7eb)] text-[var(--color-ds-text-muted,#6b7280)]">
+            <th class="py-1.5 pr-3">{t('p3m.baselineLabel')}</th>
+            <th class="py-1.5 pr-3">{t('p3m.budgetApproved')}</th>
+            <th class="py-1.5 pr-3">{t('p3m.progressPercent')}</th>
+            <th class="py-1.5 pr-3">{t('p3m.capturedAt')}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {#each baselines as b (b.id)}
+            <tr class="border-b border-[var(--color-ds-border,#e5e7eb)] last:border-0">
+              <td class="py-1.5 pr-3">{b.label}</td>
+              <td class="py-1.5 pr-3">{formatMoney(b.snapshot?.budget_approved ?? 0)}</td>
+              <td class="py-1.5 pr-3">{b.snapshot?.progress_percent ?? 0}%</td>
+              <td class="py-1.5 pr-3">{formatDate(b.created_at) || t('p3m.notSet')}</td>
             </tr>
           {/each}
         </tbody>

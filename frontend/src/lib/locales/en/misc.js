@@ -1094,6 +1094,15 @@ export default {
     noTrust: '— not assessed —',
     riskRating: 'Risk rating',
     noRisk: '— not rated —',
+    trustVeryHigh: 'Very high',
+    trustHigh: 'High',
+    trustModerate: 'Moderate',
+    trustLow: 'Low',
+    trustCritical: 'Critical',
+    riskLow: 'Low',
+    riskMedium: 'Medium',
+    riskHigh: 'High',
+    riskCritical: 'Critical',
     backupOwner: 'Backup owner',
     executiveSponsor: 'Executive sponsor',
     nextEngagement: 'Next engagement (planned)',
@@ -1258,6 +1267,31 @@ export default {
     duplicatesInFile: '{count} rows match existing stakeholders',
     importedSummary: 'Imported — created {created}, updated {updated}, skipped {skipped}',
     templatesCatalog: 'Template artifacts',
+    // Register management (create / delete / merge).
+    newStakeholder: 'New stakeholder',
+    createStakeholder: 'Create stakeholder',
+    nameRequired: 'Name is required.',
+    createdOpenDetail: 'Created — open profile?',
+    deleteTitle: 'Delete stakeholder',
+    deleteMessage: 'This permanently removes {name} and all of their communications, plans, issues, commitments, grievances, decisions, tasks, feedback and goals. This cannot be undone.',
+    duplicatesPanel: 'Duplicate candidates',
+    checkDuplicates: 'Check for duplicates',
+    noDuplicates: 'No duplicate candidates found.',
+    mergeKeep: 'Keep (target)',
+    mergeNow: 'Merge into selected',
+    mergeFoldIn: 'Merge {source} into {target}',
+    mergeConfirmTitle: 'Merge stakeholders',
+    mergeConfirmMessage: 'Every sub-resource of {source} is re-pointed to {target}; the source record is then deleted. This cannot be undone.',
+    // Group management.
+    editGroup: 'Edit group',
+    saveGroup: 'Save group',
+    membersList: 'Members',
+    noMembers: 'No members yet.',
+    addMemberPlaceholder: 'Add member…',
+    removeMember: 'Remove from group',
+    // Ownership transfer progression.
+    completedAt: 'Completed',
+    reviewHint: 'Tick all three review boxes to finalise the handover and move ownership.',
   },
 
   plans: {
@@ -1602,6 +1636,7 @@ export default {
     targetValue: 'Target value',
     unitOfMeasure: 'Unit of measure',
     baselineValue: 'Baseline value',
+    targetRealizationDate: 'Target realization date',
     latestRealized: 'Latest realized',
     realizations: 'Realizations',
     recordedDate: 'Recorded date',
@@ -1665,10 +1700,93 @@ export default {
     demand: 'Demand',
     capacity: 'Capacity',
 
+    // Edit / delete actions (all tabs)
+    edit: 'Edit',
+    delete: 'Delete',
+    add: 'Add',
+    updateFailed: 'Update failed',
+    deleteFailed: 'Deletion failed',
+    confirmDeletePortfolio: 'Delete this portfolio? All programmes, projects and their records are removed.',
+    confirmDeleteProgramme: 'Delete this programme? Its projects are removed as well.',
+    confirmDeleteProject: 'Delete this project? Benefits, risks, gates and baselines attached to it are removed.',
+    confirmDeleteBenefit: 'Delete this benefit and its realization history?',
+    confirmDeleteTranche: 'Delete this tranche?',
+    confirmDeleteResource: 'Delete this resource? Its allocations are removed as well.',
+    confirmDeleteAllocation: 'Delete this allocation?',
+    confirmDeleteRaidItem: 'Delete this RAID item?',
+    confirmDeleteCommunication: 'Delete this log entry?',
+
+    // Stage gates (governance)
+    newGate: 'New gate',
+    projectRequired: 'Select a project',
+    stageRequired: 'Select the target stage',
+    addArtifact: 'Add artifact',
+    artifactName: 'Artifact name',
+    linkOrNote: 'Link / note',
+    passGate: 'Pass',
+    rejectGate: 'Reject',
+
+    // RACI (governance)
+    raciUser: 'User',
+    raciRole: 'RACI role',
+    roleResponsible: 'Responsible',
+    roleAccountable: 'Accountable',
+    roleConsulted: 'Consulted',
+    roleInformed: 'Informed',
+    addAssignment: 'Add assignment',
+    userRequired: 'Select a user',
+
+    // Budget approvals (governance)
+    newBudgetRequest: 'New budget request',
+    decisionNotes: 'Decision notes',
+
+    // Benefits & financials
+    newBenefit: 'New benefit',
+    editBenefit: 'Edit benefit',
+    benefitEntity: 'Linked entity (project or programme)',
+    ownerRequired: 'Select an owner',
+    newRealization: 'Record realization',
+    addTranche: 'Add tranche',
+    editTranche: 'Edit tranche',
+    trancheStatus: 'Status',
+    trancheProposed: 'Proposed',
+    trancheApproved: 'Approved',
+    trancheReleased: 'Released',
+
+    // Baselines (project detail)
+    baselines: 'Baselines',
+    takeBaseline: 'Take baseline',
+    baselineLabel: 'Label',
+    labelRequired: 'Label is required',
+    noBaselines: 'No baselines recorded yet.',
+    capturedAt: 'Captured',
+
+    // RAID actions (risk tab)
+    escalate: 'Escalate',
+    newRaidItem: 'New RAID item',
+
+    // Communications log (risk tab)
+    addCommunication: 'Log communication',
+    channelMeeting: 'Meeting',
+    channelWorkshop: 'Workshop',
+    channelConsultation: 'Consultation',
+    channelReport: 'Report',
+    channelEmail: 'Email',
+    channelOther: 'Other',
+
+    // Resources tab
+    newResource: 'New resource',
+    editResource: 'Edit resource',
+    skillsHint: 'Comma-separated skills',
+    linkedUser: 'Linked user',
+    newAllocation: 'Add allocation',
+    editAllocation: 'Edit allocation',
+
     // Common
     notSet: '—',
     entityType: 'Entity',
     amount: 'Amount',
+    invalidAmount: 'Enter a valid non-negative amount',
   },
 
   assets: {

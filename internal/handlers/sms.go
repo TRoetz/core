@@ -518,6 +518,16 @@ func (h *SMSHandler) CreateStakeholder(w http.ResponseWriter, r *http.Request) {
 		respondBadRequest(w, r, "name is required")
 		return
 	}
+	// Nullable string fields follow update semantics: an explicit "" means unset (NULL).
+	if in.ExternalID != nil && *in.ExternalID == "" {
+		in.ExternalID = nil
+	}
+	if in.StakeholderType != nil && *in.StakeholderType == "" {
+		in.StakeholderType = nil
+	}
+	if in.RiskRating != nil && *in.RiskRating == "" {
+		in.RiskRating = nil
+	}
 	if !smsValidEnum(in.RoleClassification, smsRoleClassifications...) && in.RoleClassification != "" {
 		respondBadRequest(w, r, "invalid role_classification")
 		return

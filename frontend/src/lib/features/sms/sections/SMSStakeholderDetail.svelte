@@ -4,6 +4,7 @@
   import { sms as smsApi } from '../../../api/sms.js';
   import { getUsers } from '../../../api/users.js';
   import { fetchAPI } from '../../../api/core.js';
+  import { confirm } from '../../../composables/useConfirm.js';
   import {
     CLASSIFICATIONS,
     ENGAGEMENT_STATUSES,
@@ -159,8 +160,10 @@
     for (const k of ['external_id', 'stakeholder_type', 'trust_level', 'risk_rating']) {
       p[k] = String(p[k] ?? '').trim();
     }
+    // The API decodes time.Time strictly as RFC3339; bare YYYY-MM-DD is a 400.
     for (const k of ['next_engagement_at', 'last_reviewed_at']) {
       if (!p[k]) delete p[k];
+      else if (/^\d{4}-\d{2}-\d{2}$/.test(p[k])) p[k] = `${p[k]}T00:00:00Z`;
     }
     for (const k of ['location_lat', 'location_lon']) {
       const v = String(p[k] ?? '').trim();
@@ -592,6 +595,34 @@
     }
   }
 
+  /** Toggle one review checkbox on an existing transfer. Checking the last
+   * unchecked box finalises the handover server-side and moves ownership. */
+  async function toggleTransferReview(tr, field) {
+    if (tr.completed_at) return;
+    try {
+      await smsApi.updateTransfer(tr.id, { [field]: !tr[field] });
+      await refresh();
+    } catch (e) {
+      error = e?.message || 'error';
+    }
+  }
+
+  async function removeStakeholder() {
+    const ok = await confirm({
+      title: t('sms.deleteTitle'),
+      message: t('sms.deleteMessage', { name: profile.name }),
+      confirmText: t('common.delete'),
+    });
+    if (!ok) return;
+    try {
+      await smsApi.deleteStakeholder(stakeholderId);
+      onChanged?.();
+      onBack();
+    } catch (e) {
+      error = e?.message || 'error';
+    }
+  }
+
   /** Resolve the other end of a network link to a display name. */
   function linkOtherName(link) {
     const otherId = link.source_id === stakeholderId ? link.target_id : link.source_id;
@@ -723,7 +754,10 @@
     <span class="rounded-full bg-slate-100 px-2 py-0.5 text-xs">{classificationLabel(profile.role_classification)}</span>
     <span class="rounded-full px-2 py-0.5 text-xs {engagementClass(profile.engagement_status)}">{engagementLabel(profile.engagement_status)}</span>
     <span class="rounded-full px-2 py-0.5 text-xs {relationshipClass(profile.relationship_status)}">{relationshipLabel(profile.relationship_status)}</span>
-    <span class="ml-auto rounded-full px-2 py-0.5 text-xs font-medium {healthClass(profile.health_score ?? 0)}" title={t('sms.healthScore')}>
+    <button type="button" class="ml-auto rounded-md border border-red-300 px-2 py-1 text-xs text-red-600 hover:bg-red-50" onclick={removeStakeholder}>
+      {t('common.delete')}
+    </button>
+    <span class="rounded-full px-2 py-0.5 text-xs font-medium {healthClass(profile.health_score ?? 0)}" title={t('sms.healthScore')}>
       {profile.health_score ?? '–'}
     </span>
   </div>
@@ -1201,17 +1235,28 @@
         {#if transfersList.length === 0}
           <div class="mb-3 text-xs text-[var(--color-ds-text-muted,#6b7280)]">{t('sms.noTransfers')}</div>
         {:else}
+          <div class="mb-2 text-xs text-[var(--color-ds-text-muted,#6b7280)]">{t('sms.reviewHint')}</div>
           <table class="w-full text-left text-xs">
-            <thead><tr class="border-b border-[var(--color-ds-border,#e5e7eb)] text-[var(--color-ds-text-muted,#6b7280)]"><th class="py-1.5 pr-3">{t('sms.fromUser')}</th><th class="py-1.5 pr-3">{t('sms.toUser')}</th><th class="py-1.5 pr-3">{t('sms.reasonField')}</th><th class="py-1.5 pr-3 text-center">{t('sms.historyReviewed')}</th><th class="py-1.5 pr-3 text-center">{t('sms.risksReviewed')}</th><th class="py-1.5 pr-3 text-center">{t('sms.commitmentsReviewed')}</th></tr></thead>
+            <thead><tr class="border-b border-[var(--color-ds-border,#e5e7eb)] text-[var(--color-ds-text-muted,#6b7280)]"><th class="py-1.5 pr-3">{t('sms.fromUser')}</th><th class="py-1.5 pr-3">{t('sms.toUser')}</th><th class="py-1.5 pr-3">{t('sms.reasonField')}</th><th class="py-1.5 pr-3 text-center">{t('sms.historyReviewed')}</th><th class="py-1.5 pr-3 text-center">{t('sms.risksReviewed')}</th><th class="py-1.5 pr-3 text-center">{t('sms.commitmentsReviewed')}</th><th class="py-1.5 pr-3">{t('sms.completedAt')}</th></tr></thead>
             <tbody>
               {#each transfersList as tr (tr.id)}
                 <tr class="border-b border-[var(--color-ds-border,#e5e7eb)] last:border-0">
                   <td class="py-1.5 pr-3 whitespace-nowrap">{userName(tr.from_user_id)}</td>
                   <td class="py-1.5 pr-3 whitespace-nowrap">{userName(tr.to_user_id)}</td>
                   <td class="py-1.5 pr-3 max-w-md truncate">{tr.reason || '—'}</td>
-                  <td class="py-1.5 pr-3 text-center">{tr.history_reviewed ? '✓' : '—'}</td>
-                  <td class="py-1.5 pr-3 text-center">{tr.risks_reviewed ? '✓' : '—'}</td>
-                  <td class="py-1.5 pr-3 text-center">{tr.commitments_reviewed ? '✓' : '—'}</td>
+                  {#each ['history_reviewed', 'risks_reviewed', 'commitments_reviewed'] as field (field)}
+                    <td class="py-1.5 pr-3 text-center">
+                      {#if tr.completed_at}
+                        <span>{tr[field] ? '✓' : '—'}</span>
+                      {:else}
+                        <input type="checkbox" checked={!!tr[field]} onchange={() => toggleTransferReview(tr, field)} />
+                      {/if}
+                    </td>
+                  {/each}
+                  <td class="py-1.5 pr-3 whitespace-nowrap">
+                    {#if tr.completed_at}<span class="rounded-full bg-green-100 px-2 py-0.5 text-green-700">{t('sms.completedAt')} · {formatDate(tr.completed_at)}</span>
+                    {:else}<span class="text-[var(--color-ds-text-muted,#6b7280)]">—</span>{/if}
+                  </td>
                 </tr>
               {/each}
             </tbody>

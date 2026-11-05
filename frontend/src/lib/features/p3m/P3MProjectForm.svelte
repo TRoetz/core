@@ -4,32 +4,53 @@
   import { p3m as p3mApi } from '../../api/p3m.js';
   import { time } from '../../api/time.js';
   import { getUsers } from '../../api/users.js';
-  import { toISODate } from './utils.js';
+  import { toISODate, toDateInputValue } from './utils.js';
 
   /**
-   * Create form for a P3M project. The parent is either a portfolio directly
-   * (standalone) or one of the portfolio's programmes; the server resolves
-   * both shapes via resolveProjectParents. RAG is computed server-side and is
-   * not part of the payload.
+   * Create/edit form for a P3M project. The parent is either a portfolio
+   * directly (standalone) or one of the portfolio's programmes; the server
+   * resolves both shapes via resolveProjectParents. RAG is computed
+   * server-side and is not part of the payload. When `project` is set the
+   * form edits that project in place (parents are fixed to its current ones).
    */
-  let { portfolios = [], defaultPortfolioId = null, defaultProgrammeId = null, onCreated = () => {}, onCancel = () => {} } = $props();
+  let { portfolios = [], defaultPortfolioId = null, defaultProgrammeId = null, project = null, onCreated = () => {}, onCancel = () => {} } = $props();
 
   const STAGES = ['initiation', 'planning', 'execution', 'closure'];
 
-  let form = $state({
-    portfolio_id: defaultPortfolioId ? String(defaultPortfolioId) : '',
-    programme_id: defaultProgrammeId ? String(defaultProgrammeId) : '', // '' = standalone under the selected portfolio
-    title: '',
-    description: '',
-    manager_id: '',
-    time_project_id: '',
-    current_stage: 'initiation',
-    budget_approved: '',
-    budget_actual: '',
-    progress_percent: 0,
-    start_date: '',
-    target_completion_date: '',
-  });
+  function initialForm() {
+    if (project) {
+      return {
+        portfolio_id: project.portfolio_id != null ? String(project.portfolio_id) : '',
+        programme_id: project.programme_id != null ? String(project.programme_id) : '',
+        title: project.title ?? '',
+        description: project.description ?? '',
+        manager_id: project.manager_id != null ? String(project.manager_id) : '',
+        time_project_id: project.time_project_id != null ? String(project.time_project_id) : '',
+        current_stage: project.current_stage || 'initiation',
+        budget_approved: String(project.budget_approved ?? ''),
+        budget_actual: String(project.budget_actual ?? ''),
+        progress_percent: project.progress_percent ?? 0,
+        start_date: toDateInputValue(project.start_date),
+        target_completion_date: toDateInputValue(project.target_completion_date),
+      };
+    }
+    return {
+      portfolio_id: defaultPortfolioId ? String(defaultPortfolioId) : '',
+      programme_id: defaultProgrammeId ? String(defaultProgrammeId) : '', // '' = standalone under the selected portfolio
+      title: '',
+      description: '',
+      manager_id: '',
+      time_project_id: '',
+      current_stage: 'initiation',
+      budget_approved: '',
+      budget_actual: '',
+      progress_percent: 0,
+      start_date: '',
+      target_completion_date: '',
+    };
+  }
+
+  let form = $state(initialForm());
   /** @type {Array<{id:number,display_name?:string,username?:string}>} */
   let users = $state([]);
   /** @type {Array<{id:number,name:string}>} */
@@ -76,16 +97,19 @@
       };
       if (form.programme_id) payload.programme_id = Number(form.programme_id);
       if (form.manager_id) payload.manager_id = Number(form.manager_id);
+      else if (project) payload.manager_id = null; // full-replace update: explicit clear
       if (form.time_project_id) payload.time_project_id = Number(form.time_project_id);
+      else if (project) payload.time_project_id = null;
       const start = toISODate(form.start_date);
       if (start) payload.start_date = start;
       const target = toISODate(form.target_completion_date);
       if (target) payload.target_completion_date = target;
 
-      await p3mApi.projects.create(payload);
+      if (project) await p3mApi.projects.update(project.id, payload);
+      else await p3mApi.projects.create(payload);
       onCreated();
     } catch (e) {
-      error = e?.message || t('p3m.createFailed');
+      error = e?.message || t(project ? 'p3m.updateFailed' : 'p3m.createFailed');
     } finally {
       saving = false;
     }

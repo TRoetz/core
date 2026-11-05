@@ -24,6 +24,10 @@
   let activeTab = $state('overview');
   let loading = $state(true);
   let error = $state('');
+  // True once a load() succeeds. Background reloads (success or failure)
+  // must not unmount the tab content, or open forms/expanded rows lose
+  // their state on every onChanged().
+  let hasLoaded = $state(false);
   /** @type {{ portfolios: any[] }} */
   let hierarchy = $state({ portfolios: [] });
   /** @type {any} */
@@ -86,6 +90,7 @@
       const [h, s] = await Promise.all([p3mApi.getHierarchy(), p3mApi.getExecutiveSummary()]);
       hierarchy = h?.portfolios ? h : { portfolios: [] };
       summary = s ?? null;
+      hasLoaded = true;
     } catch (e) {
       error = e?.message || 'error';
     } finally {
@@ -126,11 +131,11 @@
   {/each}
 </div>
 
-{#if loading}
+{#if loading && !hasLoaded}
   <div class="flex h-64 items-center justify-center text-sm text-[var(--color-ds-text-muted,#6b7280)]">
     {t('p3m.loading')}
   </div>
-{:else if error}
+{:else if error && !hasLoaded}
   <EmptyState
     title={t('p3m.loadErrorTitle')}
     description={error}
@@ -140,13 +145,13 @@
   {#if activeTab === 'overview'}
     <P3MOverview portfolios={hierarchy.portfolios} summary={summary} onChanged={load} initialProjectId={initialProjectId} planMap={planMap} />
   {:else if activeTab === 'governance'}
-    <P3MGovernance portfolios={hierarchy.portfolios} />
+    <P3MGovernance portfolios={hierarchy.portfolios} onChanged={load} />
   {:else if activeTab === 'benefits'}
-    <P3MBenefitsFinancials />
+    <P3MBenefitsFinancials portfolios={hierarchy.portfolios} />
   {:else if activeTab === 'risk'}
-    <P3MRiskStakeholders />
+    <P3MRiskStakeholders portfolios={hierarchy.portfolios} />
   {:else}
-    <P3MResources />
+    <P3MResources portfolios={hierarchy.portfolios} />
   {/if}
 {/if}
 

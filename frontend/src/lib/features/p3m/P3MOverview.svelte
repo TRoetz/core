@@ -1,14 +1,17 @@
 <script>
   import { t } from '../../stores/i18n.svelte.js';
   import IconChevronRight from '@tabler/icons-svelte-runes/icons/chevron-right';
+  import IconPencil from '@tabler/icons-svelte-runes/icons/pencil';
   import IconPlus from '@tabler/icons-svelte-runes/icons/plus';
+  import IconX from '@tabler/icons-svelte-runes/icons/x';
+  import { confirm } from '../../composables/useConfirm.js';
   import P3MCriticalPath from './P3MCriticalPath.svelte';
   import P3MProjectDetail from './P3MProjectDetail.svelte';
   import P3MProjectForm from './P3MProjectForm.svelte';
   import { p3m as p3mApi } from '../../api/p3m.js';
   import { getUsers } from '../../api/users.js';
   import { navigate } from '../../router.js';
-  import { formatMoney, formatDate, ragColor, ragLabel, stageLabel, toISODate } from './utils.js';
+  import { formatMoney, formatDate, ragColor, ragLabel, stageLabel, toISODate, toDateInputValue } from './utils.js';
 
   let { portfolios = [], summary = null, onChanged = () => {}, initialProjectId = null, planMap = new Map() } = $props();
 
@@ -29,12 +32,16 @@
   const RAGS = ['green', 'amber', 'red'];
 
   let newPortfolioOpen = $state(false);
+  /** Portfolio id being edited, or null when the form creates a new one. */
+  let editingPortfolioId = $state(null);
   let portfolioForm = $state(emptyPortfolioForm());
   let savingPortfolio = $state(false);
   let portfolioError = $state('');
 
   /** Portfolio id the programme form is open for, or null. */
   let programmeFormFor = $state(null);
+  /** Programme being edited in place, or null when creating. */
+  let editingProgramme = $state(null);
   let programmeForm = $state(emptyProgrammeForm());
   let savingProgramme = $state(false);
   let programmeError = $state('');
@@ -43,9 +50,11 @@
 
   /** { portfolioId: number, programmeId: number|null } while the project form is open. */
   let projectFormCtx = $state(null);
+  /** Project being edited in place (P3MProjectForm with `project` set), or null. */
+  let editingProject = $state(null);
 
   function emptyPortfolioForm() {
-    return { title: '', description: '', strategic_objective: '', budget_allocated: '', rag_status: 'green' };
+    return { title: '', description: '', strategic_objective: '', budget_allocated: '', rag_status: 'green', owner_id: '' };
   }
 
   function emptyProgrammeForm() {
@@ -55,9 +64,26 @@
   function toggleNewPortfolio() {
     newPortfolioOpen = !newPortfolioOpen;
     if (newPortfolioOpen) {
+      editingPortfolioId = null;
       portfolioForm = emptyPortfolioForm();
       portfolioError = '';
+      if (!users.length) getUsers().then((u) => (users = u || [])).catch(() => {});
     }
+  }
+
+  function openPortfolioEdit(pf) {
+    newPortfolioOpen = true;
+    editingPortfolioId = pf.id;
+    portfolioForm = {
+      title: pf.title ?? '',
+      description: pf.description ?? '',
+      strategic_objective: pf.strategic_objective ?? '',
+      budget_allocated: String(pf.budget_allocated ?? ''),
+      rag_status: pf.rag_status || 'green',
+      owner_id: pf.owner_id != null ? String(pf.owner_id) : '',
+    };
+    portfolioError = '';
+    if (!users.length) getUsers().then((u) => (users = u || [])).catch(() => {});
   }
 
   async function submitPortfolio() {
@@ -69,14 +95,20 @@
     }
     savingPortfolio = true;
     try {
-      await p3mApi.portfolios.create({
+      const payload = {
         title: portfolioForm.title.trim(),
         description: portfolioForm.description,
         strategic_objective: portfolioForm.strategic_objective,
         budget_allocated: Number(portfolioForm.budget_allocated) || 0,
         rag_status: portfolioForm.rag_status,
-      });
+      };
+      if (portfolioForm.owner_id) payload.owner_id = Number(portfolioForm.owner_id);
+      else if (editingPortfolioId != null) payload.owner_id = null; // full-replace update: explicit clear
+
+      if (editingPortfolioId != null) await p3mApi.portfolios.update(editingPortfolioId, payload);
+      else await p3mApi.portfolios.create(payload);
       newPortfolioOpen = false;
+      editingPortfolioId = null;
       onChanged();
     } catch (e) {
       portfolioError = e?.message || t('p3m.createFailed');
@@ -85,10 +117,38 @@
     }
   }
 
+  async function deletePortfolio(pf) {
+    if (!(await confirm({ title: t('p3m.delete'), message: t('p3m.confirmDeletePortfolio') }))) return;
+    try {
+      await p3mApi.portfolios.delete(pf.id);
+      onChanged();
+    } catch (e) {
+      portfolioError = e?.message || t('p3m.deleteFailed');
+    }
+  }
+
   function openProgrammeForm(pfId) {
     programmeFormFor = pfId;
     projectFormCtx = null;
+    editingProgramme = null;
     programmeForm = emptyProgrammeForm();
+    programmeError = '';
+    if (!users.length) getUsers().then((u) => (users = u || [])).catch(() => {});
+  }
+
+  function openProgrammeEdit(pg, pfId) {
+    programmeFormFor = pfId;
+    projectFormCtx = null;
+    editingProgramme = pg;
+    programmeForm = {
+      title: pg.title ?? '',
+      description: pg.description ?? '',
+      manager_id: pg.manager_id != null ? String(pg.manager_id) : '',
+      budget_allocated: String(pg.budget_allocated ?? ''),
+      target_start_date: toDateInputValue(pg.target_start_date),
+      target_end_date: toDateInputValue(pg.target_end_date),
+      rag_status: pg.rag_status || 'green',
+    };
     programmeError = '';
     if (!users.length) getUsers().then((u) => (users = u || [])).catch(() => {});
   }
@@ -110,13 +170,16 @@
         rag_status: programmeForm.rag_status,
       };
       if (programmeForm.manager_id) payload.manager_id = Number(programmeForm.manager_id);
+      else if (editingProgramme != null) payload.manager_id = null; // full-replace update: explicit clear
       const start = toISODate(programmeForm.target_start_date);
       if (start) payload.target_start_date = start;
       const end = toISODate(programmeForm.target_end_date);
       if (end) payload.target_end_date = end;
 
-      await p3mApi.programmes.create(payload);
+      if (editingProgramme != null) await p3mApi.programmes.update(editingProgramme.id, payload);
+      else await p3mApi.programmes.create(payload);
       programmeFormFor = null;
+      editingProgramme = null;
       onChanged();
     } catch (e) {
       programmeError = e?.message || t('p3m.createFailed');
@@ -125,13 +188,47 @@
     }
   }
 
+  async function deleteProgramme(pg) {
+    if (!(await confirm({ title: t('p3m.delete'), message: t('p3m.confirmDeleteProgramme') }))) return;
+    try {
+      await p3mApi.programmes.delete(pg.id);
+      onChanged();
+    } catch (e) {
+      programmeError = e?.message || t('p3m.deleteFailed');
+    }
+  }
+
+  /** Error surface for tree-level actions (project delete). */
+  let treeError = $state('');
+
+  async function deleteProject(pr) {
+    if (!(await confirm({ title: t('p3m.delete'), message: t('p3m.confirmDeleteProject') }))) return;
+    try {
+      await p3mApi.projects.delete(pr.id);
+      onChanged();
+    } catch (e) {
+      treeError = e?.message || t('p3m.deleteFailed');
+    }
+  }
+
   function openProjectForm(pfId, pgId = null) {
     projectFormCtx = { portfolioId: pfId, programmeId: pgId };
     programmeFormFor = null;
+    editingProject = null;
   }
 
   function closeProjectForm() {
     projectFormCtx = null;
+  }
+
+  function openProjectEdit(pr) {
+    editingProject = pr;
+    projectFormCtx = null;
+    programmeFormFor = null;
+  }
+
+  function closeProjectEdit() {
+    editingProject = null;
   }
 
   const totals = $derived.by(() => {
@@ -263,6 +360,21 @@
             />
           </label>
 
+          <label class="block">
+            <span>{t('p3m.owner')}</span>
+            <select
+              class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+              value={portfolioForm.owner_id}
+              disabled={savingPortfolio}
+              onchange={(e) => (portfolioForm = { ...portfolioForm, owner_id: e.target.value })}
+            >
+              <option value="">{t('p3m.noSelection')}</option>
+              {#each users as u (u.id)}
+                <option value={u.id}>{u.display_name || u.username}</option>
+              {/each}
+            </select>
+          </label>
+
           <label class="block md:col-span-2">
             <span>{t('p3m.description')}</span>
             <textarea
@@ -281,7 +393,7 @@
 
         <div class="mt-3 flex items-center gap-2">
           <button type="button" class="p3m-submit" disabled={savingPortfolio} onclick={submitPortfolio}>
-            {t('p3m.create')}
+            {editingPortfolioId != null ? t('p3m.save') : t('p3m.create')}
           </button>
           <button type="button" class="p3m-cancel" onclick={toggleNewPortfolio}>{t('p3m.cancel')}</button>
         </div>
@@ -291,6 +403,9 @@
 
   <!-- Hierarchy tree -->
   <div class="px-6 py-4">
+    {#if treeError}
+      <div class="mb-2 rounded-md border border-red-200 bg-red-50 p-2 text-xs text-red-700">{treeError}</div>
+    {/if}
     {#if portfolios.length === 0}
       <div class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] p-4 text-xs text-[var(--color-ds-text-muted,#6b7280)]">
         {t('p3m.emptyTitle')} — {t('p3m.emptyDescription')}
@@ -323,6 +438,14 @@
               {/each}
             </div>
           {/if}
+          <div class="flex shrink-0 items-center gap-1 pr-2">
+            <button type="button" class="p3m-row-action" title={t('p3m.edit')} onclick={() => openPortfolioEdit(pf)}>
+              <IconPencil size={14} />
+            </button>
+            <button type="button" class="p3m-row-action p3m-row-action-danger" title={t('p3m.delete')} onclick={() => deletePortfolio(pf)}>
+              <IconX size={14} />
+            </button>
+          </div>
         </div>
 
         {#if open}
@@ -477,6 +600,14 @@
                     {/each}
                   </div>
                 {/if}
+                <div class="flex shrink-0 items-center gap-1 pr-2">
+                  <button type="button" class="p3m-row-action" title={t('p3m.edit')} onclick={() => openProgrammeEdit(pg, pf.id)}>
+                    <IconPencil size={14} />
+                  </button>
+                  <button type="button" class="p3m-row-action p3m-row-action-danger" title={t('p3m.delete')} onclick={() => deleteProgramme(pg)}>
+                    <IconX size={14} />
+                  </button>
+                </div>
               </div>
 
               {#if pgOpen}
@@ -532,7 +663,26 @@
                           {/each}
                         </div>
                       {/if}
+                      <div class="flex shrink-0 items-center gap-1 pr-2">
+                        <button type="button" class="p3m-row-action" title={t('p3m.edit')} onclick={() => openProjectEdit(pr)}>
+                          <IconPencil size={14} />
+                        </button>
+                        <button type="button" class="p3m-row-action p3m-row-action-danger" title={t('p3m.delete')} onclick={() => deleteProject(pr)}>
+                          <IconX size={14} />
+                        </button>
+                      </div>
                     </div>
+
+                    {#if editingProject && editingProject.id === pr.id}
+                      <div class="px-4 pb-2">
+                        <P3MProjectForm
+                          portfolios={portfolios}
+                          project={pr}
+                          onCreated={() => { closeProjectEdit(); onChanged(); }}
+                          onCancel={closeProjectEdit}
+                        />
+                      </div>
+                    {/if}
 
                     {#if prOpen}
                       <P3MProjectDetail project={pr} onChanged={onChanged} onClose={() => toggle(pr.id)} />
@@ -544,16 +694,37 @@
 
             {#each pf.standalone_projects ?? [] as pr (pr.id)}
               {@const prOpen = expanded[pr.id] === true}
-              <button type="button" class="p3m-node-row p3m-pr ml-6" onclick={() => toggle(pr.id)}>
-                <IconChevronRight class={prOpen ? 'rotated' : ''} size={14} />
-                <span class="inline-block h-2 w-2 shrink-0 rounded-full" style="background: {ragColor(pr.rag_status)}"></span>
-                <span>{pr.title}</span>
-                <span class="p3m-meta">{stageLabel(pr.current_stage)}</span>
-                <span class="p3m-progress">
-                  <span class="p3m-progress-fill" style="width: {pr.progress_percent}%; background: {progressColor(pr.progress_percent)}"></span>
-                </span>
-                <span class="p3m-meta">{pr.progress_percent}%</span>
-              </button>
+              <div class="flex items-center ml-6">
+                <button type="button" class="p3m-node-row p3m-pr min-w-0 flex-1" onclick={() => toggle(pr.id)}>
+                  <IconChevronRight class={prOpen ? 'rotated' : ''} size={14} />
+                  <span class="inline-block h-2 w-2 shrink-0 rounded-full" style="background: {ragColor(pr.rag_status)}"></span>
+                  <span>{pr.title}</span>
+                  <span class="p3m-meta">{stageLabel(pr.current_stage)}</span>
+                  <span class="p3m-progress">
+                    <span class="p3m-progress-fill" style="width: {pr.progress_percent}%; background: {progressColor(pr.progress_percent)}"></span>
+                  </span>
+                  <span class="p3m-meta">{pr.progress_percent}%</span>
+                </button>
+                <div class="flex shrink-0 items-center gap-1 pr-2">
+                  <button type="button" class="p3m-row-action" title={t('p3m.edit')} onclick={() => openProjectEdit(pr)}>
+                    <IconPencil size={14} />
+                  </button>
+                  <button type="button" class="p3m-row-action p3m-row-action-danger" title={t('p3m.delete')} onclick={() => deleteProject(pr)}>
+                    <IconX size={14} />
+                  </button>
+                </div>
+              </div>
+
+              {#if editingProject && editingProject.id === pr.id}
+                <div class="ml-6 pb-2">
+                  <P3MProjectForm
+                    portfolios={portfolios}
+                    project={pr}
+                    onCreated={() => { closeProjectEdit(); onChanged(); }}
+                    onCancel={closeProjectEdit}
+                  />
+                </div>
+              {/if}
 
               {#if prOpen}
                 <P3MProjectDetail project={pr} onChanged={onChanged} onClose={() => toggle(pr.id)} />
@@ -697,5 +868,22 @@
   .p3m-plan-chip:hover {
     background: var(--ds-surface-hovered);
     color: var(--color-ds-text, #111827);
+  }
+
+  .p3m-row-action {
+    display: flex;
+    padding: 0.125rem;
+    color: var(--color-ds-text-muted, #6b7280);
+    background: none;
+    border: none;
+    cursor: pointer;
+  }
+
+  .p3m-row-action:hover {
+    color: var(--color-ds-text, #111827);
+  }
+
+  .p3m-row-action-danger:hover {
+    color: #ef4444;
   }
 </style>

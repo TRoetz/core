@@ -3017,6 +3017,9 @@ var Catalog = []Migration{
 		Superseded: []string{
 			"3f51803f29600ebffa50cc9c8bae1456dbb2829c4139fc1f4966cafbe073e60b", // SQLite, pre time_project_id/workspace bridge
 			"9bcbb72c492fe1e4bc1428f417121a035fe4f4ab2e5c1ed65054da7d41da11ba", // Postgres, pre time_project_id/workspace bridge
+			// p3m.sql gained sms_stakeholder_id + index after this body shipped;
+			// existing databases get the column from 20261124_sms_sot_links.
+			"51960f8bb8e5e78e563debb4ab92a46a8dba951ba308b4c83bf7a822658f3656", // SQLite, pre sms_stakeholder_id
 		},
 		// Reuses the embedded fresh-install DDL (idempotent CREATE ... IF NOT
 		// EXISTS) plus the p3m.view permission seed for pre-existing databases.
@@ -3088,6 +3091,12 @@ var Catalog = []Migration{
 			// stamped with the pre-anonymization body and restamp forward.
 			"571a4ed3b5937970603724d9f1869f604ddc7ac254332ac9fdb20b40289d3312", // SQLite, pre spec-reference anonymization
 			"17955d4874c4145a28bbfa0971690e573635c3d7230cbc5cc4e532115816794d", // Postgres, pre spec-reference anonymization
+			// A relationship_status comment was reworded after this body shipped;
+			// the schema objects are unchanged, so restamp forward.
+			"e0b891ba015fc73f41ef38f70a894704dbf650266ac82afb98ae549496b84fe4", // SQLite, pre relationship-status comment reword
+			// Body as of 1501ec45..0328dbf4 (before feff9dce1's stakeholder
+			// updates); schema objects unchanged, so restamp forward.
+			"c42d1f22a859adadd118dc38dc40df7502e2429856c04d61bef4d08982229e6f", // SQLite, pre feff9dce1 stakeholder updates
 		},
 		// Reuses the embedded fresh-install DDL (idempotent CREATE ... IF NOT
 		// EXISTS) plus the sms.view permission seed for pre-existing databases.
