@@ -213,7 +213,10 @@ INSERT INTO permissions (permission_key, permission_name, description, scope, is
 	('public_board.manage', 'Manage Public Boards', 'Can make collections public and configure public board sharing', 'global', false),
 	('p3m.view', 'View P3M Module', 'Can view the Portfolio, Programme, and Project Management (P3M) module', 'global', false),
 	('srm.view', 'View SRM Module', 'Can view the Supplier Relationship Management (SRM) module', 'global', false),
-	('sms.view', 'View SMS Module', 'Can view the Stakeholder Management System (SMS) module', 'global', false)
+	('sms.view', 'View SMS Module', 'Can view the Stakeholder Management System (SMS) module', 'global', false),
+	('sms.manage', 'Manage SMS Module', 'Can create and modify Stakeholder Management System records', 'global', false),
+	('sms.sensitive.view', 'View Sensitive SMS Data', 'Can view restricted stakeholder fields and communications in the SMS module', 'global', false),
+	('plans.view', 'View Plans Module', 'Can view the Plans module, which groups workspaces, P3M entities, and stakeholders into delivery plans', 'global', false)
 ON CONFLICT (permission_key) DO NOTHING;
 
 -- Default workspace roles

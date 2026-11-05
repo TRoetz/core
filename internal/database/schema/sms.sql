@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS sms_stakeholders (
 	interests TEXT NOT NULL DEFAULT '',          -- free text / comma list
 	engagement_status TEXT NOT NULL DEFAULT 'passive' CHECK (engagement_status IN ('passive','engaged','active','disengaged')),
 	lifecycle_stage TEXT NOT NULL DEFAULT 'onboarding' CHECK (lifecycle_stage IN ('onboarding','active','retained','exited')),
-	relationship_status TEXT NOT NULL DEFAULT 'neutral' CHECK (relationship_status IN ('advocate','supportive','neutral','concerned','opposed')),  -- HCC §13 scale
+	relationship_status TEXT NOT NULL DEFAULT 'neutral' CHECK (relationship_status IN ('advocate','supportive','neutral','concerned','opposed')),  -- five-point relationship scale
 	trust_level TEXT CHECK (trust_level IS NULL OR trust_level IN ('very_high','high','moderate','low','critical')),
 	risk_rating TEXT CHECK (risk_rating IS NULL OR risk_rating IN ('low','medium','high','critical')),
 	communication_preferences TEXT NOT NULL DEFAULT '',  -- e.g. "email,quarterly"

@@ -214,11 +214,11 @@ func (h *SRMHandler) srmSupplierIsClosed(ctx context.Context, supplierID int) bo
 // Suppliers (master directory)
 // ---------------------------------------------------------------------------
 
-const srmSupplierColumns = `id, company_name, nzbn, tax_id_number, website, tier, relationship_state, is_active, created_at, updated_at`
+const srmSupplierColumns = `id, company_name, business_id, tax_id_number, website, tier, relationship_state, is_active, created_at, updated_at`
 
 func scanSRMSupplier(row interface{ Scan(...any) error }) (*models.SRMSupplier, error) {
 	var s models.SRMSupplier
-	err := row.Scan(&s.ID, &s.CompanyName, &s.NZBN, &s.TaxIDNumber, &s.Website, &s.Tier, &s.RelationshipState, &s.IsActive, &s.CreatedAt, &s.UpdatedAt)
+	err := row.Scan(&s.ID, &s.CompanyName, &s.BusinessID, &s.TaxIDNumber, &s.Website, &s.Tier, &s.RelationshipState, &s.IsActive, &s.CreatedAt, &s.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -351,19 +351,14 @@ func (h *SRMHandler) srmSupplierContacts(ctx context.Context) (map[int][]models.
 	return out, rows.Err()
 }
 
-// isValidNZBN reports whether v is a well-formed 9-digit NZ business number,
-// mirroring the CHECK constraint on srm_suppliers.nzbn so bad input fails as
-// a 400 instead of tripping the database constraint.
-func isValidNZBN(v string) bool {
-	if len(v) != 9 {
-		return false
-	}
-	for _, c := range v {
-		if c < '0' || c > '9' {
-			return false
-		}
-	}
-	return true
+// maxBusinessIDLen caps the vendor-neutral business identifier length so
+// oversized input fails as a 400 instead of overflowing display surfaces.
+const maxBusinessIDLen = 64
+
+// isValidBusinessID reports whether v is an acceptable business identifier.
+// The field is vendor-neutral: any non-empty string within the length cap.
+func isValidBusinessID(v string) bool {
+	return len(v) <= maxBusinessIDLen
 }
 
 // CreateSupplier registers a new supplier in the directory. New suppliers
@@ -376,7 +371,7 @@ func (h *SRMHandler) CreateSupplier(w http.ResponseWriter, r *http.Request) {
 	}
 	var in struct {
 		CompanyName string  `json:"company_name"`
-		NZBN        *string `json:"nzbn,omitempty"`
+		BusinessID  *string `json:"business_id,omitempty"`
 		TaxIDNumber *string `json:"tax_id_number,omitempty"`
 		Website     string  `json:"website"`
 		Tier        string  `json:"tier"`
@@ -399,23 +394,23 @@ func (h *SRMHandler) CreateSupplier(w http.ResponseWriter, r *http.Request) {
 		respondBadRequest(w, r, "tier must be one of tier_1..tier_4")
 		return
 	}
-	if in.NZBN != nil {
-		nzbn := strings.TrimSpace(*in.NZBN)
+	if in.BusinessID != nil {
+		businessID := strings.TrimSpace(*in.BusinessID)
 		switch {
-		case nzbn == "":
-			in.NZBN = nil
-		case !isValidNZBN(nzbn):
-			respondBadRequest(w, r, "nzbn must be a 9-digit NZ business number")
+		case businessID == "":
+			in.BusinessID = nil
+		case !isValidBusinessID(businessID):
+			respondBadRequest(w, r, "business_id must be at most 64 characters")
 			return
 		default:
-			in.NZBN = &nzbn
+			in.BusinessID = &businessID
 		}
 	}
 
 	res, err := h.db.ExecContext(r.Context(), `
-		INSERT INTO srm_suppliers (company_name, nzbn, tax_id_number, website, tier, relationship_state)
+		INSERT INTO srm_suppliers (company_name, business_id, tax_id_number, website, tier, relationship_state)
 		VALUES (?, ?, ?, ?, ?, ?)`,
-		in.CompanyName, in.NZBN, in.TaxIDNumber, in.Website, in.Tier, models.SRMStateRegistered)
+		in.CompanyName, in.BusinessID, in.TaxIDNumber, in.Website, in.Tier, models.SRMStateRegistered)
 	if err != nil {
 		respondInternalError(w, r, err)
 		return
@@ -503,7 +498,7 @@ func (h *SRMHandler) UpdateSupplier(w http.ResponseWriter, r *http.Request) {
 
 	var in struct {
 		CompanyName *string `json:"company_name,omitempty"`
-		NZBN        *string `json:"nzbn,omitempty"`
+		BusinessID  *string `json:"business_id,omitempty"`
 		TaxIDNumber *string `json:"tax_id_number,omitempty"`
 		Website     *string `json:"website,omitempty"`
 		Tier        *string `json:"tier,omitempty"`
@@ -521,16 +516,16 @@ func (h *SRMHandler) UpdateSupplier(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	if in.NZBN != nil {
-		nzbn := strings.TrimSpace(*in.NZBN)
+	if in.BusinessID != nil {
+		businessID := strings.TrimSpace(*in.BusinessID)
 		switch {
-		case nzbn == "":
-			in.NZBN = nil // empty string clears the field
-		case !isValidNZBN(nzbn):
-			respondBadRequest(w, r, "nzbn must be a 9-digit NZ business number")
+		case businessID == "":
+			in.BusinessID = nil // empty string clears the field
+		case !isValidBusinessID(businessID):
+			respondBadRequest(w, r, "business_id must be at most 64 characters")
 			return
 		default:
-			in.NZBN = &nzbn
+			in.BusinessID = &businessID
 		}
 	}
 
@@ -545,9 +540,9 @@ func (h *SRMHandler) UpdateSupplier(w http.ResponseWriter, r *http.Request) {
 
 	_, err = h.db.ExecContext(ctx, `
 		UPDATE srm_suppliers SET
-			company_name = ?, nzbn = ?, tax_id_number = ?, website = ?, tier = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP
+			company_name = ?, business_id = ?, tax_id_number = ?, website = ?, tier = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP
 		WHERE id = ?`,
-		orKeep(in.CompanyName, existing.CompanyName), in.NZBN, in.TaxIDNumber, orKeep(in.Website, existing.Website),
+		orKeep(in.CompanyName, existing.CompanyName), in.BusinessID, in.TaxIDNumber, orKeep(in.Website, existing.Website),
 		orKeep(in.Tier, existing.Tier), boolOr(in.IsActive, existing.IsActive), id)
 	if err != nil {
 		respondInternalError(w, r, err)

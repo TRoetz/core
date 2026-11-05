@@ -8,7 +8,7 @@ import (
 
 // RegisterSMSRoutes registers the Stakeholder Management System module.
 // Read endpoints require the global sms.view permission; every write action
-// additionally requires sms.manage (least privilege per HCC Doc 4 / R6).
+// additionally requires sms.manage (least privilege).
 // Restricted-classification fields are masked at handler level for users
 // without sms.sensitive.view. The route table below is the contract for the
 // handler methods implemented across handlers/sms.go (core: dashboard,

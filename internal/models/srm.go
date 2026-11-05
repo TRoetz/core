@@ -197,7 +197,7 @@ const (
 type SRMSupplier struct {
 	ID                int       `json:"id"`
 	CompanyName       string    `json:"company_name"`
-	NZBN              *string   `json:"nzbn,omitempty"`
+	BusinessID        *string   `json:"business_id,omitempty"`
 	TaxIDNumber       *string   `json:"tax_id_number,omitempty"`
 	Website           string    `json:"website"`
 	Tier              string    `json:"tier"`

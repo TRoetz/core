@@ -649,7 +649,7 @@ func (h *SRMHandler) srmScorecardDimensions(ctx context.Context, scorecardIDs []
 	for i, id := range scorecardIDs {
 		args[i] = id
 	}
-	rows, err := h.db.QueryContext(ctx, `SELECT id, scorecard_id, dimension, main_highlights, key_concerns, rag, supplier_rag, next_steps, joint_resolution_note FROM srm_scorecard_dimensions WHERE scorecard_id IN (`+joinPlaceholders(make([]string, len(scorecardIDs)))+`) ORDER BY id`, args...)
+	rows, err := h.db.QueryContext(ctx, `SELECT id, scorecard_id, dimension, main_highlights, key_concerns, rag, supplier_rag, next_steps, joint_resolution_note FROM srm_scorecard_dimensions WHERE scorecard_id IN (`+questionPlaceholders(len(scorecardIDs))+`) ORDER BY id`, args...)
 	if err != nil {
 		return out, err
 	}
@@ -957,7 +957,7 @@ func (h *SRMHandler) srmSurveyResponses(ctx context.Context, surveyIDs []int) (m
 	for i, id := range surveyIDs {
 		args[i] = id
 	}
-	rows, err := h.db.QueryContext(ctx, `SELECT r.id, r.survey_id, r.stakeholder_id, r.is_anonymous, r.answers_json, r.overall_score, r.responded_at, COALESCE(st.full_name, '') AS stakeholder_name FROM srm_survey_responses r LEFT JOIN srm_stakeholders st ON st.id = r.stakeholder_id WHERE r.survey_id IN (`+joinPlaceholders(make([]string, len(surveyIDs)))+`) ORDER BY r.id`, args...)
+	rows, err := h.db.QueryContext(ctx, `SELECT r.id, r.survey_id, r.stakeholder_id, r.is_anonymous, r.answers_json, r.overall_score, r.responded_at, COALESCE(st.full_name, '') AS stakeholder_name FROM srm_survey_responses r LEFT JOIN srm_stakeholders st ON st.id = r.stakeholder_id WHERE r.survey_id IN (`+questionPlaceholders(len(surveyIDs))+`) ORDER BY r.id`, args...)
 	if err != nil {
 		return out, err
 	}
@@ -1089,7 +1089,7 @@ func (h *SRMHandler) srmInnovationFactors(ctx context.Context, innovationIDs []i
 	for i, id := range innovationIDs {
 		args[i] = id
 	}
-	rows, err := h.db.QueryContext(ctx, `SELECT id, innovation_id, evaluator_name, factor_name, is_custom, rating FROM srm_innovation_factors WHERE innovation_id IN (`+joinPlaceholders(make([]string, len(innovationIDs)))+`) ORDER BY id`, args...)
+	rows, err := h.db.QueryContext(ctx, `SELECT id, innovation_id, evaluator_name, factor_name, is_custom, rating FROM srm_innovation_factors WHERE innovation_id IN (`+questionPlaceholders(len(innovationIDs))+`) ORDER BY id`, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -1113,7 +1113,7 @@ func (h *SRMHandler) srmInnovationRecommendations(ctx context.Context, innovatio
 	for i, id := range innovationIDs {
 		args[i] = id
 	}
-	rows, err := h.db.QueryContext(ctx, `SELECT r.id, r.innovation_id, r.decision, r.justification, r.priority, r.timing, r.agency_champion_id, r.supplier_champion_name, r.decided_at, COALESCE(u.username, '') AS user_name FROM srm_innovation_recommendations r LEFT JOIN users u ON u.id = r.agency_champion_id WHERE r.innovation_id IN (`+joinPlaceholders(make([]string, len(innovationIDs)))+`) ORDER BY r.id`, args...)
+	rows, err := h.db.QueryContext(ctx, `SELECT r.id, r.innovation_id, r.decision, r.justification, r.priority, r.timing, r.agency_champion_id, r.supplier_champion_name, r.decided_at, COALESCE(u.username, '') AS user_name FROM srm_innovation_recommendations r LEFT JOIN users u ON u.id = r.agency_champion_id WHERE r.innovation_id IN (`+questionPlaceholders(len(innovationIDs))+`) ORDER BY r.id`, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -1137,7 +1137,7 @@ func (h *SRMHandler) srmInnovationObjectives(ctx context.Context, innovationIDs 
 	for i, id := range innovationIDs {
 		args[i] = id
 	}
-	rows, err := h.db.QueryContext(ctx, `SELECT id, innovation_id, objective_text, actual_outcome, realised_value_nzd FROM srm_innovation_objectives WHERE innovation_id IN (`+joinPlaceholders(make([]string, len(innovationIDs)))+`) ORDER BY id`, args...)
+	rows, err := h.db.QueryContext(ctx, `SELECT id, innovation_id, objective_text, actual_outcome, realised_value_nzd FROM srm_innovation_objectives WHERE innovation_id IN (`+questionPlaceholders(len(innovationIDs))+`) ORDER BY id`, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -1161,7 +1161,7 @@ func (h *SRMHandler) srmInnovationTasks(ctx context.Context, innovationIDs []int
 	for i, id := range innovationIDs {
 		args[i] = id
 	}
-	rows, err := h.db.QueryContext(ctx, `SELECT id, innovation_id, task_no, task_name, description, deliverable, owner_name, side, start_date, end_date, status FROM srm_innovation_tasks WHERE innovation_id IN (`+joinPlaceholders(make([]string, len(innovationIDs)))+`) ORDER BY task_no`, args...)
+	rows, err := h.db.QueryContext(ctx, `SELECT id, innovation_id, task_no, task_name, description, deliverable, owner_name, side, start_date, end_date, status FROM srm_innovation_tasks WHERE innovation_id IN (`+questionPlaceholders(len(innovationIDs))+`) ORDER BY task_no`, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -1806,7 +1806,7 @@ func (h *SRMHandler) srmSipDeliverables(ctx context.Context, sipIDs []int) (map[
 	for i, id := range sipIDs {
 		args[i] = id
 	}
-	rows, err := h.db.QueryContext(ctx, `SELECT id, sip_id, seq, key_deliverable, completion_date, rag, owner_name, comments_risks_issues FROM srm_sip_deliverables WHERE sip_id IN (`+joinPlaceholders(make([]string, len(sipIDs)))+`) ORDER BY seq`, args...)
+	rows, err := h.db.QueryContext(ctx, `SELECT id, sip_id, seq, key_deliverable, completion_date, rag, owner_name, comments_risks_issues FROM srm_sip_deliverables WHERE sip_id IN (`+questionPlaceholders(len(sipIDs))+`) ORDER BY seq`, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -2170,7 +2170,7 @@ func (h *SRMHandler) srmDisputeEscalations(ctx context.Context, disputeIDs []int
 	for i, id := range disputeIDs {
 		args[i] = id
 	}
-	rows, err := h.db.QueryContext(ctx, `SELECT id, dispute_id, from_stage, to_stage, escalated_at, escalated_to, pause_reason, notes FROM srm_dispute_escalations WHERE dispute_id IN (`+joinPlaceholders(make([]string, len(disputeIDs)))+`) ORDER BY escalated_at`, args...)
+	rows, err := h.db.QueryContext(ctx, `SELECT id, dispute_id, from_stage, to_stage, escalated_at, escalated_to, pause_reason, notes FROM srm_dispute_escalations WHERE dispute_id IN (`+questionPlaceholders(len(disputeIDs))+`) ORDER BY escalated_at`, args...)
 	if err != nil {
 		return nil, err
 	}

@@ -3032,6 +3032,10 @@ var Catalog = []Migration{
 		CheckPostgres: pgTableCheck("srm_suppliers"),
 		// Reuses the embedded fresh-install DDL (idempotent CREATE ... IF NOT
 		// EXISTS) plus the srm.view permission seed for pre-existing databases.
+		// The body embeds srmSchema/srmSchemaPostgres; the nzbn -> business_id
+		// column rename edited those files after this migration shipped, so
+		// already-stamped rows advance their checksum instead of mismatching.
+		ReconcileChecksum: true,
 		SQLite: srmSchema + `
 			INSERT OR IGNORE INTO permissions (permission_key, permission_name, description, scope) VALUES ('srm.view', 'View SRM Module', 'Can view the Supplier Relationship Management (SRM) module', 'global');`,
 		Postgres: srmSchemaPostgres + `
@@ -3080,6 +3084,10 @@ var Catalog = []Migration{
 		Superseded: []string{
 			"268941e8b1c82041ac0f704ccc46d776aefec3950f35c04d6e1fbc3811bc7631", // SQLite, pre channel CHECK
 			"e0e447d2779a9d5701276f460bf3e00f6367cf039eb4ed9202e7c161888ed14e", // Postgres, pre channel CHECK
+			// Embedded DDL comments anonymized after shipping; accept installs
+			// stamped with the pre-anonymization body and restamp forward.
+			"571a4ed3b5937970603724d9f1869f604ddc7ac254332ac9fdb20b40289d3312", // SQLite, pre spec-reference anonymization
+			"17955d4874c4145a28bbfa0971690e573635c3d7230cbc5cc4e532115816794d", // Postgres, pre spec-reference anonymization
 		},
 		// Reuses the embedded fresh-install DDL (idempotent CREATE ... IF NOT
 		// EXISTS) plus the sms.view permission seed for pre-existing databases.
@@ -3325,16 +3333,21 @@ var Catalog = []Migration{
 	},
 	{
 		Version:         "20261123_sms_register_v2",
-		Name:            "SMS register v2 for HCC SRM gap closure (register fields, relationship entities, permission split)",
+		Name:            "SMS register v2 for SRM gap closure (register fields, relationship entities, permission split)",
 		CheckSQLiteFn:   checkSMSRegisterV2SQLite,
 		CheckPostgresFn: checkSMSRegisterV2Postgres,
+		// The Postgres body lost a spec-reference comment after shipping; accept
+		// installs stamped with the pre-anonymization body and restamp forward.
+		Superseded: []string{
+			"93bfd4b0ad49d34aa700a86d34085b361ff565bf57142d968b3a96dd27b2f952", // Postgres, pre spec-reference anonymization
+		},
 		// SQLite cannot add a CHECK to an existing column without a table
 		// rebuild; the SQL field stays non-empty so the runner reaches
 		// ApplySQLite instead of stamping the row.
 		SQLite:      "applySQLiteSMSRegisterV2:v1",
 		ApplySQLite: applySQLiteSMSRegisterV2,
 		Postgres: `
-			-- Map legacy relationship_status values onto the HCC scale (Std §8).
+			-- Map legacy relationship_status values onto the five-point scale.
 			UPDATE sms_stakeholders SET relationship_status = CASE relationship_status
 				WHEN 'positive' THEN 'supportive'
 				WHEN 'tense' THEN 'concerned'
@@ -3508,6 +3521,22 @@ var Catalog = []Migration{
 			CREATE INDEX IF NOT EXISTS idx_srm_stakeholders_sms ON srm_stakeholders(sms_stakeholder_id);
 			UPDATE srm_stakeholders ss SET sms_stakeholder_id = (SELECT MIN(id) FROM sms_stakeholders WHERE lower(email) = lower(ss.email)) WHERE email <> '' AND EXISTS (SELECT 1 FROM sms_stakeholders WHERE lower(email) = lower(ss.email));
 			UPDATE p3m_stakeholders ps SET sms_stakeholder_id = (SELECT MIN(id) FROM sms_stakeholders WHERE lower(name) = lower(ps.name)) WHERE (SELECT COUNT(*) FROM sms_stakeholders WHERE lower(name) = lower(ps.name)) = 1;
+		`,
+	},
+	{
+		Version:       "20261125_srm_business_id",
+		Name:          "Rename srm_suppliers.nzbn to vendor-neutral business_id",
+		CheckSQLite:   `SELECT (SELECT COUNT(*) FROM pragma_table_info('srm_suppliers') WHERE name='business_id') * (SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='srm_suppliers')`,
+		CheckPostgres: `SELECT (SELECT COUNT(*) FROM information_schema.columns WHERE table_name='srm_suppliers' AND column_name='business_id') * (SELECT COUNT(*) FROM information_schema.tables WHERE table_name='srm_suppliers')`,
+		// SQLite RENAME COLUMN keeps the legacy 9-digit CHECK constraint
+		// (rewritten against business_id), so the column is rebuilt to drop
+		// it; the rebuild toggles foreign_keys outside its transaction, hence
+		// ApplySQLite with a stable implementation marker.
+		SQLite:      "applySQLiteSRMBusinessID:v1",
+		ApplySQLite: applySQLiteSRMBusinessID,
+		Postgres: `
+			ALTER TABLE srm_suppliers RENAME COLUMN nzbn TO business_id;
+			ALTER TABLE srm_suppliers DROP CONSTRAINT IF EXISTS srm_suppliers_nzbn_check;
 		`,
 	},
 }
@@ -5366,10 +5395,10 @@ func checkSMSRegisterV2Postgres(db Database) (bool, error) {
 
 // applySQLiteSMSRegisterV2 rebuilds sms_stakeholders with the register v2
 // columns (SQLite cannot add a CHECK to an existing column in place), maps
-// legacy relationship_status values onto the HCC scale, upgrades engagement
-// plans and issues, creates the relationship-entity tables, and seeds the
-// permission split. IDs are preserved so every referencing row stays valid;
-// smsRegisterV2Statements returns the DDL/DML statements applied by
+// legacy relationship_status values onto the five-point scale, upgrades
+// engagement plans and issues, creates the relationship-entity tables, and
+// seeds the permission split. IDs are preserved so every referencing row stays
+// valid; smsRegisterV2Statements returns the DDL/DML statements applied by
 // applySQLiteSMSRegisterV2, in order.
 func smsRegisterV2Statements() []string {
 	return []string{
@@ -5552,10 +5581,10 @@ func smsRegisterV2Statements() []string {
 
 // applySQLiteSMSRegisterV2 rebuilds sms_stakeholders with the register v2
 // columns (SQLite cannot add a CHECK to an existing column in place), maps
-// legacy relationship_status values onto the HCC scale, upgrades engagement
-// plans and issues, creates the relationship-entity tables, and seeds the
-// permission split. IDs are preserved so every referencing row stays valid;
-// foreign_keys is disabled for the rebuild window only.
+// legacy relationship_status values onto the five-point scale, upgrades
+// engagement plans and issues, creates the relationship-entity tables, and
+// seeds the permission split. IDs are preserved so every referencing row stays
+// valid; foreign_keys is disabled for the rebuild window only.
 func applySQLiteSMSRegisterV2(db Database) (retErr error) {
 	sqliteDB, ok := db.(*SQLiteDB)
 	if !ok {
@@ -5599,6 +5628,81 @@ func applySQLiteSMSRegisterV2(db Database) (retErr error) {
 
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("commit sms_stakeholders rebuild: %w", err)
+	}
+	return nil
+}
+
+// srmBusinessIDStatements rebuilds srm_suppliers so the legacy nzbn column
+// (carrying a 9-digit CHECK) becomes a vendor-neutral business_id with no
+// format constraint. IDs are preserved so every referencing row (contacts,
+// contracts, metrics, disputes, ...) stays valid.
+func srmBusinessIDStatements() []string {
+	return []string{
+		`CREATE TABLE srm_suppliers_migration (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			company_name TEXT NOT NULL,
+			business_id TEXT UNIQUE,
+			tax_id_number TEXT UNIQUE,
+			website TEXT DEFAULT '',
+			tier TEXT NOT NULL DEFAULT 'tier_3' CHECK (tier IN ('tier_1','tier_2','tier_3','tier_4')),
+			relationship_state TEXT NOT NULL DEFAULT 'registered' CHECK (relationship_state IN ('registered','segmented','planning_ready','implementation_ready','kicked_off','jbp_formalised','monitoring_active','closed')),
+			is_active BOOLEAN NOT NULL DEFAULT true,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		)`,
+		`INSERT INTO srm_suppliers_migration (id, company_name, business_id, tax_id_number, website, tier, relationship_state, is_active, created_at, updated_at)
+			SELECT id, company_name, nzbn, tax_id_number, website, tier, relationship_state, is_active, created_at, updated_at FROM srm_suppliers`,
+		`DROP TABLE srm_suppliers`,
+		`ALTER TABLE srm_suppliers_migration RENAME TO srm_suppliers`,
+	}
+}
+
+// applySQLiteSRMBusinessID renames srm_suppliers.nzbn to business_id for
+// pre-existing SQLite databases by rebuilding the table (a plain RENAME
+// COLUMN would keep the legacy 9-digit CHECK constraint). foreign_keys is
+// disabled for the rebuild window only.
+func applySQLiteSRMBusinessID(db Database) (retErr error) {
+	sqliteDB, ok := db.(*SQLiteDB)
+	if !ok {
+		return fmt.Errorf("expected SQLite database, got %T", db)
+	}
+
+	ctx := context.Background()
+	conn, err := sqliteDB.writeConn.Conn(ctx)
+	if err != nil {
+		return fmt.Errorf("acquire SQLite write connection: %w", err)
+	}
+	defer func() { _ = conn.Close() }()
+
+	var foreignKeysEnabled bool
+	if err := conn.QueryRowContext(ctx, "PRAGMA foreign_keys").Scan(&foreignKeysEnabled); err != nil {
+		return fmt.Errorf("read foreign_keys pragma: %w", err)
+	}
+	if foreignKeysEnabled {
+		if _, err := conn.ExecContext(ctx, "PRAGMA foreign_keys=OFF"); err != nil {
+			return fmt.Errorf("disable foreign keys: %w", err)
+		}
+		defer func() {
+			if _, err := conn.ExecContext(ctx, "PRAGMA foreign_keys=ON"); retErr == nil && err != nil {
+				retErr = fmt.Errorf("restore foreign keys: %w", err)
+			}
+		}()
+	}
+
+	tx, err := conn.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin srm_suppliers rebuild: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	for _, statement := range srmBusinessIDStatements() {
+		if _, err := tx.ExecContext(ctx, statement); err != nil {
+			return fmt.Errorf("apply srm business_id rename: %w", err)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit srm_suppliers rebuild: %w", err)
 	}
 	return nil
 }
