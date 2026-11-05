@@ -417,6 +417,18 @@ func (h *SetupHandler) UpdateAIFeaturesConfig(w http.ResponseWriter, r *http.Req
 			respondBadRequest(w, r, fmt.Sprintf("Schedule is not supported for feature %q", key))
 			return
 		}
+		// max_tokens is a daily_briefing-only tuning knob (output budget for
+		// the generated briefing). 0 means "use the built-in default".
+		if fc.MaxTokens != 0 {
+			if key != "daily_briefing" {
+				respondBadRequest(w, r, fmt.Sprintf("max_tokens is not supported for feature %q", key))
+				return
+			}
+			if fc.MaxTokens < 100 || fc.MaxTokens > 32768 {
+				respondBadRequest(w, r, fmt.Sprintf("max_tokens for %q must be between 100 and 32768", key))
+				return
+			}
+		}
 	}
 
 	if err := llm.SaveAIFeaturesConfig(h.DB, cfg); err != nil {

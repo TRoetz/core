@@ -26,6 +26,10 @@ const (
 	CapabilityTests             = agentstudio.CapabilityTests
 	CapabilityTime              = agentstudio.CapabilityTime
 	CapabilityUsersApprovals    = agentstudio.CapabilityUsersApprovals
+	CapabilityPlans             = agentstudio.CapabilityPlans
+	CapabilityP3M               = agentstudio.CapabilityP3M
+	CapabilitySRM               = agentstudio.CapabilitySRM
+	CapabilitySMS               = agentstudio.CapabilitySMS
 )
 
 // AccessLevel describes the strongest resource effect a tool can have.
@@ -139,6 +143,13 @@ func Register[Args any](r *Registry, t Tool[Args]) {
 	if err != nil {
 		panic(fmt.Sprintf("aitools: build schema for %s: %v", t.Name, err))
 	}
+	// Providers that validate tool schemas strictly (LM Studio rejects a
+	// missing "properties" with HTTP 400) require an explicit object even
+	// for tools that take no arguments; the generator omits it for empty
+	// Args structs, so normalize where every entry's schema is built once.
+	if schema.Properties == nil {
+		schema.Properties = map[string]*jsonschema.Schema{}
+	}
 	schemaJSON, err := json.Marshal(schema)
 	if err != nil {
 		panic(fmt.Sprintf("aitools: marshal schema for %s: %v", t.Name, err))
@@ -170,7 +181,8 @@ func validCapabilityGroup(group CapabilityGroup) bool {
 	case CapabilityReadComment, CapabilityIssueManagement,
 		CapabilityCommentEditing, CapabilityPlanningActivity,
 		CapabilityKnowledgeDiagrams, CapabilityActions, CapabilityTests,
-		CapabilityTime, CapabilityUsersApprovals:
+		CapabilityTime, CapabilityUsersApprovals, CapabilityPlans,
+		CapabilityP3M, CapabilitySRM, CapabilitySMS:
 		return true
 	default:
 		return false
@@ -223,6 +235,10 @@ var capabilityGroupLabels = map[CapabilityGroup]string{
 	CapabilityTests:             "Tests",
 	CapabilityTime:              "Time",
 	CapabilityUsersApprovals:    "Users and approvals",
+	CapabilityPlans:             "Plans",
+	CapabilityP3M:               "P3M governance",
+	CapabilitySRM:               "Supplier relationships (SRM)",
+	CapabilitySMS:               "Stakeholder management (SMS)",
 }
 
 // StandardCapabilityGroups derives the Agent Studio catalog directly from

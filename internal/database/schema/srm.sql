@@ -14,7 +14,7 @@
 CREATE TABLE IF NOT EXISTS srm_suppliers (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
 	company_name TEXT NOT NULL,
-	nzbn TEXT UNIQUE CHECK (nzbn IS NULL OR nzbn GLOB '[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]'),
+	business_id TEXT UNIQUE,
 	tax_id_number TEXT UNIQUE,
 	website TEXT DEFAULT '',
 	tier TEXT NOT NULL DEFAULT 'tier_3' CHECK (tier IN ('tier_1', 'tier_2', 'tier_3', 'tier_4')),

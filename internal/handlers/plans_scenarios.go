@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"windshift/internal/models"
+	"windshift/internal/repository"
 )
 
 // ---------------------------------------------------------------------------
@@ -283,9 +284,11 @@ func (h *PlanHandler) computeScenarioImpact(ctx context.Context, planID int, ove
 		return nil, err
 	}
 
+	// The CQL filter fragments in sourceSQL reference the shared alias set
+	// (st, it, pri, ...), so the query needs the full filter FROM clause.
 	rows, err := h.db.QueryContext(ctx, `
 		SELECT i.id, i.start_date, i.end_date
-		FROM items i
+		`+repository.ItemListFilterFromClause()+`
 		WHERE i.merged_into_item_id IS NULL AND (`+sourceSQL+`)`, append([]any{}, sourceArgs...)...)
 	if err != nil {
 		return nil, fmt.Errorf("load plan item dates: %w", err)
@@ -625,7 +628,9 @@ func (h *PlanHandler) UpsertScenarioItems(w http.ResponseWriter, r *http.Request
 		return
 	}
 	inPlanIDs := make(map[int]bool)
-	idRows, err := h.db.QueryContext(ctx, "SELECT i.id FROM items i WHERE i.merged_into_item_id IS NULL AND ("+sourceSQL+")", append([]any{}, sourceArgs...)...)
+	// The CQL filter fragments in sourceSQL reference the shared alias set
+	// (st, it, pri, ...), so the query needs the full filter FROM clause.
+	idRows, err := h.db.QueryContext(ctx, "SELECT i.id "+repository.ItemListFilterFromClause()+" WHERE i.merged_into_item_id IS NULL AND ("+sourceSQL+")", append([]any{}, sourceArgs...)...)
 	if err != nil {
 		respondInternalError(w, r, fmt.Errorf("collect plan item ids: %w", err))
 		return

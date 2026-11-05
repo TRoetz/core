@@ -920,6 +920,9 @@ export default {
       scheduleLabel: 'Generation frequency',
       scheduleDaily: 'Once per day',
       scheduleEvery6h: 'Every 6 hours',
+      maxTokensLabel: 'Maximum output tokens',
+      maxTokensPlaceholder: 'default',
+      maxTokensHint: 'Output budget per briefing. Reasoning models spend part of this thinking before answering; raise it if briefings come back empty (100–32768, blank = built-in default).',
       features: {
         ai_chat: {
           name: 'AI Chat',

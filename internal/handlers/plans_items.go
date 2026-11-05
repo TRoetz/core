@@ -808,7 +808,10 @@ func (h *PlanHandler) AddItemDependency(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	var inPlan int
-	err = h.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM items i WHERE i.merged_into_item_id IS NULL AND ("+sourceSQL+") AND i.id IN (?, ?)", append(sourceArgs, itemID, in.TargetItemID)...).Scan(&inPlan)
+	// The CQL filter fragments in sourceSQL reference the shared alias set
+	// (st, it, pri, ...), so the membership count needs the full filter
+	// FROM clause, not a bare "FROM items i".
+	err = h.db.QueryRowContext(ctx, "SELECT COUNT(*) "+repository.ItemListFilterFromClause()+" WHERE i.merged_into_item_id IS NULL AND ("+sourceSQL+") AND i.id IN (?, ?)", append(sourceArgs, itemID, in.TargetItemID)...).Scan(&inPlan)
 	if err != nil {
 		respondInternalError(w, r, fmt.Errorf("verify plan membership: %w", err))
 		return
@@ -884,7 +887,7 @@ func (h *PlanHandler) RemoveItemDependency(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	var inPlan int
-	err = h.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM items i WHERE i.merged_into_item_id IS NULL AND ("+sourceSQL+") AND i.id IN (?, ?)", append(sourceArgs, srcID, tgtID)...).Scan(&inPlan)
+	err = h.db.QueryRowContext(ctx, "SELECT COUNT(*) "+repository.ItemListFilterFromClause()+" WHERE i.merged_into_item_id IS NULL AND ("+sourceSQL+") AND i.id IN (?, ?)", append(sourceArgs, srcID, tgtID)...).Scan(&inPlan)
 	if err != nil {
 		respondInternalError(w, r, fmt.Errorf("verify plan membership: %w", err))
 		return

@@ -51,6 +51,17 @@ func joinPlaceholders(parts []string) string {
 	return strings.Join(parts, ", ")
 }
 
+// questionPlaceholders returns a comma-separated list of n "?" placeholders
+// for IN (...) clauses. (joinPlaceholders(make([]string, n)) would join n
+// EMPTY strings and produce a syntax error.)
+func questionPlaceholders(n int) string {
+	parts := make([]string, n)
+	for i := range parts {
+		parts[i] = "?"
+	}
+	return strings.Join(parts, ", ")
+}
+
 // qualifyColumns prefixes every column in an unqualified comma-separated
 // list with alias so the list stays safe inside multi-table SELECTs where
 // shared names (created_at, updated_at) would otherwise be ambiguous.

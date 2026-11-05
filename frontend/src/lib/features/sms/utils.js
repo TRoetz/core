@@ -4,7 +4,7 @@ import { t } from '../../stores/i18n.svelte.js';
 export const CLASSIFICATIONS = ['key', 'decision_maker', 'support', 'influencer', 'observer'];
 export const ENGAGEMENT_STATUSES = ['passive', 'engaged', 'active', 'disengaged'];
 export const LIFECYCLE_STAGES = ['onboarding', 'active', 'retained', 'exited'];
-// HCC §13 relationship scale.
+// Five-point relationship scale.
 export const RELATIONSHIP_STATUSES = ['advocate', 'supportive', 'neutral', 'concerned', 'opposed'];
 export const ENTITY_TYPES = ['portfolio', 'programme', 'project'];
 // /sms/p3m-options response keys (plural list names) per entity type.
@@ -22,7 +22,7 @@ export const COMMITMENT_DIRECTIONS = ['from_us', 'from_them', 'mutual'];
 export const COMMITMENT_STATUSES = ['open', 'in_progress', 'at_risk', 'completed', 'cancelled'];
 export const GRIEVANCE_SEVERITIES = ['low', 'medium', 'high', 'critical'];
 export const GRIEVANCE_STATUSES = ['received', 'acknowledged', 'investigating', 'responded', 'closed'];
-// HCC stakeholder type taxonomy (Std §8).
+// Stakeholder type taxonomy.
 export const STAKEHOLDER_TYPES = [
   'mana_whenua', 'elected_member', 'government_agency', 'regional_authority', 'regulatory_partner',
   'infrastructure_partner', 'business', 'developer', 'business_association', 'strategic_supplier',
@@ -100,6 +100,30 @@ export function riskRatingLabel(value) {
     case 'medium': return t('sms.riskMedium');
     case 'high': return t('sms.riskHigh');
     case 'critical': return t('sms.riskCritical');
+    default: return value || '';
+  }
+}
+
+export function stakeholderTypeLabel(value) {
+  switch (value) {
+    case 'mana_whenua': return t('sms.stkTypeManaWhenua');
+    case 'elected_member': return t('sms.stkTypeElectedMember');
+    case 'government_agency': return t('sms.stkTypeGovernmentAgency');
+    case 'regional_authority': return t('sms.stkTypeRegionalAuthority');
+    case 'regulatory_partner': return t('sms.stkTypeRegulatoryPartner');
+    case 'infrastructure_partner': return t('sms.stkTypeInfrastructurePartner');
+    case 'business': return t('sms.stkTypeBusiness');
+    case 'developer': return t('sms.stkTypeDeveloper');
+    case 'business_association': return t('sms.stkTypeBusinessAssociation');
+    case 'strategic_supplier': return t('sms.stkTypeStrategicSupplier');
+    case 'utility_provider': return t('sms.stkTypeUtilityProvider');
+    case 'community_organisation': return t('sms.stkTypeCommunityOrganisation');
+    case 'industry_group': return t('sms.stkTypeIndustryGroup');
+    case 'advocacy_group': return t('sms.stkTypeAdvocacyGroup');
+    case 'educational_institution': return t('sms.stkTypeEducationalInstitution');
+    case 'major_landowner': return t('sms.stkTypeMajorLandowner');
+    case 'project_stakeholder': return t('sms.stkTypeProjectStakeholder');
+    case 'other': return t('sms.stkTypeOther');
     default: return value || '';
   }
 }

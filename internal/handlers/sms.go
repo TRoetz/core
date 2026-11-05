@@ -108,7 +108,7 @@ var (
 )
 
 // smsHealthScore computes the 0-100 stakeholder health score:
-// relationship base (HCC §13 scale) + engagement base minus penalties for open
+// relationship base (five-point scale) + engagement base minus penalties for open
 // critical and escalated issues, clamped to [0,100].
 func smsHealthScore(relationship, engagement string, openCritical, escalatedOpen int) int {
 	base := 0

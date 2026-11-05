@@ -27,7 +27,7 @@ const (
 	SMSLifecycleExited     = "exited"
 )
 
-// SMS relationship statuses — HCC §13 five-point scale.
+// SMS relationship statuses — five-point relationship scale.
 const (
 	SMSRelationshipAdvocate  = "advocate"
 	SMSRelationshipSupportive = "supportive"
@@ -45,7 +45,7 @@ const (
 	SMSTier4 = "tier_4"
 )
 
-// SMS stakeholder types (HCC register taxonomy).
+// SMS stakeholder types (register taxonomy).
 const (
 	SMSTypeManaWhenua              = "mana_whenua"
 	SMSTypeElectedMember           = "elected_member"

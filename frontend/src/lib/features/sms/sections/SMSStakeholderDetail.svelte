@@ -24,6 +24,7 @@
     GRIEVANCE_STATUSES,
     STAKEHOLDER_TYPES,
     classificationLabel,
+    stakeholderTypeLabel,
     engagementLabel,
     lifecycleLabel,
     relationshipLabel,
@@ -758,7 +759,7 @@
           <label class="text-xs"><span>{t('sms.lifecycle')}</span><select class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1" value={form.lifecycle_stage} onchange={(e) => (form = { ...form, lifecycle_stage: e.target.value })}>{#each LIFECYCLE_STAGES as s (s)}<option value={s}>{lifecycleLabel(s)}</option>{/each}</select></label>
           <label class="text-xs"><span>{t('sms.relationship')}</span><select class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1" value={form.relationship_status} onchange={(e) => (form = { ...form, relationship_status: e.target.value })}>{#each RELATIONSHIP_STATUSES as s (s)}<option value={s}>{relationshipLabel(s)}</option>{/each}</select></label>
           <label class="text-xs"><span>{t('sms.tier')}</span><select class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1" value={form.tier} onchange={(e) => (form = { ...form, tier: e.target.value })}>{#each TIERS as tr (tr)}<option value={tr}>{tierLabel(tr)}</option>{/each}</select></label>
-          <label class="text-xs"><span>{t('sms.stakeholderType')}</span><input list="sms-stakeholder-types" class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1" value={form.stakeholder_type} oninput={(e) => (form = { ...form, stakeholder_type: e.target.value })} placeholder={t('sms.noType')} /><datalist id="sms-stakeholder-types">{#each STAKEHOLDER_TYPES as st (st)}<option value={st}>{st}</option>{/each}</datalist></label>
+          <label class="text-xs"><span>{t('sms.stakeholderType')}</span><select class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1" value={form.stakeholder_type} onchange={(e) => (form = { ...form, stakeholder_type: e.target.value })}><option value="">{t('sms.noType')}</option>{#each STAKEHOLDER_TYPES as st (st)}<option value={st}>{stakeholderTypeLabel(st)}</option>{/each}</select></label>
           <label class="text-xs"><span>{t('sms.categoryField')}</span><input class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1" value={form.category} oninput={(e) => (form = { ...form, category: e.target.value })} /></label>
           <label class="text-xs"><span>{t('sms.businessUnit')}</span><input class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1" value={form.business_unit} oninput={(e) => (form = { ...form, business_unit: e.target.value })} /></label>
           <label class="text-xs"><span>{t('sms.trustLevel')}</span><select class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1" value={form.trust_level} onchange={(e) => (form = { ...form, trust_level: e.target.value })}><option value="">{t('sms.noTrust')}</option>{#each TRUST_LEVELS as tl (tl)}<option value={tl}>{trustLabel(tl)}</option>{/each}</select></label>

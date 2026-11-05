@@ -50,7 +50,8 @@ const (
 type AIFeatureConfig struct {
 	Mode         AIFeatureMode `json:"mode"`
 	ConnectionID int           `json:"connection_id"`
-	Schedule     string        `json:"schedule,omitempty"` // "daily" (default) or "every_6h" — only meaningful for daily_briefing
+	Schedule     string        `json:"schedule,omitempty"`   // "daily" (default) or "every_6h" — only meaningful for daily_briefing
+	MaxTokens    int           `json:"max_tokens,omitempty"` // output token budget for the generated response — only meaningful for daily_briefing; 0 = built-in default
 }
 
 // AIFeaturesConfig maps feature keys to their configuration.

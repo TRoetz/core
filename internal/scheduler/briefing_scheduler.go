@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -24,10 +25,28 @@ import (
 // a bounded worker pool paces the LLM naturally (each call is itself bounded
 // by DefaultRequestTimeout) without an artificial inter-user delay. The LLM
 // endpoint and the Postgres connection pool are the real ceilings, so this is
-// deliberately modest.
-const briefingConcurrency = 8
+// deliberately modest. BRIEFING_CONCURRENCY overrides the default for
+// deployments whose LLM backend cannot absorb parallel calls — a single local
+// model (e.g. LM Studio) serializes them anyway, and 8-way contention pushed
+// each request against the DefaultRequestTimeout deadline.
+var briefingConcurrency = func() int {
+	if v := os.Getenv("BRIEFING_CONCURRENCY"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			return n
+		}
+	}
+	return 8
+}()
 
-const dailyBriefingMaxTokens = 5000
+// dailyBriefingMaxTokens is the default output budget for one briefing;
+// the admin can override it per deployment via the daily_briefing AI feature
+// config (max_tokens). Reasoning models (e.g. Qwen3 via LM Studio) spend part
+// of this on chain-of-thought before the answer, and that spend varies
+// several-fold run-to-run even at low temperature. 5000 was tight enough that
+// an unusually long reasoning pass consumed the whole budget and left an empty
+// answer; 10000 leaves room for the reasoning spike while still bounding cost
+// on fast cloud models.
+const dailyBriefingMaxTokens = 10000
 
 // BriefingScheduler generates daily briefings for all users in the background.
 type BriefingScheduler struct {
@@ -143,10 +162,15 @@ func (bs *BriefingScheduler) generateAllBriefings(stop <-chan struct{}) {
 	var runErr error
 	defer recordSchedulerRun(bs.runRepo, "briefing", start, &usersProcessed, &runErr, bs.now)
 
-	// Check schedule: "every_6h" allows regeneration on the same day
+	// Check schedule: "every_6h" allows regeneration on the same day. The
+	// per-feature max_tokens override (AI feature config) rides on the same
+	// read; 0 keeps the built-in default.
 	regenerate := false
+	maxTokens := 0
 	if cfg, err := llm.LoadAIFeaturesConfig(bs.db); err == nil {
-		regenerate = cfg["daily_briefing"].Schedule == "every_6h"
+		feature := cfg["daily_briefing"]
+		regenerate = feature.Schedule == "every_6h"
+		maxTokens = feature.MaxTokens
 	}
 
 	// Get active users – empty-context filtering happens in generateBriefingForUser
@@ -208,7 +232,7 @@ func (bs *BriefingScheduler) generateAllBriefings(stop <-chan struct{}) {
 						slog.Error("panic in briefing generation", slog.Int("user_id", u.ID), slog.Any("panic", r))
 					}
 				}()
-				return bs.generateBriefingForUser(llmClient, lookups, itemRepo, workspaceRepo, u, regenerate, now)
+				return bs.generateBriefingForUser(llmClient, lookups, itemRepo, workspaceRepo, u, regenerate, maxTokens, now)
 			}()
 			if !ok {
 				failMu.Lock()
@@ -225,10 +249,23 @@ func (bs *BriefingScheduler) generateAllBriefings(stop <-chan struct{}) {
 	}
 }
 
+// briefingGreeting maps a local hour to a time-of-day greeting for the
+// briefing's opening line.
+func briefingGreeting(local time.Time) string {
+	switch h := local.Hour(); {
+	case h >= 5 && h < 12:
+		return "Good morning"
+	case h >= 12 && h < 17:
+		return "Good afternoon"
+	default:
+		return "Good evening"
+	}
+}
+
 // generateBriefingForUser returns false only for generation or storage failure.
 // Shared lookups and the tick time are injected. A leased per-user/day claim
 // deduplicates instances and self-heals after a crashed holder.
-func (bs *BriefingScheduler) generateBriefingForUser(llmClient llm.Client, lookups *repository.NameMaps, itemRepo *repository.ItemRepository, workspaceRepo *repository.WorkspaceRepository, u models.User, regenerate bool, nowUTC time.Time) bool {
+func (bs *BriefingScheduler) generateBriefingForUser(llmClient llm.Client, lookups *repository.NameMaps, itemRepo *repository.ItemRepository, workspaceRepo *repository.WorkspaceRepository, u models.User, regenerate bool, maxTokens int, nowUTC time.Time) bool {
 	userID := u.ID
 	firstName := u.FirstName
 	// Compute briefing boundaries in the user's timezone, not the server's.
@@ -399,13 +436,17 @@ func (bs *BriefingScheduler) generateBriefingForUser(llmClient llm.Client, looku
 	}
 	systemPrompt := bs.promptStore.Get(llm.PromptDailyBriefing)
 
-	userPrompt := fmt.Sprintf("Good morning %s! Today is %s (%s timezone).\n\nHere is your project data:\n\n%s",
-		firstName, nowLocal.Format("Monday, January 2, 2006"), timezone, strings.Join(contextParts, "\n\n"))
+	// The every_6h schedule can land any hour of the user's day, so pick the
+	// greeting from the user's local clock and pin it verbatim in the prompt;
+	// an open-ended "Good morning" made the model greet at the wrong time of
+	// day whenever generation ran in the afternoon or evening.
+	userPrompt := fmt.Sprintf("%s %s! It is %s on %s (%s timezone). Open with exactly that greeting, then continue.\n\nHere is your project data:\n\n%s",
+		briefingGreeting(nowLocal), firstName, nowLocal.Format("3:04 PM"), nowLocal.Format("Monday, January 2, 2006"), timezone, strings.Join(contextParts, "\n\n"))
 
 	ctx, cancel := context.WithTimeout(context.Background(), llm.DefaultRequestTimeout)
 	defer cancel()
 
-	resp, err := llmClient.Complete(ctx, dailyBriefingCompletionRequest(systemPrompt, userPrompt))
+	resp, err := llmClient.Complete(ctx, dailyBriefingCompletionRequest(systemPrompt, userPrompt, maxTokens))
 
 	durationMs := time.Since(start).Milliseconds()
 
@@ -421,6 +462,15 @@ func (bs *BriefingScheduler) generateBriefingForUser(llmClient llm.Client, looku
 	}
 
 	content := resp.Choices[0].Message.Content
+	// A model that returns an empty or whitespace-only body would otherwise
+	// be stored as a successful empty briefing; treat it as a failure so the
+	// row is retryable on the next tick.
+	if strings.TrimSpace(content) == "" {
+		slog.Warn("briefing generation failed", slog.Int("user_id", userID), slog.String("error", "LLM returned empty content"))
+		bs.storeBriefing(userID, today, "", durationMs, "LLM returned empty content", accessibleWSIDs)
+		stored = true
+		return false
+	}
 	bs.storeBriefing(userID, today, content, durationMs, "", accessibleWSIDs)
 	stored = true
 
@@ -432,14 +482,17 @@ func (bs *BriefingScheduler) generateBriefingForUser(llmClient llm.Client, looku
 	return true
 }
 
-func dailyBriefingCompletionRequest(systemPrompt, userPrompt string) llm.CompletionRequest {
+func dailyBriefingCompletionRequest(systemPrompt, userPrompt string, maxTokens int) llm.CompletionRequest {
+	if maxTokens <= 0 {
+		maxTokens = dailyBriefingMaxTokens
+	}
 	return llm.CompletionRequest{
 		Messages: []llm.Message{
 			{Role: "system", Content: systemPrompt},
 			{Role: "user", Content: userPrompt},
 		},
 		Temperature: 0.3,
-		MaxTokens:   dailyBriefingMaxTokens,
+		MaxTokens:   maxTokens,
 	}
 }
 

@@ -62,6 +62,8 @@
       const data = await aiFeatures.getConfig();
       config = data.config ?? {};
       connections = data.connections ?? [];
+      const stored = getMaxTokens('daily_briefing');
+      maxTokensDraft = stored === 0 ? '' : String(stored);
     } catch (err) {
       errorToast(t('settings.aiFeatures.loadFailed'));
       console.error('Failed to load AI features config:', err);
@@ -82,13 +84,24 @@
     return config[key]?.schedule || 'daily';
   }
 
+  function getMaxTokens(key) {
+    return config[key]?.max_tokens || 0;
+  }
+
+  // Draft for the daily_briefing max_tokens input, so typing does not save on
+  // every keystroke; it commits on change (blur/Enter) via setMaxTokens.
+  let maxTokensDraft = $state('');
+
   async function setMode(key, mode) {
     config = {
       ...config,
       [key]: {
         mode,
         connection_id: mode === 'specific' ? (config[key]?.connection_id || (connections[0]?.id ?? 0)) : 0,
-        ...(key === 'daily_briefing' ? { schedule: config[key]?.schedule || 'daily' } : {}),
+        ...(key === 'daily_briefing' ? {
+          schedule: config[key]?.schedule || 'daily',
+          max_tokens: config[key]?.max_tokens || 0,
+        } : {}),
       },
     };
     await save();
@@ -115,6 +128,20 @@
         ...current,
         mode: current?.mode || 'default',
         schedule,
+      },
+    };
+    await save();
+  }
+
+  async function setMaxTokens(key, raw) {
+    const parsed = parseInt(raw, 10);
+    const current = config[key];
+    config = {
+      ...config,
+      [key]: {
+        ...current,
+        mode: current?.mode || 'default',
+        max_tokens: Number.isFinite(parsed) && parsed > 0 ? parsed : 0,
       },
     };
     await save();
@@ -198,19 +225,42 @@
 
         {#if key === 'daily_briefing' && mode !== 'disabled'}
           <div class="mt-3 pt-3 border-t" style="border-color: var(--ds-border);">
-            <div class="block text-xs mb-1" style="color: var(--ds-text-subtle);">
-              {t('settings.aiFeatures.scheduleLabel')}
+            <div class="flex flex-wrap items-end gap-x-6 gap-y-3">
+              <div>
+                <div class="block text-xs mb-1" style="color: var(--ds-text-subtle);">
+                  {t('settings.aiFeatures.scheduleLabel')}
+                </div>
+                <Select
+                  value={getSchedule(key)}
+                  onchange={(v) => setSchedule(key, v)}
+                  size="small"
+                  options={[
+                    { value: 'daily', label: t('settings.aiFeatures.scheduleDaily') },
+                    { value: 'every_6h', label: t('settings.aiFeatures.scheduleEvery6h') }
+                  ]}
+                  class="max-w-xs"
+                />
+              </div>
+              <div>
+                <div class="block text-xs mb-1" style="color: var(--ds-text-subtle);">
+                  {t('settings.aiFeatures.maxTokensLabel')}
+                </div>
+                <input
+                  type="number"
+                  min="100"
+                  max="32768"
+                  step="100"
+                  placeholder={t('settings.aiFeatures.maxTokensPlaceholder')}
+                  bind:value={maxTokensDraft}
+                  onchange={(e) => setMaxTokens(key, e.target.value)}
+                  class="w-28 rounded-md border px-2 py-1 text-sm"
+                  style="border-color: var(--ds-border); background-color: var(--ds-surface); color: var(--ds-text);"
+                />
+              </div>
             </div>
-            <Select
-              value={getSchedule(key)}
-              onchange={(v) => setSchedule(key, v)}
-              size="small"
-              options={[
-                { value: 'daily', label: t('settings.aiFeatures.scheduleDaily') },
-                { value: 'every_6h', label: t('settings.aiFeatures.scheduleEvery6h') }
-              ]}
-              class="max-w-xs"
-            />
+            <p class="text-xs mt-2" style="color: var(--ds-text-subtle);">
+              {t('settings.aiFeatures.maxTokensHint')}
+            </p>
           </div>
         {/if}
       </div>

@@ -1600,7 +1600,7 @@ func (h *SRMHandler) srmMeetingAttendees(ctx context.Context, meetingIDs []int) 
 	if len(meetingIDs) == 0 {
 		return out, nil
 	}
-	ph := joinPlaceholders(make([]string, len(meetingIDs)))
+	ph := questionPlaceholders(len(meetingIDs))
 	args := make([]any, len(meetingIDs))
 	for i, id := range meetingIDs {
 		args[i] = id
@@ -1636,7 +1636,7 @@ func (h *SRMHandler) srmMeetingActions(ctx context.Context, meetingIDs []int) (m
 	if len(meetingIDs) == 0 {
 		return out, nil
 	}
-	ph := joinPlaceholders(make([]string, len(meetingIDs)))
+	ph := questionPlaceholders(len(meetingIDs))
 	args := make([]any, len(meetingIDs))
 	for i, id := range meetingIDs {
 		args[i] = id
@@ -2241,7 +2241,7 @@ func (h *SRMHandler) srmJbpInitiatives(ctx context.Context, jbpIDs []int) (map[i
 	if len(jbpIDs) == 0 {
 		return out, nil
 	}
-	ph := joinPlaceholders(make([]string, len(jbpIDs)))
+	ph := questionPlaceholders(len(jbpIDs))
 	args := make([]any, len(jbpIDs))
 	for i, id := range jbpIDs {
 		args[i] = id
