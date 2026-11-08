@@ -130,6 +130,7 @@ const routes = {
   '/workspaces/:id/tests/reports': 'test-reports',
   '/gantt': 'big-gantt',
   '/p3m': 'p3m',
+  '/p3m/projects/:id': 'p3m',
   '/srm': 'srm',
   // Public grievance intake webform (WI-5.3) - no authentication required.
   '/sms/grievances': 'public-sms-grievance',

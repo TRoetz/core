@@ -350,6 +350,52 @@ type P3MResourceCapacityRow struct {
 	OverAllocated bool   `json:"over_allocated"`
 }
 
+// P3M investment case decision pipeline: cases start proposed, move to
+// under_review, and end in a terminal status set only by the decision endpoint.
+const (
+	P3MICStatusProposed    = "proposed"
+	P3MICStatusUnderReview = "under_review"
+	P3MICStatusApproved    = "approved"
+	P3MICStatusRejected    = "rejected"
+	P3MICStatusDeferred    = "deferred"
+)
+
+// P3MInvestmentCase is a project's investment case: the prioritisation decision
+// pipeline plus risk/benefit/return scores used to balance portfolios on timing,
+// strategic coverage, benefit, risk and return. One per project; it travels with
+// the project through its lifecycle.
+type P3MInvestmentCase struct {
+	ID            int        `json:"id"`
+	ProjectID     int        `json:"project_id"`
+	Status        string     `json:"status"` // proposed | under_review | approved | rejected | deferred
+	BenefitScore  int        `json:"benefit_score"` // 1-5
+	RiskScore     int        `json:"risk_score"`    // 1-5
+	ROIPercent    *float64   `json:"roi_percent,omitempty"`
+	PaybackMonths *int       `json:"payback_months,omitempty"`
+	BusinessCase  string     `json:"business_case"`
+	PageID        *int       `json:"page_id,omitempty"`
+	DecidedBy     *int       `json:"decided_by,omitempty"`
+	DecisionDate  *time.Time `json:"decision_date,omitempty"` // "YYYY-MM-DD" or null
+	CreatedAt     time.Time  `json:"created_at"`
+	UpdatedAt     time.Time  `json:"updated_at"`
+
+	// Display fields joined in by list responses.
+	ProjectTitle   string `json:"project_title"`
+	PortfolioID    *int   `json:"portfolio_id,omitempty"` // project may sit under a programme only
+	PortfolioTitle string `json:"portfolio_title,omitempty"`
+	DecidedByName  string `json:"decided_by_name,omitempty"`
+}
+
+// P3MPipelineCounts is the per-portfolio investment-case pipeline rollup in the
+// executive summary: how many cases sit at each decision stage.
+type P3MPipelineCounts struct {
+	Proposed    int `json:"proposed"`
+	UnderReview int `json:"under_review"`
+	Approved    int `json:"approved"`
+	Rejected    int `json:"rejected"`
+	Deferred    int `json:"deferred"`
+}
+
 // P3MExecutiveSummary is the auto-generated one-page status rollup for a
 // portfolio: RAG, budget health, upcoming gates, and top open risks.
 type P3MExecutiveSummary struct {
@@ -366,6 +412,7 @@ type P3MPortfolioSummary struct {
 	BudgetActual    float64            `json:"budget_actual"`
 	UpcomingGates   []P3MUpcomingGate  `json:"upcoming_gates"`
 	TopRisks        []P3MRaidItem      `json:"top_risks"`
+	InvestmentPipeline P3MPipelineCounts `json:"investment_pipeline"`
 }
 
 type P3MUpcomingGate struct {

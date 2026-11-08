@@ -18,6 +18,7 @@
   import Trash2 from '@lucide/svelte/icons/trash-2';
   import X from '@lucide/svelte/icons/x';
   import { useEventListener } from 'runed';
+  import { getUserTimezone } from '../utils/dateFormatter.js';
   import { createDashboardWidgetDrag } from '../composables/dashboardWidgetDrag.js';
   import { confirm } from '../composables/useConfirm.js';
 
@@ -44,6 +45,7 @@
   import PersonalTasksWidget from '../widgets/dashboard/PersonalTasksWidget.svelte';
   import SupportOverviewWidget from '../widgets/SupportOverviewWidget.svelte';
   import SavedSearchWidget from '../widgets/dashboard/SavedSearchWidget.svelte';
+  import P3MPortfolioPulseWidget from '../widgets/dashboard/P3MPortfolioPulse.svelte';
   import CustomWidgetWidget from '../widgets/dashboard/CustomWidgetWidget.svelte';
   import WidgetBuilderModal from '../openui/WidgetBuilderModal.svelte';
   import { aiStore } from '../stores/aiStore.svelte.js';
@@ -95,8 +97,7 @@
   }
 
   onMount(async () => {
-    const userTimeZone = authStore.currentUser?.timezone || 'UTC';
-    await homepageStore.init(userTimeZone);
+    await homepageStore.init(getUserTimezone(authStore.currentUser));
   });
 
   onDestroy(() => {
@@ -558,6 +559,8 @@
                           config={widget.config ?? {}}
                           onconfigchange={(changes) => updateWidgetConfig(widget.id, changes)}
                         />
+                      {:else if widget.type === 'p3m-portfolio-pulse'}
+                        <P3MPortfolioPulseWidget />
                       {:else}
                         <div class="text-center py-8 text-sm" style={homepageStore.backgroundSubtleTextStyle}>
                           {t('dashboard.editor.unknownWidgetType', { type: widget.type })}

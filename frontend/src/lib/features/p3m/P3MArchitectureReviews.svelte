@@ -4,6 +4,7 @@
   import IconPlus from '@tabler/icons-svelte-runes/icons/plus';
   import IconX from '@tabler/icons-svelte-runes/icons/x';
   import { p3m as p3mApi } from '../../api/p3m.js';
+  import { confirm } from '../../composables/useConfirm.js';
   import { formatDate } from './utils.js';
 
   let { portfolios = [] } = $props();
@@ -21,6 +22,22 @@
   let decisionFor = $state(null);
   let comments = $state('');
   let pageIdInput = $state('');
+
+  // --- Search & filter -----------------------------------------------------
+  /** '' | project id as string */
+  let reviewProjectFilter = $state('');
+  /** all | wip | in_review | needs_work | approved */
+  let reviewStatusFilter = $state('all');
+
+  const REVIEW_STATUSES = ['wip', 'in_review', 'needs_work', 'approved'];
+
+  const filteredReviews = $derived.by(() => {
+    return reviews.filter((r) => {
+      if (reviewProjectFilter !== '' && String(r.project_id) !== reviewProjectFilter) return false;
+      if (reviewStatusFilter !== 'all' && r.status !== reviewStatusFilter) return false;
+      return true;
+    });
+  });
 
   /** Flat project options, including standalone projects. */
   const projectOptions = $derived.by(() => {
@@ -144,6 +161,16 @@
     }
   }
 
+  async function deleteReview(review) {
+    if (!(await confirm({ title: t('p3m.delete'), message: t('p3m.confirmDeleteReview') }))) return;
+    try {
+      await p3mApi.architectureReviews.delete(review.id);
+      await load();
+    } catch (e) {
+      error = e?.message || t('p3m.createFailed');
+    }
+  }
+
   const statusChip = (status) => {
     switch (status) {
       case 'wip':
@@ -182,6 +209,30 @@
       <div class="mb-2 rounded-md border border-red-200 bg-red-50 p-2 text-xs text-red-700">{error}</div>
     {/if}
 
+    <!-- Review filters: project + status -->
+    <div class="mb-2 flex flex-wrap items-center gap-2 text-xs">
+      <select
+        value={reviewProjectFilter}
+        onchange={(e) => (reviewProjectFilter = e.target.value)}
+        class="max-w-xs rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+      >
+        <option value="">{t('p3m.allProjects')}</option>
+        {#each projectOptions as po (po.id)}
+          <option value={String(po.id)}>{po.label}</option>
+        {/each}
+      </select>
+      <select
+        value={reviewStatusFilter}
+        onchange={(e) => (reviewStatusFilter = e.target.value)}
+        class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+      >
+        <option value="all">{t('p3m.allStatuses')}</option>
+        {#each REVIEW_STATUSES as st (st)}
+          <option value={st}>{statusLabel(st)}</option>
+        {/each}
+      </select>
+    </div>
+
     {#if loading}
       <div class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] p-4 text-xs text-[var(--color-ds-text-muted,#6b7280)]">
         {t('p3m.loading')}
@@ -189,6 +240,10 @@
     {:else if reviews.length === 0 && !showForm}
       <div class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] p-4 text-xs text-[var(--color-ds-text-muted,#6b7280)]">
         {t('p3m.noReviews')}
+      </div>
+    {:else if filteredReviews.length === 0}
+      <div class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] p-4 text-xs text-[var(--color-ds-text-muted,#6b7280)]">
+        {t('p3m.noResults')}
       </div>
     {:else}
       <table class="w-full text-left text-xs">
@@ -202,7 +257,7 @@
           </tr>
         </thead>
         <tbody>
-          {#each reviews as review (review.id)}
+          {#each filteredReviews as review (review.id)}
             {@const open = decisionFor === review.id}
             <tr class="border-b border-[var(--color-ds-border,#e5e7eb)]">
               <td class="py-1.5 pr-3">{projectTitleById.get(review.project_id) ?? `#${review.project_id}`}</td>
@@ -224,18 +279,23 @@
                   <div class="text-[var(--color-ds-text-muted,#6b7280)]">{t('p3m.recordedInRegister')}</div>
                 {/if}
               </td>
-              <td class="py-1.5 text-right">
-                {#if review.status === 'wip'}
-                  <button type="button" class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] px-2 py-1 hover:bg-ds-background-neutral-hovered disabled:opacity-50" disabled={saving} onclick={() => submitForArb(review)}>
-                    {t('p3m.submitForArb')}
+              <td class="py-1.5">
+                <div class="flex items-center justify-end gap-2">
+                  {#if review.status === 'wip'}
+                    <button type="button" class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] px-2 py-1 hover:bg-ds-background-neutral-hovered disabled:opacity-50" disabled={saving} onclick={() => submitForArb(review)}>
+                      {t('p3m.submitForArb')}
+                    </button>
+                  {:else if review.status === 'in_review'}
+                    <button type="button" class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] px-2 py-1 hover:bg-ds-background-neutral-hovered disabled:opacity-50" disabled={saving} onclick={() => (open ? closeDecision() : openDecision(review))}>
+                      {t('p3m.decide')}
+                    </button>
+                  {:else if review.comments}
+                    <div class="max-w-xs text-right text-[var(--color-ds-text-muted,#6b7280)]">{review.comments}</div>
+                  {/if}
+                  <button type="button" class="text-[var(--color-ds-text-muted,#6b7280)] hover:text-red-600 disabled:opacity-50" title={t('p3m.delete')} disabled={saving} onclick={() => deleteReview(review)}>
+                    <IconX size={14} />
                   </button>
-                {:else if review.status === 'in_review'}
-                  <button type="button" class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] px-2 py-1 hover:bg-ds-background-neutral-hovered disabled:opacity-50" disabled={saving} onclick={() => (open ? closeDecision() : openDecision(review))}>
-                    {t('p3m.decide')}
-                  </button>
-                {:else if review.comments}
-                  <div class="max-w-xs text-right text-[var(--color-ds-text-muted,#6b7280)]">{review.comments}</div>
-                {/if}
+                </div>
               </td>
             </tr>
             {#if open && review.status === 'in_review'}

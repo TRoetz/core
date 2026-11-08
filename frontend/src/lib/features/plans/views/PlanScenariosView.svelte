@@ -1,6 +1,8 @@
 <script>
   import { onMount } from 'svelte';
   import { plans as plansApi } from '../../../api/plans.js';
+  import Modal from '../../../dialogs/Modal.svelte';
+  import IconPencil from '@tabler/icons-svelte-runes/icons/pencil';
   import IconX from '@tabler/icons-svelte-runes/icons/x';
   import { t } from '../../../stores/i18n.svelte.js';
 
@@ -17,6 +19,45 @@
   // New-scenario form.
   let newScenarioName = $state('');
   let newScenarioDesc = $state('');
+
+  // Edit-scenario modal (rename / description / status).
+  const SCENARIO_STATUSES = [
+    { id: 'draft', labelKey: 'plans.scenariosStatusDraft' },
+    { id: 'active', labelKey: 'plans.scenariosStatusActive' },
+    { id: 'archived', labelKey: 'plans.scenariosStatusArchived' },
+  ];
+  let showEdit = $state(false);
+  let editSid = $state(null);
+  let editName = $state('');
+  let editDesc = $state('');
+  let editStatus = $state('draft');
+
+  function openScenarioEdit(s) {
+    editSid = s.id;
+    editName = s.name;
+    editDesc = s.description ?? '';
+    editStatus = SCENARIO_STATUSES.some((st) => st.id === s.status) ? s.status : 'draft';
+    showEdit = true;
+  }
+
+  async function saveScenarioEdit() {
+    if (!editName.trim()) return;
+    busy = true;
+    try {
+      await plansApi.updateScenario(planId, editSid, {
+        name: editName.trim(),
+        description: editDesc.trim(),
+        status: editStatus,
+      });
+      showEdit = false;
+      await loadScenarios();
+      if (selectedId === editSid) await loadDetail(editSid);
+    } catch (e) {
+      error = e?.message || 'error';
+    } finally {
+      busy = false;
+    }
+  }
 
   // Add-override form (for the selected scenario).
   let ovItemId = $state('');
@@ -169,6 +210,12 @@
           >
             <div class="flex items-start justify-between gap-2">
               <p class="min-w-0 flex-1 truncate text-sm font-medium">{s.name}</p>
+              <span class={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] ${s.status === 'active' ? 'bg-emerald-100 text-emerald-700' : s.status === 'archived' ? 'bg-slate-200 text-slate-600' : 'bg-slate-100 text-slate-500'}`}>
+                {t(SCENARIO_STATUSES.find((st) => st.id === (s.status || 'draft'))?.labelKey ?? 'plans.scenariosStatusDraft')}
+              </span>
+              <button type="button" title={t('common.edit')} disabled={busy} onclick={(e) => { e.stopPropagation(); openScenarioEdit(s); }} class="shrink-0 p-1 text-[var(--color-ds-text-muted,#6b7280)] hover:text-[var(--color-ds-accent-blue,#2563eb)] disabled:opacity-50">
+                <IconPencil size={14} />
+              </button>
               <button type="button" title={t('common.delete')} disabled={busy} onclick={(e) => { e.stopPropagation(); deleteScenario(s.id); }} class="shrink-0 p-1 text-[var(--color-ds-text-muted,#6b7280)] hover:text-red-600 disabled:opacity-50">
                 <IconX size={14} />
               </button>
@@ -268,3 +315,55 @@
     {/if}
   </div>
 </div>
+
+{#if showEdit}
+  <Modal isOpen={true} maxWidth="max-w-lg" onclose={() => (showEdit = false)}>
+    <div class="px-8 py-6">
+      <h2 class="mb-4 text-lg font-semibold">{t('plans.scenariosEdit')}</h2>
+      <form
+        class="space-y-4"
+        onsubmit={(e) => {
+          e.preventDefault();
+          saveScenarioEdit();
+        }}
+      >
+        <label class="block">
+          <span class="mb-1 block text-sm font-medium">{t('plans.name')}</span>
+          <input
+            type="text"
+            bind:value={editName}
+            required
+            class="h-9 w-full rounded-md border border-[var(--color-ds-border,#d1d5db)] bg-[var(--color-ds-surface,#fff)] px-2 text-sm outline-none focus:border-[var(--color-ds-accent-blue,#3b82f6)]"
+          />
+        </label>
+        <label class="block">
+          <span class="mb-1 block text-sm font-medium">{t('plans.description')}</span>
+          <textarea
+            bind:value={editDesc}
+            rows={3}
+            class="w-full rounded-md border border-[var(--color-ds-border,#d1d5db)] bg-[var(--color-ds-surface,#fff)] px-2 py-1.5 text-sm outline-none focus:border-[var(--color-ds-accent-blue,#3b82f6)]"
+          ></textarea>
+        </label>
+        <label class="block">
+          <span class="mb-1 block text-sm font-medium">{t('plans.status')}</span>
+          <select
+            bind:value={editStatus}
+            class="h-9 w-full rounded-md border border-[var(--color-ds-border,#d1d5db)] bg-[var(--color-ds-surface,#fff)] px-2 text-sm outline-none focus:border-[var(--color-ds-accent-blue,#3b82f6)]"
+          >
+            {#each SCENARIO_STATUSES as st (st.id)}
+              <option value={st.id}>{t(st.labelKey)}</option>
+            {/each}
+          </select>
+        </label>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick={() => (showEdit = false)} class="rounded-md border border-[var(--color-ds-border,#d1d5db)] bg-[var(--color-ds-surface,#fff)] px-3 py-1.5 text-sm hover:bg-[var(--color-ds-surface-hover,#f3f4f6)]">
+            {t('common.cancel')}
+          </button>
+          <button type="submit" disabled={busy || !editName.trim()} class="rounded-md bg-[var(--color-ds-accent-blue,#3b82f6)] px-3 py-1.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50">
+            {t('common.save')}
+          </button>
+        </div>
+      </form>
+    </div>
+  </Modal>
+{/if}

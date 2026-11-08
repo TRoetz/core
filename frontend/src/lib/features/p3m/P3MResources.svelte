@@ -6,16 +6,38 @@
   import EmptyState from '../../components/EmptyState.svelte';
   import IconPlus from '@tabler/icons-svelte-runes/icons/plus';
   import IconX from '@tabler/icons-svelte-runes/icons/x';
+  import IconDownload from '@tabler/icons-svelte-runes/icons/download';
   import { confirm } from '../../composables/useConfirm.js';
   import { formatMoney, formatDate, toISODate, toDateInputValue } from './utils.js';
 
   let { portfolios = [] } = $props();
+
+  // Register export (CSV) via the server-side /p3m/export endpoint.
+  function downloadExport(scope) {
+    window.open(p3mApi.exportUrl(scope), '_blank', 'noopener');
+  }
 
   let resources = $state([]);
   let allocations = $state([]);
   let capacityRows = $state([]);
   let loading = $state(true);
   let error = $state('');
+
+  // --- Search & filter -----------------------------------------------------
+  /** '' | project id as string */
+  let allocationProjectFilter = $state('');
+  /** all | soft | hard */
+  let allocationBookingFilter = $state('all');
+
+  const BOOKING_TYPES = ['soft', 'hard'];
+
+  const filteredAllocations = $derived.by(() => {
+    return allocations.filter((a) => {
+      if (allocationProjectFilter !== '' && String(a.project_id ?? '') !== allocationProjectFilter) return false;
+      if (allocationBookingFilter !== 'all' && a.booking_type !== allocationBookingFilter) return false;
+      return true;
+    });
+  });
 
   /** @type {Array<{id:number,display_name?:string,username?:string}>} */
   let users = $state([]);
@@ -245,9 +267,14 @@
     <section>
       <div class="mb-2 flex items-center justify-between">
         <h2 class="text-sm font-semibold">{t('p3m.resources')}</h2>
-        <button type="button" class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] px-2 py-1 text-xs text-[var(--color-ds-text-muted,#6b7280)] hover:text-[var(--color-ds-text,#111827)]" onclick={openResourceCreate}>
-          <IconPlus size={14} class="inline" /> {t('p3m.newResource')}
-        </button>
+        <div class="flex items-center gap-2">
+          <button type="button" class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] px-2 py-1 text-xs text-[var(--color-ds-text-muted,#6b7280)] hover:text-[var(--color-ds-text,#111827)]" onclick={openResourceCreate}>
+            <IconPlus size={14} class="inline" /> {t('p3m.newResource')}
+          </button>
+          <button type="button" class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] px-2 py-1 text-xs text-[var(--color-ds-text-muted,#6b7280)] hover:text-[var(--color-ds-text,#111827)]" onclick={() => downloadExport('resources')}>
+            <IconDownload size={14} class="inline" /> {t('p3m.exportCsv')}
+          </button>
+        </div>
       </div>
 
       {#if error && !resourceFormOpen && !allocationFormOpen}
@@ -386,6 +413,30 @@
         {/if}
       </div>
 
+      <!-- Allocation filters: project + booking type -->
+      <div class="mb-2 flex flex-wrap items-center gap-2 text-xs">
+        <select
+          value={allocationProjectFilter}
+          onchange={(e) => (allocationProjectFilter = e.target.value)}
+          class="max-w-xs rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+        >
+          <option value="">{t('p3m.allProjects')}</option>
+          {#each projectOptions as po (po.id)}
+            <option value={String(po.id)}>{po.title}</option>
+          {/each}
+        </select>
+        <select
+          value={allocationBookingFilter}
+          onchange={(e) => (allocationBookingFilter = e.target.value)}
+          class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+        >
+          <option value="all">{t('p3m.allBookingTypes')}</option>
+          {#each BOOKING_TYPES as bt (bt)}
+            <option value={bt}>{t(`p3m.bookingType${bt[0].toUpperCase()}${bt.slice(1)}`)}</option>
+          {/each}
+        </select>
+      </div>
+
       {#if allocationFormOpen}
         <div class="mb-3 rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-surface-card p-3 text-xs">
           <div class="grid grid-cols-1 gap-x-6 gap-y-2 md:grid-cols-4">
@@ -485,6 +536,10 @@
         <div class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] p-4 text-xs text-[var(--color-ds-text-muted,#6b7280)]">
           {t('p3m.noData')}
         </div>
+      {:else if filteredAllocations.length === 0}
+        <div class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] p-4 text-xs text-[var(--color-ds-text-muted,#6b7280)]">
+          {t('p3m.noResults')}
+        </div>
       {:else}
         <table class="w-full text-left text-xs">
           <thead>
@@ -498,7 +553,7 @@
             </tr>
           </thead>
           <tbody>
-            {#each allocations as a (a.id)}
+            {#each filteredAllocations as a (a.id)}
               <tr class="border-b border-[var(--color-ds-border,#e5e7eb)]">
                 <td class="py-1.5 pr-3">{resourceNameById.get(a.resource_id) ?? `#${a.resource_id}`}</td>
                 <td class="py-1.5 pr-3">{a.project_id != null ? projectTitleById.get(a.project_id) ?? `#${a.project_id}` : '—'}</td>

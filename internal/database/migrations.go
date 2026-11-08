@@ -3548,6 +3548,46 @@ var Catalog = []Migration{
 			ALTER TABLE srm_suppliers DROP CONSTRAINT IF EXISTS srm_suppliers_nzbn_check;
 		`,
 	},
+	{
+		Version:       "20261107_p3m_investment_cases",
+		Name:          "Add P3M investment cases (prioritisation pipeline and scores)",
+		CheckSQLite:   sqliteTableCheck("p3m_investment_cases"),
+		CheckPostgres: pgTableCheck("p3m_investment_cases"),
+		SQLite: `
+			CREATE TABLE IF NOT EXISTS p3m_investment_cases (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				project_id INTEGER NOT NULL UNIQUE REFERENCES p3m_projects(id) ON DELETE CASCADE,
+				status TEXT NOT NULL DEFAULT 'proposed' CHECK (status IN ('proposed', 'under_review', 'approved', 'rejected', 'deferred')),
+				benefit_score INTEGER NOT NULL DEFAULT 3 CHECK (benefit_score BETWEEN 1 AND 5),
+				risk_score INTEGER NOT NULL DEFAULT 3 CHECK (risk_score BETWEEN 1 AND 5),
+				roi_percent REAL,
+				payback_months INTEGER,
+				business_case TEXT NOT NULL DEFAULT '',
+				page_id INTEGER REFERENCES pages(id) ON DELETE SET NULL,
+				decided_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				decision_date DATE,
+				created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+				updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+			);
+		`,
+		Postgres: `
+			CREATE TABLE IF NOT EXISTS p3m_investment_cases (
+				id SERIAL PRIMARY KEY,
+				project_id INTEGER NOT NULL UNIQUE REFERENCES p3m_projects(id) ON DELETE CASCADE,
+				status TEXT NOT NULL DEFAULT 'proposed' CHECK (status IN ('proposed', 'under_review', 'approved', 'rejected', 'deferred')),
+				benefit_score INTEGER NOT NULL DEFAULT 3 CHECK (benefit_score BETWEEN 1 AND 5),
+				risk_score INTEGER NOT NULL DEFAULT 3 CHECK (risk_score BETWEEN 1 AND 5),
+				roi_percent REAL,
+				payback_months INTEGER,
+				business_case TEXT NOT NULL DEFAULT '',
+				page_id INTEGER REFERENCES pages(id) ON DELETE SET NULL,
+				decided_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				decision_date DATE,
+				created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+				updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+			);
+		`,
+	},
 }
 
 // checkP3MDecisionARBSQLite reports whether the P3M decision/ARB migration's

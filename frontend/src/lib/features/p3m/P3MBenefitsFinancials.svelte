@@ -7,16 +7,36 @@
   import IconChevronRight from '@tabler/icons-svelte-runes/icons/chevron-right';
   import IconPlus from '@tabler/icons-svelte-runes/icons/plus';
   import IconX from '@tabler/icons-svelte-runes/icons/x';
+  import IconDownload from '@tabler/icons-svelte-runes/icons/download';
   import { confirm } from '../../composables/useConfirm.js';
   import { formatMoney, formatDate, toISODate, toDateInputValue } from './utils.js';
 
   let { portfolios = [] } = $props();
+
+  // Register export (CSV) via the server-side /p3m/export endpoint.
+  function downloadExport(scope) {
+    window.open(p3mApi.exportUrl(scope), '_blank', 'noopener');
+  }
 
   let benefits = $state([]);
   let tranches = $state([]);
   let forecast = $state([]);
   let loading = $state(true);
   let error = $state('');
+
+  // --- Search & filter -----------------------------------------------------
+  /** all | financial | non_financial | strategic | compliance */
+  let benefitTypeFilter = $state('all');
+  /** all | capex | opex */
+  let expenditureTypeFilter = $state('all');
+
+  const filteredBenefits = $derived(
+    benefitTypeFilter === 'all' ? benefits : benefits.filter((b) => b.benefit_type === benefitTypeFilter)
+  );
+
+  const filteredTranches = $derived(
+    expenditureTypeFilter === 'all' ? tranches : tranches.filter((tr) => tr.expenditure_type === expenditureTypeFilter)
+  );
 
   const expandedBenefits = $state({}); // benefit id -> realizations[] | undefined (loading)
   const realizationCache = $state({});
@@ -98,6 +118,7 @@
 
   // --- Benefit create / edit ---------------------------------------------------
   const BENEFIT_TYPES = ['financial', 'non_financial', 'strategic', 'compliance'];
+  const EXPENDITURE_TYPES = ['capex', 'opex'];
   let benefitFormOpen = $state(false);
   /** Benefit being edited in place, or null when creating. */
   let editingBenefit = $state(null);
@@ -372,11 +393,30 @@
     <section>
       <div class="mb-2 flex items-center justify-between">
         <h2 class="text-sm font-semibold">{t('p3m.benefits')}</h2>
-        {#if projectOptions.length > 0 || programmeOptions.length > 0}
-          <button type="button" class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] px-2 py-1 text-xs text-[var(--color-ds-text-muted,#6b7280)] hover:text-[var(--color-ds-text,#111827)]" onclick={openBenefitCreate}>
-            <IconPlus size={14} class="inline" /> {t('p3m.newBenefit')}
+        <div class="flex items-center gap-2">
+          {#if projectOptions.length > 0 || programmeOptions.length > 0}
+            <button type="button" class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] px-2 py-1 text-xs text-[var(--color-ds-text-muted,#6b7280)] hover:text-[var(--color-ds-text,#111827)]" onclick={openBenefitCreate}>
+              <IconPlus size={14} class="inline" /> {t('p3m.newBenefit')}
+            </button>
+          {/if}
+          <button type="button" class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] px-2 py-1 text-xs text-[var(--color-ds-text-muted,#6b7280)] hover:text-[var(--color-ds-text,#111827)]" onclick={() => downloadExport('benefits')}>
+            <IconDownload size={14} class="inline" /> {t('p3m.exportCsv')}
           </button>
-        {/if}
+        </div>
+      </div>
+
+      <!-- Benefit type filter -->
+      <div class="mb-2 flex items-center gap-2 text-xs">
+        <select
+          value={benefitTypeFilter}
+          onchange={(e) => (benefitTypeFilter = e.target.value)}
+          class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+        >
+          <option value="all">{t('p3m.allBenefitTypes')}</option>
+          {#each BENEFIT_TYPES as bt (bt)}
+            <option value={bt}>{t(`p3m.benefitType${bt.split('_').map((w) => w[0].toUpperCase() + w.slice(1)).join('')}`)}</option>
+          {/each}
+        </select>
       </div>
 
       {#if error && !benefitFormOpen && !trancheFormOpen}
@@ -520,6 +560,10 @@
         <div class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] p-4 text-xs text-[var(--color-ds-text-muted,#6b7280)]">
           {t('p3m.noData')}
         </div>
+      {:else if filteredBenefits.length === 0}
+        <div class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] p-4 text-xs text-[var(--color-ds-text-muted,#6b7280)]">
+          {t('p3m.noResults')}
+        </div>
       {:else}
         <table class="w-full text-left text-xs">
           <thead>
@@ -535,7 +579,7 @@
             </tr>
           </thead>
           <tbody>
-            {#each benefits as b (b.id)}
+            {#each filteredBenefits as b (b.id)}
               {@const open = expandedBenefits[b.id]}
               <tr class="border-b border-[var(--color-ds-border,#e5e7eb)]">
                 <td class="py-1.5 pr-3">
@@ -629,6 +673,20 @@
             <IconPlus size={14} class="inline" /> {t('p3m.addTranche')}
           </button>
         {/if}
+      </div>
+
+      <!-- Expenditure type filter -->
+      <div class="mb-2 flex items-center gap-2 text-xs">
+        <select
+          value={expenditureTypeFilter}
+          onchange={(e) => (expenditureTypeFilter = e.target.value)}
+          class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+        >
+          <option value="all">{t('p3m.allExpenditureTypes')}</option>
+          {#each EXPENDITURE_TYPES as et (et)}
+            <option value={et}>{t(`p3m.${et}`)}</option>
+          {/each}
+        </select>
       </div>
 
       {#if trancheFormOpen}
@@ -736,6 +794,10 @@
         <div class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] p-4 text-xs text-[var(--color-ds-text-muted,#6b7280)]">
           {t('p3m.noData')}
         </div>
+      {:else if filteredTranches.length === 0}
+        <div class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] p-4 text-xs text-[var(--color-ds-text-muted,#6b7280)]">
+          {t('p3m.noResults')}
+        </div>
       {:else}
         <table class="w-full text-left text-xs">
           <thead>
@@ -750,7 +812,7 @@
             </tr>
           </thead>
           <tbody>
-            {#each tranches as tr (tr.id)}
+            {#each filteredTranches as tr (tr.id)}
               <tr class="border-b border-[var(--color-ds-border,#e5e7eb)]">
                 <td class="py-1.5 pr-3">{entityTitleById.get(`${tr.entity_type}:${tr.entity_id}`) ?? `#${tr.entity_id}`}</td>
                 <td class="py-1.5 pr-3">{tr.title || '—'}</td>

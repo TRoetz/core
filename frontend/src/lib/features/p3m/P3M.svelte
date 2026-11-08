@@ -3,10 +3,12 @@
   import { t } from '../../stores/i18n.svelte.js';
   import { p3m as p3mApi } from '../../api/p3m.js';
   import { plans as plansApi } from '../../api/plans.js';
+  import { currentRoute } from '../../router.js';
   import PageHeader from '../../layout/PageHeader.svelte';
   import EmptyState from '../../components/EmptyState.svelte';
   import IconTarget from '@tabler/icons-svelte-runes/icons/target';
   import P3MOverview from './P3MOverview.svelte';
+  import P3MInvestmentCases from './P3MInvestmentCases.svelte';
   import P3MHierarchyGuide from './P3MHierarchyGuide.svelte';
   import P3MGovernance from './P3MGovernance.svelte';
   import P3MBenefitsFinancials from './P3MBenefitsFinancials.svelte';
@@ -15,6 +17,7 @@
 
   const TABS = [
     { id: 'overview', labelKey: 'p3m.overview' },
+    { id: 'investment', labelKey: 'p3m.investmentTab' },
     { id: 'governance', labelKey: 'p3m.governance' },
     { id: 'benefits', labelKey: 'p3m.benefitsTab' },
     { id: 'risk', labelKey: 'p3m.riskTab' },
@@ -41,15 +44,22 @@
 
   const portfolioCount = $derived(hierarchy.portfolios.length);
 
-  // Deep link from the SRM projects section (?project=<id>): auto-expand that
-  // project's detail on first load.
-  const initialProjectId = (() => {
+  // Deep link to a project's detail view: the /p3m/projects/:id route, or the
+  // SRM projects section (?project=<id>). Auto-expands that project on load.
+  const initialProjectId = $derived.by(() => {
+    const fromRoute = Number($currentRoute.params?.id) || null;
+    if (fromRoute) return fromRoute;
     try {
       return Number(new URLSearchParams(window.location.search).get('project')) || null;
     } catch (e) {
       return null;
     }
-  })();
+  });
+
+  // A route deep link always lands on the overview tab, where the detail renders.
+  $effect(() => {
+    if ($currentRoute.params?.id) activeTab = 'overview';
+  });
   const programmeCount = $derived(
     hierarchy.portfolios.reduce((n, pf) => n + (pf.programmes?.length ?? 0), 0)
   );
@@ -144,6 +154,8 @@
 {:else}
   {#if activeTab === 'overview'}
     <P3MOverview portfolios={hierarchy.portfolios} summary={summary} onChanged={load} initialProjectId={initialProjectId} planMap={planMap} />
+  {:else if activeTab === 'investment'}
+    <P3MInvestmentCases portfolios={hierarchy.portfolios} onChanged={load} />
   {:else if activeTab === 'governance'}
     <P3MGovernance portfolios={hierarchy.portfolios} onChanged={load} />
   {:else if activeTab === 'benefits'}

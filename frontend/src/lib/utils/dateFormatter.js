@@ -328,13 +328,33 @@ export function formatHistoryTimestamp(dateString, timezone = DEFAULT_TIMEZONE) 
 }
 
 /**
- * Get the user's configured timezone from the current user object
- * Falls back to UTC for missing or invalid stored values.
+ * Get the browser's detected IANA timezone.
+ * Falls back to UTC in non-browser environments without Intl support.
+ * @returns {string} IANA timezone string
+ */
+export function getBrowserTimezone() {
+  if (typeof Intl === 'undefined') return DEFAULT_TIMEZONE;
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || DEFAULT_TIMEZONE;
+  } catch (_error) {
+    return DEFAULT_TIMEZONE;
+  }
+}
+
+/**
+ * Get the user's display timezone from the current user object.
+ * An explicit UTC choice is honored as-is; a missing or legacy value
+ * ('Local', offset, invalid IANA name) falls back to the browser-detected
+ * zone instead of UTC so users who never set a profile timezone see their
+ * own local time rather than a day or hour off.
  * @param {object} currentUser - Current user object with timezone property
  * @returns {string} IANA timezone string
  */
 export function getUserTimezone(currentUser) {
-  return resolveTimezone(currentUser?.timezone);
+  const stored = currentUser?.timezone;
+  if (typeof stored === 'string' && stored.trim() === 'UTC') return DEFAULT_TIMEZONE;
+  const resolved = resolveTimezone(stored);
+  return resolved !== DEFAULT_TIMEZONE ? resolved : getBrowserTimezone();
 }
 
 /**

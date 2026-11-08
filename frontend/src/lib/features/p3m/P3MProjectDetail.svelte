@@ -29,6 +29,22 @@
   let baselineLabel = $state('');
   let savingBaseline = $state(false);
 
+  /** @type {{stage_gates?: any[], budget_approvals?: any[], architecture_reviews?: any[], communications?: any[]} | null} */
+  let activity = $state(null);
+
+  /** Merged, newest-first event timeline across the four activity sources. */
+  const activityFeed = $derived.by(() => {
+    if (!activity) return [];
+    const items = [];
+    for (const g of activity.stage_gates ?? []) items.push({ at: String(g.created_at), type: 'stage_gate', data: g });
+    for (const b of activity.budget_approvals ?? []) items.push({ at: String(b.updated_at), type: 'budget_approval', data: b });
+    for (const a of activity.architecture_reviews ?? []) items.push({ at: String(a.decided_at || a.created_at), type: 'architecture_review', data: a });
+    for (const c of activity.communications ?? []) items.push({ at: String(c.date), type: 'communication', data: c });
+    return items.sort((x, y) => y.at.localeCompare(x.at));
+  });
+
+  const arbStatusLabel = { wip: () => t('p3m.arbWip'), in_review: () => t('p3m.arbInReview'), approved: () => t('p3m.arbApproved'), needs_work: () => t('p3m.arbNeedsWork') };
+
   const timeProjectName = $derived(rollup?.time_project?.name ?? '');
 
   async function load() {
@@ -39,17 +55,19 @@
     checkedWorkspaceIds = new Set();
     linksSaved = false;
     try {
-      const [r, tps, wss, bls] = await Promise.all([
+      const [r, tps, wss, bls, act] = await Promise.all([
         p3mApi.getProjectRollup(project.id),
         time.projects.getAll().catch(() => []),
         wsApi.getAll().catch(() => []),
         p3mApi.getProjectBaselines(project.id).catch(() => []),
+        p3mApi.getProjectActivity(project.id).catch(() => null),
       ]);
       rollup = r ?? null;
       timeProjects = Array.isArray(tps) ? tps : [];
       allWorkspaces = Array.isArray(wss) ? wss : [];
       checkedWorkspaceIds = new Set((r?.workspaces ?? []).map((w) => w.id));
       baselines = Array.isArray(bls) ? bls : [];
+      activity = act && typeof act === 'object' ? act : null;
     } catch (e) {
       error = e?.message || 'error';
     } finally {
@@ -270,6 +288,44 @@
     <!-- Per-project risk and decision registers (feed the CPM badges above) -->
     <h3 class="mb-1 mt-4 font-semibold">{t('p3m.registers')}</h3>
     <P3MProjectRegisters project={project} />
+
+    <!-- Recent events: stage gates, budget approvals, architecture reviews, communications -->
+    <h3 class="mb-1 mt-4 font-semibold">{t('p3m.activityTitle')}</h3>
+    {#if !activity}
+      <div class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] p-3 text-[var(--color-ds-text-muted,#6b7280)]">{t('p3m.loading')}</div>
+    {:else if activityFeed.length === 0}
+      <div class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] p-3 text-[var(--color-ds-text-muted,#6b7280)]">{t('p3m.noData')}</div>
+    {:else}
+      <ul class="mt-1 divide-y divide-[var(--color-ds-border,#e5e7eb)] rounded-md border border-[var(--color-ds-border,#e5e7eb)]">
+        {#each activityFeed as item (item.at + '|' + item.type + JSON.stringify(item.data))}
+          <li class="flex items-start gap-3 p-2">
+            <span class="w-24 shrink-0 tabular-nums text-[var(--color-ds-text-muted,#6b7280)]">{formatDate(item.at)}</span>
+            {#if item.type === 'stage_gate'}
+              <span class="shrink-0 rounded bg-blue-50 px-1.5 py-0.5 font-medium text-blue-700">{t('p3m.activityStageGate')}</span>
+              <span>{stageLabel(item.data.from_stage)} → {stageLabel(item.data.to_stage)}{item.data.reviewer_name ? ` — ${item.data.reviewer_name}` : ''}</span>
+              <span class="ml-auto shrink-0 rounded px-1.5 py-0.5 font-medium {item.data.passed ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}">
+                {t(item.data.passed ? 'p3m.passed' : 'p3m.activityGateNotPassed')}
+              </span>
+            {:else if item.type === 'budget_approval'}
+              <span class="shrink-0 rounded bg-amber-50 px-1.5 py-0.5 font-medium text-amber-700">{t('p3m.activityBudgetRequest')}</span>
+              <span>{formatMoney(item.data.requested_amount)}{item.data.decision_notes ? ` — ${item.data.decision_notes}` : ''}</span>
+              <span class="ml-auto shrink-0 rounded px-1.5 py-0.5 font-medium {item.data.status === 'approved' ? 'bg-green-50 text-green-700' : item.data.status === 'rejected' ? 'bg-red-50 text-red-700' : 'bg-gray-100 text-gray-600'}">
+                {t(item.data.status === 'pending' ? 'p3m.decisionPending' : item.data.status === 'approved' ? 'p3m.passed' : 'p3m.rejected')}
+              </span>
+            {:else if item.type === 'architecture_review'}
+              <span class="shrink-0 rounded bg-purple-50 px-1.5 py-0.5 font-medium text-purple-700">{t('p3m.activityArchReview')}</span>
+              <span>{item.data.title}</span>
+              <span class="ml-auto shrink-0 rounded bg-gray-100 px-1.5 py-0.5 font-medium text-gray-600">
+                {(arbStatusLabel[item.data.status] ?? (() => item.data.status))()}
+              </span>
+            {:else}
+              <span class="shrink-0 rounded bg-cyan-50 px-1.5 py-0.5 font-medium text-cyan-700">{t('p3m.activityCommunication')}</span>
+              <span>{item.data.audience}{item.data.channel ? ` · ${item.data.channel}` : ''}: {item.data.summary}</span>
+            {/if}
+          </li>
+        {/each}
+      </ul>
+    {/if}
 
     <!-- Merged stakeholders (P3M + SRM) -->
     <h3 class="mb-1 mt-4 font-semibold">

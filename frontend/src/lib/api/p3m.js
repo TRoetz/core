@@ -1,5 +1,5 @@
+import { API_BASE, fetchAPI } from './core.js';
 import { createCrudClient } from './createCrudClient.js';
-import { fetchAPI } from './core.js';
 
 /**
  * P3M (Portfolio, Programme and Project Management) API client.
@@ -11,6 +11,9 @@ export const p3m = {
   getHierarchy: (filters = {}) => fetchAPI(`/p3m/hierarchy${qs(filters)}`),
   getExecutiveSummary: () => fetchAPI('/p3m/executive-summary'),
 
+  // Register exports (CSV). Direct-download URL; cookie auth applies.
+  exportUrl: (scope) => `${API_BASE}/p3m/export?scope=${encodeURIComponent(scope)}&format=csv`,
+
   portfolios: createCrudClient('/p3m/portfolios'),
   programmes: createCrudClient('/p3m/programmes'),
   projects: createCrudClient('/p3m/projects'),
@@ -18,8 +21,12 @@ export const p3m = {
   // Cross-module project detail: financial rollup (budget, tranches, SRM
   // contract spend, worklog cost), merged stakeholders and attached contracts.
   getProjectRollup: (projectId) => fetchAPI(`/p3m/projects/${projectId}/rollup`),
+  // Unified recent-event feed for the project detail view: stage gate reviews,
+  // budget approvals, architecture review decisions and communications.
+  getProjectActivity: (projectId) => fetchAPI(`/p3m/projects/${projectId}/activity`),
   getProjectWorkspaces: (projectId) => fetchAPI(`/p3m/projects/${projectId}/workspaces`),
-  setProjectWorkspaces: (projectId, workspaceIds) => put(`/p3m/projects/${projectId}/workspaces`, { workspace_ids: workspaceIds }),
+  setProjectWorkspaces: (projectId, workspaceIds) =>
+    put(`/p3m/projects/${projectId}/workspaces`, { workspace_ids: workspaceIds }),
 
   // Critical path: CPM schedule analysis over the dated work items in the
   // entity's linked workspaces. Cycle errors arrive as API error strings.
@@ -30,8 +37,7 @@ export const p3m = {
   // Leave impact: active user leaves overlapping resource allocations and
   // critical-path tasks. Visibility only - no rescheduling is performed.
   getProjectLeaveImpact: (projectId) => fetchAPI(`/p3m/projects/${projectId}/leave-impact`),
-  getProgrammeLeaveImpact: (programmeId) =>
-    fetchAPI(`/p3m/programmes/${programmeId}/leave-impact`),
+  getProgrammeLeaveImpact: (programmeId) => fetchAPI(`/p3m/programmes/${programmeId}/leave-impact`),
 
   // Governance.
   getStageGates: (filters = {}) => fetchAPI(`/p3m/stage-gates${qs(filters)}`),
@@ -57,14 +63,24 @@ export const p3m = {
   // Benefits and financials.
   benefits: createCrudClient('/p3m/benefits'),
   getBenefitRealizations: (benefitId) => fetchAPI(`/p3m/benefits/${benefitId}/realizations`),
-  createBenefitRealization: (benefitId, data) => post(`/p3m/benefits/${benefitId}/realizations`, data),
-  deleteBenefitRealization: (benefitId, realizationId) => del(`/p3m/benefits/${benefitId}/realizations/${realizationId}`),
+  createBenefitRealization: (benefitId, data) =>
+    post(`/p3m/benefits/${benefitId}/realizations`, data),
+  deleteBenefitRealization: (benefitId, realizationId) =>
+    del(`/p3m/benefits/${benefitId}/realizations/${realizationId}`),
 
   getProjectBaselines: (projectId) => fetchAPI(`/p3m/projects/${projectId}/baselines`),
-  createProjectBaseline: (projectId, data = {}) => post(`/p3m/projects/${projectId}/baselines`, data),
+  createProjectBaseline: (projectId, data = {}) =>
+    post(`/p3m/projects/${projectId}/baselines`, data),
 
   tranches: createCrudClient('/p3m/tranches'),
   getForecast: (filters = {}) => fetchAPI(`/p3m/forecast${qs(filters)}`),
+
+  // Investment cases: per-project prioritisation pipeline and scores.
+  getInvestmentCases: (filters = {}) => fetchAPI(`/p3m/investment-cases${qs(filters)}`),
+  createInvestmentCase: (data) => post('/p3m/investment-cases', data),
+  updateInvestmentCase: (id, data) => put(`/p3m/investment-cases/${id}`, data),
+  deleteInvestmentCase: (id) => del(`/p3m/investment-cases/${id}`),
+  decideInvestmentCase: (id, data) => post(`/p3m/investment-cases/${id}/decision`, data),
 
   // Risk, stakeholders and resources.
   raidItems: createCrudClient('/p3m/raid-items'),
@@ -83,7 +99,9 @@ export const p3m = {
 };
 
 function qs(params = {}) {
-  const entries = Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== '');
+  const entries = Object.entries(params).filter(
+    ([, v]) => v !== undefined && v !== null && v !== ''
+  );
   if (!entries.length) return '';
   return `?${new URLSearchParams(entries.map(([k, v]) => [k, String(v)])).toString()}`;
 }

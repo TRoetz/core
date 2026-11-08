@@ -19,6 +19,23 @@
   let loading = $state(true);
   let error = $state('');
 
+  // --- Search & filter -----------------------------------------------------
+  /** all | project | programme | portfolio */
+  let approvalLevelFilter = $state('all');
+  /** all | pending | approved | rejected */
+  let approvalStatusFilter = $state('all');
+
+  const APPROVAL_LEVELS = ['project', 'programme', 'portfolio'];
+  const APPROVAL_STATUSES = ['pending', 'approved', 'rejected'];
+
+  const filteredApprovals = $derived.by(() => {
+    return approvals.filter((a) => {
+      if (approvalLevelFilter !== 'all' && a.routed_to_level !== approvalLevelFilter) return false;
+      if (approvalStatusFilter !== 'all' && a.status !== approvalStatusFilter) return false;
+      return true;
+    });
+  });
+
   const expandedGates = $state({});
 
   /** Flat project list (id -> title) for pickers; carries current_stage so the
@@ -615,6 +632,30 @@
         {/if}
       </div>
 
+      <!-- Approval filters: level + status -->
+      <div class="mb-2 flex flex-wrap items-center gap-2 text-xs">
+        <select
+          value={approvalLevelFilter}
+          onchange={(e) => (approvalLevelFilter = e.target.value)}
+          class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+        >
+          <option value="all">{t('p3m.allLevels')}</option>
+          {#each APPROVAL_LEVELS as lv (lv)}
+            <option value={lv}>{lv[0].toUpperCase() + lv.slice(1)}</option>
+          {/each}
+        </select>
+        <select
+          value={approvalStatusFilter}
+          onchange={(e) => (approvalStatusFilter = e.target.value)}
+          class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+        >
+          <option value="all">{t('p3m.allStatuses')}</option>
+          {#each APPROVAL_STATUSES as st (st)}
+            <option value={st}>{st === 'pending' ? t('p3m.decisionPending') : st === 'approved' ? t('p3m.passed') : t('p3m.rejected')}</option>
+          {/each}
+        </select>
+      </div>
+
       {#if approvalFormOpen && allProjects.length > 0}
         <div class="mb-3 flex items-end gap-2 rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-surface-card p-3 text-xs">
           <label class="block min-w-64 flex-1">
@@ -656,6 +697,10 @@
         <div class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] p-4 text-xs text-[var(--color-ds-text-muted,#6b7280)]">
           {t('p3m.noData')}
         </div>
+      {:else if filteredApprovals.length === 0}
+        <div class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] p-4 text-xs text-[var(--color-ds-text-muted,#6b7280)]">
+          {t('p3m.noResults')}
+        </div>
       {:else}
         <table class="w-full text-left text-xs">
           <thead>
@@ -668,7 +713,7 @@
             </tr>
           </thead>
           <tbody>
-            {#each approvals as a (a.id)}
+            {#each filteredApprovals as a (a.id)}
               <tr class="border-b border-[var(--color-ds-border,#e5e7eb)]">
                 <td class="py-1.5 pr-3">{projectTitleById.get(a.project_id) ?? `#${a.project_id}`}</td>
                 <td class="py-1.5 pr-3">{formatMoney(a.current_budget)}</td>

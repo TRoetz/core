@@ -1032,6 +1032,10 @@ export default {
     budgetHealth: 'Budgetlage',
     upcomingGates: 'Anstehende Gates',
 
+    // Portfolio Pulse homepage widget
+    pulseNoPortfolios: 'Noch keine P3M-Portfolios',
+    pulseOpenP3m: 'P3M öffnen',
+
     // Project detail + financial rollup
     coreLinks: 'Kernverknüpfungen',
     timeProjectLink: 'Zeit- & Projektverknüpfung',

@@ -3,6 +3,7 @@
   import { t } from '../../stores/i18n.svelte.js';
   import IconX from '@tabler/icons-svelte-runes/icons/x';
   import IconPlus from '@tabler/icons-svelte-runes/icons/plus';
+  import IconDownload from '@tabler/icons-svelte-runes/icons/download';
   import { p3m as p3mApi } from '../../api/p3m.js';
   import { getUsers } from '../../api/users.js';
   import EmptyState from '../../components/EmptyState.svelte';
@@ -10,6 +11,11 @@
   import { formatDate, quadrantLabel, toISODate } from './utils.js';
 
   let { portfolios = [] } = $props();
+
+  // Register export (CSV) via the server-side /p3m/export endpoint.
+  function downloadExport(scope) {
+    window.open(p3mApi.exportUrl(scope), '_blank', 'noopener');
+  }
 
   let raidItems = $state([]);
   let stakeholders = $state([]);
@@ -75,13 +81,56 @@
     }
   };
 
-  /** Stakeholders grouped by quadrant for the power/interest matrix. */
+  // --- Search & filter -----------------------------------------------------
+  let raidSearch = $state('');
+  /** all | risk | assumption | issue | dependency | decision */
+  let raidTypeFilter = $state('all');
+  /** all | open | mitigating | closed | escalated */
+  let raidStatusFilter = $state('all');
+
+  const filteredRaidItems = $derived.by(() => {
+    const q = raidSearch.trim().toLowerCase();
+    return raidItems.filter((item) => {
+      if (raidTypeFilter !== 'all' && item.item_type !== raidTypeFilter) return false;
+      if (raidStatusFilter !== 'all' && item.status !== raidStatusFilter) return false;
+      if (q === '') return true;
+      return String(item.title ?? '').toLowerCase().includes(q) ||
+        String(item.description ?? '').toLowerCase().includes(q);
+    });
+  });
+
+  /** Name/role text filter over the stakeholder matrix. */
+  let stakeholderSearch = $state('');
+
+  /** Stakeholders grouped by quadrant for the power/interest matrix, honoring the search filter. */
   const quadrants = $derived.by(() => {
     const q = { manage_closely: [], keep_satisfied: [], monitor: [], keep_informed: [] };
+    const needle = stakeholderSearch.trim().toLowerCase();
     for (const s of stakeholders) {
+      if (needle !== '') {
+        const hay = `${s.name ?? ''} ${s.role_title ?? ''}`.toLowerCase();
+        if (!hay.includes(needle)) continue;
+      }
       if (q[s.quadrant]) q[s.quadrant].push(s);
     }
     return q;
+  });
+
+  // --- Communications log filters -------------------------------------------
+  /** all | portfolio | programme | project */
+  let commEntityFilter = $state('all');
+  let commDateFrom = $state('');
+  let commDateTo = $state('');
+
+  const COMM_ENTITY_TYPES = ['portfolio', 'programme', 'project'];
+
+  const filteredCommunications = $derived.by(() => {
+    return communications.filter((c) => {
+      if (commEntityFilter !== 'all' && c.entity_type !== commEntityFilter) return false;
+      if (commDateFrom !== '' && c.date < commDateFrom) return false;
+      if (commDateTo !== '' && c.date > commDateTo) return false;
+      return true;
+    });
   });
 
   // --- Stakeholder creation ---------------------------------------------
@@ -267,11 +316,14 @@
     }
   }
 
-  /** One-click escalation for items not yet escalated. */
+  /** One-click escalation for project-level items not yet escalated. */
   async function escalateRaidItem(item) {
     try {
-      const updated = await p3mApi.raidItems.update(item.id, { ...item, status: 'escalated' });
-      raidItems = raidItems.map((x) => (x.id === updated.id ? updated : x));
+      // Server-side escalation creates a copy on the parent tier (the item's
+      // programme, or an explicit target) and marks both rows; a plain status
+      // update would skip that entirely. Reload to pick up the new row.
+      await p3mApi.escalateRaidItem(item.id);
+      await load();
     } catch (e) {
       raidError = e?.message || t('p3m.updateFailed');
     }
@@ -361,11 +413,47 @@
     <section>
       <div class="mb-2 flex items-center justify-between">
         <h2 class="text-sm font-semibold">{t('p3m.raidItems')}</h2>
-        {#if entityOptions.length > 0}
-          <button type="button" class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] px-2 py-1 text-xs text-[var(--color-ds-text-muted,#6b7280)] hover:text-[var(--color-ds-text,#111827)]" onclick={openRaidCreate}>
-            <IconPlus size={14} class="inline" /> {t('p3m.newRaidItem')}
+        <div class="flex items-center gap-2">
+          {#if entityOptions.length > 0}
+            <button type="button" class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] px-2 py-1 text-xs text-[var(--color-ds-text-muted,#6b7280)] hover:text-[var(--color-ds-text,#111827)]" onclick={openRaidCreate}>
+              <IconPlus size={14} class="inline" /> {t('p3m.newRaidItem')}
+            </button>
+          {/if}
+          <button type="button" class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] px-2 py-1 text-xs text-[var(--color-ds-text-muted,#6b7280)] hover:text-[var(--color-ds-text,#111827)]" onclick={() => downloadExport('raid')}>
+            <IconDownload size={14} class="inline" /> {t('p3m.exportCsv')}
           </button>
-        {/if}
+        </div>
+      </div>
+
+      <!-- RAID filters: text + item type + status -->
+      <div class="mb-2 flex flex-wrap items-center gap-2 text-xs">
+        <input
+          type="search"
+          placeholder={t('p3m.raidSearchPlaceholder')}
+          value={raidSearch}
+          oninput={(e) => (raidSearch = e.target.value)}
+          class="w-56 rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+        />
+        <select
+          value={raidTypeFilter}
+          onchange={(e) => (raidTypeFilter = e.target.value)}
+          class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+        >
+          <option value="all">{t('p3m.allItemTypes')}</option>
+          {#each RAID_TYPES as ty (ty)}
+            <option value={ty}>{t(`p3m.type${ty[0].toUpperCase()}${ty.slice(1)}`)}</option>
+          {/each}
+        </select>
+        <select
+          value={raidStatusFilter}
+          onchange={(e) => (raidStatusFilter = e.target.value)}
+          class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+        >
+          <option value="all">{t('p3m.allStatuses')}</option>
+          {#each RAID_STATUSES as st (st)}
+            <option value={st}>{t(`p3m.status${st[0].toUpperCase()}${st.slice(1)}`)}</option>
+          {/each}
+        </select>
       </div>
 
       {#if raidError && !showRaidForm}
@@ -512,6 +600,10 @@
         <div class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] p-4 text-xs text-[var(--color-ds-text-muted,#6b7280)]">
           {t('p3m.noData')}
         </div>
+      {:else if filteredRaidItems.length === 0}
+        <div class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] p-4 text-xs text-[var(--color-ds-text-muted,#6b7280)]">
+          {t('p3m.noResults')}
+        </div>
       {:else}
         <table class="w-full text-left text-xs">
           <thead>
@@ -526,7 +618,7 @@
             </tr>
           </thead>
           <tbody>
-            {#each raidItems as item (item.id)}
+            {#each filteredRaidItems as item (item.id)}
               <tr class="border-b border-[var(--color-ds-border,#e5e7eb)] align-top">
                 <td class="py-1.5 pr-3">{entityLabel(item)}</td>
                 <td class="py-1.5 pr-3">
@@ -550,7 +642,7 @@
                 </td>
                 <td class="py-1.5 pr-3">
                   <div class="flex items-center gap-1 whitespace-nowrap">
-                    {#if item.status !== 'escalated'}
+                    {#if item.status !== 'escalated' && item.entity_type === 'project'}
                       <button type="button" class="text-[var(--color-ds-text-muted,#6b7280)] hover:text-purple-600" title={t('p3m.escalate')} onclick={() => escalateRaidItem(item)}>
                         {t('p3m.escalate')}
                       </button>
@@ -574,11 +666,23 @@
     <section>
       <div class="mb-2 flex items-center justify-between">
         <h2 class="text-sm font-semibold">{t('p3m.stakeholders')}</h2>
-        {#if entityOptions.length > 0}
-          <button type="button" class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] px-2 py-1 text-xs text-[var(--color-ds-text-muted,#6b7280)] hover:text-[var(--color-ds-text,#111827)]" onclick={openStakeholderCreate}>
-            {t('p3m.addStakeholder')}
+        <div class="flex items-center gap-2">
+          <input
+            type="search"
+            placeholder={t('p3m.stakeholderSearchPlaceholder')}
+            value={stakeholderSearch}
+            oninput={(e) => (stakeholderSearch = e.target.value)}
+            class="w-48 rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1 text-xs"
+          />
+          {#if entityOptions.length > 0}
+            <button type="button" class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] px-2 py-1 text-xs text-[var(--color-ds-text-muted,#6b7280)] hover:text-[var(--color-ds-text,#111827)]" onclick={openStakeholderCreate}>
+              {t('p3m.addStakeholder')}
+            </button>
+          {/if}
+          <button type="button" class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] px-2 py-1 text-xs text-[var(--color-ds-text-muted,#6b7280)] hover:text-[var(--color-ds-text,#111827)]" onclick={() => downloadExport('stakeholders')}>
+            <IconDownload size={14} class="inline" /> {t('p3m.exportCsv')}
           </button>
-        {/if}
+        </div>
       </div>
 
       {#if showStakeholderForm && entityOptions.length > 0}
@@ -733,6 +837,28 @@
         {/if}
       </div>
 
+      <!-- Communications filters: entity type + date range -->
+      <div class="mb-2 flex flex-wrap items-center gap-2 text-xs">
+        <select
+          value={commEntityFilter}
+          onchange={(e) => (commEntityFilter = e.target.value)}
+          class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+        >
+          <option value="all">{t('p3m.allEntities')}</option>
+          {#each COMM_ENTITY_TYPES as et (et)}
+            <option value={et}>{et[0].toUpperCase() + et.slice(1)}</option>
+          {/each}
+        </select>
+        <label class="flex items-center gap-1">
+          <span>{t('p3m.dateFrom')}</span>
+          <input type="date" value={commDateFrom} oninput={(e) => (commDateFrom = e.target.value)} class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1" />
+        </label>
+        <label class="flex items-center gap-1">
+          <span>{t('p3m.dateTo')}</span>
+          <input type="date" value={commDateTo} oninput={(e) => (commDateTo = e.target.value)} class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1" />
+        </label>
+      </div>
+
       {#if commError && !showCommForm}
         <div class="mb-2 rounded-md border border-red-200 bg-red-50 p-2 text-xs text-red-700">{commError}</div>
       {/if}
@@ -820,6 +946,10 @@
         <div class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] p-4 text-xs text-[var(--color-ds-text-muted,#6b7280)]">
           {t('p3m.noData')}
         </div>
+      {:else if filteredCommunications.length === 0}
+        <div class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] p-4 text-xs text-[var(--color-ds-text-muted,#6b7280)]">
+          {t('p3m.noResults')}
+        </div>
       {:else}
         <table class="w-full text-left text-xs">
           <thead>
@@ -833,7 +963,7 @@
             </tr>
           </thead>
           <tbody>
-            {#each [...communications].sort((a, b) => (a.date > b.date ? -1 : 1)) as c (c.id)}
+            {#each [...filteredCommunications].sort((a, b) => (a.date > b.date ? -1 : 1)) as c (c.id)}
               <tr class="border-b border-[var(--color-ds-border,#e5e7eb)]">
                 <td class="py-1.5 pr-3">{formatDate(c.date)}</td>
                 <td class="py-1.5 pr-3">{entityLabel(c)}</td>

@@ -1,6 +1,7 @@
 <script>
   import { t } from '../../stores/i18n.svelte.js';
   import IconChevronRight from '@tabler/icons-svelte-runes/icons/chevron-right';
+  import IconDownload from '@tabler/icons-svelte-runes/icons/download';
   import IconPencil from '@tabler/icons-svelte-runes/icons/pencil';
   import IconPlus from '@tabler/icons-svelte-runes/icons/plus';
   import IconX from '@tabler/icons-svelte-runes/icons/x';
@@ -20,9 +21,14 @@
     return planMap.get(`${entityType}:${entityId}`) ?? [];
   }
 
-  // node id -> bool; default: portfolios open. A ?project= deep link starts
-  // with that project's detail expanded (parents are open by default).
-  const expanded = $state(initialProjectId ? { [initialProjectId]: true } : {});
+  // node id -> bool; default: portfolios open. A /p3m/projects/:id (or ?project=)
+  // deep link expands that project's detail, including when the route changes
+  // while this page stays mounted.
+  const expanded = $state({});
+
+  $effect(() => {
+    if (initialProjectId) expanded[initialProjectId] = true;
+  });
 
   function toggle(id) {
     expanded[id] = !expanded[id];
@@ -259,6 +265,86 @@
     if (percent >= 40) return '#f59e0b';
     return '#ef4444';
   }
+
+  // --- Search & filter -----------------------------------------------------
+  let filterText = $state('');
+  /** all | red | amber | green — applied to project rows. */
+  let filterRag = $state('all');
+  /** all | initiation | planning | execution | closure — applied to project rows. */
+  let filterStage = $state('all');
+
+  const STAGES = ['initiation', 'planning', 'execution', 'closure'];
+
+  const filtersActive = $derived(
+    filterText.trim() !== '' || filterRag !== 'all' || filterStage !== 'all'
+  );
+
+  /**
+   * Visibility maps for the active filters. A project row is visible when it
+   * passes RAG/stage and its own title or an ancestor's matches the text; a
+   * programme/portfolio stays visible while any descendant is visible (or its
+   * own title matches). With no filter active everything is visible, including
+   * empty tiers.
+   */
+  const visibility = $derived.by(() => {
+    const pfVisible = new Map();
+    const pgVisible = new Map();
+    const prVisible = new Map();
+
+    if (!filtersActive) {
+      for (const pf of portfolios) {
+        pfVisible.set(pf.id, true);
+        for (const pg of pf.programmes ?? []) {
+          pgVisible.set(pg.id, true);
+          for (const pr of pg.projects ?? []) prVisible.set(pr.id, true);
+        }
+        for (const pr of pf.standalone_projects ?? []) prVisible.set(pr.id, true);
+      }
+      return { pfVisible, pgVisible, prVisible };
+    }
+
+    const q = filterText.trim().toLowerCase();
+    const matches = (title) => q === '' || String(title ?? '').toLowerCase().includes(q);
+    const projectPasses = (pr) =>
+      (filterRag === 'all' || (pr.rag_status || 'green') === filterRag) &&
+      (filterStage === 'all' || pr.current_stage === filterStage);
+
+    for (const pf of portfolios) {
+      let anyDescendant = false;
+      const pfTitleMatch = matches(pf.title);
+
+      for (const pg of pf.programmes ?? []) {
+        const pgTextOk = q === '' || matches(pg.title) || pfTitleMatch;
+        let anyProject = false;
+        for (const pr of pg.projects ?? []) {
+          const vis = (q === '' || matches(pr.title) || pgTextOk) && projectPasses(pr);
+          prVisible.set(pr.id, vis);
+          if (vis) anyProject = true;
+        }
+        // A parent with no visible children is only kept when its own title
+        // matched the search text.
+        pgVisible.set(pg.id, (q !== '' && (matches(pg.title) || pfTitleMatch)) || anyProject);
+        if (pgVisible.get(pg.id)) anyDescendant = true;
+      }
+
+      for (const pr of pf.standalone_projects ?? []) {
+        const vis = (q === '' || matches(pr.title) || pfTitleMatch) && projectPasses(pr);
+        prVisible.set(pr.id, vis);
+        if (vis) anyDescendant = true;
+      }
+
+      pfVisible.set(pf.id, (q !== '' && pfTitleMatch) || anyDescendant);
+    }
+    return { pfVisible, pgVisible, prVisible };
+  });
+
+  const visibleCount = $derived(visibility.pfVisible.size ? [...visibility.pfVisible.values()].filter(Boolean).length : 0);
+
+  // --- Register export (CSV) ----------------------------------------------
+  let exportScope = $state('projects');
+  function downloadExport(scope = exportScope) {
+    window.open(p3mApi.exportUrl(scope), '_blank', 'noopener');
+  }
 </script>
 
 <div class="p3m-overview">
@@ -305,6 +391,39 @@
       </div>
     </div>
   </div>
+
+  <!-- Executive summary (server rollup: per-portfolio RAG, budget, gates, top risks) -->
+  {#if summary?.portfolios?.length}
+    <div class="px-6 pt-4">
+      <h3 class="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-ds-text-muted,#6b7280)]">{t('p3m.executiveSummary')}</h3>
+      <div class="grid grid-cols-1 gap-2 lg:grid-cols-2">
+        {#each summary.portfolios as ps (ps.portfolio_id)}
+          <div class="rounded-lg border border-[var(--color-ds-border,#e5e7eb)] p-3 text-xs">
+            <div class="flex items-center gap-2">
+              <span class="inline-block h-2.5 w-2.5 shrink-0 rounded-full" style="background: {ragColor(ps.rag_status)}"></span>
+              <span class="font-medium">{ps.title}</span>
+              <span class="p3m-meta ml-auto">
+                {formatMoney(ps.budget_actual)} / {formatMoney(ps.budget_approved)}
+              </span>
+            </div>
+            <div class="mt-1.5 flex items-center gap-2 text-[var(--color-ds-text-muted,#6b7280)]">
+              <span>{(ps.upcoming_gates?.length ?? 0)} {t('p3m.gatesDue')}</span>
+              {#if ps.top_risks?.length}
+                <span class="ml-auto flex min-w-0 items-center gap-1 overflow-hidden">
+                  <span class="shrink-0">{t('p3m.topRisks')}:</span>
+                  {#each ps.top_risks.slice(0, 2) as risk (risk.id)}
+                    <span class="truncate rounded bg-red-50 px-1.5 py-0.5 text-[11px] text-red-700" title={risk.title}>
+                      {risk.title} ({risk.impact_score * risk.probability_score})
+                    </span>
+                  {/each}
+                </span>
+              {/if}
+            </div>
+          </div>
+        {/each}
+      </div>
+    </div>
+  {/if}
 
   <!-- New portfolio -->
   <div class="px-6 pt-4">
@@ -411,8 +530,64 @@
         {t('p3m.emptyTitle')} — {t('p3m.emptyDescription')}
       </div>
     {:else}
+      <!-- Toolbar: search, RAG/stage filters, register export -->
+      <div class="mb-3 flex flex-wrap items-center gap-2 text-xs">
+        <input
+          type="search"
+          placeholder={t('p3m.searchPlaceholder')}
+          value={filterText}
+          oninput={(e) => (filterText = e.target.value)}
+          class="w-56 rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+        />
+        <select
+          value={filterRag}
+          onchange={(e) => (filterRag = e.target.value)}
+          class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+        >
+          <option value="all">{t('p3m.allRag')}</option>
+          {#each RAGS as r (r)}
+            <option value={r}>{ragLabel(r)}</option>
+          {/each}
+        </select>
+        <select
+          value={filterStage}
+          onchange={(e) => (filterStage = e.target.value)}
+          class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+        >
+          <option value="all">{t('p3m.allStages')}</option>
+          {#each STAGES as s (s)}
+            <option value={s}>{stageLabel(s)}</option>
+          {/each}
+        </select>
+        {#if filtersActive}
+          <button type="button" class="p3m-action" onclick={() => { filterText = ''; filterRag = 'all'; filterStage = 'all'; }}>
+            <IconX size={12} /> {t('p3m.clearFilters')}
+          </button>
+        {/if}
+        <div class="ml-auto flex items-center gap-2">
+          <select
+            value={exportScope}
+            onchange={(e) => (exportScope = e.target.value)}
+            class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+          >
+            <option value="portfolios">{t('p3m.exportScopePortfolios')}</option>
+            <option value="programmes">{t('p3m.exportScopeProgrammes')}</option>
+            <option value="projects">{t('p3m.exportScopeProjects')}</option>
+          </select>
+          <button type="button" class="p3m-action" onclick={() => downloadExport()}>
+            <IconDownload size={14} /> {t('p3m.exportCsv')}
+          </button>
+        </div>
+      </div>
+
+      {#if filtersActive && visibleCount === 0}
+        <div class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] p-4 text-xs text-[var(--color-ds-text-muted,#6b7280)]">
+          {t('p3m.noResults')}
+        </div>
+      {:else}
     {#each portfolios as pf (pf.id)}
       {@const open = expanded[pf.id] !== false}
+      {#if visibility.pfVisible.get(pf.id)}
       <div class="mb-2 overflow-hidden rounded-lg border border-[var(--color-ds-border,#e5e7eb)]">
         <div class="flex items-center">
           <button type="button" class="p3m-node-row p3m-pf min-w-0 flex-1" onclick={() => toggle(pf.id)}>
@@ -578,6 +753,7 @@
 
             {#each pf.programmes ?? [] as pg (pg.id)}
               {@const pgOpen = expanded[pg.id] !== false}
+              {#if visibility.pgVisible.get(pg.id)}
               <div class="flex items-center">
                 <button type="button" class="p3m-node-row p3m-pg min-w-0 flex-1" onclick={() => toggle(pg.id)}>
                   <IconChevronRight class={pgOpen ? 'rotated' : ''} size={14} />
@@ -638,11 +814,16 @@
 
                   {#each pg.projects ?? [] as pr (pr.id)}
                     {@const prOpen = expanded[pr.id] === true}
+                    {#if visibility.prVisible.get(pr.id)}
                     <div class="flex items-center">
                       <button type="button" class="p3m-node-row p3m-pr min-w-0 flex-1" onclick={() => toggle(pr.id)}>
                         <IconChevronRight class={prOpen ? 'rotated' : ''} size={14} />
                         <span class="inline-block h-2 w-2 shrink-0 rounded-full" style="background: {ragColor(pr.rag_status)}"></span>
-                        <span>{pr.title}</span>
+                        <span
+                          class="cursor-pointer hover:text-[var(--color-ds-accent-blue,#2563eb)] hover:underline"
+                          title={t('p3m.openProjectDetail')}
+                          onclick={(e) => { e.stopPropagation(); navigate(`/p3m/projects/${pr.id}`); }}
+                        >{pr.title}</span>
                         <span class="p3m-meta">{stageLabel(pr.current_stage)}</span>
                         <span class="p3m-progress">
                           <span class="p3m-progress-fill" style="width: {pr.progress_percent}%; background: {progressColor(pr.progress_percent)}"></span>
@@ -687,18 +868,25 @@
                     {#if prOpen}
                       <P3MProjectDetail project={pr} onChanged={onChanged} onClose={() => toggle(pr.id)} />
                     {/if}
+                    {/if}
                   {/each}
                 </div>
+              {/if}
               {/if}
             {/each}
 
             {#each pf.standalone_projects ?? [] as pr (pr.id)}
               {@const prOpen = expanded[pr.id] === true}
+              {#if visibility.prVisible.get(pr.id)}
               <div class="flex items-center ml-6">
                 <button type="button" class="p3m-node-row p3m-pr min-w-0 flex-1" onclick={() => toggle(pr.id)}>
                   <IconChevronRight class={prOpen ? 'rotated' : ''} size={14} />
                   <span class="inline-block h-2 w-2 shrink-0 rounded-full" style="background: {ragColor(pr.rag_status)}"></span>
-                  <span>{pr.title}</span>
+                  <span
+                    class="cursor-pointer hover:text-[var(--color-ds-accent-blue,#2563eb)] hover:underline"
+                    title={t('p3m.openProjectDetail')}
+                    onclick={(e) => { e.stopPropagation(); navigate(`/p3m/projects/${pr.id}`); }}
+                  >{pr.title}</span>
                   <span class="p3m-meta">{stageLabel(pr.current_stage)}</span>
                   <span class="p3m-progress">
                     <span class="p3m-progress-fill" style="width: {pr.progress_percent}%; background: {progressColor(pr.progress_percent)}"></span>
@@ -729,6 +917,7 @@
               {#if prOpen}
                 <P3MProjectDetail project={pr} onChanged={onChanged} onClose={() => toggle(pr.id)} />
               {/if}
+              {/if}
             {/each}
 
             {#if (pf.programmes?.length ?? 0) === 0 && (pf.standalone_projects?.length ?? 0) === 0}
@@ -737,7 +926,9 @@
           </div>
         {/if}
       </div>
+      {/if}
     {/each}
+      {/if}
     {/if}
   </div>
 </div>

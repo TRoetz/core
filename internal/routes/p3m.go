@@ -18,6 +18,9 @@ func RegisterP3MRoutes(deps *Deps) {
 	api.HandleH("GET /p3m/hierarchy", auth(p3mView(http.HandlerFunc(deps.P3M.GetHierarchy))))
 	api.HandleH("GET /p3m/executive-summary", auth(p3mView(http.HandlerFunc(deps.P3M.GetExecutiveSummary))))
 
+	// Register exports (CSV).
+	api.HandleH("GET /p3m/export", auth(p3mView(http.HandlerFunc(deps.P3M.ExportCSV))))
+
 	// Portfolios.
 	api.HandleH("GET /p3m/portfolios", auth(p3mView(http.HandlerFunc(deps.P3M.ListPortfolios))))
 	api.HandleH("POST /p3m/portfolios", auth(p3mView(http.HandlerFunc(deps.P3M.CreatePortfolio))))
@@ -43,6 +46,7 @@ func RegisterP3MRoutes(deps *Deps) {
 	api.HandleH("GET /p3m/projects/{id}/workspaces", auth(p3mView(http.HandlerFunc(deps.P3M.ListProjectWorkspaces))))
 	api.HandleH("PUT /p3m/projects/{id}/workspaces", auth(p3mView(http.HandlerFunc(deps.P3M.SetProjectWorkspaces))))
 	api.HandleH("GET /p3m/projects/{id}/rollup", auth(p3mView(http.HandlerFunc(deps.P3M.GetProjectRollup))))
+	api.HandleH("GET /p3m/projects/{id}/activity", auth(p3mView(http.HandlerFunc(deps.P3M.GetProjectActivity))))
 	api.HandleH("GET /p3m/projects/{id}/critical-path", auth(p3mView(http.HandlerFunc(deps.P3M.GetProjectCriticalPath))))
 	api.HandleH("GET /p3m/projects/{id}/leave-impact", auth(p3mView(http.HandlerFunc(deps.P3M.GetProjectLeaveImpact))))
 
@@ -90,6 +94,13 @@ func RegisterP3MRoutes(deps *Deps) {
 	api.HandleH("DELETE /p3m/tranches/{id}", auth(p3mView(http.HandlerFunc(deps.P3M.DeleteTranche))))
 
 	api.HandleH("GET /p3m/forecast", auth(p3mView(http.HandlerFunc(deps.P3M.GetForecast))))
+
+	// Investment cases: per-project prioritisation pipeline and scores.
+	api.HandleH("GET /p3m/investment-cases", auth(p3mView(http.HandlerFunc(deps.P3M.ListInvestmentCases))))
+	api.HandleH("POST /p3m/investment-cases", auth(p3mView(http.HandlerFunc(deps.P3M.CreateInvestmentCase))))
+	api.HandleH("PUT /p3m/investment-cases/{id}", auth(p3mView(http.HandlerFunc(deps.P3M.UpdateInvestmentCase))))
+	api.HandleH("DELETE /p3m/investment-cases/{id}", auth(p3mView(http.HandlerFunc(deps.P3M.DeleteInvestmentCase))))
+	api.HandleH("POST /p3m/investment-cases/{id}/decision", auth(p3mView(http.HandlerFunc(deps.P3M.DecideInvestmentCase))))
 
 	// Risk, stakeholders and resources.
 	api.HandleH("GET /p3m/raid-items", auth(p3mView(http.HandlerFunc(deps.P3M.ListRaidItems))))

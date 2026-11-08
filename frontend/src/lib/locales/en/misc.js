@@ -1329,6 +1329,7 @@ export default {
     noWorkspacesToAdd: 'No workspaces available to add — all workspaces are already linked.',
     tabP3M: 'P3M',
     tabStakeholders: 'Stakeholders',
+    tabFilters: 'Filters',
     tabOverview: 'Overview',
     addWorkspace: 'Add workspace:',
     searchWorkspacesPlaceholder: 'Search workspaces…',
@@ -1346,6 +1347,16 @@ export default {
     addStakeholder: 'Link stakeholder:',
     noStakeholdersAvailable: 'No SMS stakeholders available',
     noStakeholders: 'No stakeholders linked to this plan yet.',
+
+    // Filters (named CQL sources that pull items into the plan).
+    filterName: 'Filter name',
+    filterNamePlaceholder: 'e.g., Launch blockers',
+    filterQueryLabel: 'CQL query',
+    filterQueryPlaceholder: 'status = "In Progress" AND type = "Task"',
+    filterAdd: 'Add filter',
+    filterFieldsRequired: 'Both a name and a CQL query are required.',
+    filterDeleteConfirm: 'Remove the "{name}" filter from this plan?',
+    filtersEmpty: 'No CQL filters yet. Add one to pull items from any workspace into this plan.',
 
     // View switcher.
     tabSummary: 'Summary',
@@ -1453,6 +1464,10 @@ export default {
     scenariosNoOverrides: 'No overrides in this scenario.',
     scenariosShifted: 'shifts by {days}d',
     scenariosDownstream: '{count} downstream',
+    scenariosEdit: 'Edit scenario',
+    scenariosStatusDraft: 'Draft',
+    scenariosStatusActive: 'Active',
+    scenariosStatusArchived: 'Archived',
   },
 
   p3m: {
@@ -1481,6 +1496,7 @@ export default {
 
     // Tabs
     overview: 'Overview',
+    investmentTab: 'Investment',
     governance: 'Governance',
     benefitsTab: 'Benefits & Financials',
     riskTab: 'Risk & Stakeholders',
@@ -1533,6 +1549,10 @@ export default {
     totalProjects: 'Projects',
     budgetHealth: 'Budget health',
     upcomingGates: 'Upcoming gates',
+
+    // Portfolio Pulse homepage widget
+    pulseNoPortfolios: 'No P3M portfolios yet',
+    pulseOpenP3m: 'Open P3M',
 
     // Project detail + financial rollup
     coreLinks: 'Core links',
@@ -1610,6 +1630,7 @@ export default {
     pageRef: 'Page #{id}',
     recordedInRegister: 'Recorded in the project decision register',
     noReviews: 'No architecture reviews yet.',
+    confirmDeleteReview: 'Delete this architecture review?',
     save: 'Save',
     submitForArb: 'Submit for review',
 
@@ -1787,6 +1808,95 @@ export default {
     entityType: 'Entity',
     amount: 'Amount',
     invalidAmount: 'Enter a valid non-negative amount',
+
+    // Search & filter (overview tree)
+    searchPlaceholder: 'Search portfolios, programmes, projects…',
+    allRag: 'All RAG',
+    allStages: 'All stages',
+    clearFilters: 'Clear filters',
+    noResults: 'No items match the current filters.',
+
+    // RAID filters (risk tab)
+    raidSearchPlaceholder: 'Search title or description…',
+    allItemTypes: 'All types',
+    typeRisk: 'Risk',
+    typeAssumption: 'Assumption',
+    typeIssue: 'Issue',
+    typeDependency: 'Dependency',
+    typeDecision: 'Decision',
+    allStatuses: 'All statuses',
+
+    // Stakeholder filter (risk tab)
+    stakeholderSearchPlaceholder: 'Search name or role…',
+
+    // Benefit & financial filters (benefits tab)
+    allBenefitTypes: 'All benefit types',
+    benefitTypeFinancial: 'Financial',
+    benefitTypeNonFinancial: 'Non-financial',
+    benefitTypeStrategic: 'Strategic',
+    benefitTypeCompliance: 'Compliance',
+    allExpenditureTypes: 'All expenditure types',
+
+    // Architecture review filters (architecture tab)
+    allProjects: 'All projects',
+
+    // Resource allocation filters (resources tab)
+    allBookingTypes: 'All booking types',
+    bookingTypeSoft: 'Soft',
+    bookingTypeHard: 'Hard',
+
+    // Budget approval filters (governance tab)
+    allLevels: 'All levels',
+
+    // Communications log filters (risk tab)
+    allEntities: 'All entities',
+    dateFrom: 'From',
+    dateTo: 'To',
+
+    // Project activity feed (project detail view)
+    activityTitle: 'Activity',
+    activityStageGate: 'Stage gate',
+    activityGateNotPassed: 'Not passed',
+    activityBudgetRequest: 'Budget request',
+    activityArchReview: 'Architecture review',
+    activityCommunication: 'Communication',
+
+    // Register exports (CSV)
+    exportCsv: 'Export CSV',
+    exportScopePortfolios: 'Portfolios',
+    exportScopeProgrammes: 'Programmes',
+    exportScopeProjects: 'Projects',
+    exportScopeBenefits: 'Benefits',
+    exportScopeRaid: 'RAID items',
+    exportScopeStakeholders: 'Stakeholders',
+    exportScopeResources: 'Resources',
+
+    // Executive summary (server rollup)
+    executiveSummary: 'Executive summary',
+    gatesDue: 'gates due',
+    topRisks: 'Top risks',
+    openProjectDetail: 'Open project detail',
+
+    // Investment cases tab
+    investmentCases: 'Investment cases',
+    newInvestmentCase: 'New investment case',
+    editInvestmentCase: 'Edit investment case',
+    icStatusProposed: 'Proposed',
+    icStatusUnderReview: 'Under review',
+    icStatusApproved: 'Approved',
+    icStatusRejected: 'Rejected',
+    icStatusDeferred: 'Deferred',
+    defer: 'Defer',
+    icBenefitScore: 'Benefit (1–5)',
+    icRiskScore: 'Risk (1–5)',
+    roiPercent: 'ROI %',
+    paybackMonths: 'Payback (months)',
+    businessCase: 'Business case',
+    decidedBy: 'Decided by',
+    decisionDate: 'Decision date',
+    decisionNote: 'Decision note (optional)',
+    noInvestmentCases: 'No investment cases yet.',
+    confirmDeleteInvestmentCase: 'Delete this investment case? The project itself is unaffected.',
   },
 
   assets: {

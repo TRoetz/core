@@ -243,6 +243,24 @@ CREATE TABLE IF NOT EXISTS p3m_budget_tranches (
 	updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Investment cases: one per project, carrying the prioritisation decision
+-- pipeline and risk/benefit/return scores for portfolio balancing.
+CREATE TABLE IF NOT EXISTS p3m_investment_cases (
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	project_id INTEGER NOT NULL UNIQUE REFERENCES p3m_projects(id) ON DELETE CASCADE,
+	status TEXT NOT NULL DEFAULT 'proposed' CHECK (status IN ('proposed', 'under_review', 'approved', 'rejected', 'deferred')),
+	benefit_score INTEGER NOT NULL DEFAULT 3 CHECK (benefit_score BETWEEN 1 AND 5),
+	risk_score INTEGER NOT NULL DEFAULT 3 CHECK (risk_score BETWEEN 1 AND 5),
+	roi_percent REAL,
+	payback_months INTEGER,
+	business_case TEXT NOT NULL DEFAULT '',
+	page_id INTEGER REFERENCES pages(id) ON DELETE SET NULL,
+	decided_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+	decision_date DATE,
+	created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+	updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE INDEX IF NOT EXISTS idx_p3m_programmes_portfolio ON p3m_programmes(portfolio_id);
 CREATE INDEX IF NOT EXISTS idx_p3m_projects_portfolio ON p3m_projects(portfolio_id);
 CREATE INDEX IF NOT EXISTS idx_p3m_projects_programme ON p3m_projects(programme_id);

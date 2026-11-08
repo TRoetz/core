@@ -59,6 +59,10 @@ export default {
         name: 'Anstehende Meilensteine',
         description: 'Meilensteine mit nahendem Zieldatum',
       },
+      p3mPortfolioPulse: {
+        name: 'Portfolio-Puls',
+        description: 'RAG-Status, Budgetverbrauch und offene Gates/Risiken über Ihre P3M-Portfolios hinweg',
+      },
       recentWorkspaces: {
         name: 'Letzte Arbeitsbereiche',
         description: 'Kürzlich besuchte Arbeitsbereiche',

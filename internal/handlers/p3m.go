@@ -1284,6 +1284,147 @@ func (h *P3MHandler) GetProjectRollup(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// GetProjectActivity handles GET /api/p3m/projects/{id}/activity. It returns
+// the project's recent events — stage gate reviews, budget approvals,
+// architecture review decisions and communications — as structured records so
+// the client can localize labels and merge them into one newest-first feed.
+func (h *P3MHandler) GetProjectActivity(w http.ResponseWriter, r *http.Request) {
+	if _, ok := RequireAuth(w, r); !ok {
+		return
+	}
+	id, ok := requireIDParam(w, r, "id")
+	if !ok {
+		return
+	}
+
+	type stageGateEvent struct {
+		FromStage    string    `json:"from_stage"`
+		ToStage      string    `json:"to_stage"`
+		Passed       bool      `json:"passed"`
+		ReviewerName *string   `json:"reviewer_name,omitempty"`
+		CreatedAt    time.Time `json:"created_at"`
+	}
+	type budgetApprovalEvent struct {
+		RequestedAmount float64   `json:"requested_amount"`
+		Status          string    `json:"status"` // pending | approved | rejected
+		DecisionNotes   *string   `json:"decision_notes,omitempty"`
+		DecidedByName   *string   `json:"decided_by_name,omitempty"`
+		UpdatedAt       time.Time `json:"updated_at"`
+	}
+	type archReviewEvent struct {
+		Title     string     `json:"title"`
+		Status    string     `json:"status"` // wip | in_review | needs_work | approved
+		DecidedAt *time.Time `json:"decided_at,omitempty"`
+		CreatedAt time.Time  `json:"created_at"`
+	}
+
+	out := struct {
+		StageGates          []stageGateEvent      `json:"stage_gates"`
+		BudgetApprovals     []budgetApprovalEvent `json:"budget_approvals"`
+		ArchitectureReviews []archReviewEvent     `json:"architecture_reviews"`
+		Communications      []models.P3MCommunication `json:"communications"`
+	}{
+		StageGates:          make([]stageGateEvent, 0),
+		BudgetApprovals:     make([]budgetApprovalEvent, 0),
+		ArchitectureReviews: make([]archReviewEvent, 0),
+		Communications:      make([]models.P3MCommunication, 0),
+	}
+
+	ctx := r.Context()
+
+	rows, err := h.db.QueryContext(ctx, `
+		SELECT g.from_stage, g.to_stage, g.passed, COALESCE(NULLIF(TRIM(u.first_name || ' ' || u.last_name), ''), u.username), g.created_at
+		FROM p3m_stage_gate_reviews AS g
+		LEFT JOIN users AS u ON u.id = g.reviewer_id
+		WHERE g.project_id = ?
+		ORDER BY g.created_at DESC, g.id DESC LIMIT 10`, id)
+	if err != nil {
+		respondInternalError(w, r, err)
+		return
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var ev stageGateEvent
+		if err := rows.Scan(&ev.FromStage, &ev.ToStage, &ev.Passed, &ev.ReviewerName, &ev.CreatedAt); err != nil {
+			respondInternalError(w, r, err)
+			return
+		}
+		out.StageGates = append(out.StageGates, ev)
+	}
+	if err := rows.Err(); err != nil {
+		respondInternalError(w, r, err)
+		return
+	}
+
+	rows, err = h.db.QueryContext(ctx, `
+		SELECT a.requested_amount, a.status, a.decision_notes, COALESCE(NULLIF(TRIM(u.first_name || ' ' || u.last_name), ''), u.username), a.updated_at
+		FROM p3m_budget_approvals AS a
+		LEFT JOIN users AS u ON u.id = a.decided_by
+		WHERE a.project_id = ?
+		ORDER BY a.updated_at DESC, a.id DESC LIMIT 10`, id)
+	if err != nil {
+		respondInternalError(w, r, err)
+		return
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var ev budgetApprovalEvent
+		if err := rows.Scan(&ev.RequestedAmount, &ev.Status, &ev.DecisionNotes, &ev.DecidedByName, &ev.UpdatedAt); err != nil {
+			respondInternalError(w, r, err)
+			return
+		}
+		out.BudgetApprovals = append(out.BudgetApprovals, ev)
+	}
+	if err := rows.Err(); err != nil {
+		respondInternalError(w, r, err)
+		return
+	}
+
+	rows, err = h.db.QueryContext(ctx, `
+		SELECT ar.title, ar.status, ar.decided_at, ar.created_at
+		FROM p3m_architecture_reviews AS ar
+		WHERE ar.project_id = ?
+		ORDER BY COALESCE(ar.decided_at, ar.created_at) DESC, ar.id DESC LIMIT 10`, id)
+	if err != nil {
+		respondInternalError(w, r, err)
+		return
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var ev archReviewEvent
+		if err := rows.Scan(&ev.Title, &ev.Status, &ev.DecidedAt, &ev.CreatedAt); err != nil {
+			respondInternalError(w, r, err)
+			return
+		}
+		out.ArchitectureReviews = append(out.ArchitectureReviews, ev)
+	}
+	if err := rows.Err(); err != nil {
+		respondInternalError(w, r, err)
+		return
+	}
+
+	rows, err = h.db.QueryContext(ctx, `SELECT `+p3mCommunicationColumns+` FROM p3m_communications WHERE entity_type = 'project' AND entity_id = ? ORDER BY date DESC, id DESC LIMIT 10`, id)
+	if err != nil {
+		respondInternalError(w, r, err)
+		return
+	}
+	defer rows.Close()
+	for rows.Next() {
+		c, err := scanP3MCommunication(rows)
+		if err != nil {
+			respondInternalError(w, r, err)
+			return
+		}
+		out.Communications = append(out.Communications, c)
+	}
+	if err := rows.Err(); err != nil {
+		respondInternalError(w, r, err)
+		return
+	}
+
+	respondJSONOK(w, out)
+}
+
 // resolveProjectParents validates the portfolio/programme pair of a project
 // write and returns the normalized (portfolio_id, programme_id) pointers. When
 // only a programme is given its portfolio is implied; when both are given they
@@ -1471,6 +1612,47 @@ func (h *P3MHandler) GetExecutiveSummary(w http.ResponseWriter, r *http.Request)
 	}
 	prRows.Close()
 
+	// Investment pipeline counts per portfolio tree: how many cases sit at each
+	// decision stage (same COALESCE resolution as the project list above).
+	pipeline := make(map[int]models.P3MPipelineCounts)
+	pcRows, err := h.db.QueryContext(ctx, `SELECT COALESCE(p.portfolio_id, (SELECT portfolio_id FROM p3m_programmes WHERE id = p.programme_id)), ic.status, COUNT(*) FROM p3m_investment_cases ic JOIN p3m_projects p ON p.id = ic.project_id GROUP BY 1, 2`)
+	if err != nil {
+		respondInternalError(w, r, err)
+		return
+	}
+	for pcRows.Next() {
+		var fid sql.NullInt64
+		var status string
+		var count int
+		if err := pcRows.Scan(&fid, &status, &count); err != nil {
+			respondInternalError(w, r, err)
+			return
+		}
+		if !fid.Valid {
+			continue
+		}
+		fidInt := int(fid.Int64)
+		pc := pipeline[fidInt]
+		switch status {
+		case models.P3MICStatusProposed:
+			pc.Proposed = count
+		case models.P3MICStatusUnderReview:
+			pc.UnderReview = count
+		case models.P3MICStatusApproved:
+			pc.Approved = count
+		case models.P3MICStatusRejected:
+			pc.Rejected = count
+		case models.P3MICStatusDeferred:
+			pc.Deferred = count
+		}
+		pipeline[fidInt] = pc
+	}
+	if err := pcRows.Err(); err != nil {
+		respondInternalError(w, r, err)
+		return
+	}
+	pcRows.Close()
+
 	summary := models.P3MExecutiveSummary{GeneratedAt: time.Now().UTC()}
 	for _, ref := range refs {
 		ps := models.P3MPortfolioSummary{PortfolioID: ref.ID, Title: ref.Title, RagStatus: models.P3MRagGreen}
@@ -1485,6 +1667,8 @@ func (h *P3MHandler) GetExecutiveSummary(w http.ResponseWriter, r *http.Request)
 			respondInternalError(w, r, err)
 			return
 		}
+
+		ps.InvestmentPipeline = pipeline[ref.ID]
 
 		// Upcoming gates: every project in the tree that has not reached closure.
 		for _, pid := range treeProjects[ref.ID] {
