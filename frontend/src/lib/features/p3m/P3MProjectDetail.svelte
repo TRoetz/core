@@ -6,6 +6,9 @@
   import IconX from '@tabler/icons-svelte-runes/icons/x';
   import P3MCriticalPath from './P3MCriticalPath.svelte';
   import P3MProjectRegisters from './P3MProjectRegisters.svelte';
+  import P3MChangeAssessments from './P3MChangeAssessments.svelte';
+  import P3MFinanceAlerts from './P3MFinanceAlerts.svelte';
+  import P3MClosureRecord from './P3MClosureRecord.svelte';
   import { formatMoney, formatDate, ragColor, ragLabel, stageLabel } from './utils.js';
 
   let { project = null, onChanged = () => {}, onClose = () => {} } = $props();
@@ -236,6 +239,28 @@
           {/each}
         </tbody>
       </table>
+
+      {#if rollup.financials?.synced}
+        <div class="mt-2 max-w-md rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-surface-card p-3">
+          <h4 class="mb-1 text-xs font-semibold">{t('p3m.syncedFinancials')}</h4>
+          <div class="grid grid-cols-2 gap-x-8 gap-y-1 text-xs md:grid-cols-3">
+            {#if rollup.financials.synced.actual_total != null}
+              <div><span class="text-[var(--color-ds-text-muted,#6b7280)]">{t('p3m.syncedActual')}:</span> {formatMoney(rollup.financials.synced.actual_total)}</div>
+            {/if}
+            {#if rollup.financials.synced.commitment_total != null}
+              <div><span class="text-[var(--color-ds-text-muted,#6b7280)]">{t('p3m.syncedCommitment')}:</span> {formatMoney(rollup.financials.synced.commitment_total)}</div>
+            {/if}
+            {#if rollup.financials.synced.forecast_total != null}
+              <div><span class="text-[var(--color-ds-text-muted,#6b7280)]">{t('p3m.syncedForecast')}:</span> {formatMoney(rollup.financials.synced.forecast_total)}</div>
+            {/if}
+          </div>
+          <div class="mt-1 text-xs text-[var(--color-ds-text-muted,#6b7280)]">
+            {t('p3m.lastSyncedPeriod')}: {rollup.financials.synced.last_synced_period}
+          </div>
+        </div>
+      {:else if rollup}
+        <div class="mt-2 max-w-md text-xs text-[var(--color-ds-text-muted,#6b7280)]">{t('p3m.noSyncedFinancials')}</div>
+      {/if}
     {/if}
 
     <!-- Baselines: immutable snapshots of budget/schedule at a point in time -->
@@ -390,6 +415,15 @@
         </tbody>
       </table>
     {/if}
+
+    <!-- Change impact + readiness gates delivery start (CHG-002/006) -->
+    <P3MChangeAssessments project={project} />
+
+    <!-- Financial exception alert rules for this project (FIN-009) -->
+    <P3MFinanceAlerts project={project} />
+
+    <!-- Closure & handover record gates the close stage (CLS-001) -->
+    <P3MClosureRecord project={project} />
 
     <button type="button" class="mt-3 flex items-center gap-1 text-[var(--color-ds-text-muted,#6b7280)] hover:text-[var(--color-ds-text,#111827)]" onclick={onClose}>
       <IconX size={14} /> {t('p3m.close')}

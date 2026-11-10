@@ -130,7 +130,8 @@ func (h *P3MHandler) ListInvestmentCases(w http.ResponseWriter, r *http.Request)
 // most one case (UNIQUE project_id); a duplicate is rejected with 409. New cases
 // start in the proposed stage; terminal statuses are decision-endpoint-only.
 func (h *P3MHandler) CreateInvestmentCase(w http.ResponseWriter, r *http.Request) {
-	if _, ok := RequireAuth(w, r); !ok {
+	user, ok := RequireAuth(w, r)
+	if !ok {
 		return
 	}
 	var in struct {
@@ -149,7 +150,8 @@ func (h *P3MHandler) CreateInvestmentCase(w http.ResponseWriter, r *http.Request
 		respondValidationError(w, r, "project_id is required")
 		return
 	}
-	if _, err := h.getProjectRow(r.Context(), in.ProjectID); err != nil {
+	proj, err := h.getProjectRow(r.Context(), in.ProjectID)
+	if err != nil {
 		if isNotFound(err) {
 			respondNotFound(w, r, "p3m_project")
 			return
@@ -176,7 +178,7 @@ func (h *P3MHandler) CreateInvestmentCase(w http.ResponseWriter, r *http.Request
 	}
 
 	var existingID int
-	err := h.db.QueryRowContext(r.Context(), `SELECT id FROM p3m_investment_cases WHERE project_id = ?`, in.ProjectID).Scan(&existingID)
+	err = h.db.QueryRowContext(r.Context(), `SELECT id FROM p3m_investment_cases WHERE project_id = ?`, in.ProjectID).Scan(&existingID)
 	if err == nil {
 		respondConflict(w, r, "project already has an investment case")
 		return
@@ -202,6 +204,11 @@ func (h *P3MHandler) CreateInvestmentCase(w http.ResponseWriter, r *http.Request
 		respondInternalError(w, r, err)
 		return
 	}
+	h.p3mAudit(r, user, "p3m.investment_case.create", "p3m_investment_case", &c.ID, proj.Title+" investment case", map[string]any{
+		"project_id":    in.ProjectID,
+		"benefit_score": benefit,
+		"risk_score":    risk,
+	})
 	respondJSONCreated(w, c)
 }
 
@@ -210,7 +217,8 @@ func (h *P3MHandler) CreateInvestmentCase(w http.ResponseWriter, r *http.Request
 // and under_review — terminal statuses are set by the decision endpoint.
 // Omitted fields keep their current values (partial update).
 func (h *P3MHandler) UpdateInvestmentCase(w http.ResponseWriter, r *http.Request) {
-	if _, ok := RequireAuth(w, r); !ok {
+	user, ok := RequireAuth(w, r)
+	if !ok {
 		return
 	}
 	id, ok := requireIDParam(w, r, "id")
@@ -291,17 +299,34 @@ func (h *P3MHandler) UpdateInvestmentCase(w http.ResponseWriter, r *http.Request
 		respondInternalError(w, r, err)
 		return
 	}
+	h.p3mAudit(r, user, "p3m.investment_case.update", "p3m_investment_case", &c.ID, c.ProjectTitle+" investment case", p3mAuditDiff(
+		[3]any{"status", existing.Status, status},
+		[3]any{"benefit_score", existing.BenefitScore, benefit},
+		[3]any{"risk_score", existing.RiskScore, risk},
+		[3]any{"roi_percent", nullFloatPtr(existing.ROIPercent), nullFloatPtr(roi)},
+		[3]any{"payback_months", nullInt(existing.PaybackMonths), nullInt(payback)},
+	))
 	respondJSONOK(w, c)
 }
 
 // DeleteInvestmentCase handles DELETE /api/p3m/investment-cases/{id}. The case
 // is removed; the project itself is unaffected.
 func (h *P3MHandler) DeleteInvestmentCase(w http.ResponseWriter, r *http.Request) {
-	if _, ok := RequireAuth(w, r); !ok {
+	user, ok := RequireAuth(w, r)
+	if !ok {
 		return
 	}
 	id, ok := requireIDParam(w, r, "id")
 	if !ok {
+		return
+	}
+	oldC, err := h.getInvestmentCaseRow(r.Context(), id)
+	if err != nil {
+		if isNotFound(err) {
+			respondNotFound(w, r, "p3m_investment_case")
+			return
+		}
+		respondInternalError(w, r, err)
 		return
 	}
 	res, err := h.db.ExecContext(r.Context(), `DELETE FROM p3m_investment_cases WHERE id = ?`, id)
@@ -314,6 +339,9 @@ func (h *P3MHandler) DeleteInvestmentCase(w http.ResponseWriter, r *http.Request
 		respondNotFound(w, r, "p3m_investment_case")
 		return
 	}
+	h.p3mAudit(r, user, "p3m.investment_case.delete", "p3m_investment_case", &id, oldC.ProjectTitle+" investment case", map[string]any{
+		"status": oldC.Status,
+	})
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -376,5 +404,10 @@ func (h *P3MHandler) DecideInvestmentCase(w http.ResponseWriter, r *http.Request
 		respondInternalError(w, r, err)
 		return
 	}
+	h.p3mAudit(r, user, "p3m.investment_case.decide", "p3m_investment_case", &out.ID, out.ProjectTitle+" investment case", map[string]any{
+		"outcome":    in.Outcome,
+		"from_status": c.Status,
+		"notes":      in.Notes,
+	})
 	respondJSONOK(w, out)
 }

@@ -15,8 +15,10 @@ import (
 	"net/http"
 	"time"
 
+	"windshift/internal/blobstore"
 	"windshift/internal/database"
 	"windshift/internal/models"
+	"windshift/internal/scheduler"
 	"windshift/internal/services"
 )
 
@@ -25,6 +27,18 @@ import (
 type P3MHandler struct {
 	db    database.Database
 	perms *services.PermissionService
+
+	// Optional financial-system sync (FIN-007). Nil when the server was not
+	// wired with a blob store; run/upload endpoints then answer 503 and the
+	// read-only endpoints still serve stored data.
+	financeStore *blobstore.Store
+	financeOpts  scheduler.FinanceSyncOptions
+}
+
+// SetFinanceSync wires the optional FIN-007 sync engine into the handler.
+func (h *P3MHandler) SetFinanceSync(store *blobstore.Store, opts scheduler.FinanceSyncOptions) {
+	h.financeStore = store
+	h.financeOpts = opts
 }
 
 func NewP3MHandler(db database.Database, permissionService *services.PermissionService) *P3MHandler {
@@ -200,7 +214,8 @@ func (h *P3MHandler) GetPortfolio(w http.ResponseWriter, r *http.Request) {
 
 // CreatePortfolio handles POST /api/p3m/portfolios.
 func (h *P3MHandler) CreatePortfolio(w http.ResponseWriter, r *http.Request) {
-	if _, ok := RequireAuth(w, r); !ok {
+	user, ok := RequireAuth(w, r)
+	if !ok {
 		return
 	}
 	var in struct {
@@ -241,17 +256,32 @@ func (h *P3MHandler) CreatePortfolio(w http.ResponseWriter, r *http.Request) {
 		respondInternalError(w, r, err)
 		return
 	}
+	h.p3mAudit(r, user, "p3m.portfolio.create", "p3m_portfolio", &pf.ID, pf.Title, map[string]any{
+		"budget_allocated":   in.BudgetAllocated,
+		"rag_status":         in.RagStatus,
+		"strategic_objective": in.StrategicObjective,
+	})
 	respondJSONCreated(w, pf)
 }
 
 // UpdatePortfolio handles PUT /api/p3m/portfolios/{id}. The body carries the
 // full mutable state of the portfolio.
 func (h *P3MHandler) UpdatePortfolio(w http.ResponseWriter, r *http.Request) {
-	if _, ok := RequireAuth(w, r); !ok {
+	user, ok := RequireAuth(w, r)
+	if !ok {
 		return
 	}
 	id, ok := requireIDParam(w, r, "id")
 	if !ok {
+		return
+	}
+	oldPf, err := h.getPortfolioRow(r.Context(), id)
+	if err != nil {
+		if isNotFound(err) {
+			respondNotFound(w, r, "p3m_portfolio")
+			return
+		}
+		respondInternalError(w, r, err)
 		return
 	}
 	var in struct {
@@ -291,6 +321,14 @@ func (h *P3MHandler) UpdatePortfolio(w http.ResponseWriter, r *http.Request) {
 		respondInternalError(w, r, err)
 		return
 	}
+	h.p3mAudit(r, user, "p3m.portfolio.update", "p3m_portfolio", &pf.ID, pf.Title, p3mAuditDiff(
+		[3]any{"title", oldPf.Title, in.Title},
+		[3]any{"description", oldPf.Description, in.Description},
+		[3]any{"strategic_objective", oldPf.StrategicObjective, in.StrategicObjective},
+		[3]any{"budget_allocated", oldPf.BudgetAllocated, in.BudgetAllocated},
+		[3]any{"rag_status", oldPf.RagStatus, in.RagStatus},
+		[3]any{"owner_id", nullInt(oldPf.OwnerID), nullInt(in.OwnerID)},
+	))
 	rollups, _ := h.portfolioRollups(r.Context())
 	pf.Rollup = rollups[pf.ID]
 	respondJSONOK(w, pf)
@@ -299,11 +337,21 @@ func (h *P3MHandler) UpdatePortfolio(w http.ResponseWriter, r *http.Request) {
 // DeletePortfolio handles DELETE /api/p3m/portfolios/{id}. Programmes and
 // projects inside the portfolio cascade.
 func (h *P3MHandler) DeletePortfolio(w http.ResponseWriter, r *http.Request) {
-	if _, ok := RequireAuth(w, r); !ok {
+	user, ok := RequireAuth(w, r)
+	if !ok {
 		return
 	}
 	id, ok := requireIDParam(w, r, "id")
 	if !ok {
+		return
+	}
+	oldPf, err := h.getPortfolioRow(r.Context(), id)
+	if err != nil {
+		if isNotFound(err) {
+			respondNotFound(w, r, "p3m_portfolio")
+			return
+		}
+		respondInternalError(w, r, err)
 		return
 	}
 	res, err := h.db.ExecContext(r.Context(), `DELETE FROM p3m_portfolios WHERE id = ?`, id)
@@ -315,6 +363,7 @@ func (h *P3MHandler) DeletePortfolio(w http.ResponseWriter, r *http.Request) {
 		respondNotFound(w, r, "p3m_portfolio")
 		return
 	}
+	h.p3mAudit(r, user, "p3m.portfolio.delete", "p3m_portfolio", &id, oldPf.Title, nil)
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -393,6 +442,36 @@ func (h *P3MHandler) portfolioRollups(ctx context.Context) (map[int]*models.P3MP
 		r.BudgetApproved += bAppr
 		r.BudgetActual += bAct
 		r.RagStatus = p3mRankToRag(worstRank)
+	}
+	rows.Close()
+
+	rows, err = h.db.QueryContext(ctx, `
+		SELECT COALESCE(p.portfolio_id, pg.portfolio_id) AS fid, COALESCE(NULLIF(TRIM(p.funding_source), ''), 'unspecified') AS fs, SUM(budget_approved)
+		FROM p3m_projects p LEFT JOIN p3m_programmes pg ON pg.id = p.programme_id
+		WHERE COALESCE(p.portfolio_id, pg.portfolio_id) IS NOT NULL
+		GROUP BY fid, fs`)
+	if err != nil {
+		return nil, err
+	}
+	for rows.Next() {
+		var (
+			fid int
+			fs  string
+			sum float64
+		)
+		if err := rows.Scan(&fid, &fs, &sum); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		r := out[fid]
+		if r == nil {
+			r = &models.P3MPortfolioRollup{}
+			out[fid] = r
+		}
+		if r.FundingSources == nil {
+			r.FundingSources = make(map[string]float64)
+		}
+		r.FundingSources[fs] += sum
 	}
 	rows.Close()
 
@@ -488,7 +567,8 @@ func (h *P3MHandler) GetProgramme(w http.ResponseWriter, r *http.Request) {
 // CreateProgramme handles POST /api/p3m/programmes. portfolio_id is required;
 // the referenced portfolio must exist.
 func (h *P3MHandler) CreateProgramme(w http.ResponseWriter, r *http.Request) {
-	if _, ok := RequireAuth(w, r); !ok {
+	user, ok := RequireAuth(w, r)
+	if !ok {
 		return
 	}
 	var in struct {
@@ -536,16 +616,31 @@ func (h *P3MHandler) CreateProgramme(w http.ResponseWriter, r *http.Request) {
 		respondInternalError(w, r, err)
 		return
 	}
+	h.p3mAudit(r, user, "p3m.programme.create", "p3m_programme", &pg.ID, pg.Title, map[string]any{
+		"portfolio_id":     in.PortfolioID,
+		"budget_allocated": in.BudgetAllocated,
+		"rag_status":       in.RagStatus,
+	})
 	respondJSONCreated(w, pg)
 }
 
 // UpdateProgramme handles PUT /api/p3m/programmes/{id}.
 func (h *P3MHandler) UpdateProgramme(w http.ResponseWriter, r *http.Request) {
-	if _, ok := RequireAuth(w, r); !ok {
+	user, ok := RequireAuth(w, r)
+	if !ok {
 		return
 	}
 	id, ok := requireIDParam(w, r, "id")
 	if !ok {
+		return
+	}
+	oldPg, err := h.getProgrammeRow(r.Context(), id)
+	if err != nil {
+		if isNotFound(err) {
+			respondNotFound(w, r, "p3m_programme")
+			return
+		}
+		respondInternalError(w, r, err)
 		return
 	}
 	var in struct {
@@ -592,6 +687,16 @@ func (h *P3MHandler) UpdateProgramme(w http.ResponseWriter, r *http.Request) {
 		respondInternalError(w, r, err)
 		return
 	}
+	h.p3mAudit(r, user, "p3m.programme.update", "p3m_programme", &pg.ID, pg.Title, p3mAuditDiff(
+		[3]any{"portfolio_id", oldPg.PortfolioID, in.PortfolioID},
+		[3]any{"title", oldPg.Title, in.Title},
+		[3]any{"description", oldPg.Description, in.Description},
+		[3]any{"manager_id", nullInt(oldPg.ManagerID), nullInt(in.ManagerID)},
+		[3]any{"budget_allocated", oldPg.BudgetAllocated, in.BudgetAllocated},
+		[3]any{"target_start_date", oldPg.TargetStartDate, nullTime(in.TargetStartDate)},
+		[3]any{"target_end_date", oldPg.TargetEndDate, nullTime(in.TargetEndDate)},
+		[3]any{"rag_status", oldPg.RagStatus, in.RagStatus},
+	))
 	rollups, _ := h.programmeRollups(r.Context())
 	pg.Rollup = rollups[pg.ID]
 	respondJSONOK(w, pg)
@@ -600,11 +705,21 @@ func (h *P3MHandler) UpdateProgramme(w http.ResponseWriter, r *http.Request) {
 // DeleteProgramme handles DELETE /api/p3m/programmes/{id}. Projects inside the
 // programme cascade.
 func (h *P3MHandler) DeleteProgramme(w http.ResponseWriter, r *http.Request) {
-	if _, ok := RequireAuth(w, r); !ok {
+	user, ok := RequireAuth(w, r)
+	if !ok {
 		return
 	}
 	id, ok := requireIDParam(w, r, "id")
 	if !ok {
+		return
+	}
+	oldPg, err := h.getProgrammeRow(r.Context(), id)
+	if err != nil {
+		if isNotFound(err) {
+			respondNotFound(w, r, "p3m_programme")
+			return
+		}
+		respondInternalError(w, r, err)
 		return
 	}
 	res, err := h.db.ExecContext(r.Context(), `DELETE FROM p3m_programmes WHERE id = ?`, id)
@@ -616,6 +731,7 @@ func (h *P3MHandler) DeleteProgramme(w http.ResponseWriter, r *http.Request) {
 		respondNotFound(w, r, "p3m_programme")
 		return
 	}
+	h.p3mAudit(r, user, "p3m.programme.delete", "p3m_programme", &id, oldPg.Title, nil)
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -681,11 +797,12 @@ func (h *P3MHandler) programmeRollups(ctx context.Context) (map[int]*models.P3MP
 // Projects (leaf tier; EVM + automatic RAG live here)
 // ---------------------------------------------------------------------------
 
-const p3mProjectColumns = `id, portfolio_id, programme_id, title, description, manager_id, time_project_id, current_stage, budget_approved, budget_actual, progress_percent, start_date, target_completion_date, rag_status, created_at, updated_at`
+const p3mProjectColumns = `id, portfolio_id, programme_id, title, description, manager_id, time_project_id, work_type, external_ref, funding_source, contingency, current_stage, budget_approved, budget_actual, progress_percent, start_date, target_completion_date, rag_status, created_at, updated_at`
 
 func scanP3MProject(row interface{ Scan(...any) error }) (models.P3MProject, error) {
 	var p models.P3MProject
 	err := row.Scan(&p.ID, &p.PortfolioID, &p.ProgrammeID, &p.Title, &p.Description, &p.ManagerID, &p.TimeProjectID,
+		&p.WorkType, &p.ExternalRef, &p.FundingSource, &p.Contingency,
 		&p.CurrentStage, &p.BudgetApproved, &p.BudgetActual, &p.ProgressPercent,
 		&p.StartDate, &p.TargetCompletionDate, &p.RagStatus, &p.CreatedAt, &p.UpdatedAt)
 	return p, err
@@ -781,7 +898,8 @@ func (h *P3MHandler) GetProject(w http.ResponseWriter, r *http.Request) {
 // portfolio directly or through a programme; when both are given they must
 // agree. The RAG is computed server-side and stored with the row.
 func (h *P3MHandler) CreateProject(w http.ResponseWriter, r *http.Request) {
-	if _, ok := RequireAuth(w, r); !ok {
+	user, ok := RequireAuth(w, r)
+	if !ok {
 		return
 	}
 	var in struct {
@@ -791,6 +909,10 @@ func (h *P3MHandler) CreateProject(w http.ResponseWriter, r *http.Request) {
 		Description          string    `json:"description"`
 		ManagerID            *int      `json:"manager_id,omitempty"`
 		TimeProjectID        *int      `json:"time_project_id,omitempty"`
+		WorkType             *string   `json:"work_type,omitempty"`
+		ExternalRef          *string   `json:"external_ref,omitempty"`
+		FundingSource        *string   `json:"funding_source,omitempty"`
+		Contingency          float64   `json:"contingency"`
 		CurrentStage         string    `json:"current_stage"`
 		BudgetApproved       float64   `json:"budget_approved"`
 		BudgetActual         float64   `json:"budget_actual"`
@@ -815,25 +937,30 @@ func (h *P3MHandler) CreateProject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if in.CurrentStage == "" {
-		in.CurrentStage = models.P3MStageInitiation
+		in.CurrentStage = models.P3MLifecycleStageFrontDoor
 	}
-	if !p3mValidStage(in.CurrentStage) {
-		respondValidationError(w, r, "current_stage must be one of initiation, planning, execution, closure")
+	if !h.validateEnabledStageKey(r.Context(), w, r, in.CurrentStage) {
+		return
+	}
+	if err := h.p3mStageEntryError(r.Context(), 0, "", in.WorkType, in.CurrentStage); err != nil {
+		respondConflict(w, r, err.Error())
 		return
 	}
 
 	p := models.P3MProject{
 		PortfolioID: fid, ProgrammeID: pid, Title: in.Title, Description: in.Description, ManagerID: in.ManagerID,
-		TimeProjectID: in.TimeProjectID, CurrentStage: in.CurrentStage, BudgetApproved: in.BudgetApproved, BudgetActual: in.BudgetActual,
+		TimeProjectID: in.TimeProjectID, WorkType: in.WorkType, ExternalRef: in.ExternalRef, FundingSource: in.FundingSource, Contingency: in.Contingency, CurrentStage: in.CurrentStage,
+		BudgetApproved: in.BudgetApproved, BudgetActual: in.BudgetActual,
 		ProgressPercent: in.ProgressPercent, StartDate: nullTime(in.StartDate), TargetCompletionDate: nullTime(in.TargetCompletionDate),
 	}
 	p3mApplyComputed(&p)
 
 	now := time.Now().UTC()
 	res, err := h.db.ExecContext(r.Context(), `
-		INSERT INTO p3m_projects (portfolio_id, programme_id, title, description, manager_id, time_project_id, current_stage, budget_approved, budget_actual, progress_percent, start_date, target_completion_date, rag_status, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		INSERT INTO p3m_projects (portfolio_id, programme_id, title, description, manager_id, time_project_id, work_type, external_ref, funding_source, contingency, current_stage, budget_approved, budget_actual, progress_percent, start_date, target_completion_date, rag_status, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		nullInt(p.PortfolioID), nullInt(p.ProgrammeID), p.Title, p.Description, nullInt(p.ManagerID), nullInt(p.TimeProjectID),
+		nullStringPtr(p.WorkType), nullStringPtr(p.ExternalRef), nullStringPtr(p.FundingSource), p.Contingency,
 		p.CurrentStage, p.BudgetApproved, p.BudgetActual, p.ProgressPercent,
 		nullTimePtr(p.StartDate), nullTimePtr(p.TargetCompletionDate), p.RagStatus, now, now)
 	if err != nil {
@@ -843,6 +970,17 @@ func (h *P3MHandler) CreateProject(w http.ResponseWriter, r *http.Request) {
 	id64, _ := res.LastInsertId()
 	p.ID = int(id64)
 	p.CreatedAt, p.UpdatedAt = now, now
+	h.p3mAudit(r, user, "p3m.project.create", "p3m_project", &p.ID, p.Title, map[string]any{
+		"portfolio_id":      nullInt(p.PortfolioID),
+		"programme_id":      nullInt(p.ProgrammeID),
+		"current_stage":     p.CurrentStage,
+		"work_type":         nullStringPtr(p.WorkType),
+		"external_ref":      nullStringPtr(p.ExternalRef),
+		"funding_source":    nullStringPtr(p.FundingSource),
+		"contingency":       p.Contingency,
+		"budget_approved":   p.BudgetApproved,
+		"time_project_id":   nullInt(p.TimeProjectID),
+	})
 	respondJSONCreated(w, p)
 }
 
@@ -851,7 +989,8 @@ func (h *P3MHandler) CreateProject(w http.ResponseWriter, r *http.Request) {
 // POST /p3m/budget-approvals so threshold routing applies. Decreases and all
 // other field changes apply directly; RAG is recomputed on every write.
 func (h *P3MHandler) UpdateProject(w http.ResponseWriter, r *http.Request) {
-	if _, ok := RequireAuth(w, r); !ok {
+	user, ok := RequireAuth(w, r)
+	if !ok {
 		return
 	}
 	id, ok := requireIDParam(w, r, "id")
@@ -875,6 +1014,10 @@ func (h *P3MHandler) UpdateProject(w http.ResponseWriter, r *http.Request) {
 		Description          string    `json:"description"`
 		ManagerID            *int      `json:"manager_id,omitempty"`
 		TimeProjectID        *int      `json:"time_project_id,omitempty"`
+		WorkType             *string   `json:"work_type,omitempty"`
+		ExternalRef          *string   `json:"external_ref,omitempty"`
+		FundingSource        *string   `json:"funding_source,omitempty"`
+		Contingency          float64   `json:"contingency"`
 		CurrentStage         string    `json:"current_stage"`
 		BudgetApproved       float64   `json:"budget_approved"`
 		BudgetActual         float64   `json:"budget_actual"`
@@ -901,9 +1044,14 @@ func (h *P3MHandler) UpdateProject(w http.ResponseWriter, r *http.Request) {
 	if in.CurrentStage == "" {
 		in.CurrentStage = current.CurrentStage
 	}
-	if !p3mValidStage(in.CurrentStage) {
-		respondValidationError(w, r, "current_stage must be one of initiation, planning, execution, closure")
+	if !h.validateEnabledStageKey(r.Context(), w, r, in.CurrentStage) {
 		return
+	}
+	if in.CurrentStage != current.CurrentStage {
+		if err := h.p3mStageEntryError(r.Context(), id, current.CurrentStage, in.WorkType, in.CurrentStage); err != nil {
+			respondConflict(w, r, err.Error())
+			return
+		}
 	}
 	if in.BudgetApproved > current.BudgetApproved+1e-9 {
 		respondConflict(w, r, "budget increases require POST /p3m/budget-approvals so authorization thresholds apply")
@@ -912,15 +1060,17 @@ func (h *P3MHandler) UpdateProject(w http.ResponseWriter, r *http.Request) {
 
 	p := models.P3MProject{
 		ID: id, PortfolioID: fid, ProgrammeID: pid, Title: in.Title, Description: in.Description, ManagerID: in.ManagerID,
-		TimeProjectID: in.TimeProjectID, CurrentStage: in.CurrentStage, BudgetApproved: in.BudgetApproved, BudgetActual: in.BudgetActual,
+		TimeProjectID: in.TimeProjectID, WorkType: in.WorkType, ExternalRef: in.ExternalRef, FundingSource: in.FundingSource, Contingency: in.Contingency, CurrentStage: in.CurrentStage,
+		BudgetApproved: in.BudgetApproved, BudgetActual: in.BudgetActual,
 		ProgressPercent: in.ProgressPercent, StartDate: nullTime(in.StartDate), TargetCompletionDate: nullTime(in.TargetCompletionDate),
 	}
 	p3mApplyComputed(&p)
 
 	now := time.Now().UTC()
 	_, err = h.db.ExecContext(r.Context(), `
-		UPDATE p3m_projects SET portfolio_id = ?, programme_id = ?, title = ?, description = ?, manager_id = ?, time_project_id = ?, current_stage = ?, budget_approved = ?, budget_actual = ?, progress_percent = ?, start_date = ?, target_completion_date = ?, rag_status = ?, updated_at = ? WHERE id = ?`,
+		UPDATE p3m_projects SET portfolio_id = ?, programme_id = ?, title = ?, description = ?, manager_id = ?, time_project_id = ?, work_type = ?, external_ref = ?, funding_source = ?, contingency = ?, current_stage = ?, budget_approved = ?, budget_actual = ?, progress_percent = ?, start_date = ?, target_completion_date = ?, rag_status = ?, updated_at = ? WHERE id = ?`,
 		nullInt(p.PortfolioID), nullInt(p.ProgrammeID), p.Title, p.Description, nullInt(p.ManagerID), nullInt(p.TimeProjectID),
+		nullStringPtr(p.WorkType), nullStringPtr(p.ExternalRef), nullStringPtr(p.FundingSource), p.Contingency,
 		p.CurrentStage, p.BudgetApproved, p.BudgetActual, p.ProgressPercent,
 		nullTimePtr(p.StartDate), nullTimePtr(p.TargetCompletionDate), p.RagStatus, now, id)
 	if err != nil {
@@ -928,17 +1078,41 @@ func (h *P3MHandler) UpdateProject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	p.CreatedAt, p.UpdatedAt = current.CreatedAt, now
+	h.p3mAudit(r, user, "p3m.project.update", "p3m_project", &p.ID, p.Title, p3mAuditDiff(
+		[3]any{"title", current.Title, in.Title},
+		[3]any{"description", current.Description, in.Description},
+		[3]any{"manager_id", nullInt(current.ManagerID), nullInt(in.ManagerID)},
+		[3]any{"time_project_id", nullInt(current.TimeProjectID), nullInt(in.TimeProjectID)},
+		[3]any{"funding_source", nullStringPtr(current.FundingSource), nullStringPtr(in.FundingSource)},
+		[3]any{"contingency", current.Contingency, in.Contingency},
+		[3]any{"current_stage", current.CurrentStage, p.CurrentStage},
+		[3]any{"budget_approved", current.BudgetApproved, in.BudgetApproved},
+		[3]any{"budget_actual", current.BudgetActual, in.BudgetActual},
+		[3]any{"progress_percent", current.ProgressPercent, in.ProgressPercent},
+		[3]any{"start_date", current.StartDate, nullTime(in.StartDate)},
+		[3]any{"target_completion_date", current.TargetCompletionDate, nullTime(in.TargetCompletionDate)},
+	))
 	respondJSONOK(w, p)
 }
 
 // DeleteProject handles DELETE /api/p3m/projects/{id}. Child rows (benefits,
 // RAID items, gates, baselines, ...) cascade.
 func (h *P3MHandler) DeleteProject(w http.ResponseWriter, r *http.Request) {
-	if _, ok := RequireAuth(w, r); !ok {
+	user, ok := RequireAuth(w, r)
+	if !ok {
 		return
 	}
 	id, ok := requireIDParam(w, r, "id")
 	if !ok {
+		return
+	}
+	oldP, err := h.getProjectRow(r.Context(), id)
+	if err != nil {
+		if isNotFound(err) {
+			respondNotFound(w, r, "p3m_project")
+			return
+		}
+		respondInternalError(w, r, err)
 		return
 	}
 	res, err := h.db.ExecContext(r.Context(), `DELETE FROM p3m_projects WHERE id = ?`, id)
@@ -950,6 +1124,7 @@ func (h *P3MHandler) DeleteProject(w http.ResponseWriter, r *http.Request) {
 		respondNotFound(w, r, "p3m_project")
 		return
 	}
+	h.p3mAudit(r, user, "p3m.project.delete", "p3m_project", &id, oldP.Title, nil)
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -1013,7 +1188,8 @@ func (h *P3MHandler) ListProjectWorkspaces(w http.ResponseWriter, r *http.Reques
 // replaces the project's workspace membership with the given list; an empty
 // list unlinks the project from every workspace.
 func (h *P3MHandler) SetProjectWorkspaces(w http.ResponseWriter, r *http.Request) {
-	if _, ok := RequireAuth(w, r); !ok {
+	user, ok := RequireAuth(w, r)
+	if !ok {
 		return
 	}
 	id, ok := requireIDParam(w, r, "id")
@@ -1066,6 +1242,12 @@ func (h *P3MHandler) SetProjectWorkspaces(w http.ResponseWriter, r *http.Request
 	if err := tx.Commit(); err != nil {
 		respondInternalError(w, r, err)
 		return
+	}
+
+	if proj, err := h.getProjectRow(r.Context(), id); err == nil {
+		h.p3mAudit(r, user, "p3m.project.workspaces", "p3m_project", &id, proj.Title+" workspaces", map[string]any{
+			"workspace_ids": in.WorkspaceIDs,
+		})
 	}
 
 	h.ListProjectWorkspaces(w, r)
@@ -1265,20 +1447,33 @@ func (h *P3MHandler) GetProjectRollup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	synced, err := h.p3mRollupSyncedBlock(ctx, id)
+	if err != nil {
+		respondInternalError(w, r, err)
+		return
+	}
+
+	financials := map[string]any{
+		"budget_approved":            project.BudgetApproved,
+		"budget_actual":              project.BudgetActual,
+		"contingency":                project.Contingency,
+		"funding_source":             nullStringPtr(project.FundingSource),
+		"tranche_amount_total":       trancheTotal,
+		"contract_value_total":       contractValue,
+		"contract_committed_spend":   committedSpend,
+		"contract_actual_spend":      actualSpend,
+		"worklog_hours":              worklogHours,
+		"worklog_cost":               worklogCost,
+	}
+	if synced != nil {
+		financials["synced"] = synced
+	}
+
 	respondJSONOK(w, map[string]any{
 		"project_id":   id,
 		"time_project": timeProject,
 		"workspaces":   workspaces,
-		"financials": map[string]float64{
-			"budget_approved":        project.BudgetApproved,
-			"budget_actual":          project.BudgetActual,
-			"tranche_amount_total":   trancheTotal,
-			"contract_value_total":   contractValue,
-			"contract_committed_spend": committedSpend,
-			"contract_actual_spend":  actualSpend,
-			"worklog_hours":          worklogHours,
-			"worklog_cost":           worklogCost,
-		},
+		"financials":   financials,
 		"stakeholders": stakeholders,
 		"contracts":    contracts,
 	})
@@ -1653,6 +1848,20 @@ func (h *P3MHandler) GetExecutiveSummary(w http.ResponseWriter, r *http.Request)
 	}
 	pcRows.Close()
 
+	// Exit stages (e.g. close / benefits_realisation) come from the
+	// configurable lifecycle; projects at or past them have no upcoming gates.
+	exitStages := make(map[string]bool)
+	stages, err := h.loadEnabledLifecycleStages(ctx)
+	if err != nil {
+		respondInternalError(w, r, err)
+		return
+	}
+	for _, s := range stages {
+		if s.IsExit {
+			exitStages[s.StageKey] = true
+		}
+	}
+
 	summary := models.P3MExecutiveSummary{GeneratedAt: time.Now().UTC()}
 	for _, ref := range refs {
 		ps := models.P3MPortfolioSummary{PortfolioID: ref.ID, Title: ref.Title, RagStatus: models.P3MRagGreen}
@@ -1678,7 +1887,7 @@ func (h *P3MHandler) GetExecutiveSummary(w http.ResponseWriter, r *http.Request)
 				respondInternalError(w, r, err)
 				return
 			}
-			if stage != models.P3MStageClosure {
+			if !exitStages[stage] {
 				ps.UpcomingGates = append(ps.UpcomingGates, models.P3MUpcomingGate{ProjectID: pid, Title: title, Stage: stage})
 			}
 		}

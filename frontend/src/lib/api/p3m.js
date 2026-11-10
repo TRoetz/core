@@ -34,6 +34,10 @@ export const p3m = {
   getProgrammeCriticalPath: (programmeId) =>
     fetchAPI(`/p3m/programmes/${programmeId}/critical-path`),
 
+  // What-if schedule preview (RAID-004): recompute the project CPM with the
+  // proposed item changes applied. Read-only - nothing is saved.
+  getCpmPreview: (projectId, data) => post(`/p3m/projects/${projectId}/cpm-preview`, data),
+
   // Leave impact: active user leaves overlapping resource allocations and
   // critical-path tasks. Visibility only - no rescheduling is performed.
   getProjectLeaveImpact: (projectId) => fetchAPI(`/p3m/projects/${projectId}/leave-impact`),
@@ -96,6 +100,91 @@ export const p3m = {
   resources: createCrudClient('/p3m/resources'),
   resourceAllocations: createCrudClient('/p3m/resource-allocations'),
   getResourceCapacity: (filters = {}) => fetchAPI(`/p3m/resource-capacity${qs(filters)}`),
+
+  // Front Door intake pack (FD-*).
+  getFrontDoorIntakes: (filters = {}) => fetchAPI(`/p3m/front-door${qs(filters)}`),
+  createFrontDoorIntake: (data) => post('/p3m/front-door', data),
+  updateFrontDoorIntake: (id, data) => put(`/p3m/front-door/${id}`, data),
+  decideFrontDoorIntake: (id, data) => post(`/p3m/front-door/${id}/decision`, data),
+
+  // Finance system sync (FIN-007): configs, runs and the unmatched review queue.
+  getFinanceSyncConfigs: () => fetchAPI('/p3m/finance-sync/configs'),
+  createFinanceSyncConfig: (data) => post('/p3m/finance-sync/configs', data),
+  updateFinanceSyncConfig: (id, data) => put(`/p3m/finance-sync/configs/${id}`, data),
+  deleteFinanceSyncConfig: (id) => del(`/p3m/finance-sync/configs/${id}`),
+  runFinanceSyncNow: (id) => post(`/p3m/finance-sync/configs/${id}/run`),
+  // Multipart CSV upload; the browser sets the multipart boundary, so this
+  // bypasses the JSON helpers.
+  uploadFinanceSyncCSV: async (id, file) => {
+    const fd = new FormData();
+    fd.append('file', file);
+    const res = await fetch(`${API_BASE}/p3m/finance-sync/configs/${id}/upload`, {
+      method: 'POST',
+      body: fd, // Don't set Content-Type for FormData - browser sets it with boundary
+      credentials: 'same-origin',
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(text || 'Upload failed');
+    }
+    return res.json().catch(() => ({}));
+  },
+  getFinanceSyncRuns: (filters = {}) => fetchAPI(`/p3m/finance-sync/runs${qs(filters)}`),
+  getFinanceSyncRun: (id) => fetchAPI(`/p3m/finance-sync/runs/${id}`),
+  getUnmatchedFinanceRows: (filters = {}) => fetchAPI(`/p3m/finance-sync/unmatched${qs(filters)}`),
+  assignUnmatchedFinanceRow: (factId, data) => post(`/p3m/finance-sync/unmatched/${factId}/assign`, data),
+  rejectUnmatchedFinanceRow: (factId, data = {}) => post(`/p3m/finance-sync/unmatched/${factId}/reject`, data),
+  getFinanceSyncSummary: () => fetchAPI('/p3m/finance-sync/summary'),
+
+  // Phase-2 gap closure: change calendar (CHG-008/009).
+  changeCalendar: createCrudClient('/p3m/change-calendar'),
+  getChangeCalendarWeek: (filters = {}) => fetchAPI(`/p3m/change-calendar/week${qs(filters)}`),
+
+  // Change impact + readiness assessments (CHG-002/006).
+  getChangeAssessments: (projectId) => fetchAPI(`/p3m/projects/${projectId}/change-assessments`),
+  createChangeAssessment: (projectId, data) => post(`/p3m/projects/${projectId}/change-assessments`, data),
+  updateChangeAssessment: (id, data) => put(`/p3m/change-assessments/${id}`, data),
+  getReadinessAssessments: (projectId) => fetchAPI(`/p3m/projects/${projectId}/readiness-assessments`),
+  createReadinessAssessment: (projectId, data) => post(`/p3m/projects/${projectId}/readiness-assessments`, data),
+  updateReadinessAssessment: (id, data) => put(`/p3m/readiness-assessments/${id}`, data),
+
+  // Benefit measurements + portfolio rollup (BEN-007/009).
+  getBenefitMeasurements: (benefitId) => fetchAPI(`/p3m/benefits/${benefitId}/measurements`),
+  createBenefitMeasurement: (benefitId, data) => post(`/p3m/benefits/${benefitId}/measurements`, data),
+  updateBenefitMeasurement: (id, data) => put(`/p3m/benefit-measurements/${id}`, data),
+  getBenefitsRollup: (filters = {}) => fetchAPI(`/p3m/benefits/rollup${qs(filters)}`),
+
+  // Report snapshots + tolerance profiles (RPT-005..007).
+  listReportSnapshots: (filters = {}) => fetchAPI(`/p3m/report-snapshots${qs(filters)}`),
+  createReportSnapshot: (data, filters = {}) => post(`/p3m/report-snapshots${qs(filters)}`, data),
+  getReportSnapshot: (id) => fetchAPI(`/p3m/report-snapshots/${id}`),
+  suggestCategoryRags: (filters = {}) => fetchAPI(`/p3m/report-snapshots/suggest${qs(filters)}`),
+  toleranceProfiles: createCrudClient('/p3m/tolerance-profiles'),
+
+  // RAID rollups + CPM what-if preview (RAID-001/004/006).
+  getProgrammeRaidRollup: (programmeId) => fetchAPI(`/p3m/programmes/${programmeId}/raid-rollup`),
+  getPortfolioRaidRollup: (portfolioId) => fetchAPI(`/p3m/portfolios/${portfolioId}/raid-rollup`),
+  previewProjectCpm: (projectId, data) => post(`/p3m/projects/${projectId}/cpm-preview`, data),
+
+  // Resource scenario modelling (RES-004/006).
+  runResourceScenario: (data) => post('/p3m/resource-scenarios', data),
+
+  // Prioritisation scoring + roadmap (PO-003..005, 008).
+  scoringCriteria: createCrudClient('/p3m/scoring-criteria'),
+  getInvestmentCaseScores: (id) => fetchAPI(`/p3m/investment-cases/${id}/scores`),
+  upsertInvestmentCaseScore: (id, data) => put(`/p3m/investment-cases/${id}/scores`, data),
+  getRankedInvestmentCases: (filters = {}) => fetchAPI(`/p3m/investment-cases/ranked${qs(filters)}`),
+  getPortfolioRoadmap: (portfolioId) => fetchAPI(`/p3m/portfolios/${portfolioId}/roadmap`),
+
+  // Financial exception alerts (FIN-009).
+  financeAlertRules: createCrudClient('/p3m/finance-alert-rules'),
+  evaluateAllFinanceAlerts: () => post('/p3m/evaluate-finance-alerts'),
+  evaluateProjectFinanceAlerts: (projectId) => post(`/p3m/projects/${projectId}/evaluate-finance-alerts`),
+
+  // Closure & handover record (CLS-001).
+  getClosureRecord: (projectId) => fetchAPI(`/p3m/projects/${projectId}/closure-record`),
+  createClosureRecord: (projectId, data) => post(`/p3m/projects/${projectId}/closure-record`, data),
+  updateClosureRecord: (id, data) => put(`/p3m/closure-records/${id}`, data),
 };
 
 function qs(params = {}) {

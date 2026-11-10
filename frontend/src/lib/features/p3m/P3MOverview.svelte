@@ -7,6 +7,7 @@
   import IconX from '@tabler/icons-svelte-runes/icons/x';
   import { confirm } from '../../composables/useConfirm.js';
   import P3MCriticalPath from './P3MCriticalPath.svelte';
+  import P3MRaidRollup from './P3MRaidRollup.svelte';
   import P3MProjectDetail from './P3MProjectDetail.svelte';
   import P3MProjectForm from './P3MProjectForm.svelte';
   import { p3m as p3mApi } from '../../api/p3m.js';
@@ -639,6 +640,12 @@
               </button>
             </div>
 
+            <!-- Portfolio RAID roll-up across all child projects (RAID-006) -->
+            <div class="px-10 py-2">
+              <h3 class="mb-1 text-xs font-semibold">{t('p3m.raidRollupTitle')}</h3>
+              <P3MRaidRollup entityType="portfolio" id={pf.id} />
+            </div>
+
             {#if programmeFormFor === pf.id}
               <div class="mx-10 mb-2 rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-surface-card p-3 text-xs">
                 <div class="grid grid-cols-1 gap-x-6 gap-y-2 md:grid-cols-2">
@@ -798,6 +805,12 @@
                   <div class="px-4 py-1.5">
                     <h3 class="mb-1 text-xs font-semibold">{t('p3m.criticalPath')}</h3>
                     <P3MCriticalPath entityType="programme" id={pg.id} />
+                  </div>
+
+                  <!-- Programme RAID roll-up across its projects (RAID-006) -->
+                  <div class="px-4 py-1.5">
+                    <h3 class="mb-1 text-xs font-semibold">{t('p3m.raidRollupTitle')}</h3>
+                    <P3MRaidRollup entityType="programme" id={pg.id} />
                   </div>
 
                   {#if projectFormCtx && projectFormCtx.portfolioId === pf.id && projectFormCtx.programmeId === pg.id}

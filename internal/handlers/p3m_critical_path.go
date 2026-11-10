@@ -258,8 +258,23 @@ func findCPMCycle(remaining map[int]bool, succs map[int][]int) []int {
 // over them. dependencyCount is the number of edges actually used (both ends
 // present among the dated items).
 func (h *P3MHandler) loadCPMSchedule(ctx context.Context, projectIDs []int) (*cpmResult, int, error) {
+	nodes, edges, err := h.loadCPMNodesAndEdges(ctx, projectIDs)
+	if err != nil {
+		return nil, 0, err
+	}
+	res, err := computeCPM(nodes, edges)
+	if err != nil {
+		return nil, 0, err
+	}
+	return res, len(edges), nil
+}
+
+// loadCPMNodesAndEdges loads the dated work items and "blocks" dependencies for
+// the given P3M projects without running CPM, so callers can apply hypothetical
+// changes before scheduling (what-if preview).
+func (h *P3MHandler) loadCPMNodesAndEdges(ctx context.Context, projectIDs []int) ([]cpmNode, []cpmEdge, error) {
 	if len(projectIDs) == 0 {
-		return &cpmResult{tasks: []models.P3MCriticalPathTask{}, criticalIDs: []int{}}, 0, nil
+		return nil, nil, nil
 	}
 
 	idArgs := make([]any, len(projectIDs))
@@ -273,25 +288,25 @@ func (h *P3MHandler) loadCPMSchedule(ctx context.Context, projectIDs []int) (*cp
 		SELECT DISTINCT wpw.workspace_id FROM workspace_p3m_projects wpw
 		WHERE wpw.p3m_project_id IN (`+joinPlaceholders(ph)+`)`, idArgs...)
 	if err != nil {
-		return nil, 0, err
+		return nil, nil, err
 	}
 	wsIDs := make([]int, 0)
 	for rows.Next() {
 		var wsID int
 		if err := rows.Scan(&wsID); err != nil {
 			rows.Close()
-			return nil, 0, err
+			return nil, nil, err
 		}
 		wsIDs = append(wsIDs, wsID)
 	}
 	if err := rows.Err(); err != nil {
 		rows.Close()
-		return nil, 0, err
+		return nil, nil, err
 	}
 	rows.Close()
 
 	if len(wsIDs) == 0 {
-		return &cpmResult{tasks: []models.P3MCriticalPathTask{}, criticalIDs: []int{}}, 0, nil
+		return nil, nil, nil
 	}
 
 	wsArgs := make([]any, len(wsIDs))
@@ -307,7 +322,7 @@ func (h *P3MHandler) loadCPMSchedule(ctx context.Context, projectIDs []int) (*cp
 		  AND start_date IS NOT NULL AND end_date IS NOT NULL AND end_date >= start_date
 		ORDER BY id`, wsArgs...)
 	if err != nil {
-		return nil, 0, err
+		return nil, nil, err
 	}
 	nodes := make([]cpmNode, 0)
 	itemIDs := make([]int, 0)
@@ -316,7 +331,7 @@ func (h *P3MHandler) loadCPMSchedule(ctx context.Context, projectIDs []int) (*cp
 		var start, end sql.NullTime
 		if err := itemsRows.Scan(&n.id, &n.title, &n.workspaceID, &start, &end); err != nil {
 			itemsRows.Close()
-			return nil, 0, err
+			return nil, nil, err
 		}
 		n.start = start.Time.UTC().Truncate(cpmDay)
 		n.end = end.Time.UTC().Truncate(cpmDay)
@@ -325,12 +340,12 @@ func (h *P3MHandler) loadCPMSchedule(ctx context.Context, projectIDs []int) (*cp
 	}
 	if err := itemsRows.Err(); err != nil {
 		itemsRows.Close()
-		return nil, 0, err
+		return nil, nil, err
 	}
 	itemsRows.Close()
 
 	if len(itemIDs) == 0 {
-		return &cpmResult{tasks: []models.P3MCriticalPathTask{}, criticalIDs: []int{}}, 0, nil
+		return nil, nil, nil
 	}
 
 	itemArgs := make([]any, len(itemIDs))
@@ -345,28 +360,24 @@ func (h *P3MHandler) loadCPMSchedule(ctx context.Context, projectIDs []int) (*cp
 		WHERE dep_type = 'blocks' AND source_item_id IN (`+joinPlaceholders(itemPh)+`)
 		  AND target_item_id IN (`+joinPlaceholders(itemPh)+`)`, append(append([]any{}, itemArgs...), itemArgs...)...)
 	if err != nil {
-		return nil, 0, err
+		return nil, nil, err
 	}
 	edges := make([]cpmEdge, 0)
 	for depRows.Next() {
 		var e cpmEdge
 		if err := depRows.Scan(&e.src, &e.dst); err != nil {
 			depRows.Close()
-			return nil, 0, err
+			return nil, nil, err
 		}
 		edges = append(edges, e)
 	}
 	if err := depRows.Err(); err != nil {
 		depRows.Close()
-		return nil, 0, err
+		return nil, nil, err
 	}
 	depRows.Close()
 
-	res, err := computeCPM(nodes, edges)
-	if err != nil {
-		return nil, 0, err
-	}
-	return res, len(edges), nil
+	return nodes, edges, nil
 }
 
 // applyCPMRegisterCounts annotates each task with its open risks and pending

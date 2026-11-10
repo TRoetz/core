@@ -40,6 +40,8 @@ export const ADMIN_COMPONENT_LOADERS = {
   'approval-set-detail': () => import('../settings/ApprovalSetDetail.svelte'),
   'form-channel': () => import('../features/channels/FormChannelPage.svelte'),
   'portal-channel': () => import('../features/channels/PortalChannelPage.svelte'),
+  'p3m-finance-sync': () => import('../settings/FinanceSyncSettings.svelte'),
+  'p3m-alert-rules': () => import('../settings/P3MAlertRulesSettings.svelte'),
 };
 
 export function getAdminComponentProps(componentKey, loadedExtensions) {

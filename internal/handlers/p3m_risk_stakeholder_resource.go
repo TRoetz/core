@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -17,12 +18,12 @@ import (
 // RAID items (risk / assumption / issue / dependency).
 // ---------------------------------------------------------------------------
 
-const p3mRaidColumns = `id, entity_type, entity_id, item_type, title, description, impact_score, probability_score, mitigation_plan, owner_id, status, item_id, created_at, updated_at`
+const p3mRaidColumns = `id, entity_type, entity_id, item_type, title, description, impact_score, probability_score, mitigation_plan, owner_id, status, due_date, item_subtype, decision_subtype, srm_contract_id, item_id, created_at, updated_at`
 
 // scanP3MRaidItem reads one p3m_raid_items row.
 func scanP3MRaidItem(row interface{ Scan(...any) error }) (models.P3MRaidItem, error) {
 	var item models.P3MRaidItem
-	err := row.Scan(&item.ID, &item.EntityType, &item.EntityID, &item.ItemType, &item.Title, &item.Description, &item.ImpactScore, &item.ProbabilityScore, &item.MitigationPlan, &item.OwnerID, &item.Status, &item.ItemID, &item.CreatedAt, &item.UpdatedAt)
+	err := row.Scan(&item.ID, &item.EntityType, &item.EntityID, &item.ItemType, &item.Title, &item.Description, &item.ImpactScore, &item.ProbabilityScore, &item.MitigationPlan, &item.OwnerID, &item.Status, &item.DueDate, &item.ItemSubtype, &item.DecisionSubtype, &item.SRMContractID, &item.ItemID, &item.CreatedAt, &item.UpdatedAt)
 	return item, err
 }
 
@@ -46,6 +47,28 @@ func p3mValidRaidItemType(itemType string) bool {
 func p3mValidRaidStatus(status string) bool {
 	switch status {
 	case "open", "mitigating", "closed", "escalated":
+		return true
+	default:
+		return false
+	}
+}
+
+// p3mValidRaidItemSubtype reports whether subtype is one of the BRD change and
+// adoption risk subtypes (RAID-001); empty means untyped.
+func p3mValidRaidItemSubtype(subtype string) bool {
+	switch subtype {
+	case "", "change_risk", "adoption_risk":
+		return true
+	default:
+		return false
+	}
+}
+
+// p3mValidDecisionSubtype reports whether subtype is one of the decision and
+// approval categories (GOV-007); empty means untyped.
+func p3mValidDecisionSubtype(subtype string) bool {
+	switch subtype {
+	case "", "governance", "funding", "procurement", "plan", "closure":
 		return true
 	default:
 		return false
@@ -104,6 +127,10 @@ func (h *P3MHandler) ListRaidItems(w http.ResponseWriter, r *http.Request) {
 		conds = append(conds, "status = ?")
 		args = append(args, v)
 	}
+	if v := r.URL.Query().Get("item_subtype"); v != "" {
+		conds = append(conds, "item_subtype = ?")
+		args = append(args, v)
+	}
 	if len(conds) > 0 {
 		query += " WHERE " + strings.Join(conds, " AND ")
 	}
@@ -135,21 +162,26 @@ func (h *P3MHandler) ListRaidItems(w http.ResponseWriter, r *http.Request) {
 
 // CreateRaidItem handles POST /api/p3m/raid-items.
 func (h *P3MHandler) CreateRaidItem(w http.ResponseWriter, r *http.Request) {
-	if _, ok := RequireAuth(w, r); !ok {
+	user, ok := RequireAuth(w, r)
+	if !ok {
 		return
 	}
 	var in struct {
-		EntityType       string `json:"entity_type"`
-		EntityID         int    `json:"entity_id"`
-		ItemType         string `json:"item_type"`
-		Title            string `json:"title"`
-		Description      string `json:"description"`
-		ImpactScore      int    `json:"impact_score"`
-		ProbabilityScore int    `json:"probability_score"`
-		MitigationPlan   string `json:"mitigation_plan"`
-		OwnerID          int    `json:"owner_id"`
-		Status           string `json:"status"`
-		ItemID           *int   `json:"item_id,omitempty"`
+		EntityType       string     `json:"entity_type"`
+		EntityID         int        `json:"entity_id"`
+		ItemType         string     `json:"item_type"`
+		Title            string     `json:"title"`
+		Description      string     `json:"description"`
+		ImpactScore      int        `json:"impact_score"`
+		ProbabilityScore int        `json:"probability_score"`
+		MitigationPlan   string     `json:"mitigation_plan"`
+		OwnerID          int        `json:"owner_id"`
+		Status           string     `json:"status"`
+		DueDate          *time.Time `json:"due_date,omitempty"`
+		ItemSubtype      string     `json:"item_subtype,omitempty"`
+		DecisionSubtype  string     `json:"decision_subtype,omitempty"`
+		SRMContractID    *int       `json:"srm_contract_id,omitempty"`
+		ItemID           *int       `json:"item_id,omitempty"`
 	}
 	if err := newJSONDecoder(w, r).Decode(&in); err != nil {
 		respondBadRequest(w, r, "Invalid request body")
@@ -160,6 +192,14 @@ func (h *P3MHandler) CreateRaidItem(w http.ResponseWriter, r *http.Request) {
 	}
 	if !p3mValidRaidItemType(in.ItemType) {
 		respondValidationError(w, r, "item_type must be one of risk, assumption, issue, dependency or decision")
+		return
+	}
+	if !p3mValidRaidItemSubtype(in.ItemSubtype) {
+		respondValidationError(w, r, "item_subtype must be change_risk or adoption_risk")
+		return
+	}
+	if !p3mValidDecisionSubtype(in.DecisionSubtype) {
+		respondValidationError(w, r, "decision_subtype must be one of governance, funding, procurement, plan or closure")
 		return
 	}
 	if in.ImpactScore < 1 || in.ImpactScore > 5 {
@@ -174,6 +214,13 @@ func (h *P3MHandler) CreateRaidItem(w http.ResponseWriter, r *http.Request) {
 	if err := h.db.QueryRowContext(r.Context(), `SELECT COUNT(*) FROM users WHERE id = ?`, in.OwnerID).Scan(&ownerCount); err != nil || ownerCount == 0 {
 		respondNotFound(w, r, "user")
 		return
+	}
+	if in.SRMContractID != nil {
+		var contractCount int
+		if err := h.db.QueryRowContext(r.Context(), `SELECT COUNT(*) FROM srm_contracts WHERE id = ?`, *in.SRMContractID).Scan(&contractCount); err != nil || contractCount == 0 {
+			respondNotFound(w, r, "srm_contract")
+			return
+		}
 	}
 	if in.ItemID != nil {
 		var itemCount int
@@ -191,8 +238,8 @@ func (h *P3MHandler) CreateRaidItem(w http.ResponseWriter, r *http.Request) {
 	}
 
 	now := time.Now().UTC()
-	res, err := h.db.ExecContext(r.Context(), `INSERT INTO p3m_raid_items (entity_type, entity_id, item_type, title, description, impact_score, probability_score, mitigation_plan, owner_id, status, item_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		in.EntityType, in.EntityID, in.ItemType, in.Title, in.Description, in.ImpactScore, in.ProbabilityScore, in.MitigationPlan, in.OwnerID, in.Status, in.ItemID, now, now)
+	res, err := h.db.ExecContext(r.Context(), `INSERT INTO p3m_raid_items (entity_type, entity_id, item_type, title, description, impact_score, probability_score, mitigation_plan, owner_id, status, due_date, item_subtype, decision_subtype, srm_contract_id, item_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		in.EntityType, in.EntityID, in.ItemType, in.Title, in.Description, in.ImpactScore, in.ProbabilityScore, in.MitigationPlan, in.OwnerID, in.Status, nullTimePtr(in.DueDate), in.ItemSubtype, in.DecisionSubtype, in.SRMContractID, in.ItemID, now, now)
 	if err != nil {
 		respondInternalError(w, r, err)
 		return
@@ -204,6 +251,11 @@ func (h *P3MHandler) CreateRaidItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	p3mApplyComputedRaid(&item)
+	h.p3mAudit(r, user, "p3m.raid.create", "p3m_raid_item", &item.ID, item.Title, map[string]any{
+		"entity":    in.EntityType + "#" + strconv.Itoa(in.EntityID),
+		"item_type": in.ItemType,
+		"status":    in.Status,
+	})
 	respondJSONCreated(w, item)
 }
 
@@ -211,25 +263,39 @@ func (h *P3MHandler) CreateRaidItem(w http.ResponseWriter, r *http.Request) {
 // is replaced; the entity reference may move between tiers but must point at
 // an existing entity.
 func (h *P3MHandler) UpdateRaidItem(w http.ResponseWriter, r *http.Request) {
-	if _, ok := RequireAuth(w, r); !ok {
+	user, ok := RequireAuth(w, r)
+	if !ok {
 		return
 	}
 	id, ok := requireIDParam(w, r, "id")
 	if !ok {
 		return
 	}
+	oldItem, err := h.getRaidItemRow(r.Context(), id)
+	if isNotFound(err) {
+		respondNotFound(w, r, "p3m_raid_item")
+		return
+	}
+	if err != nil {
+		respondInternalError(w, r, err)
+		return
+	}
 	var in struct {
-		EntityType       string `json:"entity_type"`
-		EntityID         int    `json:"entity_id"`
-		ItemType         string `json:"item_type"`
-		Title            string `json:"title"`
-		Description      string `json:"description"`
-		ImpactScore      int    `json:"impact_score"`
-		ProbabilityScore int    `json:"probability_score"`
-		MitigationPlan   string `json:"mitigation_plan"`
-		OwnerID          int    `json:"owner_id"`
-		Status           string `json:"status"`
-		ItemID           *int   `json:"item_id,omitempty"`
+		EntityType       string     `json:"entity_type"`
+		EntityID         int        `json:"entity_id"`
+		ItemType         string     `json:"item_type"`
+		Title            string     `json:"title"`
+		Description      string     `json:"description"`
+		ImpactScore      int        `json:"impact_score"`
+		ProbabilityScore int        `json:"probability_score"`
+		MitigationPlan   string     `json:"mitigation_plan"`
+		OwnerID          int        `json:"owner_id"`
+		Status           string     `json:"status"`
+		DueDate          *time.Time `json:"due_date,omitempty"`
+		ItemSubtype      string     `json:"item_subtype,omitempty"`
+		DecisionSubtype  string     `json:"decision_subtype,omitempty"`
+		SRMContractID    *int       `json:"srm_contract_id,omitempty"`
+		ItemID           *int       `json:"item_id,omitempty"`
 	}
 	if err := newJSONDecoder(w, r).Decode(&in); err != nil {
 		respondBadRequest(w, r, "Invalid request body")
@@ -240,6 +306,14 @@ func (h *P3MHandler) UpdateRaidItem(w http.ResponseWriter, r *http.Request) {
 	}
 	if !p3mValidRaidItemType(in.ItemType) {
 		respondValidationError(w, r, "item_type must be one of risk, assumption, issue, dependency or decision")
+		return
+	}
+	if !p3mValidRaidItemSubtype(in.ItemSubtype) {
+		respondValidationError(w, r, "item_subtype must be change_risk or adoption_risk")
+		return
+	}
+	if !p3mValidDecisionSubtype(in.DecisionSubtype) {
+		respondValidationError(w, r, "decision_subtype must be one of governance, funding, procurement, plan or closure")
 		return
 	}
 	if in.ImpactScore < 1 || in.ImpactScore > 5 {
@@ -255,6 +329,13 @@ func (h *P3MHandler) UpdateRaidItem(w http.ResponseWriter, r *http.Request) {
 		respondNotFound(w, r, "user")
 		return
 	}
+	if in.SRMContractID != nil {
+		var contractCount int
+		if err := h.db.QueryRowContext(r.Context(), `SELECT COUNT(*) FROM srm_contracts WHERE id = ?`, *in.SRMContractID).Scan(&contractCount); err != nil || contractCount == 0 {
+			respondNotFound(w, r, "srm_contract")
+			return
+		}
+	}
 	if in.ItemID != nil {
 		var itemCount int
 		if err := h.db.QueryRowContext(r.Context(), `SELECT COUNT(*) FROM items WHERE id = ?`, *in.ItemID).Scan(&itemCount); err != nil || itemCount == 0 {
@@ -268,8 +349,8 @@ func (h *P3MHandler) UpdateRaidItem(w http.ResponseWriter, r *http.Request) {
 	}
 
 	now := time.Now().UTC()
-	res, err := h.db.ExecContext(r.Context(), `UPDATE p3m_raid_items SET entity_type = ?, entity_id = ?, item_type = ?, title = ?, description = ?, impact_score = ?, probability_score = ?, mitigation_plan = ?, owner_id = ?, status = ?, item_id = ?, updated_at = ? WHERE id = ?`,
-		in.EntityType, in.EntityID, in.ItemType, in.Title, in.Description, in.ImpactScore, in.ProbabilityScore, in.MitigationPlan, in.OwnerID, in.Status, in.ItemID, now, id)
+	res, err := h.db.ExecContext(r.Context(), `UPDATE p3m_raid_items SET entity_type = ?, entity_id = ?, item_type = ?, title = ?, description = ?, impact_score = ?, probability_score = ?, mitigation_plan = ?, owner_id = ?, status = ?, due_date = ?, item_subtype = ?, decision_subtype = ?, srm_contract_id = ?, item_id = ?, updated_at = ? WHERE id = ?`,
+		in.EntityType, in.EntityID, in.ItemType, in.Title, in.Description, in.ImpactScore, in.ProbabilityScore, in.MitigationPlan, in.OwnerID, in.Status, nullTimePtr(in.DueDate), in.ItemSubtype, in.DecisionSubtype, in.SRMContractID, in.ItemID, now, id)
 	if err != nil {
 		respondInternalError(w, r, err)
 		return
@@ -284,16 +365,42 @@ func (h *P3MHandler) UpdateRaidItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	p3mApplyComputedRaid(&item)
+	h.p3mAudit(r, user, "p3m.raid.update", "p3m_raid_item", &item.ID, item.Title, p3mAuditDiff(
+		[3]any{"entity", oldItem.EntityType+"#"+strconv.Itoa(oldItem.EntityID), in.EntityType+"#"+strconv.Itoa(in.EntityID)},
+		[3]any{"item_type", oldItem.ItemType, in.ItemType},
+		[3]any{"title", oldItem.Title, in.Title},
+		[3]any{"description", oldItem.Description, in.Description},
+		[3]any{"impact_score", oldItem.ImpactScore, in.ImpactScore},
+		[3]any{"probability_score", oldItem.ProbabilityScore, in.ProbabilityScore},
+		[3]any{"mitigation_plan", oldItem.MitigationPlan, in.MitigationPlan},
+		[3]any{"owner_id", oldItem.OwnerID, in.OwnerID},
+		[3]any{"status", oldItem.Status, in.Status},
+		[3]any{"due_date", nullTimeStr(oldItem.DueDate), nullTimeStr(in.DueDate)},
+		[3]any{"item_subtype", oldItem.ItemSubtype, in.ItemSubtype},
+		[3]any{"decision_subtype", oldItem.DecisionSubtype, in.DecisionSubtype},
+		[3]any{"srm_contract_id", nullInt(oldItem.SRMContractID), nullInt(in.SRMContractID)},
+		[3]any{"item_id", nullInt(oldItem.ItemID), nullInt(in.ItemID)},
+	))
 	respondJSONOK(w, item)
 }
 
 // DeleteRaidItem handles DELETE /api/p3m/raid-items/{id}.
 func (h *P3MHandler) DeleteRaidItem(w http.ResponseWriter, r *http.Request) {
-	if _, ok := RequireAuth(w, r); !ok {
+	user, ok := RequireAuth(w, r)
+	if !ok {
 		return
 	}
 	id, ok := requireIDParam(w, r, "id")
 	if !ok {
+		return
+	}
+	oldItem, err := h.getRaidItemRow(r.Context(), id)
+	if isNotFound(err) {
+		respondNotFound(w, r, "p3m_raid_item")
+		return
+	}
+	if err != nil {
+		respondInternalError(w, r, err)
 		return
 	}
 	res, err := h.db.ExecContext(r.Context(), `DELETE FROM p3m_raid_items WHERE id = ?`, id)
@@ -305,6 +412,10 @@ func (h *P3MHandler) DeleteRaidItem(w http.ResponseWriter, r *http.Request) {
 		respondNotFound(w, r, "p3m_raid_item")
 		return
 	}
+	h.p3mAudit(r, user, "p3m.raid.delete", "p3m_raid_item", &id, oldItem.Title, map[string]any{
+		"entity":    oldItem.EntityType + "#" + strconv.Itoa(oldItem.EntityID),
+		"item_type": oldItem.ItemType,
+	})
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -313,7 +424,8 @@ func (h *P3MHandler) DeleteRaidItem(w http.ResponseWriter, r *http.Request) {
 // (an explicit programme or portfolio, or the item's own parent when none is
 // given) and both rows are marked escalated.
 func (h *P3MHandler) EscalateRaidItem(w http.ResponseWriter, r *http.Request) {
-	if _, ok := RequireAuth(w, r); !ok {
+	user, ok := RequireAuth(w, r)
+	if !ok {
 		return
 	}
 	id, ok := requireIDParam(w, r, "id")
@@ -407,6 +519,10 @@ func (h *P3MHandler) EscalateRaidItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	p3mApplyComputedRaid(&created)
+	h.p3mAudit(r, user, "p3m.raid.escalate", "p3m_raid_item", &created.ID, created.Title, map[string]any{
+		"source_entity": item.EntityType + "#" + strconv.Itoa(item.EntityID),
+		"target_entity": targetType + "#" + strconv.Itoa(targetID),
+	})
 	respondJSONCreated(w, created)
 }
 
@@ -481,7 +597,8 @@ func (h *P3MHandler) ListStakeholders(w http.ResponseWriter, r *http.Request) {
 
 // CreateStakeholder handles POST /api/p3m/stakeholders.
 func (h *P3MHandler) CreateStakeholder(w http.ResponseWriter, r *http.Request) {
-	if _, ok := RequireAuth(w, r); !ok {
+	user, ok := RequireAuth(w, r)
+	if !ok {
 		return
 	}
 	var in struct {
@@ -527,17 +644,31 @@ func (h *P3MHandler) CreateStakeholder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.Quadrant = p3mStakeholderQuadrant(s.PowerScore, s.InterestScore)
+	h.p3mAudit(r, user, "p3m.stakeholder.create", "p3m_stakeholder", &s.ID, s.Name, map[string]any{
+		"entity":     in.EntityType + "#" + strconv.Itoa(in.EntityID),
+		"role_title": in.RoleTitle,
+	})
 	respondJSONCreated(w, s)
 }
 
 // UpdateStakeholder handles PUT /api/p3m/stakeholders/{id}. The full mutable
 // state is replaced.
 func (h *P3MHandler) UpdateStakeholder(w http.ResponseWriter, r *http.Request) {
-	if _, ok := RequireAuth(w, r); !ok {
+	user, ok := RequireAuth(w, r)
+	if !ok {
 		return
 	}
 	id, ok := requireIDParam(w, r, "id")
 	if !ok {
+		return
+	}
+	oldS, err := h.getStakeholderRow(r.Context(), id)
+	if isNotFound(err) {
+		respondNotFound(w, r, "p3m_stakeholder")
+		return
+	}
+	if err != nil {
+		respondInternalError(w, r, err)
 		return
 	}
 	var in struct {
@@ -586,16 +717,34 @@ func (h *P3MHandler) UpdateStakeholder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.Quadrant = p3mStakeholderQuadrant(s.PowerScore, s.InterestScore)
+	h.p3mAudit(r, user, "p3m.stakeholder.update", "p3m_stakeholder", &s.ID, s.Name, p3mAuditDiff(
+		[3]any{"entity", oldS.EntityType+"#"+strconv.Itoa(oldS.EntityID), in.EntityType+"#"+strconv.Itoa(in.EntityID)},
+		[3]any{"name", oldS.Name, in.Name},
+		[3]any{"role_title", oldS.RoleTitle, in.RoleTitle},
+		[3]any{"power_score", oldS.PowerScore, in.PowerScore},
+		[3]any{"interest_score", oldS.InterestScore, in.InterestScore},
+		[3]any{"notes", oldS.Notes, in.Notes},
+	))
 	respondJSONOK(w, s)
 }
 
 // DeleteStakeholder handles DELETE /api/p3m/stakeholders/{id}.
 func (h *P3MHandler) DeleteStakeholder(w http.ResponseWriter, r *http.Request) {
-	if _, ok := RequireAuth(w, r); !ok {
+	user, ok := RequireAuth(w, r)
+	if !ok {
 		return
 	}
 	id, ok := requireIDParam(w, r, "id")
 	if !ok {
+		return
+	}
+	oldS, err := h.getStakeholderRow(r.Context(), id)
+	if isNotFound(err) {
+		respondNotFound(w, r, "p3m_stakeholder")
+		return
+	}
+	if err != nil {
+		respondInternalError(w, r, err)
 		return
 	}
 	res, err := h.db.ExecContext(r.Context(), `DELETE FROM p3m_stakeholders WHERE id = ?`, id)
@@ -607,6 +756,10 @@ func (h *P3MHandler) DeleteStakeholder(w http.ResponseWriter, r *http.Request) {
 		respondNotFound(w, r, "p3m_stakeholder")
 		return
 	}
+	h.p3mAudit(r, user, "p3m.stakeholder.delete", "p3m_stakeholder", &id, oldS.Name, map[string]any{
+		"entity":     oldS.EntityType + "#" + strconv.Itoa(oldS.EntityID),
+		"role_title": oldS.RoleTitle,
+	})
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -734,16 +887,35 @@ func (h *P3MHandler) CreateCommunication(w http.ResponseWriter, r *http.Request)
 		respondInternalError(w, r, err)
 		return
 	}
+	name := strings.TrimSpace(in.Summary)
+	if name == "" {
+		name = in.Channel + " communication"
+	}
+	h.p3mAudit(r, user, "p3m.communication.create", "p3m_communication", &c.ID, name, map[string]any{
+		"entity":  in.EntityType + "#" + strconv.Itoa(in.EntityID),
+		"date":    c.Date.Format("2006-01-02"),
+		"channel": in.Channel,
+	})
 	respondJSONCreated(w, c)
 }
 
 // DeleteCommunication handles DELETE /api/p3m/communications/{id}.
 func (h *P3MHandler) DeleteCommunication(w http.ResponseWriter, r *http.Request) {
-	if _, ok := RequireAuth(w, r); !ok {
+	user, ok := RequireAuth(w, r)
+	if !ok {
 		return
 	}
 	id, ok := requireIDParam(w, r, "id")
 	if !ok {
+		return
+	}
+	oldC, err := h.getCommunicationRow(r.Context(), id)
+	if isNotFound(err) {
+		respondNotFound(w, r, "p3m_communication")
+		return
+	}
+	if err != nil {
+		respondInternalError(w, r, err)
 		return
 	}
 	res, err := h.db.ExecContext(r.Context(), `DELETE FROM p3m_communications WHERE id = ?`, id)
@@ -755,6 +927,15 @@ func (h *P3MHandler) DeleteCommunication(w http.ResponseWriter, r *http.Request)
 		respondNotFound(w, r, "p3m_communication")
 		return
 	}
+	name := strings.TrimSpace(oldC.Summary)
+	if name == "" {
+		name = oldC.Channel + " communication"
+	}
+	h.p3mAudit(r, user, "p3m.communication.delete", "p3m_communication", &id, name, map[string]any{
+		"entity":  oldC.EntityType + "#" + strconv.Itoa(oldC.EntityID),
+		"date":    oldC.Date.Format("2006-01-02"),
+		"channel": oldC.Channel,
+	})
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -762,14 +943,14 @@ func (h *P3MHandler) DeleteCommunication(w http.ResponseWriter, r *http.Request)
 // Resources.
 // ---------------------------------------------------------------------------
 
-const p3mResourceColumns = `id, name, user_id, skills, cost_rate, capacity_hours_per_week, created_at, updated_at`
+const p3mResourceColumns = `id, name, user_id, skills, cost_rate, capacity_hours_per_week, pool, created_at, updated_at`
 
 // scanP3MResource reads one p3m_resources row; the skills column is stored as
 // a JSON array in TEXT.
 func scanP3MResource(row interface{ Scan(...any) error }) (models.P3MResource, error) {
 	var res models.P3MResource
 	var skills string
-	if err := row.Scan(&res.ID, &res.Name, &res.UserID, &skills, &res.CostRate, &res.CapacityHoursPerWeek, &res.CreatedAt, &res.UpdatedAt); err != nil {
+	if err := row.Scan(&res.ID, &res.Name, &res.UserID, &skills, &res.CostRate, &res.CapacityHoursPerWeek, &res.Pool, &res.CreatedAt, &res.UpdatedAt); err != nil {
 		return res, err
 	}
 	if skills != "" {
@@ -829,7 +1010,8 @@ func (h *P3MHandler) ListResources(w http.ResponseWriter, r *http.Request) {
 
 // CreateResource handles POST /api/p3m/resources.
 func (h *P3MHandler) CreateResource(w http.ResponseWriter, r *http.Request) {
-	if _, ok := RequireAuth(w, r); !ok {
+	user, ok := RequireAuth(w, r)
+	if !ok {
 		return
 	}
 	var in struct {
@@ -838,6 +1020,7 @@ func (h *P3MHandler) CreateResource(w http.ResponseWriter, r *http.Request) {
 		Skills               []string `json:"skills"`
 		CostRate             float64  `json:"cost_rate"`
 		CapacityHoursPerWeek int      `json:"capacity_hours_per_week"`
+		Pool                 string   `json:"pool,omitempty"`
 	}
 	if err := newJSONDecoder(w, r).Decode(&in); err != nil {
 		respondBadRequest(w, r, "Invalid request body")
@@ -864,8 +1047,8 @@ func (h *P3MHandler) CreateResource(w http.ResponseWriter, r *http.Request) {
 	}
 
 	now := time.Now().UTC()
-	res, err := h.db.ExecContext(r.Context(), `INSERT INTO p3m_resources (name, user_id, skills, cost_rate, capacity_hours_per_week, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-		in.Name, nullInt(in.UserID), p3mMarshalSkills(in.Skills), in.CostRate, in.CapacityHoursPerWeek, now, now)
+	res, err := h.db.ExecContext(r.Context(), `INSERT INTO p3m_resources (name, user_id, skills, cost_rate, capacity_hours_per_week, pool, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		in.Name, nullInt(in.UserID), p3mMarshalSkills(in.Skills), in.CostRate, in.CapacityHoursPerWeek, in.Pool, now, now)
 	if err != nil {
 		respondInternalError(w, r, err)
 		return
@@ -876,17 +1059,32 @@ func (h *P3MHandler) CreateResource(w http.ResponseWriter, r *http.Request) {
 		respondInternalError(w, r, err)
 		return
 	}
+	h.p3mAudit(r, user, "p3m.resource.create", "p3m_resource", &resource.ID, resource.Name, map[string]any{
+		"cost_rate":               in.CostRate,
+		"capacity_hours_per_week": in.CapacityHoursPerWeek,
+		"pool":                    in.Pool,
+	})
 	respondJSONCreated(w, resource)
 }
 
 // UpdateResource handles PUT /api/p3m/resources/{id}. The full mutable state
 // is replaced.
 func (h *P3MHandler) UpdateResource(w http.ResponseWriter, r *http.Request) {
-	if _, ok := RequireAuth(w, r); !ok {
+	user, ok := RequireAuth(w, r)
+	if !ok {
 		return
 	}
 	id, ok := requireIDParam(w, r, "id")
 	if !ok {
+		return
+	}
+	oldRes, err := h.getResourceRow(r.Context(), id)
+	if isNotFound(err) {
+		respondNotFound(w, r, "p3m_resource")
+		return
+	}
+	if err != nil {
+		respondInternalError(w, r, err)
 		return
 	}
 	var in struct {
@@ -895,6 +1093,7 @@ func (h *P3MHandler) UpdateResource(w http.ResponseWriter, r *http.Request) {
 		Skills               []string `json:"skills"`
 		CostRate             float64  `json:"cost_rate"`
 		CapacityHoursPerWeek int      `json:"capacity_hours_per_week"`
+		Pool                 string   `json:"pool,omitempty"`
 	}
 	if err := newJSONDecoder(w, r).Decode(&in); err != nil {
 		respondBadRequest(w, r, "Invalid request body")
@@ -921,8 +1120,8 @@ func (h *P3MHandler) UpdateResource(w http.ResponseWriter, r *http.Request) {
 	}
 
 	now := time.Now().UTC()
-	res, err := h.db.ExecContext(r.Context(), `UPDATE p3m_resources SET name = ?, user_id = ?, skills = ?, cost_rate = ?, capacity_hours_per_week = ?, updated_at = ? WHERE id = ?`,
-		in.Name, nullInt(in.UserID), p3mMarshalSkills(in.Skills), in.CostRate, in.CapacityHoursPerWeek, now, id)
+	res, err := h.db.ExecContext(r.Context(), `UPDATE p3m_resources SET name = ?, user_id = ?, skills = ?, cost_rate = ?, capacity_hours_per_week = ?, pool = ?, updated_at = ? WHERE id = ?`,
+		in.Name, nullInt(in.UserID), p3mMarshalSkills(in.Skills), in.CostRate, in.CapacityHoursPerWeek, in.Pool, now, id)
 	if err != nil {
 		respondInternalError(w, r, err)
 		return
@@ -936,16 +1135,34 @@ func (h *P3MHandler) UpdateResource(w http.ResponseWriter, r *http.Request) {
 		respondInternalError(w, r, err)
 		return
 	}
+	h.p3mAudit(r, user, "p3m.resource.update", "p3m_resource", &resource.ID, resource.Name, p3mAuditDiff(
+		[3]any{"name", oldRes.Name, in.Name},
+		[3]any{"user_id", nullInt(oldRes.UserID), nullInt(in.UserID)},
+		[3]any{"skills", p3mMarshalSkills(oldRes.Skills), p3mMarshalSkills(in.Skills)},
+		[3]any{"cost_rate", oldRes.CostRate, in.CostRate},
+		[3]any{"capacity_hours_per_week", oldRes.CapacityHoursPerWeek, in.CapacityHoursPerWeek},
+		[3]any{"pool", oldRes.Pool, in.Pool},
+	))
 	respondJSONOK(w, resource)
 }
 
 // DeleteResource handles DELETE /api/p3m/resources/{id}. Allocations cascade.
 func (h *P3MHandler) DeleteResource(w http.ResponseWriter, r *http.Request) {
-	if _, ok := RequireAuth(w, r); !ok {
+	user, ok := RequireAuth(w, r)
+	if !ok {
 		return
 	}
 	id, ok := requireIDParam(w, r, "id")
 	if !ok {
+		return
+	}
+	oldRes, err := h.getResourceRow(r.Context(), id)
+	if isNotFound(err) {
+		respondNotFound(w, r, "p3m_resource")
+		return
+	}
+	if err != nil {
+		respondInternalError(w, r, err)
 		return
 	}
 	res, err := h.db.ExecContext(r.Context(), `DELETE FROM p3m_resources WHERE id = ?`, id)
@@ -957,6 +1174,10 @@ func (h *P3MHandler) DeleteResource(w http.ResponseWriter, r *http.Request) {
 		respondNotFound(w, r, "p3m_resource")
 		return
 	}
+	h.p3mAudit(r, user, "p3m.resource.delete", "p3m_resource", &id, oldRes.Name, map[string]any{
+		"cost_rate":               oldRes.CostRate,
+		"capacity_hours_per_week": oldRes.CapacityHoursPerWeek,
+	})
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -964,12 +1185,12 @@ func (h *P3MHandler) DeleteResource(w http.ResponseWriter, r *http.Request) {
 // Resource allocations and capacity.
 // ---------------------------------------------------------------------------
 
-const p3mResourceAllocationColumns = `id, resource_id, project_id, start_date, end_date, hours_per_week, booking_type, created_at, updated_at`
+const p3mResourceAllocationColumns = `id, resource_id, project_id, start_date, end_date, hours_per_week, booking_type, allocation_class, created_at, updated_at`
 
 // scanP3MResourceAllocation reads one p3m_resource_allocations row.
 func scanP3MResourceAllocation(row interface{ Scan(...any) error }) (models.P3MResourceAllocation, error) {
 	var a models.P3MResourceAllocation
-	err := row.Scan(&a.ID, &a.ResourceID, &a.ProjectID, &a.StartDate, &a.EndDate, &a.HoursPerWeek, &a.BookingType, &a.CreatedAt, &a.UpdatedAt)
+	err := row.Scan(&a.ID, &a.ResourceID, &a.ProjectID, &a.StartDate, &a.EndDate, &a.HoursPerWeek, &a.BookingType, &a.AllocationClass, &a.CreatedAt, &a.UpdatedAt)
 	return a, err
 }
 
@@ -983,6 +1204,17 @@ func (h *P3MHandler) getResourceAllocationRow(ctx context.Context, id int) (mode
 func p3mValidBookingType(bookingType string) bool {
 	switch bookingType {
 	case "soft", "hard":
+		return true
+	default:
+		return false
+	}
+}
+
+// p3mValidAllocationClass reports whether allocationClass is project or bau;
+// bau rows count against capacity but not any project (RES-004).
+func p3mValidAllocationClass(allocClass string) bool {
+	switch allocClass {
+	case "project", "bau":
 		return true
 	default:
 		return false
@@ -1015,6 +1247,10 @@ func (h *P3MHandler) ListResourceAllocations(w http.ResponseWriter, r *http.Requ
 		conds = append(conds, "project_id = ?")
 		args = append(args, v)
 	}
+	if v := r.URL.Query().Get("allocation_class"); v != "" {
+		conds = append(conds, "allocation_class = ?")
+		args = append(args, v)
+	}
 	if len(conds) > 0 {
 		query += " WHERE " + strings.Join(conds, " AND ")
 	}
@@ -1045,19 +1281,28 @@ func (h *P3MHandler) ListResourceAllocations(w http.ResponseWriter, r *http.Requ
 
 // CreateResourceAllocation handles POST /api/p3m/resource-allocations.
 func (h *P3MHandler) CreateResourceAllocation(w http.ResponseWriter, r *http.Request) {
-	if _, ok := RequireAuth(w, r); !ok {
+	user, ok := RequireAuth(w, r)
+	if !ok {
 		return
 	}
 	var in struct {
-		ResourceID   int       `json:"resource_id"`
-		ProjectID    *int      `json:"project_id,omitempty"`
-		StartDate    time.Time `json:"start_date"`
-		EndDate      time.Time `json:"end_date"`
-		HoursPerWeek int       `json:"hours_per_week"`
-		BookingType  string    `json:"booking_type"`
+		ResourceID      int       `json:"resource_id"`
+		ProjectID       *int      `json:"project_id,omitempty"`
+		StartDate       time.Time `json:"start_date"`
+		EndDate         time.Time `json:"end_date"`
+		HoursPerWeek    int       `json:"hours_per_week"`
+		BookingType     string    `json:"booking_type"`
+		AllocationClass string    `json:"allocation_class,omitempty"`
 	}
 	if err := newJSONDecoder(w, r).Decode(&in); err != nil {
 		respondBadRequest(w, r, "Invalid request body")
+		return
+	}
+	if in.AllocationClass == "" {
+		in.AllocationClass = "project"
+	}
+	if !p3mValidAllocationClass(in.AllocationClass) {
+		respondValidationError(w, r, "allocation_class must be project or bau")
 		return
 	}
 	var resourceCount int
@@ -1065,14 +1310,20 @@ func (h *P3MHandler) CreateResourceAllocation(w http.ResponseWriter, r *http.Req
 		respondNotFound(w, r, "p3m_resource")
 		return
 	}
-	if in.ProjectID == nil {
-		respondValidationError(w, r, "project_id is required")
+	if in.AllocationClass == "bau" && in.ProjectID != nil {
+		respondValidationError(w, r, "project_id must not be set for bau allocations")
 		return
 	}
-	var projectCount int
-	if err := h.db.QueryRowContext(r.Context(), `SELECT COUNT(*) FROM p3m_projects WHERE id = ?`, *in.ProjectID).Scan(&projectCount); err != nil || projectCount == 0 {
-		respondNotFound(w, r, "p3m_project")
-		return
+	if in.AllocationClass == "project" {
+		if in.ProjectID == nil {
+			respondValidationError(w, r, "project_id is required")
+			return
+		}
+		var projectCount int
+		if err := h.db.QueryRowContext(r.Context(), `SELECT COUNT(*) FROM p3m_projects WHERE id = ?`, *in.ProjectID).Scan(&projectCount); err != nil || projectCount == 0 {
+			respondNotFound(w, r, "p3m_project")
+			return
+		}
 	}
 	if in.StartDate.IsZero() {
 		respondValidationError(w, r, "start_date is required")
@@ -1099,8 +1350,8 @@ func (h *P3MHandler) CreateResourceAllocation(w http.ResponseWriter, r *http.Req
 	}
 
 	now := time.Now().UTC()
-	res, err := h.db.ExecContext(r.Context(), `INSERT INTO p3m_resource_allocations (resource_id, project_id, start_date, end_date, hours_per_week, booking_type, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-		in.ResourceID, *in.ProjectID, in.StartDate, in.EndDate, in.HoursPerWeek, in.BookingType, now, now)
+	res, err := h.db.ExecContext(r.Context(), `INSERT INTO p3m_resource_allocations (resource_id, project_id, start_date, end_date, hours_per_week, booking_type, allocation_class, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		in.ResourceID, nullInt(in.ProjectID), in.StartDate, in.EndDate, in.HoursPerWeek, in.BookingType, in.AllocationClass, now, now)
 	if err != nil {
 		respondInternalError(w, r, err)
 		return
@@ -1111,29 +1362,59 @@ func (h *P3MHandler) CreateResourceAllocation(w http.ResponseWriter, r *http.Req
 		respondInternalError(w, r, err)
 		return
 	}
+	target := "BAU"
+	if in.ProjectID != nil {
+		target = "project " + strconv.Itoa(*in.ProjectID)
+	}
+	h.p3mAudit(r, user, "p3m.resource_allocation.create", "p3m_resource_allocation", &a.ID,
+		"resource "+strconv.Itoa(in.ResourceID)+" -> "+target, map[string]any{
+			"start_date":       a.StartDate.Format("2006-01-02"),
+			"end_date":         a.EndDate.Format("2006-01-02"),
+			"hours_per_week":   in.HoursPerWeek,
+			"booking_type":     in.BookingType,
+			"allocation_class": in.AllocationClass,
+		})
 	respondJSONCreated(w, a)
 }
 
 // UpdateResourceAllocation handles PUT /api/p3m/resource-allocations/{id}. The
 // full mutable state is replaced.
 func (h *P3MHandler) UpdateResourceAllocation(w http.ResponseWriter, r *http.Request) {
-	if _, ok := RequireAuth(w, r); !ok {
+	user, ok := RequireAuth(w, r)
+	if !ok {
 		return
 	}
 	id, ok := requireIDParam(w, r, "id")
 	if !ok {
 		return
 	}
+	oldA, err := h.getResourceAllocationRow(r.Context(), id)
+	if isNotFound(err) {
+		respondNotFound(w, r, "p3m_resource_allocation")
+		return
+	}
+	if err != nil {
+		respondInternalError(w, r, err)
+		return
+	}
 	var in struct {
-		ResourceID   int       `json:"resource_id"`
-		ProjectID    *int      `json:"project_id,omitempty"`
-		StartDate    time.Time `json:"start_date"`
-		EndDate      time.Time `json:"end_date"`
-		HoursPerWeek int       `json:"hours_per_week"`
-		BookingType  string    `json:"booking_type"`
+		ResourceID      int       `json:"resource_id"`
+		ProjectID       *int      `json:"project_id,omitempty"`
+		StartDate       time.Time `json:"start_date"`
+		EndDate         time.Time `json:"end_date"`
+		HoursPerWeek    int       `json:"hours_per_week"`
+		BookingType     string    `json:"booking_type"`
+		AllocationClass string    `json:"allocation_class,omitempty"`
 	}
 	if err := newJSONDecoder(w, r).Decode(&in); err != nil {
 		respondBadRequest(w, r, "Invalid request body")
+		return
+	}
+	if in.AllocationClass == "" {
+		in.AllocationClass = "project"
+	}
+	if !p3mValidAllocationClass(in.AllocationClass) {
+		respondValidationError(w, r, "allocation_class must be project or bau")
 		return
 	}
 	var resourceCount int
@@ -1141,14 +1422,20 @@ func (h *P3MHandler) UpdateResourceAllocation(w http.ResponseWriter, r *http.Req
 		respondNotFound(w, r, "p3m_resource")
 		return
 	}
-	if in.ProjectID == nil {
-		respondValidationError(w, r, "project_id is required")
+	if in.AllocationClass == "bau" && in.ProjectID != nil {
+		respondValidationError(w, r, "project_id must not be set for bau allocations")
 		return
 	}
-	var projectCount int
-	if err := h.db.QueryRowContext(r.Context(), `SELECT COUNT(*) FROM p3m_projects WHERE id = ?`, *in.ProjectID).Scan(&projectCount); err != nil || projectCount == 0 {
-		respondNotFound(w, r, "p3m_project")
-		return
+	if in.AllocationClass == "project" {
+		if in.ProjectID == nil {
+			respondValidationError(w, r, "project_id is required")
+			return
+		}
+		var projectCount int
+		if err := h.db.QueryRowContext(r.Context(), `SELECT COUNT(*) FROM p3m_projects WHERE id = ?`, *in.ProjectID).Scan(&projectCount); err != nil || projectCount == 0 {
+			respondNotFound(w, r, "p3m_project")
+			return
+		}
 	}
 	if in.StartDate.IsZero() {
 		respondValidationError(w, r, "start_date is required")
@@ -1172,8 +1459,8 @@ func (h *P3MHandler) UpdateResourceAllocation(w http.ResponseWriter, r *http.Req
 	}
 
 	now := time.Now().UTC()
-	res, err := h.db.ExecContext(r.Context(), `UPDATE p3m_resource_allocations SET resource_id = ?, project_id = ?, start_date = ?, end_date = ?, hours_per_week = ?, booking_type = ?, updated_at = ? WHERE id = ?`,
-		in.ResourceID, *in.ProjectID, in.StartDate, in.EndDate, in.HoursPerWeek, in.BookingType, now, id)
+	res, err := h.db.ExecContext(r.Context(), `UPDATE p3m_resource_allocations SET resource_id = ?, project_id = ?, start_date = ?, end_date = ?, hours_per_week = ?, booking_type = ?, allocation_class = ?, updated_at = ? WHERE id = ?`,
+		in.ResourceID, nullInt(in.ProjectID), in.StartDate, in.EndDate, in.HoursPerWeek, in.BookingType, in.AllocationClass, now, id)
 	if err != nil {
 		respondInternalError(w, r, err)
 		return
@@ -1187,16 +1474,40 @@ func (h *P3MHandler) UpdateResourceAllocation(w http.ResponseWriter, r *http.Req
 		respondInternalError(w, r, err)
 		return
 	}
+	target := "BAU"
+	if a.ProjectID != nil {
+		target = "project " + strconv.Itoa(*a.ProjectID)
+	}
+	h.p3mAudit(r, user, "p3m.resource_allocation.update", "p3m_resource_allocation", &a.ID,
+		"resource "+strconv.Itoa(a.ResourceID)+" -> "+target, p3mAuditDiff(
+			[3]any{"resource_id", oldA.ResourceID, in.ResourceID},
+			[3]any{"project_id", nullInt(oldA.ProjectID), nullInt(in.ProjectID)},
+			[3]any{"start_date", oldA.StartDate.Format("2006-01-02"), in.StartDate.Format("2006-01-02")},
+			[3]any{"end_date", oldA.EndDate.Format("2006-01-02"), in.EndDate.Format("2006-01-02")},
+			[3]any{"hours_per_week", oldA.HoursPerWeek, in.HoursPerWeek},
+			[3]any{"booking_type", oldA.BookingType, in.BookingType},
+			[3]any{"allocation_class", oldA.AllocationClass, in.AllocationClass},
+		))
 	respondJSONOK(w, a)
 }
 
 // DeleteResourceAllocation handles DELETE /api/p3m/resource-allocations/{id}.
 func (h *P3MHandler) DeleteResourceAllocation(w http.ResponseWriter, r *http.Request) {
-	if _, ok := RequireAuth(w, r); !ok {
+	user, ok := RequireAuth(w, r)
+	if !ok {
 		return
 	}
 	id, ok := requireIDParam(w, r, "id")
 	if !ok {
+		return
+	}
+	oldA, err := h.getResourceAllocationRow(r.Context(), id)
+	if isNotFound(err) {
+		respondNotFound(w, r, "p3m_resource_allocation")
+		return
+	}
+	if err != nil {
+		respondInternalError(w, r, err)
 		return
 	}
 	res, err := h.db.ExecContext(r.Context(), `DELETE FROM p3m_resource_allocations WHERE id = ?`, id)
@@ -1208,6 +1519,13 @@ func (h *P3MHandler) DeleteResourceAllocation(w http.ResponseWriter, r *http.Req
 		respondNotFound(w, r, "p3m_resource_allocation")
 		return
 	}
+	h.p3mAudit(r, user, "p3m.resource_allocation.delete", "p3m_resource_allocation", &id,
+		"resource "+strconv.Itoa(oldA.ResourceID)+" -> project "+nullIntStr(oldA.ProjectID), map[string]any{
+			"start_date":     oldA.StartDate.Format("2006-01-02"),
+			"end_date":       oldA.EndDate.Format("2006-01-02"),
+			"hours_per_week": oldA.HoursPerWeek,
+			"booking_type":   oldA.BookingType,
+		})
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -1272,21 +1590,27 @@ func (h *P3MHandler) GetResourceCapacity(w http.ResponseWriter, r *http.Request)
 		end   time.Time
 		hours int
 	}
-	allocations, err := h.db.QueryContext(r.Context(), `SELECT resource_id, start_date, end_date, hours_per_week FROM p3m_resource_allocations`)
+	allocations, err := h.db.QueryContext(r.Context(), `SELECT resource_id, start_date, end_date, hours_per_week, allocation_class FROM p3m_resource_allocations`)
 	if err != nil {
 		respondInternalError(w, r, err)
 		return
 	}
 	defer allocations.Close()
 	byResource := make(map[int][]allocWindow)
+	bauByResource := make(map[int][]allocWindow)
 	for allocations.Next() {
 		var rid int
 		var a allocWindow
-		if err := allocations.Scan(&rid, &a.start, &a.end, &a.hours); err != nil {
+		var allocClass string
+		if err := allocations.Scan(&rid, &a.start, &a.end, &a.hours, &allocClass); err != nil {
 			respondInternalError(w, r, err)
 			return
 		}
-		byResource[rid] = append(byResource[rid], a)
+		if allocClass == "bau" {
+			bauByResource[rid] = append(bauByResource[rid], a)
+		} else {
+			byResource[rid] = append(byResource[rid], a)
+		}
 	}
 	if err := allocations.Err(); err != nil {
 		respondInternalError(w, r, err)
@@ -1299,17 +1623,25 @@ func (h *P3MHandler) GetResourceCapacity(w http.ResponseWriter, r *http.Request)
 		for ms.Before(toExclusive) {
 			me := time.Date(ms.Year(), ms.Month()+1, 1, 0, 0, 0, 0, time.UTC)
 			demand := 0.0
+			bauDemand := 0.0
 			for _, a := range byResource[ref.id] {
 				if overlap := p3mOverlapDays(a.start, a.end, ms, me); overlap > 0 {
 					demand += float64(a.hours) * float64(overlap) / 7.0
 				}
 			}
+			for _, a := range bauByResource[ref.id] {
+				if overlap := p3mOverlapDays(a.start, a.end, ms, me); overlap > 0 {
+					bauDemand += float64(a.hours) * float64(overlap) / 7.0
+				}
+			}
+			demand += bauDemand // BAU consumes capacity but no project (RES-004)
 			capacity := float64(ref.capacity) * (me.Sub(ms).Hours() / 24) / 7.0
 			rows = append(rows, models.P3MResourceCapacityRow{
 				ResourceID:    ref.id,
 				Name:          ref.name,
 				Month:         ms.Format("2006-01"),
 				DemandHours:   demand,
+				BauHours:      bauDemand,
 				CapacityHours: capacity,
 				OverAllocated: demand > capacity+1e-9,
 			})

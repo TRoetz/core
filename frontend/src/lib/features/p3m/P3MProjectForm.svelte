@@ -24,6 +24,7 @@
         programme_id: project.programme_id != null ? String(project.programme_id) : '',
         title: project.title ?? '',
         description: project.description ?? '',
+        external_ref: project.external_ref ?? '',
         manager_id: project.manager_id != null ? String(project.manager_id) : '',
         time_project_id: project.time_project_id != null ? String(project.time_project_id) : '',
         current_stage: project.current_stage || 'initiation',
@@ -39,6 +40,7 @@
       programme_id: defaultProgrammeId ? String(defaultProgrammeId) : '', // '' = standalone under the selected portfolio
       title: '',
       description: '',
+      external_ref: '',
       manager_id: '',
       time_project_id: '',
       current_stage: 'initiation',
@@ -96,6 +98,8 @@
         progress_percent: Math.max(0, Math.min(100, Number(form.progress_percent) || 0)),
       };
       if (form.programme_id) payload.programme_id = Number(form.programme_id);
+      if (form.external_ref.trim()) payload.external_ref = form.external_ref.trim();
+      else if (project) payload.external_ref = null; // full-replace update: explicit clear
       if (form.manager_id) payload.manager_id = Number(form.manager_id);
       else if (project) payload.manager_id = null; // full-replace update: explicit clear
       if (form.time_project_id) payload.time_project_id = Number(form.time_project_id);
@@ -156,6 +160,17 @@
         value={form.title}
         disabled={saving}
         oninput={(e) => (form = { ...form, title: e.target.value })}
+      />
+    </label>
+
+    <label class="block">
+      <span>{t('p3m.externalRefLabel')}</span>
+      <input
+        class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+        value={form.external_ref}
+        disabled={saving}
+        placeholder="External project code used to match finance sync rows"
+        oninput={(e) => (form = { ...form, external_ref: e.target.value })}
       />
     </label>
 

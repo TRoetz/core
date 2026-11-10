@@ -111,6 +111,9 @@ func (h *P3MHandler) CreateArchitectureReview(w http.ResponseWriter, r *http.Req
 		respondInternalError(w, r, err)
 		return
 	}
+	h.p3mAudit(r, user, "p3m.architecture_review.create", "p3m_architecture_review", &rv.ID, rv.Title, map[string]any{
+		"project_id": in.ProjectID,
+	})
 	respondJSONCreated(w, rv)
 }
 
@@ -119,7 +122,8 @@ func (h *P3MHandler) CreateArchitectureReview(w http.ResponseWriter, r *http.Req
 // The only status transition accepted here is wip -> in_review (submission for
 // ARB); decided reviews return 409.
 func (h *P3MHandler) UpdateArchitectureReview(w http.ResponseWriter, r *http.Request) {
-	if _, ok := RequireAuth(w, r); !ok {
+	user, ok := RequireAuth(w, r)
+	if !ok {
 		return
 	}
 	id, ok := requireIDParam(w, r, "id")
@@ -151,6 +155,7 @@ func (h *P3MHandler) UpdateArchitectureReview(w http.ResponseWriter, r *http.Req
 		respondConflict(w, r, "review is decided")
 		return
 	}
+	oldRv := rv
 
 	newStatus := rv.Status
 	if in.Status != "" {
@@ -206,12 +211,20 @@ func (h *P3MHandler) UpdateArchitectureReview(w http.ResponseWriter, r *http.Req
 		respondInternalError(w, r, err)
 		return
 	}
+	h.p3mAudit(r, user, "p3m.architecture_review.update", "p3m_architecture_review", &rv.ID, rv.Title, p3mAuditDiff(
+		[3]any{"title", oldRv.Title, rv.Title},
+		[3]any{"description", oldRv.Description, rv.Description},
+		[3]any{"comments", oldRv.Comments, rv.Comments},
+		[3]any{"status", oldRv.Status, rv.Status},
+		[3]any{"architecture_page_id", nullInt(oldRv.ArchitecturePageID), nullInt(rv.ArchitecturePageID)},
+	))
 	respondJSONOK(w, rv)
 }
 
 // DeleteArchitectureReview handles DELETE /api/p3m/architecture-reviews/{id}.
 func (h *P3MHandler) DeleteArchitectureReview(w http.ResponseWriter, r *http.Request) {
-	if _, ok := RequireAuth(w, r); !ok {
+	user, ok := RequireAuth(w, r)
+	if !ok {
 		return
 	}
 	id, ok := requireIDParam(w, r, "id")
@@ -244,6 +257,10 @@ func (h *P3MHandler) DeleteArchitectureReview(w http.ResponseWriter, r *http.Req
 			return
 		}
 	}
+	h.p3mAudit(r, user, "p3m.architecture_review.delete", "p3m_architecture_review", &id, rv.Title, map[string]any{
+		"status":           rv.Status,
+		"project_id":       rv.ProjectID,
+	})
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -319,5 +336,10 @@ func (h *P3MHandler) DecideArchitectureReview(w http.ResponseWriter, r *http.Req
 		respondInternalError(w, r, err)
 		return
 	}
+	h.p3mAudit(r, user, "p3m.architecture_review.decide", "p3m_architecture_review", &rv.ID, rv.Title, map[string]any{
+		"approved":   in.Approved,
+		"status":     rv.Status,
+		"comments":   in.Comments,
+	})
 	respondJSONOK(w, rv)
 }

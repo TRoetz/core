@@ -249,6 +249,35 @@
     }
   }
 
+  // --- Scenario what-if (RES-004/006) ------------------------------------------
+  let scenarioPool = $state('');
+  /** resource_id -> hours-per-week delta as string */
+  let scenarioDeltas = $state({});
+  let runningScenario = $state(false);
+  let scenarioError = $state('');
+  let scenarioResult = $state(null);
+
+  function setScenarioDelta(id, value) {
+    scenarioDeltas = { ...scenarioDeltas, [id]: value };
+  }
+
+  async function runScenario() {
+    if (runningScenario) return;
+    scenarioError = '';
+    const allocations = resources
+      .map((r) => ({ resource_id: r.id, hours_per_week: Math.max(0, Math.round(Number(scenarioDeltas[r.id]) || 0)) }))
+      .filter((a) => a.hours_per_week > 0);
+    runningScenario = true;
+    try {
+      scenarioResult = await p3mApi.runResourceScenario({ allocations, pool: scenarioPool.trim() });
+    } catch (e) {
+      scenarioError = e?.message || t('p3m.updateFailed');
+      scenarioResult = null;
+    } finally {
+      runningScenario = false;
+    }
+  }
+
   onMount(() => {
     load();
     getUsers().then((u) => (users = u || [])).catch(() => {});
@@ -630,6 +659,85 @@
           <span class="flex items-center gap-1"><span class="inline-block h-2 w-2 rounded bg-[#f59e0b]"></span>85–100%</span>
           <span class="flex items-center gap-1"><span class="inline-block h-2 w-2 rounded bg-[#ef4444]"></span>{t('p3m.overAllocated')}</span>
         </div>
+      {/if}
+    </section>
+
+    <!-- Scenario what-if (RES-004/006) -->
+    <section>
+      <div class="mb-2 flex items-center justify-between">
+        <h2 class="text-sm font-semibold">{t('p3m.scenarioTitle')}</h2>
+        {#if resources.length > 0}
+          <button type="button" class="rounded-md bg-[var(--color-ds-accent-blue,#2563eb)] px-3 py-1 text-xs font-medium text-white disabled:opacity-50" disabled={runningScenario} onclick={runScenario}>
+            {t('p3m.runScenario')}
+          </button>
+        {/if}
+      </div>
+
+      <div class="mb-2 flex items-center gap-1.5 text-xs">
+        <span>{t('p3m.poolFilter')}</span>
+        <input type="text" placeholder="Go, SQL…" value={scenarioPool} oninput={(e) => (scenarioPool = e.target.value)} class="w-40 rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1" />
+      </div>
+
+      {#if scenarioError}
+        <div class="mb-2 rounded-md border border-red-200 bg-red-50 p-2 text-xs text-red-700">{scenarioError}</div>
+      {/if}
+
+      {#if resources.length === 0}
+        <div class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] p-4 text-xs text-[var(--color-ds-text-muted,#6b7280)]">
+          {t('p3m.noData')}
+        </div>
+      {:else}
+        <table class="w-full text-left text-xs">
+          <thead>
+            <tr class="border-b border-[var(--color-ds-border,#e5e7eb)] text-[var(--color-ds-text-muted,#6b7280)]">
+              <th class="py-1.5 pr-3">{t('p3m.resources')}</th>
+              <th class="py-1.5 pr-3">{t('p3m.capacityHpw')}</th>
+              <th class="py-1.5 pr-3">{t('p3m.hoursPerWeekDelta')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {#each resources as r (r.id)}
+              <tr class="border-b border-[var(--color-ds-border,#e5e7eb)]">
+                <td class="py-1.5 pr-3 font-medium">{r.name}</td>
+                <td class="py-1.5 pr-3">{r.capacity_hours_per_week ?? 0} h</td>
+                <td class="py-1.5 pr-3">
+                  <input type="number" min="0" step="1" value={scenarioDeltas[r.id] ?? ''} oninput={(e) => setScenarioDelta(r.id, e.target.value)} class="w-24 rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1" />
+                </td>
+              </tr>
+            {/each}
+          </tbody>
+        </table>
+
+        {#if scenarioResult && (scenarioResult.resources ?? []).length > 0}
+          <div class="mt-3 overflow-x-auto rounded-md border border-[var(--color-ds-border,#e5e7eb)]">
+            <table class="w-full text-left text-xs">
+              <thead>
+                <tr class="border-b border-[var(--color-ds-border,#e5e7eb)] bg-slate-50 text-[var(--color-ds-text-muted,#6b7280)]">
+                  <th class="px-3 py-1.5">{t('p3m.resources')}</th>
+                  <th class="px-3 py-1.5">{t('p3m.capacityHpw')}</th>
+                  <th class="px-3 py-1.5">{t('p3m.bauHours')}</th>
+                  <th class="px-3 py-1.5">{t('p3m.committedHours')}</th>
+                  <th class="px-3 py-1.5">{t('p3m.scenarioHours')}</th>
+                  <th class="px-3 py-1.5">{t('p3m.utilization')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {#each scenarioResult.resources as row (row.resource_id)}
+                  <tr class={row.over_allocated ? 'bg-red-50' : ''}>
+                    <td class="px-3 py-1.5 font-medium">{row.name}</td>
+                    <td class="px-3 py-1.5">{row.capacity_hours_per_week} h</td>
+                    <td class="px-3 py-1.5">{row.bau_hours} h</td>
+                    <td class="px-3 py-1.5">{row.committed_hours} h</td>
+                    <td class="px-3 py-1.5 font-medium">{row.scenario_hours} h</td>
+                    <td class="px-3 py-1.5">
+                      {row.utilization_pct}%{#if row.over_allocated}<span class="ml-2 rounded bg-red-100 px-1.5 py-0.5 text-[10px] font-medium text-red-700">{t('p3m.overAllocated')}</span>{/if}
+                    </td>
+                  </tr>
+                {/each}
+              </tbody>
+            </table>
+          </div>
+        {/if}
       {/if}
     </section>
   </div>

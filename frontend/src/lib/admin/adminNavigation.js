@@ -292,6 +292,25 @@ export const adminGroups = [
     ],
   },
   {
+    id: 'p3m',
+    labelKey: 'settings.adminGroups.p3m',
+    icon: IconDatabase,
+    items: [
+      {
+        id: 'p3m-finance-sync',
+        labelKey: 'settings.adminItems.p3mFinanceSync.title',
+        icon: IconDatabase,
+        descriptionKey: 'settings.adminItems.p3mFinanceSync.description',
+      },
+      {
+        id: 'p3m-alert-rules',
+        labelKey: 'settings.adminItems.p3mAlertRules.title',
+        icon: IconAlertCircle,
+        descriptionKey: 'settings.adminItems.p3mAlertRules.description',
+      },
+    ],
+  },
+  {
     id: 'system',
     labelKey: 'settings.adminGroups.system',
     icon: IconActivity,

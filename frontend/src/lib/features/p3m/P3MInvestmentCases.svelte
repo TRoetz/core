@@ -6,8 +6,9 @@
   import IconDownload from '@tabler/icons-svelte-runes/icons/download';
   import IconPencil from '@tabler/icons-svelte-runes/icons/pencil';
   import IconPlus from '@tabler/icons-svelte-runes/icons/plus';
+  import IconStar from '@tabler/icons-svelte-runes/icons/star';
   import IconX from '@tabler/icons-svelte-runes/icons/x';
-  import { formatDate } from './utils.js';
+  import { formatDate, ragColor } from './utils.js';
 
   let { portfolios = [], onChanged = () => {} } = $props();
 
@@ -212,7 +213,177 @@
     return flat.length > n ? `${flat.slice(0, n).trimEnd()}…` : flat;
   }
 
-  onMount(load);
+  // --- Prioritisation scoring criteria (PO-003/008) --------------------------------
+  let criteria = $state([]);
+  let critFormOpen = $state(false);
+  /** null = create mode, otherwise the criterion id being edited. */
+  let editingCritId = $state(null);
+  let savingCrit = $state(false);
+  let critError = $state('');
+
+  function emptyCrit() {
+    return { name: '', weight: '1', direction: 'higher_better', description: '' };
+  }
+  let critForm = $state(emptyCrit());
+
+  async function loadCriteria() {
+    try {
+      criteria = (await p3mApi.scoringCriteria.getAll()) ?? [];
+    } catch (e) {
+      critError = e?.message || 'error';
+    }
+  }
+
+  function toggleCritForm() {
+    critFormOpen = !critFormOpen;
+    if (critFormOpen) {
+      editingCritId = null;
+      critForm = emptyCrit();
+      critError = '';
+    }
+  }
+
+  function startEditCriterion(c) {
+    critFormOpen = true;
+    editingCritId = c.id;
+    critForm = {
+      name: c.name,
+      weight: String(c.weight ?? 1),
+      direction: c.direction,
+      description: c.description ?? '',
+    };
+    critError = '';
+  }
+
+  async function submitCriterion() {
+    if (savingCrit) return;
+    critError = '';
+    const payload = {
+      name: critForm.name.trim(),
+      weight: Number(critForm.weight),
+      direction: critForm.direction,
+      description: critForm.description || null,
+    };
+    if (!payload.name) {
+      critError = t('p3m.criterionNameRequired');
+      return;
+    }
+    savingCrit = true;
+    try {
+      if (editingCritId) await p3mApi.scoringCriteria.update(editingCritId, payload);
+      else await p3mApi.scoringCriteria.create(payload);
+      critFormOpen = false;
+      editingCritId = null;
+      await loadCriteria();
+    } catch (e) {
+      critError = e?.message || t('p3m.updateFailed');
+    } finally {
+      savingCrit = false;
+    }
+  }
+
+  async function removeCriterion(c) {
+    if (!confirm(t('p3m.confirmDeleteCriterion'))) return;
+    try {
+      await p3mApi.scoringCriteria.delete(c.id);
+      await loadCriteria();
+    } catch (e) {
+      critError = e?.message || t('p3m.deleteFailed');
+    }
+  }
+
+  // --- Score card per investment case (PO-004/008) ----------------------------------
+  /** Case id whose score card is open, or null. */
+  let scoringFor = $state(null);
+  /** criterion_id -> { value: '1'..'5'|'', rationale } */
+  let scoreDrafts = $state({});
+  let savingScores = $state(false);
+  let scoreError = $state('');
+
+  async function openScorecard(c) {
+    if (scoringFor === c.id) {
+      scoringFor = null;
+      return;
+    }
+    scoringFor = c.id;
+    scoreDrafts = {};
+    scoreError = '';
+    try {
+      const rows = (await p3mApi.getInvestmentCaseScores(c.id)) ?? [];
+      for (const row of rows) {
+        scoreDrafts[row.criterion_id] = { value: String(row.score?.score ?? ''), rationale: row.score?.rationale ?? '' };
+      }
+    } catch (e) {
+      scoreError = e?.message || 'error';
+    }
+  }
+
+  async function saveScores() {
+    if (!scoringFor || savingScores) return;
+    savingScores = true;
+    scoreError = '';
+    try {
+      for (const crit of criteria.filter((c) => c.enabled)) {
+        const draft = scoreDrafts[crit.id];
+        if (!draft || draft.value === '') continue;
+        await p3mApi.upsertInvestmentCaseScore(scoringFor, {
+          criterion_id: crit.id,
+          score: Number(draft.value),
+          rationale: draft.rationale.trim() ? draft.rationale : null,
+        });
+      }
+      scoringFor = null;
+      await loadRanked();
+    } catch (e) {
+      scoreError = e?.message || 'error';
+    } finally {
+      savingScores = false;
+    }
+  }
+
+  // --- Ranked view (PO-004) -----------------------------------------------------------
+  let ranked = $state([]);
+
+  async function loadRanked() {
+    try {
+      const filters = portfolioFilter !== '' ? { portfolio_id: Number(portfolioFilter) } : {};
+      ranked = (await p3mApi.getRankedInvestmentCases(filters))?.ranking ?? [];
+    } catch {
+      ranked = [];
+    }
+  }
+
+  // Re-rank when the portfolio filter changes.
+  $effect(() => {
+    const f = portfolioFilter;
+    void f;
+    loadRanked();
+  });
+
+  // --- Portfolio roadmap (PO-005) ------------------------------------------------------
+  let roadmapPf = $state('');
+  let roadmapProjects = $state([]);
+
+  async function loadRoadmap() {
+    if (!roadmapPf) {
+      roadmapProjects = [];
+      return;
+    }
+    try {
+      roadmapProjects = (await p3mApi.getPortfolioRoadmap(Number(roadmapPf)))?.projects ?? [];
+    } catch {
+      roadmapProjects = [];
+    }
+  }
+
+  onMount(() => {
+    load();
+    loadCriteria();
+    if (!roadmapPf && portfolios.length > 0) {
+      roadmapPf = String(portfolios[0].id);
+      loadRoadmap();
+    }
+  });
 </script>
 
 {#if loading && cases.length === 0}
@@ -346,6 +517,76 @@
         </div>
       {/if}
 
+      <!-- Score card for one investment case (PO-004) -->
+      {#if scoringFor != null}
+        {@const scCase = cases.find((c) => c.id === scoringFor)}
+        <div class="mb-3 rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-surface-card p-3 text-xs">
+          <h3 class="mb-2 font-semibold">{t('p3m.scoreCase')}: {scCase?.project_title ?? `#${scoringFor}`}</h3>
+
+          {#if scoreError}
+            <div class="mb-2 rounded-md border border-red-200 bg-red-50 p-2 text-red-700">{scoreError}</div>
+          {/if}
+
+          {#if criteria.filter((c) => c.enabled).length === 0}
+            <div class="text-[var(--color-ds-text-muted,#6b7280)]">{t('p3m.noCriteria')}</div>
+          {:else}
+            <table class="w-full text-left">
+              <thead>
+                <tr class="border-b border-[var(--color-ds-border,#e5e7eb)] text-[var(--color-ds-text-muted,#6b7280)]">
+                  <th class="py-1 pr-3 font-medium">{t('p3m.name')}</th>
+                  <th class="py-1 pr-3 font-medium">{t('p3m.weight')}</th>
+                  <th class="py-1 pr-3 font-medium">{t('p3m.direction')}</th>
+                  <th class="py-1 pr-3 font-medium">1–5</th>
+                  <th class="py-1 font-medium">{t('p3m.rationale')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {#each criteria.filter((c) => c.enabled) as crit (crit.id)}
+                  {@const draft = scoreDrafts[crit.id] ?? { value: '', rationale: '' }}
+                  <tr class="border-b border-[var(--color-ds-border,#e5e7eb)]">
+                    <td class="py-1.5 pr-3">{crit.name}</td>
+                    <td class="py-1.5 pr-3 tabular-nums">{crit.weight}</td>
+                    <td class="py-1.5 pr-3 whitespace-nowrap">{t(crit.direction === 'lower_better' ? 'p3m.lowerBetter' : 'p3m.higherBetter')}</td>
+                    <td class="py-1.5 pr-3">
+                      <select
+                        class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-0.5"
+                        value={draft.value}
+                        disabled={savingScores}
+                        onchange={(e) => (scoreDrafts = { ...scoreDrafts, [crit.id]: { ...draft, value: e.target.value } })}
+                      >
+                        <option value="">—</option>
+                        {#each [1, 2, 3, 4, 5] as n (n)}
+                          <option value={String(n)}>{n}</option>
+                        {/each}
+                      </select>
+                    </td>
+                    <td class="py-1.5">
+                      <input
+                        type="text"
+                        class="w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-0.5"
+                        placeholder={t('p3m.rationale')}
+                        value={draft.rationale}
+                        disabled={savingScores}
+                        oninput={(e) => (scoreDrafts = { ...scoreDrafts, [crit.id]: { ...draft, rationale: e.target.value } })}
+                      />
+                    </td>
+                  </tr>
+                {/each}
+              </tbody>
+            </table>
+          {/if}
+
+          <div class="mt-3 flex items-center gap-2">
+            <button type="button" class="rounded-md bg-[var(--color-ds-accent-blue,#2563eb)] px-3 py-1 font-medium text-white disabled:opacity-50" disabled={savingScores} onclick={saveScores}>
+              {t('p3m.save')}
+            </button>
+            <button type="button" class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] px-3 py-1 text-[var(--color-ds-text-muted,#6b7280)] hover:text-[var(--color-ds-text,#111827)]" onclick={() => (scoringFor = null)}>
+              {t('p3m.cancel')}
+            </button>
+          </div>
+        </div>
+      {/if}
+
       <!-- Pipeline table grouped by status -->
       {#if grouped.length === 0}
         <div class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] p-4 text-xs text-[var(--color-ds-text-muted,#6b7280)]">
@@ -395,6 +636,9 @@
                           {statusLabel(outcome)}
                         </button>
                       {/each}
+                      <button type="button" class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] px-2 py-0.5 text-[var(--color-ds-text-muted,#6b7280)] hover:text-[var(--color-ds-accent-blue,#2563eb)]" onclick={() => openScorecard(c)} aria-label={t('p3m.scoreCase')}>
+                        <IconStar size={13} />
+                      </button>
                       <button type="button" class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] px-2 py-0.5 text-[var(--color-ds-text-muted,#6b7280)] hover:text-[var(--color-ds-text,#111827)]" onclick={() => startEdit(c)} aria-label={t('p3m.edit')}>
                         <IconPencil size={13} />
                       </button>
@@ -405,6 +649,201 @@
                   </td>
                 </tr>
               {/each}
+            {/each}
+          </tbody>
+        </table>
+      {/if}
+    </section>
+
+    <!-- Scoring criteria management (PO-003) -->
+    <section>
+      <div class="mb-2 flex items-center justify-between">
+        <h2 class="text-sm font-semibold">{t('p3m.scoringCriteriaTitle')}</h2>
+        <button type="button" class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] px-2 py-1 text-xs text-[var(--color-ds-text-muted,#6b7280)] hover:text-[var(--color-ds-text,#111827)]" onclick={toggleCritForm}>
+          {#if critFormOpen}
+            {t('p3m.cancel')}
+          {:else}
+            <IconPlus size={14} class="inline" /> {t('p3m.newCriterion')}
+          {/if}
+        </button>
+      </div>
+
+      {#if critError && !critFormOpen}
+        <div class="mb-2 rounded-md border border-red-200 bg-red-50 p-2 text-xs text-red-700">{critError}</div>
+      {/if}
+
+      {#if critFormOpen}
+        <div class="mb-3 rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-surface-card p-3 text-xs">
+          <h3 class="mb-2 font-semibold">{editingCritId ? t('p3m.edit') : t('p3m.newCriterion')}</h3>
+
+          <div class="flex flex-wrap items-end gap-x-4 gap-y-2">
+            <label class="block min-w-[180px] flex-1">
+              <span class="text-[var(--color-ds-text-muted,#6b7280)]">{t('p3m.name')} *</span>
+              <input type="text" class="mt-1 block w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1" value={critForm.name} disabled={savingCrit} oninput={(e) => (critForm = { ...critForm, name: e.target.value })} />
+            </label>
+            <label class="block w-28">
+              <span class="text-[var(--color-ds-text-muted,#6b7280)]">{t('p3m.weight')}</span>
+              <input type="number" step="0.1" min="0" class="mt-1 block w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1" value={critForm.weight} disabled={savingCrit} oninput={(e) => (critForm = { ...critForm, weight: e.target.value })} />
+            </label>
+            <label class="block">
+              <span class="text-[var(--color-ds-text-muted,#6b7280)]">{t('p3m.direction')}</span>
+              <select class="mt-1 block rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1" value={critForm.direction} disabled={savingCrit} onchange={(e) => (critForm = { ...critForm, direction: e.target.value })}>
+                <option value="higher_better">{t('p3m.higherBetter')}</option>
+                <option value="lower_better">{t('p3m.lowerBetter')}</option>
+              </select>
+            </label>
+            <label class="block min-w-[200px] flex-1">
+              <span class="text-[var(--color-ds-text-muted,#6b7280)]">{t('p3m.description')}</span>
+              <input type="text" class="mt-1 block w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1" value={critForm.description} disabled={savingCrit} oninput={(e) => (critForm = { ...critForm, description: e.target.value })} />
+            </label>
+          </div>
+
+          {#if critError}
+            <div class="mt-2 text-red-600">{critError}</div>
+          {/if}
+
+          <div class="mt-3 flex items-center gap-2">
+            <button type="button" class="rounded-md bg-[var(--color-ds-accent-blue,#2563eb)] px-3 py-1 font-medium text-white disabled:opacity-50" disabled={savingCrit} onclick={submitCriterion}>
+              {editingCritId ? t('p3m.save') : t('p3m.create')}
+            </button>
+            <button type="button" class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] px-3 py-1 text-[var(--color-ds-text-muted,#6b7280)] hover:text-[var(--color-ds-text,#111827)]" onclick={toggleCritForm}>
+              {t('p3m.cancel')}
+            </button>
+          </div>
+        </div>
+      {/if}
+
+      {#if criteria.length === 0 && !critFormOpen}
+        <div class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] p-4 text-xs text-[var(--color-ds-text-muted,#6b7280)]">
+          {t('p3m.noCriteria')}
+        </div>
+      {:else if criteria.length > 0}
+        <table class="w-full text-left text-xs">
+          <thead>
+            <tr class="border-b border-[var(--color-ds-border,#e5e7eb)] text-[var(--color-ds-text-muted,#6b7280)]">
+              <th class="py-1.5 pr-3">{t('p3m.name')}</th>
+              <th class="py-1.5 pr-3">{t('p3m.weight')}</th>
+              <th class="py-1.5 pr-3">{t('p3m.direction')}</th>
+              <th class="py-1.5 pr-3">{t('p3m.description')}</th>
+              <th class="py-1.5 pr-3">{t('p3m.enabled')}</th>
+              <th class="py-1.5 pr-3"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {#each criteria as crit (crit.id)}
+              <tr class="border-b border-[var(--color-ds-border,#e5e7eb)]">
+                <td class="py-1.5 pr-3">{crit.name}</td>
+                <td class="py-1.5 pr-3 tabular-nums">{crit.weight}</td>
+                <td class="py-1.5 pr-3 whitespace-nowrap">{t(crit.direction === 'lower_better' ? 'p3m.lowerBetter' : 'p3m.higherBetter')}</td>
+                <td class="max-w-[280px] truncate py-1.5 pr-3" title={crit.description}>{crit.description || t('p3m.notSet')}</td>
+                <td class="py-1.5 pr-3">
+                  {#if crit.enabled}
+                    <span class="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700">{t('p3m.yes')}</span>
+                  {:else}
+                    <span class="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600">{t('p3m.no')}</span>
+                  {/if}
+                </td>
+                <td class="py-1.5 pr-3">
+                  <div class="flex items-center gap-1.5 whitespace-nowrap">
+                    <button type="button" class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] px-2 py-0.5 text-[var(--color-ds-text-muted,#6b7280)] hover:text-[var(--color-ds-text,#111827)]" onclick={() => startEditCriterion(crit)} aria-label={t('p3m.edit')}>
+                      <IconPencil size={13} />
+                    </button>
+                    <button type="button" class="rounded-md border border-red-300 px-2 py-0.5 text-red-600 hover:bg-red-50" onclick={() => removeCriterion(crit)} aria-label={t('p3m.delete')}>
+                      <IconX size={13} />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            {/each}
+          </tbody>
+        </table>
+      {/if}
+    </section>
+
+    <!-- Ranked investment cases (PO-004) -->
+    <section>
+      <h2 class="mb-2 text-sm font-semibold">{t('p3m.rankedView')}</h2>
+      {#if ranked.length === 0}
+        <div class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] p-4 text-xs text-[var(--color-ds-text-muted,#6b7280)]">
+          {t('p3m.noInvestmentCases')}
+        </div>
+      {:else}
+        <table class="w-full text-left text-xs">
+          <thead>
+            <tr class="border-b border-[var(--color-ds-border,#e5e7eb)] text-[var(--color-ds-text-muted,#6b7280)]">
+              <th class="py-1.5 pr-3">{t('p3m.rank')}</th>
+              <th class="py-1.5 pr-3">{t('p3m.projects')}</th>
+              <th class="py-1.5 pr-3">{t('p3m.status')}</th>
+              <th class="py-1.5 pr-3 text-right">{t('p3m.compositeScore')}</th>
+              <th class="py-1.5 pr-3 text-right">{t('p3m.scoredCriteria')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {#each ranked as row (row.ic_id)}
+              <tr class="border-b border-[var(--color-ds-border,#e5e7eb)]">
+                <td class="py-1.5 pr-3 tabular-nums">{row.rank}</td>
+                <td class="py-1.5 pr-3">{row.title || `#${row.project_id}`}</td>
+                <td class="py-1.5 pr-3">
+                  <span class={STATUS_BADGES[row.status] ?? 'bg-slate-100 text-slate-600'}>{statusLabel(row.status)}</span>
+                </td>
+                <td class="py-1.5 pr-3 text-right tabular-nums">{row.composite_score == null ? t('p3m.notSet') : row.composite_score}</td>
+                <td class="py-1.5 pr-3 text-right tabular-nums">{row.scored_criteria}</td>
+              </tr>
+            {/each}
+          </tbody>
+        </table>
+      {/if}
+    </section>
+
+    <!-- Portfolio roadmap (PO-005) -->
+    <section>
+      <div class="mb-2 flex items-center justify-between">
+        <h2 class="text-sm font-semibold">{t('p3m.roadmapTitle')}</h2>
+        <select value={roadmapPf} onchange={(e) => { roadmapPf = e.target.value; loadRoadmap(); }} class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1 text-xs">
+          <option value="">{t('p3m.selectPortfolio')}</option>
+          {#each portfolios as pf (pf.id)}
+            <option value={String(pf.id)}>{pf.title}</option>
+          {/each}
+        </select>
+      </div>
+
+      {#if !roadmapPf}
+        <div class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] p-4 text-xs text-[var(--color-ds-text-muted,#6b7280)]">
+          {t('p3m.selectPortfolio')}
+        </div>
+      {:else if roadmapProjects.length === 0}
+        <div class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] p-4 text-xs text-[var(--color-ds-text-muted,#6b7280)]">
+          {t('p3m.noRoadmapProjects')}
+        </div>
+      {:else}
+        <table class="w-full text-left text-xs">
+          <thead>
+            <tr class="border-b border-[var(--color-ds-border,#e5e7eb)] text-[var(--color-ds-text-muted,#6b7280)]">
+              <th class="py-1.5 pr-3">{t('p3m.projects')}</th>
+              <th class="py-1.5 pr-3">{t('p3m.startDate')}</th>
+              <th class="py-1.5 pr-3">{t('p3m.targetCompletionDate')}</th>
+              <th class="py-1.5 pr-3 w-40">%</th>
+              <th class="py-1.5 pr-3">{t('p3m.ragStatus')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {#each roadmapProjects as rp (rp.id)}
+              <tr class="border-b border-[var(--color-ds-border,#e5e7eb)]">
+                <td class="py-1.5 pr-3">{rp.title}</td>
+                <td class="py-1.5 pr-3 whitespace-nowrap">{rp.start_date ? formatDate(rp.start_date) : t('p3m.notSet')}</td>
+                <td class="py-1.5 pr-3 whitespace-nowrap">{rp.target_completion_date ? formatDate(rp.target_completion_date) : t('p3m.notSet')}</td>
+                <td class="py-1.5 pr-3">
+                  <div class="flex items-center gap-2">
+                    <span class="inline-block h-1.5 w-24 overflow-hidden rounded bg-slate-200">
+                      <span class="block h-full rounded" style="width: {rp.progress_percent}%; background: var(--color-ds-accent-blue,#2563eb)"></span>
+                    </span>
+                    <span class="tabular-nums">{rp.progress_percent}%</span>
+                  </div>
+                </td>
+                <td class="py-1.5 pr-3">
+                  <span class="inline-block h-2.5 w-2.5 rounded-full" style="background: {ragColor(rp.rag_status)}"></span>
+                </td>
+              </tr>
             {/each}
           </tbody>
         </table>

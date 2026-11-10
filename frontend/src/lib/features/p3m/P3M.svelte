@@ -14,6 +14,9 @@
   import P3MBenefitsFinancials from './P3MBenefitsFinancials.svelte';
   import P3MRiskStakeholders from './P3MRiskStakeholders.svelte';
   import P3MResources from './P3MResources.svelte';
+  import P3MChangeCalendar from './P3MChangeCalendar.svelte';
+  import P3MReporting from './P3MReporting.svelte';
+  import P3MPortfolioPulse from './P3MPortfolioPulse.svelte';
 
   const TABS = [
     { id: 'overview', labelKey: 'p3m.overview' },
@@ -22,6 +25,8 @@
     { id: 'benefits', labelKey: 'p3m.benefitsTab' },
     { id: 'risk', labelKey: 'p3m.riskTab' },
     { id: 'resources', labelKey: 'p3m.resourcesTab' },
+    { id: 'change', labelKey: 'p3m.changeTab' },
+    { id: 'reporting', labelKey: 'p3m.reportingTab' },
   ];
 
   let activeTab = $state('overview');
@@ -153,7 +158,10 @@
   />
 {:else}
   {#if activeTab === 'overview'}
-    <P3MOverview portfolios={hierarchy.portfolios} summary={summary} onChanged={load} initialProjectId={initialProjectId} planMap={planMap} />
+    <P3MPortfolioPulse />
+    <div class="mt-4">
+      <P3MOverview portfolios={hierarchy.portfolios} summary={summary} onChanged={load} initialProjectId={initialProjectId} planMap={planMap} />
+    </div>
   {:else if activeTab === 'investment'}
     <P3MInvestmentCases portfolios={hierarchy.portfolios} onChanged={load} />
   {:else if activeTab === 'governance'}
@@ -162,6 +170,10 @@
     <P3MBenefitsFinancials portfolios={hierarchy.portfolios} />
   {:else if activeTab === 'risk'}
     <P3MRiskStakeholders portfolios={hierarchy.portfolios} />
+  {:else if activeTab === 'change'}
+    <P3MChangeCalendar portfolios={hierarchy.portfolios} />
+  {:else if activeTab === 'reporting'}
+    <P3MReporting portfolios={hierarchy.portfolios} />
   {:else}
     <P3MResources portfolios={hierarchy.portfolios} />
   {/if}

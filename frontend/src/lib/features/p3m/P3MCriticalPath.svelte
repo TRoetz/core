@@ -72,6 +72,48 @@
   function days(value) {
     return `${Math.round(Number(value ?? 0) * 10) / 10}d`;
   }
+
+  // --- What-if schedule preview (RAID-004) - projects only --------------------
+  let whatIfTaskId = $state('');
+  let whatIfStartDate = $state('');
+  let whatIfDuration = $state('');
+  let runningPreview = $state(false);
+  let previewError = $state('');
+  /** @type {any} */
+  let previewResult = $state(null);
+
+  async function runWhatIf() {
+    if (runningPreview || id === null) return;
+    const itemId = Number(whatIfTaskId);
+    if (!itemId) {
+      previewError = t('p3m.noChangeSelected');
+      return;
+    }
+    if (!whatIfStartDate && whatIfDuration === '') {
+      previewError = t('p3m.whatIfNeedsChange');
+      return;
+    }
+    const change = { item_id: itemId };
+    if (whatIfStartDate) change.new_start_date = whatIfStartDate;
+    if (whatIfDuration !== '') change.duration_days = Math.round(Number(whatIfDuration));
+    runningPreview = true;
+    previewError = '';
+    try {
+      previewResult = await p3mApi.getCpmPreview(id, { changes: [change] });
+    } catch (e) {
+      // Validation and cycle errors arrive as API error strings; show verbatim.
+      previewError = e?.message || String(e);
+      previewResult = null;
+    } finally {
+      runningPreview = false;
+    }
+  }
+
+  const previewCriticalChain = $derived(
+    (previewResult?.preview?.critical_path ?? [])
+      .map((tid) => tasks.find((task) => task.item_id === tid)?.title)
+      .filter(Boolean),
+  );
 </script>
 
 {#if loading && !data}
@@ -190,6 +232,70 @@
           {/if}
         </div>
       {/each}
+    </div>
+  {/if}
+
+  {#if entityType === 'project' && tasks.length > 0}
+    <div class="mt-3 rounded-md border border-[var(--color-ds-border,#e5e7eb)] p-2">
+      <div class="text-xs font-semibold">{t('p3m.whatIfTitle')}</div>
+      <p class="mt-0.5 text-[11px] text-[var(--color-ds-text-muted,#6b7280)]">{t('p3m.whatIfHint')}</p>
+
+      <div class="mt-2 flex flex-wrap items-end gap-x-4 gap-y-2">
+        <label class="block text-xs">
+          <span>{t('p3m.changeTask')}</span>
+          <select value={whatIfTaskId} onchange={(e) => (whatIfTaskId = e.target.value)} class="mt-0.5 block max-w-xs rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1">
+            <option value="">—</option>
+            {#each tasks as task (task.item_id)}
+              <option value={task.item_id}>{task.title}</option>
+            {/each}
+          </select>
+        </label>
+        <label class="block text-xs">
+          <span>{t('p3m.newStartDate')}</span>
+          <input type="date" value={whatIfStartDate} oninput={(e) => (whatIfStartDate = e.target.value)} class="mt-0.5 block rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1" />
+        </label>
+        <label class="block text-xs">
+          <span>{t('p3m.durationDays')}</span>
+          <input type="number" min="1" step="1" value={whatIfDuration} oninput={(e) => (whatIfDuration = e.target.value)} class="mt-0.5 block w-24 rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1" />
+        </label>
+        <button type="button" disabled={runningPreview} onclick={runWhatIf} class="rounded-md bg-[var(--color-ds-accent-blue,#2563eb)] px-3 py-1 text-xs font-medium text-white disabled:opacity-50">
+          {t('p3m.runPreview')}
+        </button>
+      </div>
+
+      {#if previewError}
+        <div class="mt-2 rounded-md border border-red-200 bg-red-50 p-2 text-xs text-red-700">{previewError}</div>
+      {/if}
+
+      {#if previewResult}
+        <div class="mt-2 flex flex-wrap items-center gap-x-6 gap-y-1 text-xs">
+          <div>
+            <span class="text-[var(--color-ds-text-muted,#6b7280)]">{t('p3m.baselineWindow')}:</span>
+            {formatDate(previewResult.baseline.project_start)} → {formatDate(previewResult.baseline.project_end)}
+          </div>
+          <div>
+            <span class="text-[var(--color-ds-text-muted,#6b7280)]">{t('p3m.previewWindow')}:</span>
+            {formatDate(previewResult.preview.project_start)} → {formatDate(previewResult.preview.project_end)}
+          </div>
+          {#if previewResult.delta_days !== undefined}
+            <div>
+              <span class="text-[var(--color-ds-text-muted,#6b7280)]">{t('p3m.deltaDays')}:</span>
+              <span class={previewResult.delta_days > 0 ? 'font-semibold text-red-700' : previewResult.delta_days < 0 ? 'font-semibold text-green-700' : 'font-medium'}>
+                {previewResult.delta_days > 0 ? `+${previewResult.delta_days}` : previewResult.delta_days}
+              </span>
+            </div>
+          {/if}
+        </div>
+        {#if previewCriticalChain.length > 0}
+          <div class="mt-1.5 flex flex-wrap items-center gap-x-1.5 gap-y-1">
+            <span class="text-[var(--color-ds-text-muted,#6b7280)]">{t('p3m.criticalPath')}:</span>
+            {#each previewCriticalChain as title, i (`${i}:${title}`)}
+              {#if i > 0}<span class="text-[var(--color-ds-text-muted,#6b7280)]">→</span>{/if}
+              <span class="rounded border border-red-200 bg-red-50 px-1.5 py-0.5 font-medium text-red-700">{title}</span>
+            {/each}
+          </div>
+        {/if}
+      {/if}
     </div>
   {/if}
 {/if}

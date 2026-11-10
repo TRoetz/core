@@ -40,6 +40,8 @@
 
   const expandedBenefits = $state({}); // benefit id -> realizations[] | undefined (loading)
   const realizationCache = $state({});
+  /** benefit id -> measurements[] (loaded with the expansion). */
+  const measurementCache = $state({});
 
   /** @type {Array<{id:number,display_name?:string,username?:string}>} */
   let users = $state([]);
@@ -85,6 +87,22 @@
     return Math.max(0, Math.min(100, pct));
   }
 
+  /** Inline chip style for a benefit status value. */
+  function benefitStatusStyle(status) {
+    switch (status) {
+      case 'realised':
+        return 'background:#dcfce7;color:#166534';
+      case 'measuring':
+        return 'background:#dbeafe;color:#1e40af';
+      case 'shortfall':
+        return 'background:#fee2e2;color:#991b1b';
+      case 'retired':
+        return 'background:#f3f4f6;color:#6b7280';
+      default: // planned
+        return 'background:#fef9c3;color:#854d0e';
+    }
+  }
+
   async function load() {
     loading = true;
     error = '';
@@ -107,8 +125,12 @@
     }
     expandedBenefits[b.id] = []; // mark loading
     try {
-      const rows = await p3mApi.getBenefitRealizations(b.id);
+      const [rows, measRows] = await Promise.all([
+        p3mApi.getBenefitRealizations(b.id),
+        p3mApi.getBenefitMeasurements(b.id).catch(() => []),
+      ]);
       realizationCache[b.id] = rows ?? [];
+      measurementCache[b.id] = measRows ?? [];
       expandedBenefits[b.id] = realizationCache[b.id];
     } catch (e) {
       error = e?.message || 'error';
@@ -118,6 +140,8 @@
 
   // --- Benefit create / edit ---------------------------------------------------
   const BENEFIT_TYPES = ['financial', 'non_financial', 'strategic', 'compliance'];
+  const BENEFIT_STATUSES = ['planned', 'measuring', 'realised', 'shortfall', 'retired'];
+  const MEASUREMENT_FREQUENCIES = ['monthly', 'quarterly', 'annual', 'one_off'];
   const EXPENDITURE_TYPES = ['capex', 'opex'];
   let benefitFormOpen = $state(false);
   /** Benefit being edited in place, or null when creating. */
@@ -134,6 +158,13 @@
     unit_of_measure: '',
     target_realization_date: '',
     owner_id: '',
+    // Benefit profile (BEN-003/007/008).
+    measurement_method: '',
+    measurement_frequency: '',
+    status: 'planned',
+    evidence: '',
+    finance_validator_id: '',
+    capability_ref: '',
   });
   let benefitForm = $state(emptyBenefitForm());
 
@@ -157,6 +188,12 @@
       unit_of_measure: b.unit_of_measure ?? '',
       target_realization_date: toDateInputValue(b.target_realization_date),
       owner_id: b.owner_id != null ? String(b.owner_id) : '',
+      measurement_method: b.measurement_method ?? '',
+      measurement_frequency: b.measurement_frequency ?? '',
+      status: b.status || 'planned',
+      evidence: b.evidence ?? '',
+      finance_validator_id: b.finance_validator_id != null ? String(b.finance_validator_id) : '',
+      capability_ref: b.capability_ref ?? '',
     };
     error = '';
     benefitFormOpen = true;
@@ -202,6 +239,12 @@
         unit_of_measure: benefitForm.unit_of_measure,
         target_realization_date: date,
         owner_id: owner,
+        measurement_method: benefitForm.measurement_method.trim() || null,
+        measurement_frequency: benefitForm.measurement_frequency || null,
+        status: benefitForm.status || 'planned',
+        evidence: benefitForm.evidence.trim() || null,
+        finance_validator_id: benefitForm.finance_validator_id ? Number(benefitForm.finance_validator_id) : null,
+        capability_ref: benefitForm.capability_ref.trim() || null,
       };
       if (editingBenefit) await p3mApi.benefits.update(editingBenefit.id, payload);
       else await p3mApi.benefits.create(payload);
@@ -270,6 +313,54 @@
       await load();
     } catch (e) {
       error = e?.message || t('p3m.deleteFailed');
+    }
+  }
+
+  // --- Benefit measurements (BEN-007/008) ------------------------------------
+  /** benefit id -> draft "new measurement" form. */
+  const measurementForms = $state({});
+  let savingMeasurementBenefitId = $state(null);
+  /** measurement row id -> completion value draft. */
+  let completeDrafts = $state({});
+
+  function measurementDraft(bid) {
+    return measurementForms[bid] ?? { due_date: '', value: '', evidence: '' };
+  }
+
+  async function recordMeasurement(b) {
+    const draft = measurementDraft(b.id);
+    if (!draft.due_date || savingMeasurementBenefitId === b.id) return;
+    savingMeasurementBenefitId = b.id;
+    try {
+      await p3mApi.createBenefitMeasurement(b.id, {
+        due_date: toISODate(draft.due_date),
+        value: draft.value !== '' ? Number(draft.value) : null,
+        evidence: draft.evidence.trim() || null,
+      });
+      measurementForms[b.id] = { due_date: '', value: '', evidence: '' };
+      const rows = (await p3mApi.getBenefitMeasurements(b.id)) ?? [];
+      measurementCache[b.id] = rows;
+    } catch (e) {
+      error = e?.message || t('p3m.createFailed');
+    } finally {
+      savingMeasurementBenefitId = null;
+    }
+  }
+
+  /** Complete an open measurement with its actual value (PUT sets completed_at). */
+  async function completeMeasurement(b, m) {
+    const draft = completeDrafts[m.id];
+    if (draft === undefined || draft.trim() === '' || savingMeasurementBenefitId === b.id) return;
+    savingMeasurementBenefitId = b.id;
+    try {
+      await p3mApi.updateBenefitMeasurement(m.id, { value: Number(draft) });
+      delete completeDrafts[m.id];
+      const rows = (await p3mApi.getBenefitMeasurements(b.id)) ?? [];
+      measurementCache[b.id] = rows;
+    } catch (e) {
+      error = e?.message || t('p3m.updateFailed');
+    } finally {
+      savingMeasurementBenefitId = null;
     }
   }
 
@@ -543,6 +634,80 @@
                 oninput={(e) => (benefitForm = { ...benefitForm, target_realization_date: e.target.value })}
               />
             </label>
+
+            <label class="block">
+              <span>{t('p3m.measurementMethod')}</span>
+              <input
+                class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+                value={benefitForm.measurement_method}
+                disabled={savingBenefit}
+                oninput={(e) => (benefitForm = { ...benefitForm, measurement_method: e.target.value })}
+              />
+            </label>
+
+            <label class="block">
+              <span>{t('p3m.measurementFrequency')}</span>
+              <select
+                class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+                value={benefitForm.measurement_frequency}
+                disabled={savingBenefit}
+                onchange={(e) => (benefitForm = { ...benefitForm, measurement_frequency: e.target.value })}
+              >
+                <option value="">{t('p3m.noSelection')}</option>
+                {#each MEASUREMENT_FREQUENCIES as mf (mf)}
+                  <option value={mf}>{mf}</option>
+                {/each}
+              </select>
+            </label>
+
+            <label class="block">
+              <span>{t('p3m.benefitStatus')}</span>
+              <select
+                class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+                value={benefitForm.status}
+                disabled={savingBenefit}
+                onchange={(e) => (benefitForm = { ...benefitForm, status: e.target.value })}
+              >
+                {#each BENEFIT_STATUSES as bs (bs)}
+                  <option value={bs}>{bs}</option>
+                {/each}
+              </select>
+            </label>
+
+            <label class="block">
+              <span>{t('p3m.evidence')}</span>
+              <input
+                class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+                value={benefitForm.evidence}
+                disabled={savingBenefit}
+                oninput={(e) => (benefitForm = { ...benefitForm, evidence: e.target.value })}
+              />
+            </label>
+
+            <label class="block">
+              <span>{t('p3m.financeValidator')}</span>
+              <select
+                class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+                value={benefitForm.finance_validator_id}
+                disabled={savingBenefit}
+                onchange={(e) => (benefitForm = { ...benefitForm, finance_validator_id: e.target.value })}
+              >
+                <option value="">{t('p3m.noSelection')}</option>
+                {#each users as u (u.id)}
+                  <option value={u.id}>{u.display_name || u.username}</option>
+                {/each}
+              </select>
+            </label>
+
+            <label class="block">
+              <span>{t('p3m.capabilityRef')}</span>
+              <input
+                class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+                value={benefitForm.capability_ref}
+                disabled={savingBenefit}
+                oninput={(e) => (benefitForm = { ...benefitForm, capability_ref: e.target.value })}
+              />
+            </label>
           </div>
 
           <div class="mt-3 flex items-center gap-2">
@@ -590,6 +755,10 @@
                 <td class="py-1.5 pr-3">
                   {b.title}
                   <span class="ml-2 rounded bg-slate-100 px-1 text-[10px] capitalize text-slate-500">{b.benefit_type}</span>
+                  <span class="ml-1 rounded px-1 text-[10px] capitalize" style={benefitStatusStyle(b.status)}>{b.status || 'planned'}</span>
+                  {#if b.measurement_frequency}
+                    <span class="ml-1 text-[10px] text-[var(--color-ds-text-muted,#6b7280)]">{b.measurement_frequency}</span>
+                  {/if}
                 </td>
                 <td class="py-1.5 pr-3">{entityLabel(b)}</td>
                 <td class="py-1.5 pr-3">
@@ -655,6 +824,62 @@
                         </div>
                       {/each}
                     {/if}
+
+                    <!-- Measurements (BEN-007) -->
+                    <div class="mt-2 border-t border-[var(--color-ds-border,#e5e7eb)] pt-1.5">
+                      <p class="mb-1 text-xs font-semibold">{t('p3m.measurementsTitle')}</p>
+                      <div class="mb-1 flex items-center gap-2">
+                        <input
+                          type="date"
+                          class="w-36 rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-0.5"
+                          value={measurementDraft(b.id).due_date}
+                          oninput={(e) => (measurementForms[b.id] = { ...measurementDraft(b.id), due_date: e.target.value })}
+                        />
+                        <input
+                          type="number"
+                          step="any"
+                          class="w-28 rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-0.5"
+                          placeholder={t('p3m.realizedValue')}
+                          value={measurementDraft(b.id).value}
+                          oninput={(e) => (measurementForms[b.id] = { ...measurementDraft(b.id), value: e.target.value })}
+                        />
+                        <input
+                          class="min-w-0 flex-1 rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-0.5"
+                          placeholder={t('p3m.evidence')}
+                          value={measurementDraft(b.id).evidence}
+                          oninput={(e) => (measurementForms[b.id] = { ...measurementDraft(b.id), evidence: e.target.value })}
+                        />
+                        <button type="button" class="rounded-md bg-[var(--color-ds-accent-blue,#2563eb)] px-2 py-0.5 font-medium text-white disabled:opacity-40" disabled={savingMeasurementBenefitId === b.id || measurementDraft(b.id).due_date === ''} onclick={() => recordMeasurement(b)}>
+                          {t('p3m.newMeasurement')}
+                        </button>
+                      </div>
+                      {#each (measurementCache[b.id] ?? []).slice().sort((x, y) => (x.due_date > y.due_date ? 1 : -1)) as m (m.id)}
+                        {@const overdue = !m.completed_at && m.due_date < new Date().toISOString().slice(0, 10)}
+                        <div class="flex items-center gap-3 py-0.5">
+                          <span style={overdue ? 'color:#dc2626;font-weight:600' : ''}>{m.due_date}{#if overdue} ({t('p3m.overdue')}){/if}</span>
+                          {#if m.completed_at}
+                            <span class="font-medium">{m.value != null ? formatMoney(m.value) : '—'}</span>
+                          {:else}
+                            <input
+                              type="number"
+                              step="any"
+                              class="w-24 rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-0.5"
+                              placeholder={t('p3m.realizedValue')}
+                              value={completeDrafts[m.id] ?? ''}
+                              oninput={(e) => (completeDrafts = { ...completeDrafts, [m.id]: e.target.value })}
+                            />
+                            <button type="button" class="rounded-md bg-[var(--color-ds-accent-blue,#2563eb)] px-2 py-0.5 font-medium text-white disabled:opacity-40" disabled={savingMeasurementBenefitId === b.id || (completeDrafts[m.id] ?? '').trim() === ''} onclick={() => completeMeasurement(b, m)}>
+                              {t('p3m.save')}
+                            </button>
+                          {/if}
+                          {#if m.evidence}
+                            <span class="text-[var(--color-ds-text-muted,#6b7280)]">{m.evidence}</span>
+                          {/if}
+                        </div>
+                      {:else}
+                        <span class="text-[var(--color-ds-text-muted,#6b7280)]">{t('p3m.noData')}</span>
+                      {/each}
+                    </div>
                   </td>
                 </tr>
               {/if}

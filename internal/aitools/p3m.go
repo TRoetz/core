@@ -20,9 +20,9 @@ import (
 const (
 	p3mPortfolioColumns = `id, title, description, strategic_objective, budget_allocated, rag_status, owner_id, created_at, updated_at`
 	p3mProgrammeColumns = `id, portfolio_id, title, description, manager_id, budget_allocated, target_start_date, target_end_date, rag_status, created_at, updated_at`
-	p3mProjectColumns   = `id, portfolio_id, programme_id, title, description, manager_id, time_project_id, current_stage, budget_approved, budget_actual, progress_percent, start_date, target_completion_date, rag_status, created_at, updated_at`
+	p3mProjectColumns   = `id, portfolio_id, programme_id, title, description, manager_id, time_project_id, work_type, external_ref, funding_source, contingency, current_stage, budget_approved, budget_actual, progress_percent, start_date, target_completion_date, rag_status, created_at, updated_at`
 	p3mRaidColumns      = `id, entity_type, entity_id, item_type, title, description, impact_score, probability_score, mitigation_plan, owner_id, status, item_id, created_at, updated_at`
-	p3mStageGateColumns = `id, project_id, from_stage, to_stage, passed, reviewer_id, review_date, comments, created_at`
+	p3mStageGateColumns = `id, project_id, from_stage, to_stage, passed, reviewer_id, review_date, comments, template_id, created_at`
 	p3mBenefitColumns   = `id, project_id, programme_id, title, benefit_type, target_value, unit_of_measure, baseline_value, target_realization_date, owner_id, created_at`
 )
 
@@ -43,6 +43,7 @@ func aiScanP3MProgramme(row interface{ Scan(...any) error }) (models.P3MProgramm
 func aiScanP3MProject(row interface{ Scan(...any) error }) (models.P3MProject, error) {
 	var p models.P3MProject
 	err := row.Scan(&p.ID, &p.PortfolioID, &p.ProgrammeID, &p.Title, &p.Description, &p.ManagerID, &p.TimeProjectID,
+		&p.WorkType, &p.ExternalRef, &p.FundingSource, &p.Contingency,
 		&p.CurrentStage, &p.BudgetApproved, &p.BudgetActual, &p.ProgressPercent,
 		&p.StartDate, &p.TargetCompletionDate, &p.RagStatus, &p.CreatedAt, &p.UpdatedAt)
 	return p, err
@@ -58,7 +59,7 @@ func aiScanP3MRaidItem(row interface{ Scan(...any) error }) (models.P3MRaidItem,
 
 func aiScanP3MStageGate(row interface{ Scan(...any) error }) (models.P3MStageGateReview, error) {
 	var g models.P3MStageGateReview
-	err := row.Scan(&g.ID, &g.ProjectID, &g.FromStage, &g.ToStage, &g.Passed, &g.ReviewerID, &g.ReviewDate, &g.Comments, &g.CreatedAt)
+	err := row.Scan(&g.ID, &g.ProjectID, &g.FromStage, &g.ToStage, &g.Passed, &g.ReviewerID, &g.ReviewDate, &g.Comments, &g.TemplateID, &g.CreatedAt)
 	return g, err
 }
 
@@ -150,13 +151,12 @@ func aiP3MApplyComputedRaid(item *models.P3MRaidItem) {
 
 // --- validation helpers ---
 
-func aiP3MValidStage(s string) bool {
-	switch s {
-	case models.P3MStageInitiation, models.P3MStagePlanning, models.P3MStageExecution, models.P3MStageClosure:
-		return true
-	default:
-		return false
-	}
+// aiP3MValidStage reports whether s names an enabled lifecycle stage; the
+// valid set is admin-configurable, so it is always read from the database.
+func aiP3MValidStage(db database.Database, s string) bool {
+	var count int
+	err := db.QueryRow(`SELECT COUNT(*) FROM p3m_lifecycle_stages WHERE stage_key = ? AND enabled = 1`, s).Scan(&count)
+	return err == nil && count > 0
 }
 
 func aiP3MValidRaidItemType(itemType string) bool {
@@ -215,6 +215,7 @@ func aiGetP3MProjectRow(db database.Database, id int) (models.P3MProject, error)
 	var p models.P3MProject
 	err := db.QueryRow(`SELECT `+p3mProjectColumns+` FROM p3m_projects WHERE id = ?`, id).Scan(
 		&p.ID, &p.PortfolioID, &p.ProgrammeID, &p.Title, &p.Description, &p.ManagerID, &p.TimeProjectID,
+		&p.WorkType, &p.ExternalRef, &p.FundingSource, &p.Contingency,
 		&p.CurrentStage, &p.BudgetApproved, &p.BudgetActual, &p.ProgressPercent,
 		&p.StartDate, &p.TargetCompletionDate, &p.RagStatus, &p.CreatedAt, &p.UpdatedAt)
 	return p, err
@@ -1143,8 +1144,8 @@ func init() {
 			if err != nil {
 				return map[string]string{"error": "project not found"}, nil
 			}
-			if !aiP3MValidStage(args.ToStage) {
-				return map[string]string{"error": "to_stage must be one of initiation, planning, execution or closure"}, nil
+			if !aiP3MValidStage(env.DB, args.ToStage) {
+				return map[string]string{"error": "to_stage must be an enabled lifecycle stage"}, nil
 			}
 			if args.ToStage == project.CurrentStage {
 				return map[string]string{"error": "to_stage must differ from the current stage"}, nil
@@ -1167,7 +1168,7 @@ func init() {
 			}
 			var g models.P3MStageGateReview
 			if err := env.DB.QueryRowContext(ctx, `SELECT `+p3mStageGateColumns+` FROM p3m_stage_gate_reviews WHERE id = ?`, reviewID).
-				Scan(&g.ID, &g.ProjectID, &g.FromStage, &g.ToStage, &g.Passed, &g.ReviewerID, &g.ReviewDate, &g.Comments, &g.CreatedAt); err != nil {
+				Scan(&g.ID, &g.ProjectID, &g.FromStage, &g.ToStage, &g.Passed, &g.ReviewerID, &g.ReviewDate, &g.Comments, &g.TemplateID, &g.CreatedAt); err != nil {
 				return nil, err
 			}
 			g.Artifacts, _ = aiP3MLoadGateArtifacts(env.DB, reviewID)
@@ -1196,7 +1197,7 @@ func init() {
 			}
 			var gate models.P3MStageGateReview
 			err = env.DB.QueryRowContext(ctx, `SELECT `+p3mStageGateColumns+` FROM p3m_stage_gate_reviews WHERE id = ?`, args.GateID).
-				Scan(&gate.ID, &gate.ProjectID, &gate.FromStage, &gate.ToStage, &gate.Passed, &gate.ReviewerID, &gate.ReviewDate, &gate.Comments, &gate.CreatedAt)
+				Scan(&gate.ID, &gate.ProjectID, &gate.FromStage, &gate.ToStage, &gate.Passed, &gate.ReviewerID, &gate.ReviewDate, &gate.Comments, &gate.TemplateID, &gate.CreatedAt)
 			if err != nil {
 				return map[string]string{"error": "stage gate not found"}, nil
 			}
@@ -1228,7 +1229,7 @@ func init() {
 			// Reload.
 			gate = models.P3MStageGateReview{}
 			if err := env.DB.QueryRowContext(ctx, `SELECT `+p3mStageGateColumns+` FROM p3m_stage_gate_reviews WHERE id = ?`, args.GateID).
-				Scan(&gate.ID, &gate.ProjectID, &gate.FromStage, &gate.ToStage, &gate.Passed, &gate.ReviewerID, &gate.ReviewDate, &gate.Comments, &gate.CreatedAt); err != nil {
+				Scan(&gate.ID, &gate.ProjectID, &gate.FromStage, &gate.ToStage, &gate.Passed, &gate.ReviewerID, &gate.ReviewDate, &gate.Comments, &gate.TemplateID, &gate.CreatedAt); err != nil {
 				return nil, err
 			}
 			gate.Artifacts, _ = aiP3MLoadGateArtifacts(env.DB, args.GateID)

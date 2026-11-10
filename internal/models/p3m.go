@@ -8,14 +8,6 @@ import "time"
 // benefits, financials, risk/RAID, stakeholder engagement, and resource
 // management.
 
-// P3M stage lifecycle shared by projects and stage-gate reviews.
-const (
-	P3MStageInitiation = "initiation"
-	P3MStagePlanning   = "planning"
-	P3MStageExecution  = "execution"
-	P3MStageClosure    = "closure"
-)
-
 // P3MRagStatus values shared by all three tiers.
 const (
 	P3MRagRed   = "red"
@@ -72,6 +64,7 @@ type P3MPortfolioRollup struct {
 	BudgetApproved float64 `json:"budget_approved"`
 	BudgetActual   float64 `json:"budget_actual"`
 	RagStatus      string  `json:"rag_status"`
+	FundingSources map[string]float64 `json:"funding_sources,omitempty"` // approved budget by funding source (FIN-002/006)
 }
 
 // P3MProgramme is the middle tier: related projects coordinated to realize a
@@ -112,6 +105,10 @@ type P3MProject struct {
 	Description          string     `json:"description"`
 	ManagerID            *int       `json:"manager_id,omitempty"`
 	TimeProjectID        *int       `json:"time_project_id,omitempty"`
+	WorkType             *string    `json:"work_type,omitempty"` // programme | project | continuous_improvement | digital_product | operational
+	ExternalRef          *string    `json:"external_ref,omitempty"` // unique reference in the external finance system (FIN-007 matching)
+	FundingSource        *string    `json:"funding_source,omitempty"` // e.g. core_budget, capital_fund, grant (FIN-002/006)
+	Contingency          float64    `json:"contingency"`              // contingency reserve held against the budget (FIN-010)
 	CurrentStage         string     `json:"current_stage"`
 	BudgetApproved       float64    `json:"budget_approved"`
 	BudgetActual         float64    `json:"budget_actual"`
@@ -148,7 +145,17 @@ type P3MBenefit struct {
 	BaselineValue       float64    `json:"baseline_value"`
 	TargetRealizationDate time.Time `json:"target_realization_date"`
 	OwnerID             int        `json:"owner_id"`
-	CreatedAt           time.Time  `json:"created_at"`
+
+	// Benefit profile completion (BEN-003/007/008).
+	MeasurementMethod    *string  `json:"measurement_method,omitempty"`
+	MeasurementFrequency *string  `json:"measurement_frequency,omitempty"` // monthly | quarterly | annual | one_off
+	Status               string   `json:"status"`                          // planned | measuring | realised | shortfall | retired
+	Evidence             *string  `json:"evidence,omitempty"`
+	FinanceValidatorID   *int     `json:"finance_validator_id,omitempty"`
+	ValidationStatus     string   `json:"validation_status"` // not_required | pending | validated
+	CapabilityRef        *string  `json:"capability_ref,omitempty"`
+
+	CreatedAt time.Time `json:"created_at"`
 
 	// Computed from the latest realization row (nil when none recorded).
 	LatestRealizedValue *float64 `json:"latest_realized_value,omitempty" db:"-"`
@@ -177,6 +184,7 @@ type P3MStageGateReview struct {
 	ReviewerID int                `json:"reviewer_id"`
 	ReviewDate *time.Time         `json:"review_date,omitempty"`
 	Comments   string             `json:"comments"`
+	TemplateID *int               `json:"template_id,omitempty"`
 	CreatedAt  time.Time          `json:"created_at"`
 
 	Artifacts []P3MGateArtifact `json:"artifacts,omitempty" db:"-"`
@@ -252,6 +260,14 @@ type P3MRaidItem struct {
 	MitigationPlan    string     `json:"mitigation_plan"`
 	OwnerID           int        `json:"owner_id"`
 	Status            string     `json:"status"` // open | mitigating | closed | escalated
+
+	// RAID due dates + subtypes (RAID-001/006, Appendix B).
+	DueDate      *time.Time `json:"due_date,omitempty"`
+	ItemSubtype  *string    `json:"item_subtype,omitempty"` // change_risk | adoption_risk
+	// Decision register extensions (GOV-007): set when item_type = 'decision'.
+	DecisionSubtype *string `json:"decision_subtype,omitempty"` // governance | funding | procurement | plan | closure
+	SRMContractID   *int    `json:"srm_contract_id,omitempty"`  // srm_contracts.id for procurement decisions
+
 	CreatedAt         time.Time  `json:"created_at"`
 	UpdatedAt         time.Time  `json:"updated_at"`
 
@@ -300,6 +316,7 @@ type P3MResource struct {
 	Skills               []string   `json:"skills"`
 	CostRate             float64    `json:"cost_rate"` // per hour
 	CapacityHoursPerWeek int        `json:"capacity_hours_per_week"`
+	Pool                 *string    `json:"pool,omitempty"` // specialist pool, e.g. digital_services | change | general (RES-005)
 	CreatedAt            time.Time  `json:"created_at"`
 	UpdatedAt            time.Time  `json:"updated_at"`
 }
@@ -314,7 +331,9 @@ type P3MResourceAllocation struct {
 	EndDate      time.Time  `json:"end_date"`
 	HoursPerWeek int        `json:"hours_per_week"`
 	BookingType  string     `json:"booking_type"` // soft | hard
-	CreatedAt    time.Time  `json:"created_at"`
+	// BAU rows count against capacity but not against any project (RES-004).
+	AllocationClass string    `json:"allocation_class"` // project | bau
+	CreatedAt       time.Time `json:"created_at"`
 	UpdatedAt    time.Time  `json:"updated_at"`
 }
 
@@ -325,12 +344,32 @@ type P3MBudgetTranche struct {
 	EntityType      string     `json:"entity_type"` // portfolio | programme | project
 	EntityID        int        `json:"entity_id"`
 	Title           string     `json:"title"`
-	Amount          float64    `json:"amount"`
-	ExpenditureType string     `json:"expenditure_type"` // capex | opex
-	PlannedDate     time.Time  `json:"planned_date"`
+	Amount          float64   `json:"amount"`
+	ExpenditureType string    `json:"expenditure_type"` // capex | opex
+	ExpenditureClass *string  `json:"expenditure_class,omitempty"` // one_off | ongoing (FIN-002)
+	PlannedDate     time.Time `json:"planned_date"`
 	Status          string     `json:"status"` // proposed | approved | released
 	CreatedAt       time.Time  `json:"created_at"`
 	UpdatedAt       time.Time  `json:"updated_at"`
+}
+
+// P3MFinancialCloseOut is the finance sign-off record for a project at its
+// close stage (FIN-010): final budget position, outstanding commitments and
+// ongoing obligations carried into BAU. Status moves open -> validated by the
+// finance reviewer; validation stamps closed_at.
+type P3MFinancialCloseOut struct {
+	ID                      int        `json:"id"`
+	ProjectID               int        `json:"project_id"`
+	FinalBudget             float64    `json:"final_budget"`
+	ActualToDate            float64    `json:"actual_to_date"`
+	OutstandingCommitments  float64    `json:"outstanding_commitments"`
+	OngoingObligations      string     `json:"ongoing_obligations"` // free-text BAU obligations carried forward
+	FinanceReviewerID       *int       `json:"finance_reviewer_id,omitempty"`
+	Status                  string     `json:"status"` // open | validated
+	Notes                   string     `json:"notes"`
+	ClosedAt                *time.Time `json:"closed_at,omitempty"`
+	CreatedAt               time.Time  `json:"created_at"`
+	UpdatedAt               time.Time  `json:"updated_at"`
 }
 
 // P3MForecastPoint is one month of aggregated planned spend.
@@ -342,12 +381,13 @@ type P3MForecastPoint struct {
 
 // P3MResourceCapacityRow is one resource's demand vs capacity for a month.
 type P3MResourceCapacityRow struct {
-	ResourceID   int     `json:"resource_id"`
-	Name         string  `json:"name"`
-	Month        string  `json:"month"` // YYYY-MM
-	DemandHours  float64 `json:"demand_hours"`
+	ResourceID    int     `json:"resource_id"`
+	Name          string  `json:"name"`
+	Month         string  `json:"month"` // YYYY-MM
+	DemandHours   float64 `json:"demand_hours"`
+	BauHours      float64 `json:"bau_hours"`
 	CapacityHours float64 `json:"capacity_hours"`
-	OverAllocated bool   `json:"over_allocated"`
+	OverAllocated bool    `json:"over_allocated"`
 }
 
 // P3M investment case decision pipeline: cases start proposed, move to
@@ -542,4 +582,284 @@ type P3MLeaveImpact struct {
 	Title       string                `json:"title"`
 	Resources   []P3MLeaveResourceRow `json:"resources"`
 	Tasks       []P3MLeaveTaskRow     `json:"tasks"`
+}
+
+// P3MIntake is a Front Door intake record (FD-001..005, FD-008): the single
+// entry point for new work into the P3M lifecycle. A "proceed" decision
+// creates/links a project pre-filled from this record so the idea is captured
+// once and never re-entered downstream (FD-010).
+type P3MIntake struct {
+	ID                   int        `json:"id"`
+	Title                string     `json:"title"`
+	Source               string     `json:"source"` // standard | exceptional_path (FD-011 retrospective registration)
+	Description          string     `json:"description"`
+	ProblemOpportunity   string     `json:"problem_opportunity"`
+	StrategicAlignment   string     `json:"strategic_alignment"`
+	IntendedOutcomes     string     `json:"intended_outcomes"`
+	IndicativeCost       *float64   `json:"indicative_cost,omitempty"`
+	ResourceRequirements string     `json:"resource_requirements"`
+	RiskNotes            string     `json:"risk_notes"`
+	ChangeImpactNotes    string     `json:"change_impact_notes"`
+	BusinessGroup        string     `json:"business_group"`
+	WorkType             *string    `json:"work_type,omitempty"` // programme | project | continuous_improvement | digital_product | operational
+	Complexity           string     `json:"complexity"`          // low | med | high (FD-005)
+	Status               string     `json:"status"`              // captured | assessing | decided
+	Decision             *string    `json:"decision,omitempty"`  // proceed | redirect | defer | decline | return_info (FD-008)
+	DecidedBy            *int       `json:"decided_by,omitempty"`
+	DecisionDate         *time.Time `json:"decision_date,omitempty"`
+	Conditions           string     `json:"conditions"` // decision conditions; copied to the first gate on proceed
+	Rationale            string     `json:"rationale"`  // mandatory with every decision
+	TargetProjectID      *int       `json:"target_project_id,omitempty"`
+	LifecyclePosition    *string    `json:"lifecycle_position,omitempty"` // FD-011: where an exceptional-path item sits in the lifecycle
+	CreatedBy            *int       `json:"created_by,omitempty"`
+	CreatedAt            time.Time  `json:"created_at"`
+	UpdatedAt            time.Time  `json:"updated_at"`
+}
+
+// P3MFrontDoorScreen is a per-complexity required-field rule for Front Door
+// assessment (FD-003/005): every listed field must be completed before an
+// intake of that complexity can be decided. Admin-configurable.
+type P3MFrontDoorScreen struct {
+	ID         int    `json:"id"`
+	Complexity string `json:"complexity"` // low | med | high
+	FieldKey   string `json:"field_key"`
+	Required   bool   `json:"required"`
+}
+
+// P3MFinanceSyncConfig is a scheduled source of financial data from the
+// external finance system (FIN-007). Typically one row per deployment;
+// multiple rows are allowed.
+type P3MFinanceSyncConfig struct {
+	ID              int        `json:"id"`
+	Name            string     `json:"name"`
+	Enabled         bool       `json:"enabled"`
+	SourceType      string     `json:"source_type"` // file_path | s3
+	SourceRef       string     `json:"source_ref"`  // absolute path (allowlisted) or s3://bucket/key
+	ScheduleMinutes int        `json:"schedule_minutes"`
+	PeriodFormat    string     `json:"period_format"`
+	DefaultCurrency string     `json:"default_currency"`
+	MatchMode       string     `json:"match_mode"` // ref_only | ref_then_title
+	LastRunAt       *time.Time `json:"last_run_at,omitempty"`
+	LastRunStatus   *string    `json:"last_run_status,omitempty"` // success | partial | failed | skipped
+	LastFileHash    *string    `json:"last_file_hash,omitempty"`
+	CreatedBy       *int       `json:"created_by,omitempty"`
+	UpdatedBy       *int       `json:"updated_by,omitempty"`
+	CreatedAt       time.Time  `json:"created_at"`
+	UpdatedAt       time.Time  `json:"updated_at"`
+}
+
+// P3MFinanceActual is one immutable fact row imported from the finance system.
+// Runs are append-only; the effective value for a (project, period, line_type)
+// key comes from the latest run that matched it. No row is ever deleted.
+type P3MFinanceActual struct {
+	ID          int        `json:"id"`
+	ConfigID    int        `json:"config_id"`
+	RunID       *int       `json:"run_id,omitempty"`
+	ProjectID   *int       `json:"project_id,omitempty"`
+	ExternalRef string     `json:"external_ref"`
+	CostCenter  *string    `json:"cost_center,omitempty"`
+	WorkOrder   *string    `json:"work_order,omitempty"`
+	Period      string     `json:"period"` // YYYY-MM (quarters expanded to months)
+	LineType    string     `json:"line_type"`
+	Amount      float64    `json:"amount"`
+	Currency    string     `json:"currency"`
+	Description *string    `json:"description,omitempty"`
+	MatchStatus string     `json:"match_status"` // matched | unmatched | rejected
+	RawRow      *string    `json:"raw_row,omitempty"`
+	ImportedAt  time.Time  `json:"imported_at"`
+
+	// Candidates is populated only in the unmatched review queue: projects
+	// whose normalised title matches this row.
+	Candidates []P3MFinanceMatchCandidate `json:"candidates,omitempty" db:"-"`
+}
+
+// P3MFinanceMatchCandidate is a project suggested for an unmatched fact row.
+type P3MFinanceMatchCandidate struct {
+	ID    int     `json:"id"`
+	Title string  `json:"title"`
+	Ref   *string `json:"external_ref,omitempty"`
+}
+
+// P3MFinanceSyncRun is the business-level record of one sync execution;
+// tick-level health is recorded separately in scheduler_runs.
+type P3MFinanceSyncRun struct {
+	ID            int        `json:"id"`
+	ConfigID      int        `json:"config_id"`
+	Trigger       string     `json:"trigger"` // schedule | manual | upload
+	StartedAt     time.Time  `json:"started_at"`
+	CompletedAt   *time.Time `json:"completed_at,omitempty"`
+	Status        string     `json:"status"` // running | success | partial | failed
+	FileHash      *string    `json:"file_hash,omitempty"`
+	RowsTotal     int        `json:"rows_total"`
+	RowsMatched   int        `json:"rows_matched"`
+	RowsUnmatched int        `json:"rows_unmatched"`
+	RowsFailed    int        `json:"rows_failed"`
+	ErrorSummary  *string    `json:"error_summary,omitempty"` // JSON [{row, reason}], last 200 entries
+}
+
+// P3MFinanceSyncRejection is an operator dismissal of a (ref, period,
+// line_type) row from the review queue; later runs store such rows as
+// rejected instead of re-queueing them.
+type P3MFinanceSyncRejection struct {
+	ID          int       `json:"id"`
+	ExternalRef string    `json:"external_ref"`
+	Period      string    `json:"period"`
+	LineType    string    `json:"line_type"`
+	Reason      string    `json:"reason"`
+	RejectedBy  int       `json:"rejected_by"`
+	CreatedAt   time.Time `json:"created_at"`
+}
+
+// --- Phase 2 gap-closure models (BRD OHP F6-F15) ---------------------------
+
+// P3MChangeCalendarEntry is one row of the organisation-wide change calendar
+// (CHG-008/009). Weeks are ISO week strings such as "2026-W45".
+type P3MChangeCalendarEntry struct {
+	ID           int       `json:"id"`
+	EntityType   *string   `json:"entity_type,omitempty"` // project | programme | portfolio; nil = standalone entry
+	EntityID     *int      `json:"entity_id,omitempty"`
+	Activity     string    `json:"activity"`
+	BusinessUnit *string   `json:"business_unit,omitempty"`
+	StartWeek    string    `json:"start_week"`
+	EndWeek      string    `json:"end_week"`
+	ImpactLevel  int       `json:"impact_level"` // 1 (low) .. 5 (high)
+	Source       string    `json:"source"`       // corporate_project | corporate_activity | bau | local
+	Notes        *string   `json:"notes,omitempty"`
+	CreatedBy    *int      `json:"created_by,omitempty"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
+}
+
+// P3MChangeAssessment is the single active change impact assessment for an
+// entity (CHG-002/003); SupportLevel carries the CHG-003 triage outcome.
+type P3MChangeAssessment struct {
+	ID                     int       `json:"id"`
+	EntityType             string    `json:"entity_type"` // project | programme
+	EntityID               int       `json:"entity_id"`
+	ImpactedGroups         *string   `json:"impacted_groups,omitempty"`          // JSON [string]
+	ImpactByCharacteristic *string   `json:"impact_by_characteristic,omitempty"` // JSON [{characteristic, nature, severity}]
+	OverallRating          int       `json:"overall_rating"`                     // 1..5
+	SupportLevel           string    `json:"support_level"`                      // none | light | full
+	Approach               *string   `json:"approach,omitempty"`
+	Deliverables           *string   `json:"deliverables,omitempty"`             // JSON [string]
+	CreatedBy              *int      `json:"created_by,omitempty"`
+	CreatedAt              time.Time `json:"created_at"`
+	UpdatedAt              time.Time `json:"updated_at"`
+}
+
+// P3MReadinessAssessment is one readiness assessment (CHG-006); the latest
+// per entity gates entry to implement_deliver.
+type P3MReadinessAssessment struct {
+	ID             int       `json:"id"`
+	EntityType     string    `json:"entity_type"` // project | programme
+	EntityID       int       `json:"entity_id"`
+	Questions      string    `json:"questions"`   // JSON [{id, text, required}]
+	Answers        *string   `json:"answers,omitempty"` // JSON [{question_id, answer: yes|no, gap_action}]
+	AssessedAt     time.Time `json:"assessed_at"`
+	Outcome        string    `json:"outcome"`     // go | no_go | reassess
+	ReassessmentOf *int      `json:"reassessment_of,omitempty"`
+	CreatedBy      *int      `json:"created_by,omitempty"`
+	CreatedAt      time.Time `json:"created_at"`
+}
+
+// P3MBenefitMeasurement is one scheduled or completed measurement point for a
+// benefit (BEN-007); the scheduler reminds on DueDate while incomplete.
+type P3MBenefitMeasurement struct {
+	ID          int        `json:"id"`
+	BenefitID   int        `json:"benefit_id"`
+	DueDate     string     `json:"due_date"` // YYYY-MM-DD
+	CompletedAt *time.Time `json:"completed_at,omitempty"`
+	Value       *float64   `json:"value,omitempty"`
+	Evidence    *string    `json:"evidence,omitempty"`
+	RecordedBy  *int       `json:"recorded_by,omitempty"`
+	CreatedAt   time.Time  `json:"created_at"`
+}
+
+// P3MReportSnapshot is one point-in-time RAG report capture (RPT-005/006);
+// Metrics and SuggestedCategoryRags are computed server-side at capture.
+type P3MReportSnapshot struct {
+	ID                    int       `json:"id"`
+	EntityType            string    `json:"entity_type"` // project | programme | portfolio
+	EntityID              int       `json:"entity_id"`
+	Period                string    `json:"period"`      // e.g. "2026-11" or a date
+	OverallRAG            string    `json:"overall_rag"` // green | amber | red
+	CategoryRags          *string   `json:"category_rags,omitempty"`           // JSON {schedule,budget,scope,risk,benefits,change}
+	SuggestedCategoryRags *string   `json:"suggested_category_rags,omitempty"` // tolerance-computed (RPT-007)
+	RAGOverrideReasons    *string   `json:"rag_override_reasons,omitempty"`    // JSON {category: reason} where manual differs from suggested
+	Commentary            *string   `json:"commentary,omitempty"`
+	Escalations           *string   `json:"escalations,omitempty"` // JSON [string]
+	Metrics               *string   `json:"metrics,omitempty"`     // auto-captured at capture time
+	CapturedBy            *int      `json:"captured_by,omitempty"`
+	CapturedAt            time.Time `json:"captured_at"`
+}
+
+// P3MToleranceProfile defines the RAG tolerances for a portfolio or project
+// (RPT-007); EntityID is the portfolio or project id per Scope.
+type P3MToleranceProfile struct {
+	ID           int       `json:"id"`
+	Scope        string    `json:"scope"` // portfolio | project
+	EntityID     int       `json:"entity_id"`
+	ScheduleDays int       `json:"schedule_days"`
+	BudgetPct    float64   `json:"budget_pct"`
+	RiskScore    int       `json:"risk_score"` // 1..5: amber at this score or above
+	UpdatedAt    time.Time `json:"updated_at"`
+}
+
+// P3MScoringCriterion is one portfolio prioritisation criterion (PO-003).
+type P3MScoringCriterion struct {
+	ID          int       `json:"id"`
+	Name        string    `json:"name"`
+	Weight      float64   `json:"weight"` // >= 0; composite = sum(weight*score)/sum(weight)
+	Direction   string    `json:"direction"` // higher_better | lower_better
+	Description *string   `json:"description,omitempty"`
+	Enabled     bool      `json:"enabled"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+// P3MInvestmentCaseScore is one 1-5 score of an investment case against a
+// criterion (PO-003); changes are audit-emitted for PO-008 history.
+type P3MInvestmentCaseScore struct {
+	ID          int       `json:"id"`
+	ICID        int       `json:"ic_id"`
+	CriterionID int       `json:"criterion_id"`
+	Score       float64   `json:"score"` // 1..5
+	Rationale   *string   `json:"rationale,omitempty"`
+	ScoredBy    *int      `json:"scored_by,omitempty"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+// P3MFinanceAlertRule is one financial exception rule (FIN-009) evaluated on
+// each finance sync run and the nightly tick.
+type P3MFinanceAlertRule struct {
+	ID          int       `json:"id"`
+	Name        string    `json:"name"`
+	Scope       string    `json:"scope"` // portfolio | project
+	PortfolioID *int      `json:"portfolio_id,omitempty"`
+	ProjectID   *int      `json:"project_id,omitempty"`
+	Metric      string    `json:"metric"`     // forecast_overrun_pct | variance_vs_budget | commitment_vs_remaining
+	Comparator  string    `json:"comparator"` // > | < | >= | <=
+	Threshold   float64   `json:"threshold"`
+	NotifyEmail *string   `json:"notify_email,omitempty"` // comma list; empty = no email
+	Enabled     bool      `json:"enabled"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+// P3MClosureRecord is the closure & handover record for a project (CLS-001);
+// OutstandingItems auto-populates from open RAID items at capture.
+type P3MClosureRecord struct {
+	ID                  int        `json:"id"`
+	ProjectID           int        `json:"project_id"`
+	ClosureReportPageID *string    `json:"closure_report_page_id,omitempty"`
+	AcceptanceSignoffBy *int       `json:"acceptance_signoff_by,omitempty"`
+	AcceptanceSignoffAt *time.Time `json:"acceptance_signoff_at,omitempty"`
+	OutstandingItems    *string    `json:"outstanding_items,omitempty"` // JSON [string]
+	LessonsLearned      *string    `json:"lessons_learned,omitempty"`
+	CostOwnership       *string    `json:"cost_ownership,omitempty"` // owner ref + ongoing cost ref
+	HandoverTo          *string    `json:"handover_to,omitempty"`   // user/team ref
+	Status              string     `json:"status"`                  // recommended | approved
+	CreatedAt           time.Time  `json:"created_at"`
+	UpdatedAt           time.Time  `json:"updated_at"`
 }

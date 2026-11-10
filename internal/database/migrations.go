@@ -3020,6 +3020,17 @@ var Catalog = []Migration{
 			// p3m.sql gained sms_stakeholder_id + index after this body shipped;
 			// existing databases get the column from 20261124_sms_sot_links.
 			"51960f8bb8e5e78e563debb4ab92a46a8dba951ba308b4c83bf7a822658f3656", // SQLite, pre sms_stakeholder_id
+			// Intermediate bodies shipped in 1501ec45..05e28159; each change's
+			// schema objects come from their own migrations.
+			"4c9cbb40476e4321392ff7b19365fa26192e955c1a1957d6237e4994c105b0aa", // SQLite, as of 1501ec45
+			"27b029c8151c8d3df6e401afc13758d9f73b418fd8ab2c8a3f8040268acafa59", // Postgres, as of 1501ec45
+			"4c3f9fe153f3af6d0f046164b24fc70486aa627528e567e0abeed29074ee43f5", // Postgres, as of 0328dbf4
+			// p3m.sql/p3m_postgres.sql gained p3m_investment_cases in 05e28159;
+			// existing databases get the table from 20261107_p3m_investment_cases.
+			"2d8f88c5d161b6514de578143da916b0e2eed04ead92c6308d00c52b168f0e0b", // SQLite, pre p3m_investment_cases
+			"32809ae921038f2589c17c233988525d870d9fa3ea68e17624a0bbb70e97399e", // Postgres, pre p3m_investment_cases
+			"367e1e277143099390b731befaf4094d6cf7d2c512d52889ab4739425ec9bf3f", // SQLite, as of 05e28159
+			"e7578ef2a4baeb2c34c913d422890feb83c20eee05a4cc99ce6467d1bbd25887", // Postgres, as of 05e28159
 		},
 		// Reuses the embedded fresh-install DDL (idempotent CREATE ... IF NOT
 		// EXISTS) plus the p3m.view permission seed for pre-existing databases.
@@ -3586,6 +3597,791 @@ var Catalog = []Migration{
 				created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
 				updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 			);
+		`,
+	},
+	{
+		Version:       "20261109_p3m_configurable_lifecycle",
+		Name:          "Replace hard-coded P3M stages with admin-configurable lifecycle, gate templates and proportional skips",
+		CheckSQLite:   `SELECT (SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='p3m_lifecycle_stages') * (SELECT COUNT(*) FROM pragma_table_info('p3m_projects') WHERE name='work_type')`,
+		CheckPostgres: `SELECT (SELECT COUNT(*) FROM information_schema.tables WHERE table_name='p3m_lifecycle_stages') * (SELECT COUNT(*) FROM information_schema.columns WHERE table_name='p3m_projects' AND column_name='work_type')`,
+		// SQLite cannot drop the legacy stage CHECK constraints without full
+		// rebuilds of p3m_projects and p3m_stage_gate_reviews, so the body runs
+		// as an Apply function that toggles foreign_keys outside its
+		// transaction (same pattern as applySQLiteSRMBusinessID).
+		SQLite:      "applySQLiteP3MConfigurableLifecycle:v1",
+		ApplySQLite: applySQLiteP3MConfigurableLifecycle,
+		Postgres: `
+			-- Drop the legacy stage CHECKs before remapping values into them.
+			ALTER TABLE p3m_projects DROP CONSTRAINT IF EXISTS p3m_projects_current_stage_check;
+			ALTER TABLE p3m_stage_gate_reviews DROP CONSTRAINT IF EXISTS p3m_stage_gate_reviews_from_stage_check;
+			ALTER TABLE p3m_stage_gate_reviews DROP CONSTRAINT IF EXISTS p3m_stage_gate_reviews_to_stage_check;
+			-- Remap legacy stage values to the proportional lifecycle keys.
+			UPDATE p3m_projects SET current_stage = CASE current_stage WHEN 'initiation' THEN 'front_door' WHEN 'planning' THEN 'proposal' WHEN 'execution' THEN 'implement_deliver' WHEN 'closure' THEN 'close' ELSE current_stage END;
+			UPDATE p3m_stage_gate_reviews SET from_stage = CASE from_stage WHEN 'initiation' THEN 'front_door' WHEN 'planning' THEN 'proposal' WHEN 'execution' THEN 'implement_deliver' WHEN 'closure' THEN 'close' ELSE from_stage END;
+			UPDATE p3m_stage_gate_reviews SET to_stage = CASE to_stage WHEN 'initiation' THEN 'front_door' WHEN 'planning' THEN 'proposal' WHEN 'execution' THEN 'implement_deliver' WHEN 'closure' THEN 'close' ELSE to_stage END;
+			CREATE TABLE IF NOT EXISTS p3m_lifecycle_stages (
+				id SERIAL PRIMARY KEY,
+				stage_key TEXT NOT NULL UNIQUE,
+				name TEXT NOT NULL,
+				description TEXT DEFAULT '',
+				sort_order INTEGER NOT NULL UNIQUE,
+				is_entry INTEGER NOT NULL DEFAULT 0,
+				is_exit INTEGER NOT NULL DEFAULT 0,
+				gate_required INTEGER NOT NULL DEFAULT 1,
+				skippable INTEGER NOT NULL DEFAULT 1,
+				enabled INTEGER NOT NULL DEFAULT 1,
+				created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+				updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE TABLE IF NOT EXISTS p3m_stage_gate_templates (
+				id SERIAL PRIMARY KEY,
+				name TEXT NOT NULL,
+				from_stage_key TEXT,
+				to_stage_key TEXT NOT NULL REFERENCES p3m_lifecycle_stages(stage_key) ON DELETE RESTRICT,
+				mandatory INTEGER NOT NULL DEFAULT 1,
+				work_type TEXT,
+				required_artifacts TEXT DEFAULT '[]',
+				description TEXT DEFAULT '',
+				enabled INTEGER NOT NULL DEFAULT 1,
+				created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+				updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE INDEX IF NOT EXISTS idx_p3m_gate_templates_to ON p3m_stage_gate_templates(to_stage_key, enabled);
+			ALTER TABLE p3m_projects ADD COLUMN IF NOT EXISTS work_type TEXT;
+			ALTER TABLE p3m_projects ADD COLUMN IF NOT EXISTS external_ref TEXT;
+			CREATE UNIQUE INDEX IF NOT EXISTS uq_p3m_projects_external_ref ON p3m_projects(external_ref);
+			ALTER TABLE p3m_projects ALTER COLUMN current_stage SET DEFAULT 'front_door';
+			ALTER TABLE p3m_stage_gate_reviews ADD COLUMN IF NOT EXISTS template_id INTEGER REFERENCES p3m_stage_gate_templates(id) ON DELETE SET NULL;
+			CREATE TABLE IF NOT EXISTS p3m_project_stage_skips (
+				id SERIAL PRIMARY KEY,
+				project_id INTEGER NOT NULL REFERENCES p3m_projects(id) ON DELETE CASCADE,
+				stage_key TEXT NOT NULL REFERENCES p3m_lifecycle_stages(stage_key) ON DELETE RESTRICT,
+				reason TEXT NOT NULL,
+				decided_by INTEGER NOT NULL,
+				decided_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+				UNIQUE(project_id, stage_key)
+			);
+			CREATE INDEX IF NOT EXISTS idx_p3m_stage_skips_project ON p3m_project_stage_skips(project_id);
+			INSERT INTO p3m_lifecycle_stages (stage_key, name, description, sort_order, is_entry, is_exit, gate_required, skippable, enabled) VALUES
+				('front_door', 'Idea / Front Door', 'Intake and initial assessment of the idea or request.', 0, 1, 0, 0, 0, 1),
+				('proposal', 'Proposal', 'Business proposal with indicative cost and strategic alignment.', 1, 0, 0, 1, 1, 1),
+				('define_planning', 'Define / Planning', 'Detailed definition, planning and baseline approval.', 2, 0, 0, 1, 0, 1),
+				('implement_deliver', 'Implement / Deliver & Monitor', 'Delivery execution with monitoring against the baseline.', 3, 0, 0, 1, 0, 1),
+				('close', 'Close', 'Delivery acceptance and financial close-out.', 4, 0, 0, 1, 0, 1),
+				('benefits_realisation', 'Benefits Realisation', 'Post-implementation review and benefit tracking to target.', 5, 0, 1, 1, 1, 1)
+			ON CONFLICT (stage_key) DO NOTHING;
+			INSERT INTO p3m_stage_gate_templates (name, from_stage_key, to_stage_key, mandatory, work_type, required_artifacts, description)
+			SELECT 'Front Door assessment', 'front_door', 'proposal', 1, NULL, '[{"name":"Classification","required":true},{"name":"Initial assessment","required":true}]', 'Mandatory intake gate: classify the idea and record the initial assessment.'
+			WHERE NOT EXISTS (SELECT 1 FROM p3m_stage_gate_templates WHERE name = 'Front Door assessment' AND from_stage_key IS 'front_door' AND to_stage_key = 'proposal');
+			INSERT INTO p3m_stage_gate_templates (name, from_stage_key, to_stage_key, mandatory, work_type, required_artifacts, description)
+			SELECT 'Governance go/no-go', 'proposal', 'define_planning', 1, NULL, '[{"name":"Governance go/no-go decision","required":true},{"name":"Financial endorsement","required":true}]', 'Governance go/no-go with financial endorsement before detailed planning.'
+			WHERE NOT EXISTS (SELECT 1 FROM p3m_stage_gate_templates WHERE name = 'Governance go/no-go' AND from_stage_key IS 'proposal' AND to_stage_key = 'define_planning');
+			INSERT INTO p3m_stage_gate_templates (name, from_stage_key, to_stage_key, mandatory, work_type, required_artifacts, description)
+			SELECT 'Baseline & sponsor approval', 'define_planning', 'implement_deliver', 1, NULL, '[{"name":"Approved baseline","required":true},{"name":"Sponsor approval","required":true}]', 'Baseline (scope/schedule/cost) approved by the sponsor before delivery starts.'
+			WHERE NOT EXISTS (SELECT 1 FROM p3m_stage_gate_templates WHERE name = 'Baseline & sponsor approval' AND from_stage_key IS 'define_planning' AND to_stage_key = 'implement_deliver');
+			INSERT INTO p3m_stage_gate_templates (name, from_stage_key, to_stage_key, mandatory, work_type, required_artifacts, description)
+			SELECT 'Delivery acceptance & financial close-out', 'implement_deliver', 'close', 1, NULL, '[{"name":"Delivery acceptance","required":true},{"name":"Financial close-out","required":true}]', 'Delivered scope accepted and finances closed out before closure.'
+			WHERE NOT EXISTS (SELECT 1 FROM p3m_stage_gate_templates WHERE name = 'Delivery acceptance & financial close-out' AND from_stage_key IS 'implement_deliver' AND to_stage_key = 'close');
+			INSERT INTO p3m_stage_gate_templates (name, from_stage_key, to_stage_key, mandatory, work_type, required_artifacts, description)
+			SELECT 'Post-implementation review (PIR)', 'close', 'benefits_realisation', 1, NULL, '[{"name":"PIR report","required":true}]', 'Mandatory-but-skippable PIR gate into benefits realisation; projects may remain at Close when the skip is recorded.'
+			WHERE NOT EXISTS (SELECT 1 FROM p3m_stage_gate_templates WHERE name = 'Post-implementation review (PIR)' AND from_stage_key IS 'close' AND to_stage_key = 'benefits_realisation');
+			INSERT INTO p3m_stage_gate_templates (name, from_stage_key, to_stage_key, mandatory, work_type, required_artifacts, description)
+			SELECT 'Return for information', 'proposal', 'front_door', 0, NULL, '[]', 'Optional return-to-intake path when a proposal needs more information.'
+			WHERE NOT EXISTS (SELECT 1 FROM p3m_stage_gate_templates WHERE name = 'Return for information' AND from_stage_key IS 'proposal' AND to_stage_key IS 'front_door');
+		`,
+	},
+	{
+		Version:       "20261110_p3m_financial_fields",
+		Name:          "Add P3M financial record fields and close-out records (FIN-002/006/010)",
+		CheckSQLite:   `SELECT (SELECT COUNT(*) FROM pragma_table_info('p3m_projects') WHERE name='funding_source') * (SELECT COUNT(*) FROM pragma_table_info('p3m_budget_tranches') WHERE name='expenditure_class') * (SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='p3m_financial_close_outs')`,
+		CheckPostgres: `SELECT (SELECT COUNT(*) FROM information_schema.columns WHERE table_name='p3m_projects' AND column_name='funding_source') * (SELECT COUNT(*) FROM information_schema.columns WHERE table_name='p3m_budget_tranches' AND column_name='expenditure_class') * (SELECT COUNT(*) FROM information_schema.tables WHERE table_name='p3m_financial_close_outs')`,
+		SQLite: `
+			ALTER TABLE p3m_projects ADD COLUMN funding_source TEXT;
+			ALTER TABLE p3m_projects ADD COLUMN contingency REAL NOT NULL DEFAULT 0;
+			-- SQLite's ALTER cannot attach a CHECK to the added column, so the
+			-- one_off|ongoing domain is enforced in the handlers.
+			ALTER TABLE p3m_budget_tranches ADD COLUMN expenditure_class TEXT;
+			CREATE TABLE IF NOT EXISTS p3m_financial_close_outs (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				project_id INTEGER NOT NULL UNIQUE REFERENCES p3m_projects(id) ON DELETE CASCADE,
+				final_budget REAL NOT NULL DEFAULT 0,
+				actual_to_date REAL NOT NULL DEFAULT 0,
+				outstanding_commitments REAL NOT NULL DEFAULT 0,
+				ongoing_obligations TEXT DEFAULT '',
+				finance_reviewer_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'validated')),
+				notes TEXT DEFAULT '',
+				closed_at DATETIME,
+				created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+				updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+			);
+		`,
+		Postgres: `
+			ALTER TABLE p3m_projects ADD COLUMN IF NOT EXISTS funding_source TEXT;
+			ALTER TABLE p3m_projects ADD COLUMN IF NOT EXISTS contingency REAL NOT NULL DEFAULT 0;
+			ALTER TABLE p3m_budget_tranches ADD COLUMN IF NOT EXISTS expenditure_class TEXT CHECK (expenditure_class IN ('one_off', 'ongoing'));
+			CREATE TABLE IF NOT EXISTS p3m_financial_close_outs (
+				id SERIAL PRIMARY KEY,
+				project_id INTEGER NOT NULL UNIQUE REFERENCES p3m_projects(id) ON DELETE CASCADE,
+				final_budget REAL NOT NULL DEFAULT 0,
+				actual_to_date REAL NOT NULL DEFAULT 0,
+				outstanding_commitments REAL NOT NULL DEFAULT 0,
+				ongoing_obligations TEXT DEFAULT '',
+				finance_reviewer_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'validated')),
+				notes TEXT DEFAULT '',
+				closed_at TIMESTAMPTZ,
+				created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+				updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+			);
+		`,
+	},
+	{
+		Version:       "20261111_p3m_front_door",
+		Name:          "Add P3M Front Door intake pack (FD-001..005, FD-008/010/011)",
+		CheckSQLite:   `SELECT (SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='p3m_intakes') * (SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='p3m_front_door_screens')`,
+		CheckPostgres: `SELECT (SELECT COUNT(*) FROM information_schema.tables WHERE table_name='p3m_intakes') * (SELECT COUNT(*) FROM information_schema.tables WHERE table_name='p3m_front_door_screens')`,
+		SQLite: `
+			CREATE TABLE IF NOT EXISTS p3m_intakes (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				title TEXT NOT NULL,
+				source TEXT NOT NULL DEFAULT 'standard',
+				description TEXT NOT NULL DEFAULT '',
+				problem_opportunity TEXT NOT NULL DEFAULT '',
+				strategic_alignment TEXT NOT NULL DEFAULT '',
+				intended_outcomes TEXT NOT NULL DEFAULT '',
+				indicative_cost REAL,
+				resource_requirements TEXT NOT NULL DEFAULT '',
+				risk_notes TEXT NOT NULL DEFAULT '',
+				change_impact_notes TEXT NOT NULL DEFAULT '',
+				business_group TEXT NOT NULL DEFAULT '',
+				work_type TEXT,
+				complexity TEXT NOT NULL DEFAULT 'med' CHECK (complexity IN ('low', 'med', 'high')),
+				status TEXT NOT NULL DEFAULT 'captured' CHECK (status IN ('captured', 'assessing', 'decided')),
+				decision TEXT CHECK (decision IS NULL OR decision IN ('proceed', 'redirect', 'defer', 'decline', 'return_info')),
+				decided_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				decision_date DATETIME,
+				conditions TEXT NOT NULL DEFAULT '',
+				rationale TEXT NOT NULL DEFAULT '',
+				target_project_id INTEGER REFERENCES p3m_projects(id) ON DELETE SET NULL,
+				lifecycle_position TEXT,
+				created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				created_at DATETIME NOT NULL,
+				updated_at DATETIME NOT NULL
+			);
+			CREATE INDEX IF NOT EXISTS idx_p3m_intakes_status ON p3m_intakes(status);
+			CREATE TABLE IF NOT EXISTS p3m_front_door_screens (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				complexity TEXT NOT NULL CHECK (complexity IN ('low', 'med', 'high')),
+				field_key TEXT NOT NULL,
+				required INTEGER NOT NULL DEFAULT 0,
+				UNIQUE (complexity, field_key)
+			);
+			INSERT OR IGNORE INTO p3m_front_door_screens (complexity, field_key, required) VALUES
+				('low', 'title', 1), ('low', 'source', 1), ('low', 'description', 1),
+				('low', 'problem_opportunity', 1), ('low', 'strategic_alignment', 1),
+				('low', 'intended_outcomes', 1), ('low', 'work_type', 1), ('low', 'business_group', 1),
+				('med', 'title', 1), ('med', 'source', 1), ('med', 'description', 1),
+				('med', 'problem_opportunity', 1), ('med', 'strategic_alignment', 1),
+				('med', 'intended_outcomes', 1), ('med', 'work_type', 1), ('med', 'business_group', 1),
+				('med', 'resource_requirements', 1), ('med', 'risk_notes', 1),
+				('high', 'title', 1), ('high', 'source', 1), ('high', 'description', 1),
+				('high', 'problem_opportunity', 1), ('high', 'strategic_alignment', 1),
+				('high', 'intended_outcomes', 1), ('high', 'work_type', 1), ('high', 'business_group', 1),
+				('high', 'resource_requirements', 1), ('high', 'risk_notes', 1),
+				('high', 'change_impact_notes', 1), ('high', 'indicative_cost', 1);
+		`,
+		Postgres: `
+			CREATE TABLE IF NOT EXISTS p3m_intakes (
+				id SERIAL PRIMARY KEY,
+				title TEXT NOT NULL,
+				source TEXT NOT NULL DEFAULT 'standard',
+				description TEXT NOT NULL DEFAULT '',
+				problem_opportunity TEXT NOT NULL DEFAULT '',
+				strategic_alignment TEXT NOT NULL DEFAULT '',
+				intended_outcomes TEXT NOT NULL DEFAULT '',
+				indicative_cost REAL,
+				resource_requirements TEXT NOT NULL DEFAULT '',
+				risk_notes TEXT NOT NULL DEFAULT '',
+				change_impact_notes TEXT NOT NULL DEFAULT '',
+				business_group TEXT NOT NULL DEFAULT '',
+				work_type TEXT,
+				complexity TEXT NOT NULL DEFAULT 'med' CHECK (complexity IN ('low', 'med', 'high')),
+				status TEXT NOT NULL DEFAULT 'captured' CHECK (status IN ('captured', 'assessing', 'decided')),
+				decision TEXT CHECK (decision IS NULL OR decision IN ('proceed', 'redirect', 'defer', 'decline', 'return_info')),
+				decided_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				decision_date TIMESTAMPTZ,
+				conditions TEXT NOT NULL DEFAULT '',
+				rationale TEXT NOT NULL DEFAULT '',
+				target_project_id INTEGER REFERENCES p3m_projects(id) ON DELETE SET NULL,
+				lifecycle_position TEXT,
+				created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+				updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE INDEX IF NOT EXISTS idx_p3m_intakes_status ON p3m_intakes(status);
+			CREATE TABLE IF NOT EXISTS p3m_front_door_screens (
+				id SERIAL PRIMARY KEY,
+				complexity TEXT NOT NULL CHECK (complexity IN ('low', 'med', 'high')),
+				field_key TEXT NOT NULL,
+				required BOOLEAN NOT NULL DEFAULT false,
+				UNIQUE (complexity, field_key)
+			);
+			INSERT INTO p3m_front_door_screens (complexity, field_key, required) VALUES
+				('low', 'title', true), ('low', 'source', true), ('low', 'description', true),
+				('low', 'problem_opportunity', true), ('low', 'strategic_alignment', true),
+				('low', 'intended_outcomes', true), ('low', 'work_type', true), ('low', 'business_group', true),
+				('med', 'title', true), ('med', 'source', true), ('med', 'description', true),
+				('med', 'problem_opportunity', true), ('med', 'strategic_alignment', true),
+				('med', 'intended_outcomes', true), ('med', 'work_type', true), ('med', 'business_group', true),
+				('med', 'resource_requirements', true), ('med', 'risk_notes', true),
+				('high', 'title', true), ('high', 'source', true), ('high', 'description', true),
+				('high', 'problem_opportunity', true), ('high', 'strategic_alignment', true),
+				('high', 'intended_outcomes', true), ('high', 'work_type', true), ('high', 'business_group', true),
+				('high', 'resource_requirements', true), ('high', 'risk_notes', true),
+			('high', 'change_impact_notes', true), ('high', 'indicative_cost', true)
+		ON CONFLICT (complexity, field_key) DO NOTHING;
+	`,
+	},
+	{
+		Version:       "20261112_p3m_finance_sync",
+		Name:          "Add P3M financial system sync tables (FIN-007)",
+		CheckSQLite:   `SELECT (SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='p3m_finance_sync_configs') * (SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='p3m_finance_actuals') * (SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='p3m_finance_sync_runs') * (SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='p3m_finance_sync_rejections')`,
+		CheckPostgres: `SELECT (SELECT COUNT(*) FROM information_schema.tables WHERE table_name='p3m_finance_sync_configs') * (SELECT COUNT(*) FROM information_schema.tables WHERE table_name='p3m_finance_actuals') * (SELECT COUNT(*) FROM information_schema.tables WHERE table_name='p3m_finance_sync_runs') * (SELECT COUNT(*) FROM information_schema.tables WHERE table_name='p3m_finance_sync_rejections')`,
+		SQLite: `
+			CREATE TABLE IF NOT EXISTS p3m_finance_sync_configs (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				name TEXT NOT NULL,
+				enabled INTEGER NOT NULL DEFAULT 1,
+				source_type TEXT NOT NULL CHECK (source_type IN ('file_path', 's3')),
+				source_ref TEXT NOT NULL,
+				schedule_minutes INTEGER NOT NULL DEFAULT 60,
+				period_format TEXT NOT NULL DEFAULT 'yyyy-mm',
+				default_currency TEXT NOT NULL DEFAULT 'NZD',
+				match_mode TEXT NOT NULL DEFAULT 'ref_then_title' CHECK (match_mode IN ('ref_only', 'ref_then_title')),
+				last_run_at DATETIME,
+				last_run_status TEXT,
+				last_file_hash TEXT,
+				created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				updated_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+				updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE INDEX IF NOT EXISTS idx_p3m_fin_sync_configs_enabled ON p3m_finance_sync_configs(enabled);
+			CREATE TABLE IF NOT EXISTS p3m_finance_sync_runs (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				config_id INTEGER NOT NULL REFERENCES p3m_finance_sync_configs(id) ON DELETE CASCADE,
+				trigger TEXT NOT NULL CHECK (trigger IN ('schedule', 'manual', 'upload')),
+				started_at DATETIME NOT NULL,
+				completed_at DATETIME,
+				status TEXT NOT NULL DEFAULT 'running' CHECK (status IN ('running', 'success', 'partial', 'failed')),
+				file_hash TEXT,
+				rows_total INTEGER NOT NULL DEFAULT 0,
+				rows_matched INTEGER NOT NULL DEFAULT 0,
+				rows_unmatched INTEGER NOT NULL DEFAULT 0,
+				rows_failed INTEGER NOT NULL DEFAULT 0,
+				error_summary TEXT
+			);
+			CREATE INDEX IF NOT EXISTS idx_p3m_fin_runs_config ON p3m_finance_sync_runs(config_id, started_at DESC);
+			CREATE TABLE IF NOT EXISTS p3m_finance_actuals (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				config_id INTEGER NOT NULL REFERENCES p3m_finance_sync_configs(id) ON DELETE CASCADE,
+				run_id INTEGER REFERENCES p3m_finance_sync_runs(id) ON DELETE SET NULL,
+				project_id INTEGER REFERENCES p3m_projects(id) ON DELETE SET NULL,
+				external_ref TEXT NOT NULL,
+				cost_center TEXT,
+				work_order TEXT,
+				period TEXT NOT NULL,
+				line_type TEXT NOT NULL CHECK (line_type IN ('actual', 'commitment', 'forecast')),
+				amount REAL NOT NULL,
+				currency TEXT NOT NULL DEFAULT 'NZD',
+				description TEXT,
+				match_status TEXT NOT NULL DEFAULT 'unmatched' CHECK (match_status IN ('matched', 'unmatched', 'rejected')),
+				raw_row TEXT,
+				imported_at DATETIME DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE INDEX IF NOT EXISTS idx_p3m_fin_actuals_proj_period ON p3m_finance_actuals(project_id, period, line_type);
+			CREATE INDEX IF NOT EXISTS idx_p3m_fin_actuals_ref ON p3m_finance_actuals(external_ref, period);
+			CREATE INDEX IF NOT EXISTS idx_p3m_fin_actuals_unmatched ON p3m_finance_actuals(match_status) WHERE match_status = 'unmatched';
+			CREATE INDEX IF NOT EXISTS idx_p3m_fin_actuals_run ON p3m_finance_actuals(run_id);
+			CREATE TABLE IF NOT EXISTS p3m_finance_sync_rejections (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				external_ref TEXT NOT NULL,
+				period TEXT NOT NULL,
+				line_type TEXT NOT NULL CHECK (line_type IN ('actual', 'commitment', 'forecast')),
+				reason TEXT NOT NULL,
+				rejected_by INTEGER NOT NULL,
+				created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE UNIQUE INDEX IF NOT EXISTS uq_p3m_fin_rejections ON p3m_finance_sync_rejections(external_ref, period, line_type);
+		`,
+		Postgres: `
+			CREATE TABLE IF NOT EXISTS p3m_finance_sync_configs (
+				id SERIAL PRIMARY KEY,
+				name TEXT NOT NULL,
+				enabled BOOLEAN NOT NULL DEFAULT TRUE,
+				source_type TEXT NOT NULL CHECK (source_type IN ('file_path', 's3')),
+				source_ref TEXT NOT NULL,
+				schedule_minutes INTEGER NOT NULL DEFAULT 60,
+				period_format TEXT NOT NULL DEFAULT 'yyyy-mm',
+				default_currency TEXT NOT NULL DEFAULT 'NZD',
+				match_mode TEXT NOT NULL DEFAULT 'ref_then_title' CHECK (match_mode IN ('ref_only', 'ref_then_title')),
+				last_run_at TIMESTAMPTZ,
+				last_run_status TEXT,
+				last_file_hash TEXT,
+				created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				updated_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+				updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE INDEX IF NOT EXISTS idx_p3m_fin_sync_configs_enabled ON p3m_finance_sync_configs(enabled);
+			CREATE TABLE IF NOT EXISTS p3m_finance_sync_runs (
+				id SERIAL PRIMARY KEY,
+				config_id INTEGER NOT NULL REFERENCES p3m_finance_sync_configs(id) ON DELETE CASCADE,
+				trigger TEXT NOT NULL CHECK (trigger IN ('schedule', 'manual', 'upload')),
+				started_at TIMESTAMPTZ NOT NULL,
+				completed_at TIMESTAMPTZ,
+				status TEXT NOT NULL DEFAULT 'running' CHECK (status IN ('running', 'success', 'partial', 'failed')),
+				file_hash TEXT,
+				rows_total INTEGER NOT NULL DEFAULT 0,
+				rows_matched INTEGER NOT NULL DEFAULT 0,
+				rows_unmatched INTEGER NOT NULL DEFAULT 0,
+				rows_failed INTEGER NOT NULL DEFAULT 0,
+				error_summary TEXT
+			);
+			CREATE INDEX IF NOT EXISTS idx_p3m_fin_runs_config ON p3m_finance_sync_runs(config_id, started_at DESC);
+			CREATE TABLE IF NOT EXISTS p3m_finance_actuals (
+				id SERIAL PRIMARY KEY,
+				config_id INTEGER NOT NULL REFERENCES p3m_finance_sync_configs(id) ON DELETE CASCADE,
+				run_id INTEGER REFERENCES p3m_finance_sync_runs(id) ON DELETE SET NULL,
+				project_id INTEGER REFERENCES p3m_projects(id) ON DELETE SET NULL,
+				external_ref TEXT NOT NULL,
+				cost_center TEXT,
+				work_order TEXT,
+				period TEXT NOT NULL,
+				line_type TEXT NOT NULL CHECK (line_type IN ('actual', 'commitment', 'forecast')),
+				amount REAL NOT NULL,
+				currency TEXT NOT NULL DEFAULT 'NZD',
+				description TEXT,
+				match_status TEXT NOT NULL DEFAULT 'unmatched' CHECK (match_status IN ('matched', 'unmatched', 'rejected')),
+				raw_row TEXT,
+				imported_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE INDEX IF NOT EXISTS idx_p3m_fin_actuals_proj_period ON p3m_finance_actuals(project_id, period, line_type);
+			CREATE INDEX IF NOT EXISTS idx_p3m_fin_actuals_ref ON p3m_finance_actuals(external_ref, period);
+			CREATE INDEX IF NOT EXISTS idx_p3m_fin_actuals_unmatched ON p3m_finance_actuals(match_status) WHERE match_status = 'unmatched';
+			CREATE INDEX IF NOT EXISTS idx_p3m_fin_actuals_run ON p3m_finance_actuals(run_id);
+			CREATE TABLE IF NOT EXISTS p3m_finance_sync_rejections (
+				id SERIAL PRIMARY KEY,
+				external_ref TEXT NOT NULL,
+				period TEXT NOT NULL,
+				line_type TEXT NOT NULL CHECK (line_type IN ('actual', 'commitment', 'forecast')),
+				reason TEXT NOT NULL,
+				rejected_by INTEGER NOT NULL,
+				created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE UNIQUE INDEX IF NOT EXISTS uq_p3m_fin_rejections ON p3m_finance_sync_rejections(external_ref, period, line_type);
+		`,
+	},
+	{
+		Version:       "20261113_p3m_change_calendar",
+		Name:          "Add P3M change calendar entries (CHG-008/009)",
+		CheckSQLite:   `SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='p3m_change_calendar_entries'`,
+		CheckPostgres: `SELECT COUNT(*) FROM information_schema.tables WHERE table_name='p3m_change_calendar_entries'`,
+		SQLite: `
+			CREATE TABLE IF NOT EXISTS p3m_change_calendar_entries (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				entity_type TEXT CHECK (entity_type IN ('portfolio', 'programme', 'project')),
+				entity_id INTEGER,
+				activity TEXT NOT NULL,
+				business_unit TEXT,
+				start_week TEXT NOT NULL,
+				end_week TEXT NOT NULL,
+				impact_level INTEGER NOT NULL DEFAULT 3 CHECK (impact_level BETWEEN 1 AND 5),
+				source TEXT NOT NULL DEFAULT 'local' CHECK (source IN ('corporate_project', 'corporate_activity', 'bau', 'local')),
+				notes TEXT,
+				created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+				updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE INDEX IF NOT EXISTS idx_p3m_change_cal_weeks ON p3m_change_calendar_entries(start_week, end_week);
+			CREATE INDEX IF NOT EXISTS idx_p3m_change_cal_bu ON p3m_change_calendar_entries(business_unit);
+		`,
+		Postgres: `
+			CREATE TABLE IF NOT EXISTS p3m_change_calendar_entries (
+				id SERIAL PRIMARY KEY,
+				entity_type TEXT CHECK (entity_type IN ('portfolio', 'programme', 'project')),
+				entity_id INTEGER,
+				activity TEXT NOT NULL,
+				business_unit TEXT,
+				start_week TEXT NOT NULL,
+				end_week TEXT NOT NULL,
+				impact_level INTEGER NOT NULL DEFAULT 3 CHECK (impact_level BETWEEN 1 AND 5),
+				source TEXT NOT NULL DEFAULT 'local' CHECK (source IN ('corporate_project', 'corporate_activity', 'bau', 'local')),
+				notes TEXT,
+				created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+				updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE INDEX IF NOT EXISTS idx_p3m_change_cal_weeks ON p3m_change_calendar_entries(start_week, end_week);
+			CREATE INDEX IF NOT EXISTS idx_p3m_change_cal_bu ON p3m_change_calendar_entries(business_unit);
+		`,
+	},
+	{
+		Version:       "20261114_p3m_change_readiness",
+		Name:          "Add P3M change impact and readiness assessments (CHG-002/003/004/006)",
+		CheckSQLite:   `SELECT (SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='p3m_change_assessments') * (SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='p3m_readiness_assessments')`,
+		CheckPostgres: `SELECT (SELECT COUNT(*) FROM information_schema.tables WHERE table_name='p3m_change_assessments') * (SELECT COUNT(*) FROM information_schema.tables WHERE table_name='p3m_readiness_assessments')`,
+		SQLite: `
+			CREATE TABLE IF NOT EXISTS p3m_change_assessments (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				entity_type TEXT NOT NULL CHECK (entity_type IN ('project', 'programme')),
+				entity_id INTEGER NOT NULL,
+				impacted_groups TEXT,
+				impact_by_characteristic TEXT,
+				overall_rating INTEGER NOT NULL DEFAULT 3 CHECK (overall_rating BETWEEN 1 AND 5),
+				support_level TEXT NOT NULL DEFAULT 'none' CHECK (support_level IN ('none', 'light', 'full')),
+				approach TEXT,
+				deliverables TEXT,
+				created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+				updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE UNIQUE INDEX IF NOT EXISTS uq_p3m_change_assessments ON p3m_change_assessments(entity_type, entity_id);
+			CREATE TABLE IF NOT EXISTS p3m_readiness_assessments (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				entity_type TEXT NOT NULL CHECK (entity_type IN ('project', 'programme')),
+				entity_id INTEGER NOT NULL,
+				questions TEXT NOT NULL,
+				answers TEXT,
+				assessed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+				outcome TEXT NOT NULL CHECK (outcome IN ('go', 'no_go', 'reassess')),
+				reassessment_of INTEGER REFERENCES p3m_readiness_assessments(id) ON DELETE SET NULL,
+				created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE INDEX IF NOT EXISTS idx_p3m_readiness_entity ON p3m_readiness_assessments(entity_type, entity_id, assessed_at DESC);
+		`,
+		Postgres: `
+			CREATE TABLE IF NOT EXISTS p3m_change_assessments (
+				id SERIAL PRIMARY KEY,
+				entity_type TEXT NOT NULL CHECK (entity_type IN ('project', 'programme')),
+				entity_id INTEGER NOT NULL,
+				impacted_groups TEXT,
+				impact_by_characteristic TEXT,
+				overall_rating INTEGER NOT NULL DEFAULT 3 CHECK (overall_rating BETWEEN 1 AND 5),
+				support_level TEXT NOT NULL DEFAULT 'none' CHECK (support_level IN ('none', 'light', 'full')),
+				approach TEXT,
+				deliverables TEXT,
+				created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+				updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE UNIQUE INDEX IF NOT EXISTS uq_p3m_change_assessments ON p3m_change_assessments(entity_type, entity_id);
+			CREATE TABLE IF NOT EXISTS p3m_readiness_assessments (
+				id SERIAL PRIMARY KEY,
+				entity_type TEXT NOT NULL CHECK (entity_type IN ('project', 'programme')),
+				entity_id INTEGER NOT NULL,
+				questions TEXT NOT NULL,
+				answers TEXT,
+				assessed_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+				outcome TEXT NOT NULL CHECK (outcome IN ('go', 'no_go', 'reassess')),
+				reassessment_of INTEGER REFERENCES p3m_readiness_assessments(id) ON DELETE SET NULL,
+				created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE INDEX IF NOT EXISTS idx_p3m_readiness_entity ON p3m_readiness_assessments(entity_type, entity_id, assessed_at DESC);
+		`,
+	},
+	{
+		Version:       "20261115_p3m_benefits_profile",
+		Name:          "Add P3M benefit profile fields and measurement schedules (BEN-003/007/008/009)",
+		CheckSQLite:   `SELECT (SELECT COUNT(*) FROM pragma_table_info('p3m_benefits') WHERE name='measurement_method') * (SELECT COUNT(*) FROM pragma_table_info('p3m_benefits') WHERE name='status') * (SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='p3m_benefit_measurements')`,
+		CheckPostgres: `SELECT (SELECT COUNT(*) FROM information_schema.columns WHERE table_name='p3m_benefits' AND column_name='measurement_method') * (SELECT COUNT(*) FROM information_schema.columns WHERE table_name='p3m_benefits' AND column_name='status') * (SELECT COUNT(*) FROM information_schema.tables WHERE table_name='p3m_benefit_measurements')`,
+		SQLite: `
+			-- SQLite's ALTER cannot attach a CHECK to the added columns, so the
+			-- frequency/status/validation domains are enforced in the handlers.
+			ALTER TABLE p3m_benefits ADD COLUMN measurement_method TEXT;
+			ALTER TABLE p3m_benefits ADD COLUMN measurement_frequency TEXT;
+			ALTER TABLE p3m_benefits ADD COLUMN status TEXT NOT NULL DEFAULT 'planned';
+			ALTER TABLE p3m_benefits ADD COLUMN evidence TEXT;
+			ALTER TABLE p3m_benefits ADD COLUMN finance_validator_id INTEGER REFERENCES users(id) ON DELETE SET NULL;
+			ALTER TABLE p3m_benefits ADD COLUMN validation_status TEXT NOT NULL DEFAULT 'not_required';
+			ALTER TABLE p3m_benefits ADD COLUMN capability_ref TEXT;
+			CREATE TABLE IF NOT EXISTS p3m_benefit_measurements (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				benefit_id INTEGER NOT NULL REFERENCES p3m_benefits(id) ON DELETE CASCADE,
+				due_date DATE NOT NULL,
+				completed_at DATETIME,
+				value REAL,
+				evidence TEXT,
+				recorded_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE INDEX IF NOT EXISTS idx_p3m_benefit_measurements_due ON p3m_benefit_measurements(due_date) WHERE completed_at IS NULL;
+		`,
+		Postgres: `
+			ALTER TABLE p3m_benefits ADD COLUMN IF NOT EXISTS measurement_method TEXT;
+			ALTER TABLE p3m_benefits ADD COLUMN IF NOT EXISTS measurement_frequency TEXT CHECK (measurement_frequency IN ('monthly', 'quarterly', 'annual', 'one_off'));
+			ALTER TABLE p3m_benefits ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'planned' CHECK (status IN ('planned', 'measuring', 'realised', 'shortfall', 'retired'));
+			ALTER TABLE p3m_benefits ADD COLUMN IF NOT EXISTS evidence TEXT;
+			ALTER TABLE p3m_benefits ADD COLUMN IF NOT EXISTS finance_validator_id INTEGER REFERENCES users(id) ON DELETE SET NULL;
+			ALTER TABLE p3m_benefits ADD COLUMN IF NOT EXISTS validation_status TEXT NOT NULL DEFAULT 'not_required' CHECK (validation_status IN ('not_required', 'pending', 'validated'));
+			ALTER TABLE p3m_benefits ADD COLUMN IF NOT EXISTS capability_ref TEXT;
+			CREATE TABLE IF NOT EXISTS p3m_benefit_measurements (
+				id SERIAL PRIMARY KEY,
+				benefit_id INTEGER NOT NULL REFERENCES p3m_benefits(id) ON DELETE CASCADE,
+				due_date DATE NOT NULL,
+				completed_at TIMESTAMPTZ,
+				value REAL,
+				evidence TEXT,
+				recorded_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE INDEX IF NOT EXISTS idx_p3m_benefit_measurements_due ON p3m_benefit_measurements(due_date) WHERE completed_at IS NULL;
+		`,
+	},
+	{
+		Version:       "20261116_p3m_report_snapshots",
+		Name:          "Add P3M report snapshots and tolerance profiles (RPT-005/006/007/009)",
+		CheckSQLite:   `SELECT (SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='p3m_report_snapshots') * (SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='p3m_tolerance_profiles')`,
+		CheckPostgres: `SELECT (SELECT COUNT(*) FROM information_schema.tables WHERE table_name='p3m_report_snapshots') * (SELECT COUNT(*) FROM information_schema.tables WHERE table_name='p3m_tolerance_profiles')`,
+		SQLite: `
+			CREATE TABLE IF NOT EXISTS p3m_report_snapshots (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				entity_type TEXT NOT NULL CHECK (entity_type IN ('project', 'programme', 'portfolio')),
+				entity_id INTEGER NOT NULL,
+				period TEXT NOT NULL,
+				overall_rag TEXT NOT NULL CHECK (overall_rag IN ('green', 'amber', 'red')),
+				category_rags TEXT,
+				suggested_category_rags TEXT,
+				rag_override_reasons TEXT,
+				commentary TEXT,
+				escalations TEXT,
+				metrics TEXT,
+				captured_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				captured_at DATETIME DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE INDEX IF NOT EXISTS idx_p3m_snapshots_entity ON p3m_report_snapshots(entity_type, entity_id, captured_at DESC);
+			CREATE TABLE IF NOT EXISTS p3m_tolerance_profiles (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				scope TEXT NOT NULL CHECK (scope IN ('portfolio', 'project')),
+				entity_id INTEGER NOT NULL,
+				schedule_days INTEGER NOT NULL DEFAULT 14,
+				budget_pct REAL NOT NULL DEFAULT 10.0,
+				risk_score INTEGER NOT NULL DEFAULT 3 CHECK (risk_score BETWEEN 1 AND 5),
+				updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE UNIQUE INDEX IF NOT EXISTS uq_p3m_tolerance_profiles ON p3m_tolerance_profiles(scope, entity_id);
+		`,
+		Postgres: `
+			CREATE TABLE IF NOT EXISTS p3m_report_snapshots (
+				id SERIAL PRIMARY KEY,
+				entity_type TEXT NOT NULL CHECK (entity_type IN ('project', 'programme', 'portfolio')),
+				entity_id INTEGER NOT NULL,
+				period TEXT NOT NULL,
+				overall_rag TEXT NOT NULL CHECK (overall_rag IN ('green', 'amber', 'red')),
+				category_rags TEXT,
+				suggested_category_rags TEXT,
+				rag_override_reasons TEXT,
+				commentary TEXT,
+				escalations TEXT,
+				metrics TEXT,
+				captured_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				captured_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE INDEX IF NOT EXISTS idx_p3m_snapshots_entity ON p3m_report_snapshots(entity_type, entity_id, captured_at DESC);
+			CREATE TABLE IF NOT EXISTS p3m_tolerance_profiles (
+				id SERIAL PRIMARY KEY,
+				scope TEXT NOT NULL CHECK (scope IN ('portfolio', 'project')),
+				entity_id INTEGER NOT NULL,
+				schedule_days INTEGER NOT NULL DEFAULT 14,
+				budget_pct REAL NOT NULL DEFAULT 10.0,
+				risk_score INTEGER NOT NULL DEFAULT 3 CHECK (risk_score BETWEEN 1 AND 5),
+				updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE UNIQUE INDEX IF NOT EXISTS uq_p3m_tolerance_profiles ON p3m_tolerance_profiles(scope, entity_id);
+		`,
+	},
+	{
+		Version:       "20261117_p3m_raid_rollup",
+		Name:          "Add P3M RAID due dates and item subtypes (RAID-001/004/006)",
+		CheckSQLite:   `SELECT (SELECT COUNT(*) FROM pragma_table_info('p3m_raid_items') WHERE name='due_date') * (SELECT COUNT(*) FROM pragma_table_info('p3m_raid_items') WHERE name='item_subtype')`,
+		CheckPostgres: `SELECT (SELECT COUNT(*) FROM information_schema.columns WHERE table_name='p3m_raid_items' AND column_name='due_date') * (SELECT COUNT(*) FROM information_schema.columns WHERE table_name='p3m_raid_items' AND column_name='item_subtype')`,
+		SQLite: `
+			-- SQLite's ALTER cannot attach a CHECK to the added column, so the
+			-- change_risk|adoption_risk domain is enforced in the handlers.
+			ALTER TABLE p3m_raid_items ADD COLUMN due_date DATE;
+			ALTER TABLE p3m_raid_items ADD COLUMN item_subtype TEXT;
+		`,
+		Postgres: `
+			ALTER TABLE p3m_raid_items ADD COLUMN IF NOT EXISTS due_date DATE;
+			ALTER TABLE p3m_raid_items ADD COLUMN IF NOT EXISTS item_subtype TEXT CHECK (item_subtype IN ('change_risk', 'adoption_risk'));
+		`,
+	},
+	{
+		Version:       "20261118_p3m_resource_scenarios",
+		Name:          "Add P3M resource pools and BAU allocation class (RES-004/005/006)",
+		CheckSQLite:   `SELECT (SELECT COUNT(*) FROM pragma_table_info('p3m_resources') WHERE name='pool') * (SELECT COUNT(*) FROM pragma_table_info('p3m_resource_allocations') WHERE name='allocation_class')`,
+		CheckPostgres: `SELECT (SELECT COUNT(*) FROM information_schema.columns WHERE table_name='p3m_resources' AND column_name='pool') * (SELECT COUNT(*) FROM information_schema.columns WHERE table_name='p3m_resource_allocations' AND column_name='allocation_class')`,
+		SQLite: `
+			ALTER TABLE p3m_resources ADD COLUMN pool TEXT;
+			-- SQLite's ALTER cannot attach a CHECK to the added column, so the
+			-- project|bau domain is enforced in the handlers.
+			ALTER TABLE p3m_resource_allocations ADD COLUMN allocation_class TEXT NOT NULL DEFAULT 'project';
+		`,
+		Postgres: `
+			ALTER TABLE p3m_resources ADD COLUMN IF NOT EXISTS pool TEXT;
+			ALTER TABLE p3m_resource_allocations ADD COLUMN IF NOT EXISTS allocation_class TEXT NOT NULL DEFAULT 'project' CHECK (allocation_class IN ('project', 'bau'));
+		`,
+	},
+	{
+		Version:       "20261119_p3m_prioritization",
+		Name:          "Add P3M portfolio prioritisation scoring (PO-003/004/008)",
+		CheckSQLite:   `SELECT (SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='p3m_scoring_criteria') * (SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='p3m_investment_case_scores')`,
+		CheckPostgres: `SELECT (SELECT COUNT(*) FROM information_schema.tables WHERE table_name='p3m_scoring_criteria') * (SELECT COUNT(*) FROM information_schema.tables WHERE table_name='p3m_investment_case_scores')`,
+		SQLite: `
+			CREATE TABLE IF NOT EXISTS p3m_scoring_criteria (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				name TEXT NOT NULL UNIQUE,
+				weight REAL NOT NULL DEFAULT 1.0 CHECK (weight >= 0),
+				direction TEXT NOT NULL DEFAULT 'higher_better' CHECK (direction IN ('higher_better', 'lower_better')),
+				description TEXT,
+				enabled INTEGER NOT NULL DEFAULT 1,
+				created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+				updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE TABLE IF NOT EXISTS p3m_investment_case_scores (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				ic_id INTEGER NOT NULL REFERENCES p3m_investment_cases(id) ON DELETE CASCADE,
+				criterion_id INTEGER NOT NULL REFERENCES p3m_scoring_criteria(id) ON DELETE CASCADE,
+				score REAL NOT NULL CHECK (score BETWEEN 1 AND 5),
+				rationale TEXT,
+				scored_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+				updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE UNIQUE INDEX IF NOT EXISTS uq_p3m_ic_scores ON p3m_investment_case_scores(ic_id, criterion_id);
+		`,
+		Postgres: `
+			CREATE TABLE IF NOT EXISTS p3m_scoring_criteria (
+				id SERIAL PRIMARY KEY,
+				name TEXT NOT NULL UNIQUE,
+				weight REAL NOT NULL DEFAULT 1.0 CHECK (weight >= 0),
+				direction TEXT NOT NULL DEFAULT 'higher_better' CHECK (direction IN ('higher_better', 'lower_better')),
+				description TEXT,
+				enabled BOOLEAN NOT NULL DEFAULT TRUE,
+				created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+				updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE TABLE IF NOT EXISTS p3m_investment_case_scores (
+				id SERIAL PRIMARY KEY,
+				ic_id INTEGER NOT NULL REFERENCES p3m_investment_cases(id) ON DELETE CASCADE,
+				criterion_id INTEGER NOT NULL REFERENCES p3m_scoring_criteria(id) ON DELETE CASCADE,
+				score REAL NOT NULL CHECK (score BETWEEN 1 AND 5),
+				rationale TEXT,
+				scored_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+				updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE UNIQUE INDEX IF NOT EXISTS uq_p3m_ic_scores ON p3m_investment_case_scores(ic_id, criterion_id);
+		`,
+	},
+	{
+		Version:       "20261120_p3m_finance_alerts",
+		Name:          "Add P3M financial exception alert rules (FIN-009)",
+		CheckSQLite:   `SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='p3m_finance_alert_rules'`,
+		CheckPostgres: `SELECT COUNT(*) FROM information_schema.tables WHERE table_name='p3m_finance_alert_rules'`,
+		SQLite: `
+			CREATE TABLE IF NOT EXISTS p3m_finance_alert_rules (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				name TEXT NOT NULL,
+				scope TEXT NOT NULL CHECK (scope IN ('portfolio', 'project')),
+				portfolio_id INTEGER REFERENCES p3m_portfolios(id) ON DELETE CASCADE,
+				project_id INTEGER REFERENCES p3m_projects(id) ON DELETE CASCADE,
+				metric TEXT NOT NULL CHECK (metric IN ('forecast_overrun_pct', 'variance_vs_budget', 'commitment_vs_remaining')),
+				comparator TEXT NOT NULL DEFAULT '>' CHECK (comparator IN ('>', '<', '>=', '<=')),
+				threshold REAL NOT NULL,
+				notify_email TEXT,
+				enabled INTEGER NOT NULL DEFAULT 1,
+				created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+				updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE INDEX IF NOT EXISTS idx_p3m_finance_alert_rules_enabled ON p3m_finance_alert_rules(enabled);
+		`,
+		Postgres: `
+			CREATE TABLE IF NOT EXISTS p3m_finance_alert_rules (
+				id SERIAL PRIMARY KEY,
+				name TEXT NOT NULL,
+				scope TEXT NOT NULL CHECK (scope IN ('portfolio', 'project')),
+				portfolio_id INTEGER REFERENCES p3m_portfolios(id) ON DELETE CASCADE,
+				project_id INTEGER REFERENCES p3m_projects(id) ON DELETE CASCADE,
+				metric TEXT NOT NULL CHECK (metric IN ('forecast_overrun_pct', 'variance_vs_budget', 'commitment_vs_remaining')),
+				comparator TEXT NOT NULL DEFAULT '>' CHECK (comparator IN ('>', '<', '>=', '<=')),
+				threshold REAL NOT NULL,
+				notify_email TEXT,
+				enabled BOOLEAN NOT NULL DEFAULT TRUE,
+				created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+				updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE INDEX IF NOT EXISTS idx_p3m_finance_alert_rules_enabled ON p3m_finance_alert_rules(enabled);
+		`,
+	},
+	{
+		Version:       "20261121_p3m_closure_records",
+		Name:          "Add P3M closure and handover records (CLS-001/002)",
+		CheckSQLite:   `SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='p3m_closure_records'`,
+		CheckPostgres: `SELECT COUNT(*) FROM information_schema.tables WHERE table_name='p3m_closure_records'`,
+		SQLite: `
+			CREATE TABLE IF NOT EXISTS p3m_closure_records (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				project_id INTEGER NOT NULL UNIQUE REFERENCES p3m_projects(id) ON DELETE CASCADE,
+				closure_report_page_id TEXT,
+				acceptance_signoff_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				acceptance_signoff_at DATETIME,
+				outstanding_items TEXT,
+				lessons_learned TEXT,
+				cost_ownership TEXT,
+				handover_to TEXT,
+				status TEXT NOT NULL DEFAULT 'recommended' CHECK (status IN ('recommended', 'approved')),
+				created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+				updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+			);
+		`,
+		Postgres: `
+			CREATE TABLE IF NOT EXISTS p3m_closure_records (
+				id SERIAL PRIMARY KEY,
+				project_id INTEGER NOT NULL UNIQUE REFERENCES p3m_projects(id) ON DELETE CASCADE,
+				closure_report_page_id TEXT,
+				acceptance_signoff_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				acceptance_signoff_at TIMESTAMPTZ,
+				outstanding_items TEXT,
+				lessons_learned TEXT,
+				cost_ownership TEXT,
+				handover_to TEXT,
+				status TEXT NOT NULL DEFAULT 'recommended' CHECK (status IN ('recommended', 'approved')),
+				created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+				updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+			);
+		`,
+	},
+	{
+		Version:       "20261122_p3m_procurement_decisions",
+		Name:          "Add P3M procurement decision subtype and SRM contract link (GOV-007)",
+		CheckSQLite:   `SELECT (SELECT COUNT(*) FROM pragma_table_info('p3m_raid_items') WHERE name='decision_subtype') * (SELECT COUNT(*) FROM pragma_table_info('p3m_raid_items') WHERE name='srm_contract_id')`,
+		CheckPostgres: `SELECT (SELECT COUNT(*) FROM information_schema.columns WHERE table_name='p3m_raid_items' AND column_name='decision_subtype') * (SELECT COUNT(*) FROM information_schema.columns WHERE table_name='p3m_raid_items' AND column_name='srm_contract_id')`,
+		SQLite: `
+			-- SQLite's ALTER cannot attach a CHECK to the added column, so the
+			-- subtype domain is enforced in the handlers. srm_contract_id has no
+			-- FK because p3m.sql loads before srm.sql on fresh installs; the
+			-- handler validates the reference.
+			ALTER TABLE p3m_raid_items ADD COLUMN decision_subtype TEXT;
+			ALTER TABLE p3m_raid_items ADD COLUMN srm_contract_id INTEGER;
+		`,
+		Postgres: `
+			ALTER TABLE p3m_raid_items ADD COLUMN IF NOT EXISTS decision_subtype TEXT CHECK (decision_subtype IN ('governance', 'funding', 'procurement', 'plan', 'closure'));
+			-- No FK to srm_contracts: p3m_postgres.sql loads before srm_postgres.sql.
+			ALTER TABLE p3m_raid_items ADD COLUMN IF NOT EXISTS srm_contract_id INTEGER;
 		`,
 	},
 }
@@ -5752,6 +6548,180 @@ func applySQLiteSRMBusinessID(db Database) (retErr error) {
 
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("commit srm_suppliers rebuild: %w", err)
+	}
+	return nil
+}
+
+// p3mLifecycleStageRemap rewrites the legacy four-stage values into the
+// proportional lifecycle keys (BRD §5.2).
+const p3mLegacyStageCase = `CASE current_stage WHEN 'initiation' THEN 'front_door' WHEN 'planning' THEN 'proposal' WHEN 'execution' THEN 'implement_deliver' WHEN 'closure' THEN 'close' ELSE current_stage END`
+
+// p3mConfigurableLifecycleStatements rebuilds p3m_projects and
+// p3m_stage_gate_reviews without the legacy stage CHECK constraints, adds the
+// work_type/external_ref/template_id columns, creates the lifecycle config
+// tables, and seeds the default stages and gate templates. Runs with
+// foreign_keys disabled (toggled by applySQLiteP3MConfigurableLifecycle).
+func p3mConfigurableLifecycleStatements() []string {
+	return []string{
+		`CREATE TABLE p3m_projects_new (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			portfolio_id INTEGER REFERENCES p3m_portfolios(id) ON DELETE CASCADE,
+			programme_id INTEGER REFERENCES p3m_programmes(id) ON DELETE SET NULL,
+			title TEXT NOT NULL,
+			description TEXT DEFAULT '',
+			manager_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+			time_project_id INTEGER REFERENCES time_projects(id) ON DELETE SET NULL,
+			work_type TEXT,
+			external_ref TEXT UNIQUE,
+			current_stage TEXT NOT NULL DEFAULT 'front_door',
+			budget_approved REAL NOT NULL DEFAULT 0,
+			budget_actual REAL NOT NULL DEFAULT 0,
+			progress_percent INTEGER NOT NULL DEFAULT 0 CHECK (progress_percent BETWEEN 0 AND 100),
+			start_date DATE,
+			target_completion_date DATE,
+			rag_status TEXT NOT NULL DEFAULT 'green' CHECK (rag_status IN ('red', 'amber', 'green')),
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		)`,
+		`INSERT INTO p3m_projects_new (id, portfolio_id, programme_id, title, description, manager_id, time_project_id, current_stage, budget_approved, budget_actual, progress_percent, start_date, target_completion_date, rag_status, created_at, updated_at)
+			SELECT id, portfolio_id, programme_id, title, description, manager_id, time_project_id, current_stage, budget_approved, budget_actual, progress_percent, start_date, target_completion_date, rag_status, created_at, updated_at FROM p3m_projects`,
+		`DROP TABLE p3m_projects`,
+		`ALTER TABLE p3m_projects_new RENAME TO p3m_projects`,
+		`CREATE INDEX IF NOT EXISTS idx_p3m_projects_portfolio ON p3m_projects(portfolio_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_p3m_projects_programme ON p3m_projects(programme_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_p3m_projects_time_project_id ON p3m_projects(time_project_id)`,
+		"UPDATE p3m_projects SET current_stage = " + p3mLegacyStageCase,
+		`UPDATE p3m_stage_gate_reviews SET from_stage = CASE from_stage WHEN 'initiation' THEN 'front_door' WHEN 'planning' THEN 'proposal' WHEN 'execution' THEN 'implement_deliver' WHEN 'closure' THEN 'close' ELSE from_stage END`,
+		`UPDATE p3m_stage_gate_reviews SET to_stage = CASE to_stage WHEN 'initiation' THEN 'front_door' WHEN 'planning' THEN 'proposal' WHEN 'execution' THEN 'implement_deliver' WHEN 'closure' THEN 'close' ELSE to_stage END`,
+		`CREATE TABLE IF NOT EXISTS p3m_lifecycle_stages (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			stage_key TEXT NOT NULL UNIQUE,
+			name TEXT NOT NULL,
+			description TEXT DEFAULT '',
+			sort_order INTEGER NOT NULL UNIQUE,
+			is_entry INTEGER NOT NULL DEFAULT 0,
+			is_exit INTEGER NOT NULL DEFAULT 0,
+			gate_required INTEGER NOT NULL DEFAULT 1,
+			skippable INTEGER NOT NULL DEFAULT 1,
+			enabled INTEGER NOT NULL DEFAULT 1,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		)`,
+		`CREATE TABLE IF NOT EXISTS p3m_stage_gate_templates (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			name TEXT NOT NULL,
+			from_stage_key TEXT,
+			to_stage_key TEXT NOT NULL REFERENCES p3m_lifecycle_stages(stage_key) ON DELETE RESTRICT,
+			mandatory INTEGER NOT NULL DEFAULT 1,
+			work_type TEXT,
+			required_artifacts TEXT DEFAULT '[]',
+			description TEXT DEFAULT '',
+			enabled INTEGER NOT NULL DEFAULT 1,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_p3m_gate_templates_to ON p3m_stage_gate_templates(to_stage_key, enabled)`,
+		`CREATE TABLE p3m_stage_gate_reviews_new (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			project_id INTEGER NOT NULL REFERENCES p3m_projects(id) ON DELETE CASCADE,
+			from_stage TEXT NOT NULL,
+			to_stage TEXT NOT NULL,
+			template_id INTEGER REFERENCES p3m_stage_gate_templates(id) ON DELETE SET NULL,
+			passed BOOLEAN NOT NULL DEFAULT false,
+			reviewer_id INTEGER NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+			review_date DATE,
+			comments TEXT DEFAULT '',
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		)`,
+		`INSERT INTO p3m_stage_gate_reviews_new (id, project_id, from_stage, to_stage, passed, reviewer_id, review_date, comments, created_at)
+			SELECT id, project_id, from_stage, to_stage, passed, reviewer_id, review_date, comments, created_at FROM p3m_stage_gate_reviews`,
+		`DROP TABLE p3m_stage_gate_reviews`,
+		`ALTER TABLE p3m_stage_gate_reviews_new RENAME TO p3m_stage_gate_reviews`,
+		`CREATE INDEX IF NOT EXISTS idx_p3m_stage_gates_project ON p3m_stage_gate_reviews(project_id)`,
+		`CREATE TABLE IF NOT EXISTS p3m_project_stage_skips (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			project_id INTEGER NOT NULL REFERENCES p3m_projects(id) ON DELETE CASCADE,
+			stage_key TEXT NOT NULL REFERENCES p3m_lifecycle_stages(stage_key) ON DELETE RESTRICT,
+			reason TEXT NOT NULL,
+			decided_by INTEGER NOT NULL,
+			decided_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			UNIQUE(project_id, stage_key)
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_p3m_stage_skips_project ON p3m_project_stage_skips(project_id)`,
+		`INSERT OR IGNORE INTO p3m_lifecycle_stages (stage_key, name, description, sort_order, is_entry, is_exit, gate_required, skippable, enabled) VALUES
+			('front_door', 'Idea / Front Door', 'Intake and initial assessment of the idea or request.', 0, 1, 0, 0, 0, 1),
+			('proposal', 'Proposal', 'Business proposal with indicative cost and strategic alignment.', 1, 0, 0, 1, 1, 1),
+			('define_planning', 'Define / Planning', 'Detailed definition, planning and baseline approval.', 2, 0, 0, 1, 0, 1),
+			('implement_deliver', 'Implement / Deliver & Monitor', 'Delivery execution with monitoring against the baseline.', 3, 0, 0, 1, 0, 1),
+			('close', 'Close', 'Delivery acceptance and financial close-out.', 4, 0, 0, 1, 0, 1),
+			('benefits_realisation', 'Benefits Realisation', 'Post-implementation review and benefit tracking to target.', 5, 0, 1, 1, 1, 1)`,
+		`INSERT INTO p3m_stage_gate_templates (name, from_stage_key, to_stage_key, mandatory, work_type, required_artifacts, description)
+			SELECT 'Front Door assessment', 'front_door', 'proposal', 1, NULL, '[{"name":"Classification","required":true},{"name":"Initial assessment","required":true}]', 'Mandatory intake gate: classify the idea and record the initial assessment.'
+			WHERE NOT EXISTS (SELECT 1 FROM p3m_stage_gate_templates WHERE name = 'Front Door assessment' AND from_stage_key IS 'front_door' AND to_stage_key = 'proposal')`,
+		`INSERT INTO p3m_stage_gate_templates (name, from_stage_key, to_stage_key, mandatory, work_type, required_artifacts, description)
+			SELECT 'Governance go/no-go', 'proposal', 'define_planning', 1, NULL, '[{"name":"Governance go/no-go decision","required":true},{"name":"Financial endorsement","required":true}]', 'Governance go/no-go with financial endorsement before detailed planning.'
+			WHERE NOT EXISTS (SELECT 1 FROM p3m_stage_gate_templates WHERE name = 'Governance go/no-go' AND from_stage_key IS 'proposal' AND to_stage_key = 'define_planning')`,
+		`INSERT INTO p3m_stage_gate_templates (name, from_stage_key, to_stage_key, mandatory, work_type, required_artifacts, description)
+			SELECT 'Baseline & sponsor approval', 'define_planning', 'implement_deliver', 1, NULL, '[{"name":"Approved baseline","required":true},{"name":"Sponsor approval","required":true}]', 'Baseline (scope/schedule/cost) approved by the sponsor before delivery starts.'
+			WHERE NOT EXISTS (SELECT 1 FROM p3m_stage_gate_templates WHERE name = 'Baseline & sponsor approval' AND from_stage_key IS 'define_planning' AND to_stage_key = 'implement_deliver')`,
+		`INSERT INTO p3m_stage_gate_templates (name, from_stage_key, to_stage_key, mandatory, work_type, required_artifacts, description)
+			SELECT 'Delivery acceptance & financial close-out', 'implement_deliver', 'close', 1, NULL, '[{"name":"Delivery acceptance","required":true},{"name":"Financial close-out","required":true}]', 'Delivered scope accepted and finances closed out before closure.'
+			WHERE NOT EXISTS (SELECT 1 FROM p3m_stage_gate_templates WHERE name = 'Delivery acceptance & financial close-out' AND from_stage_key IS 'implement_deliver' AND to_stage_key = 'close')`,
+		`INSERT INTO p3m_stage_gate_templates (name, from_stage_key, to_stage_key, mandatory, work_type, required_artifacts, description)
+			SELECT 'Post-implementation review (PIR)', 'close', 'benefits_realisation', 1, NULL, '[{"name":"PIR report","required":true}]', 'Mandatory-but-skippable PIR gate into benefits realisation; projects may remain at Close when the skip is recorded.'
+			WHERE NOT EXISTS (SELECT 1 FROM p3m_stage_gate_templates WHERE name = 'Post-implementation review (PIR)' AND from_stage_key IS 'close' AND to_stage_key = 'benefits_realisation')`,
+		`INSERT INTO p3m_stage_gate_templates (name, from_stage_key, to_stage_key, mandatory, work_type, required_artifacts, description)
+			SELECT 'Return for information', 'proposal', 'front_door', 0, NULL, '[]', 'Optional return-to-intake path when a proposal needs more information.'
+			WHERE NOT EXISTS (SELECT 1 FROM p3m_stage_gate_templates WHERE name = 'Return for information' AND from_stage_key IS 'proposal' AND to_stage_key = 'front_door')`,
+	}
+}
+
+// applySQLiteP3MConfigurableLifecycle migrates pre-existing SQLite databases
+// to the configurable P3M lifecycle. The two table rebuilds require
+// foreign_keys disabled for the window, so it follows the raw-connection
+// pattern of applySQLiteSRMBusinessID.
+func applySQLiteP3MConfigurableLifecycle(db Database) (retErr error) {
+	sqliteDB, ok := db.(*SQLiteDB)
+	if !ok {
+		return fmt.Errorf("expected SQLite database, got %T", db)
+	}
+
+	ctx := context.Background()
+	conn, err := sqliteDB.writeConn.Conn(ctx)
+	if err != nil {
+		return fmt.Errorf("acquire SQLite write connection: %w", err)
+	}
+	defer func() { _ = conn.Close() }()
+
+	var foreignKeysEnabled bool
+	if err := conn.QueryRowContext(ctx, "PRAGMA foreign_keys").Scan(&foreignKeysEnabled); err != nil {
+		return fmt.Errorf("read foreign_keys pragma: %w", err)
+	}
+	if foreignKeysEnabled {
+		if _, err := conn.ExecContext(ctx, "PRAGMA foreign_keys=OFF"); err != nil {
+			return fmt.Errorf("disable foreign keys: %w", err)
+		}
+		defer func() {
+			if _, err := conn.ExecContext(ctx, "PRAGMA foreign_keys=ON"); retErr == nil && err != nil {
+				retErr = fmt.Errorf("restore foreign keys: %w", err)
+			}
+		}()
+	}
+
+	tx, err := conn.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin p3m lifecycle migration: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	for _, statement := range p3mConfigurableLifecycleStatements() {
+		if _, err := tx.ExecContext(ctx, statement); err != nil {
+			return fmt.Errorf("apply p3m configurable lifecycle: %w", err)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit p3m lifecycle migration: %w", err)
 	}
 	return nil
 }

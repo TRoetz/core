@@ -300,6 +300,11 @@ func Load(frontend embed.FS, shutdownChan chan os.Signal) Config {
 		},
 		Memory:  MemoryConfig{LimitMB: resolvedMemoryLimitMB},
 		Storage: storageConfig,
+		FinanceSync: FinanceSyncConfig{
+			Enabled:      !isEnvFalse("FINANCE_SYNC_ENABLED"),
+			PathPrefix:   os.Getenv("FINANCE_SYNC_PATH_PREFIX"),
+			NotifyEmails: os.Getenv("FINANCE_SYNC_NOTIFY_EMAILS"),
+		},
 
 		AttachmentPath:              attachPath,
 		EnableAdminFallback:         adminFallbackEnabled,

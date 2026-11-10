@@ -2,7 +2,9 @@ package handlers
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
+	"strconv"
 	"time"
 
 	"windshift/internal/models"
@@ -11,11 +13,11 @@ import (
 // scanP3MStageGateReview reads one p3m_stage_gate_reviews row.
 func scanP3MStageGateReview(row interface{ Scan(...any) error }) (models.P3MStageGateReview, error) {
 	var g models.P3MStageGateReview
-	err := row.Scan(&g.ID, &g.ProjectID, &g.FromStage, &g.ToStage, &g.Passed, &g.ReviewerID, &g.ReviewDate, &g.Comments, &g.CreatedAt)
+	err := row.Scan(&g.ID, &g.ProjectID, &g.FromStage, &g.ToStage, &g.Passed, &g.ReviewerID, &g.ReviewDate, &g.Comments, &g.TemplateID, &g.CreatedAt)
 	return g, err
 }
 
-const p3mStageGateColumns = `id, project_id, from_stage, to_stage, passed, reviewer_id, review_date, comments, created_at`
+const p3mStageGateColumns = `id, project_id, from_stage, to_stage, passed, reviewer_id, review_date, comments, template_id, created_at`
 
 // loadP3MStageGateWithArtifacts fetches a gate review plus its artifact rows.
 func (h *P3MHandler) loadP3MStageGateWithArtifacts(ctx context.Context, id int) (models.P3MStageGateReview, error) {
@@ -112,10 +114,11 @@ func (h *P3MHandler) CreateStageGate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var in struct {
-		ProjectID int `json:"project_id"`
-		ToStage   string `json:"to_stage"`
-		Comments  string `json:"comments"`
-		Artifacts []struct {
+		ProjectID  int    `json:"project_id"`
+		ToStage    string `json:"to_stage"`
+		TemplateID *int   `json:"template_id,omitempty"`
+		Comments   string `json:"comments"`
+		Artifacts  []struct {
 			Name       string `json:"name"`
 			Required   bool   `json:"required"`
 			LinkOrNote string `json:"link_or_note"`
@@ -135,8 +138,16 @@ func (h *P3MHandler) CreateStageGate(w http.ResponseWriter, r *http.Request) {
 		respondInternalError(w, r, err)
 		return
 	}
-	if !p3mValidStage(in.ToStage) {
-		respondValidationError(w, r, "to_stage must be one of initiation, planning, execution or closure")
+	if !h.validateEnabledStageKey(r.Context(), w, r, in.ToStage) {
+		return
+	}
+	stages, err := h.loadEnabledLifecycleStages(r.Context())
+	if err != nil {
+		respondInternalError(w, r, err)
+		return
+	}
+	if p3mStagePosition(stages, project.CurrentStage) < 0 {
+		respondConflict(w, r, "the project's current stage is not an enabled lifecycle stage; re-route the project first")
 		return
 	}
 	if in.ToStage == project.CurrentStage {
@@ -144,11 +155,34 @@ func (h *P3MHandler) CreateStageGate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var templateID any = nil
+	if in.TemplateID != nil {
+		tpl, err := h.loadP3MStageGateTemplate(r.Context(), *in.TemplateID)
+		if err != nil {
+			if isNotFound(err) {
+				respondNotFound(w, r, "p3m_stage_gate_template")
+				return
+			}
+			respondInternalError(w, r, err)
+			return
+		}
+		templateID = *in.TemplateID
+		if len(in.Artifacts) == 0 {
+			for _, a := range tpl.RequiredArtifacts {
+				in.Artifacts = append(in.Artifacts, struct {
+					Name       string `json:"name"`
+					Required   bool   `json:"required"`
+					LinkOrNote string `json:"link_or_note"`
+				}{Name: a.Name, Required: a.Required, LinkOrNote: a.Description})
+			}
+		}
+	}
+
 	now := time.Now().UTC()
 	res, err := h.db.ExecContext(r.Context(), `
-		INSERT INTO p3m_stage_gate_reviews (project_id, from_stage, to_stage, passed, reviewer_id, review_date, comments, created_at)
-		VALUES (?, ?, ?, false, ?, NULL, ?, ?)`,
-		in.ProjectID, project.CurrentStage, in.ToStage, user.ID, in.Comments, now)
+		INSERT INTO p3m_stage_gate_reviews (project_id, from_stage, to_stage, passed, reviewer_id, review_date, comments, template_id, created_at)
+		VALUES (?, ?, ?, false, ?, NULL, ?, ?, ?)`,
+		in.ProjectID, project.CurrentStage, in.ToStage, user.ID, in.Comments, templateID, now)
 	if err != nil {
 		respondInternalError(w, r, err)
 		return
@@ -172,6 +206,10 @@ func (h *P3MHandler) CreateStageGate(w http.ResponseWriter, r *http.Request) {
 		respondInternalError(w, r, err)
 		return
 	}
+	h.p3mAudit(r, user, "p3m.stage_gate.create", "p3m_stage_gate", &gate.ID, project.Title+" "+project.CurrentStage+"->"+in.ToStage, map[string]any{
+		"from_stage": project.CurrentStage,
+		"to_stage":   in.ToStage,
+	})
 	respondJSONCreated(w, gate)
 }
 
@@ -179,7 +217,8 @@ func (h *P3MHandler) CreateStageGate(w http.ResponseWriter, r *http.Request) {
 // decision requires every required artifact completed and the project still in
 // the review's from_stage; it then advances the project to to_stage.
 func (h *P3MHandler) DecideStageGate(w http.ResponseWriter, r *http.Request) {
-	if _, ok := RequireAuth(w, r); !ok {
+	user, ok := RequireAuth(w, r)
+	if !ok {
 		return
 	}
 	id, ok := requireIDParam(w, r, "id")
@@ -226,11 +265,43 @@ func (h *P3MHandler) DecideStageGate(w http.ResponseWriter, r *http.Request) {
 			respondConflict(w, r, "project stage changed since the gate was created")
 			return
 		}
+		stages, err := h.loadEnabledLifecycleStages(r.Context())
+		if err != nil {
+			respondInternalError(w, r, err)
+			return
+		}
+		if p3mStagePosition(stages, gate.ToStage) < 0 {
+			respondConflict(w, r, "to_stage "+gate.ToStage+" is no longer an enabled lifecycle stage")
+			return
+		}
+		if err := h.p3mGateDecisionEntryError(r.Context(), project.ID, project.WorkType, gate.FromStage, gate.ToStage); err != nil {
+			respondConflict(w, r, err.Error())
+			return
+		}
+		if gate.ToStage == "implement_deliver" {
+			if err := h.ChangeAssessmentBlockError(r.Context(), project.ID); err != nil {
+				respondConflict(w, r, err.Error())
+				return
+			}
+			if err := h.ReadinessNoGoError(r.Context(), project.ID); err != nil {
+				respondConflict(w, r, err.Error())
+				return
+			}
+		}
+		if gate.ToStage == "close" {
+			if err := h.ClosureRecordBlockError(r.Context(), project.ID); err != nil {
+				respondConflict(w, r, err.Error())
+				return
+			}
+		}
 		if _, err := h.db.ExecContext(r.Context(), `
 			UPDATE p3m_projects SET current_stage = ?, updated_at = ? WHERE id = ?`,
 			gate.ToStage, now, project.ID); err != nil {
 			respondInternalError(w, r, err)
 			return
+		}
+		if _, err := h.ProposeChangeCalendarEntry(r.Context(), "project", project.ID, project.Title+" -> "+gate.ToStage, now); err != nil {
+			slog.Warn("p3m: propose change calendar entry failed", "project_id", project.ID, "to_stage", gate.ToStage, "error", err)
 		}
 	}
 
@@ -246,13 +317,19 @@ func (h *P3MHandler) DecideStageGate(w http.ResponseWriter, r *http.Request) {
 		respondInternalError(w, r, err)
 		return
 	}
+	h.p3mAudit(r, user, "p3m.stage_gate.decide", "p3m_stage_gate", &gate.ID, project.Title+" "+gate.FromStage+"->"+gate.ToStage, map[string]any{
+		"passed":     in.Passed,
+		"from_stage": gate.FromStage,
+		"to_stage":   gate.ToStage,
+	})
 	respondJSONOK(w, gate)
 }
 
 // UpdateGateArtifact handles PUT /api/p3m/gate-artifacts/{id}. Only the
 // completion flag and the link/note are mutable.
 func (h *P3MHandler) UpdateGateArtifact(w http.ResponseWriter, r *http.Request) {
-	if _, ok := RequireAuth(w, r); !ok {
+	user, ok := RequireAuth(w, r)
+	if !ok {
 		return
 	}
 	id, ok := requireIDParam(w, r, "id")
@@ -265,6 +342,18 @@ func (h *P3MHandler) UpdateGateArtifact(w http.ResponseWriter, r *http.Request) 
 	}
 	if err := newJSONDecoder(w, r).Decode(&in); err != nil {
 		respondBadRequest(w, r, "Invalid request body")
+		return
+	}
+
+	var oldA models.P3MGateArtifact
+	err := h.db.QueryRowContext(r.Context(), `SELECT id, review_id, name, required, completed, link_or_note FROM p3m_gate_artifacts WHERE id = ?`, id).
+		Scan(&oldA.ID, &oldA.ReviewID, &oldA.Name, &oldA.Required, &oldA.Completed, &oldA.LinkOrNote)
+	if err != nil {
+		if isNotFound(err) {
+			respondNotFound(w, r, "p3m_gate_artifact")
+			return
+		}
+		respondInternalError(w, r, err)
 		return
 	}
 
@@ -288,6 +377,10 @@ func (h *P3MHandler) UpdateGateArtifact(w http.ResponseWriter, r *http.Request) 
 		respondInternalError(w, r, err)
 		return
 	}
+	h.p3mAudit(r, user, "p3m.gate_artifact.update", "p3m_gate_artifact", &a.ID, a.Name, p3mAuditDiff(
+		[3]any{"completed", oldA.Completed, in.Completed},
+		[3]any{"link_or_note", oldA.LinkOrNote, in.LinkOrNote},
+	))
 	respondJSONOK(w, a)
 }
 
@@ -365,7 +458,8 @@ func (h *P3MHandler) GetRaciMatrix(w http.ResponseWriter, r *http.Request) {
 // UpsertRaciAssignment handles PUT /api/p3m/raci. The (entity_type, entity_id,
 // user_id) triple is unique; a second write updates the role in place.
 func (h *P3MHandler) UpsertRaciAssignment(w http.ResponseWriter, r *http.Request) {
-	if _, ok := RequireAuth(w, r); !ok {
+	user, ok := RequireAuth(w, r)
+	if !ok {
 		return
 	}
 	var in struct {
@@ -408,16 +502,32 @@ func (h *P3MHandler) UpsertRaciAssignment(w http.ResponseWriter, r *http.Request
 		respondInternalError(w, r, err)
 		return
 	}
+	h.p3mAudit(r, user, "p3m.raci.upsert", "p3m_raci_assignment", &a.ID, in.EntityType+"#"+strconv.Itoa(in.EntityID), map[string]any{
+		"user_id": in.UserID,
+		"role":    in.Role,
+	})
 	respondJSONOK(w, a)
 }
 
 // DeleteRaciAssignment handles DELETE /api/p3m/raci/{id}.
 func (h *P3MHandler) DeleteRaciAssignment(w http.ResponseWriter, r *http.Request) {
-	if _, ok := RequireAuth(w, r); !ok {
+	user, ok := RequireAuth(w, r)
+	if !ok {
 		return
 	}
 	id, ok := requireIDParam(w, r, "id")
 	if !ok {
+		return
+	}
+	var oldA models.P3MRaciAssignment
+	err := h.db.QueryRowContext(r.Context(), `SELECT id, entity_type, entity_id, user_id, role FROM p3m_raci_assignments WHERE id = ?`, id).
+		Scan(&oldA.ID, &oldA.EntityType, &oldA.EntityID, &oldA.UserID, &oldA.Role)
+	if err != nil {
+		if isNotFound(err) {
+			respondNotFound(w, r, "p3m_raci_assignment")
+			return
+		}
+		respondInternalError(w, r, err)
 		return
 	}
 	res, err := h.db.ExecContext(r.Context(), `DELETE FROM p3m_raci_assignments WHERE id = ?`, id)
@@ -430,6 +540,10 @@ func (h *P3MHandler) DeleteRaciAssignment(w http.ResponseWriter, r *http.Request
 		respondNotFound(w, r, "p3m_raci_assignment")
 		return
 	}
+	h.p3mAudit(r, user, "p3m.raci.delete", "p3m_raci_assignment", &id, oldA.EntityType+"#"+strconv.Itoa(oldA.EntityID), map[string]any{
+		"user_id": oldA.UserID,
+		"role":    oldA.Role,
+	})
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -463,7 +577,8 @@ func (h *P3MHandler) ListAuthorizationThresholds(w http.ResponseWriter, r *http.
 
 // UpdateAuthorizationThreshold handles PUT /api/p3m/authorization-thresholds.
 func (h *P3MHandler) UpdateAuthorizationThreshold(w http.ResponseWriter, r *http.Request) {
-	if _, ok := RequireAuth(w, r); !ok {
+	user, ok := RequireAuth(w, r)
+	if !ok {
 		return
 	}
 	var in struct {
@@ -486,6 +601,8 @@ func (h *P3MHandler) UpdateAuthorizationThreshold(w http.ResponseWriter, r *http
 	}
 
 	now := time.Now().UTC()
+	var oldAmount float64
+	h.db.QueryRowContext(r.Context(), `SELECT threshold_amount FROM p3m_authorization_thresholds WHERE level = ?`, in.Level).Scan(&oldAmount)
 	if _, err := h.db.ExecContext(r.Context(), `
 		INSERT INTO p3m_authorization_thresholds (level, threshold_amount, updated_at)
 		VALUES (?, ?, ?)
@@ -502,6 +619,9 @@ func (h *P3MHandler) UpdateAuthorizationThreshold(w http.ResponseWriter, r *http
 		respondInternalError(w, r, err)
 		return
 	}
+	h.p3mAudit(r, user, "p3m.authorization_threshold.update", "p3m_authorization_threshold", &t.ID, in.Level, p3mAuditDiff(
+		[3]any{"threshold_amount", oldAmount, in.ThresholdAmount},
+	))
 	respondJSONOK(w, t)
 }
 
@@ -618,6 +738,13 @@ func (h *P3MHandler) CreateBudgetApproval(w http.ResponseWriter, r *http.Request
 		respondInternalError(w, r, err)
 		return
 	}
+	h.p3mAudit(r, user, "p3m.budget_approval.create", "p3m_budget_approval", &a.ID, project.Title+" budget "+strconv.FormatFloat(a.RequestAmount, 'f', 0, 64), map[string]any{
+		"project_id":       a.ProjectID,
+		"current_budget":   a.CurrentBudget,
+		"requested_amount": a.RequestAmount,
+		"routed_to_level":  a.RoutedToLevel,
+		"status":           a.Status,
+	})
 	respondJSONCreated(w, a)
 }
 
@@ -725,5 +852,11 @@ func (h *P3MHandler) DecideBudgetApproval(w http.ResponseWriter, r *http.Request
 		respondInternalError(w, r, err)
 		return
 	}
+	h.p3mAudit(r, user, "p3m.budget_approval.decide", "p3m_budget_approval", &a.ID, "project #"+strconv.Itoa(a.ProjectID)+" budget "+strconv.FormatFloat(a.RequestAmount, 'f', 0, 64), map[string]any{
+		"passed":           in.Passed,
+		"status":           a.Status,
+		"requested_amount": a.RequestAmount,
+		"notes":            in.Notes,
+	})
 	respondJSONOK(w, a)
 }

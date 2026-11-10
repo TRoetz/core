@@ -58,6 +58,7 @@ type Config struct {
 	Jira         JiraConfig
 	Memory       MemoryConfig
 	Storage      StorageConfig
+	FinanceSync  FinanceSyncConfig
 
 	// Flat fields (no logical grouping)
 	AttachmentPath              string
@@ -85,6 +86,18 @@ type Config struct {
 // process. The runtime heap target and cache allocations are derived from it.
 type MemoryConfig struct {
 	LimitMB int
+}
+
+// FinanceSyncConfig controls the P3M financial-system CSV sync (FIN-007):
+// scheduled import of actuals/commitments/forecast exported by the external
+// finance system, reconciled against P3M budgets.
+type FinanceSyncConfig struct {
+	// Enabled is a kill-switch: on unless FINANCE_SYNC_ENABLED is set to false/0.
+	Enabled bool
+	// PathPrefix allowlists file_path sources; files outside it are refused.
+	PathPrefix string
+	// NotifyEmails is the comma-separated distribution list for failure alerts.
+	NotifyEmails string
 }
 
 // Storage backend names accepted by STORAGE_BACKEND.
