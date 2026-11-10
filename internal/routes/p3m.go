@@ -225,6 +225,7 @@ func RegisterP3MRoutes(deps *Deps) {
 	api.HandleH("DELETE /p3m/scoring-criteria/{id}", auth(p3mView(http.HandlerFunc(deps.P3M.DeleteScoringCriterion))))
 	api.HandleH("PUT /p3m/investment-cases/{id}/scores", auth(p3mView(http.HandlerFunc(deps.P3M.UpsertInvestmentCaseScore))))
 	api.HandleH("GET /p3m/investment-cases/{id}/scores", auth(p3mView(http.HandlerFunc(deps.P3M.ListInvestmentCaseScores))))
+	api.HandleH("GET /p3m/investment-cases/{id}/score-history", auth(p3mView(http.HandlerFunc(deps.P3M.GetInvestmentCaseScoreHistory))))
 	api.HandleH("GET /p3m/investment-cases/ranked", auth(p3mView(http.HandlerFunc(deps.P3M.GetRankedInvestmentCases))))
 	api.HandleH("GET /p3m/portfolios/{id}/roadmap", auth(p3mView(http.HandlerFunc(deps.P3M.GetPortfolioRoadmap))))
 

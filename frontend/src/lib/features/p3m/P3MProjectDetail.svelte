@@ -11,7 +11,7 @@
   import P3MClosureRecord from './P3MClosureRecord.svelte';
   import { formatMoney, formatDate, ragColor, ragLabel, stageLabel } from './utils.js';
 
-  let { project = null, onChanged = () => {}, onClose = () => {} } = $props();
+  let { project = null, stages = [], onChanged = () => {}, onClose = () => {} } = $props();
 
   /** @type {any} */
   let rollup = $state(null);
@@ -34,6 +34,17 @@
 
   /** @type {{stage_gates?: any[], budget_approvals?: any[], architecture_reviews?: any[], communications?: any[]} | null} */
   let activity = $state(null);
+
+  // --- Stage gates: next required decision + skip action (F2) -----------------
+  /** @type {Array<{template:any,status:string}>} */
+  let projectGates = $state([]);
+  let skipTarget = $state('');
+  let skipReason = $state('');
+  let savingSkip = $state(false);
+
+  const skippableStageKeys = $derived(new Set(stages.filter((s) => s.skippable).map((s) => s.stage_key)));
+
+  const gateStatusLabel = { not_started: () => t('p3m.gateNotStarted'), in_progress: () => t('p3m.gateInProgress'), passed: () => t('p3m.gatePassed'), skipped: () => t('p3m.gateSkipped') };
 
   /** Merged, newest-first event timeline across the four activity sources. */
   const activityFeed = $derived.by(() => {
@@ -58,12 +69,13 @@
     checkedWorkspaceIds = new Set();
     linksSaved = false;
     try {
-      const [r, tps, wss, bls, act] = await Promise.all([
+      const [r, tps, wss, bls, act, gts] = await Promise.all([
         p3mApi.getProjectRollup(project.id),
         time.projects.getAll().catch(() => []),
         wsApi.getAll().catch(() => []),
         p3mApi.getProjectBaselines(project.id).catch(() => []),
         p3mApi.getProjectActivity(project.id).catch(() => null),
+        p3mApi.getProjectGates(project.id).catch(() => []),
       ]);
       rollup = r ?? null;
       timeProjects = Array.isArray(tps) ? tps : [];
@@ -71,10 +83,30 @@
       checkedWorkspaceIds = new Set((r?.workspaces ?? []).map((w) => w.id));
       baselines = Array.isArray(bls) ? bls : [];
       activity = act && typeof act === 'object' ? act : null;
+      projectGates = Array.isArray(gts) ? gts : [];
     } catch (e) {
       error = e?.message || 'error';
     } finally {
       loadingRollup = false;
+    }
+  }
+
+  /** Record a skip for the selected stage (advances the project's current stage). */
+  async function submitStageSkip() {
+    if (!project || savingSkip || !skipTarget) return;
+    savingSkip = true;
+    error = '';
+    try {
+      await p3mApi.recordStageSkip(project.id, { stage_key: skipTarget, reason: skipReason.trim() });
+      const gts = await p3mApi.getProjectGates(project.id).catch(() => []);
+      projectGates = Array.isArray(gts) ? gts : [];
+      skipTarget = '';
+      skipReason = '';
+      onChanged(); // skipping advances the project's stage
+    } catch (e) {
+      error = e?.message || 'error';
+    } finally {
+      savingSkip = false;
     }
   }
 
@@ -166,7 +198,7 @@
   <div class="mb-2 ml-10 rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-surface-card p-3 text-xs">
     <!-- Summary fields -->
     <div class="grid grid-cols-2 gap-x-8 gap-y-1 md:grid-cols-4">
-      <div><span class="text-[var(--color-ds-text-muted,#6b7280)]">{t('p3m.currentStage')}:</span> {stageLabel(project.current_stage)}</div>
+      <div><span class="text-[var(--color-ds-text-muted,#6b7280)]">{t('p3m.currentStage')}:</span> {stageLabel(project.current_stage, stages)}</div>
       <div><span class="text-[var(--color-ds-text-muted,#6b7280)]">{t('p3m.ragStatus')}:</span> {ragLabel(project.rag_status)}</div>
       <div><span class="text-[var(--color-ds-text-muted,#6b7280)]">{t('p3m.budgetApproved')}:</span> {formatMoney(project.budget_approved)}</div>
       <div><span class="text-[var(--color-ds-text-muted,#6b7280)]">{t('p3m.progressPercent')}:</span> {project.progress_percent}%</div>
@@ -222,6 +254,48 @@
 
     {#if error}
       <div class="mt-2 rounded-md border border-red-200 bg-red-50 p-2 text-red-700">{error}</div>
+    {/if}
+
+    <!-- Stage gates: next required decision + skip action (F2) -->
+    <h3 class="mb-1 mt-4 font-semibold">{t('p3m.stageGates')}</h3>
+    {#if projectGates.length === 0}
+      <div class="text-[var(--color-ds-text-muted,#6b7280)]">{t('p3m.noData')}</div>
+    {:else}
+      <table class="w-full max-w-2xl text-left">
+        <tbody>
+          {#each projectGates as g (g.template.id)}
+            {@const tpl = g.template}
+            <tr class="border-b border-[var(--color-ds-border,#e5e7eb)] last:border-0">
+              <td class="py-1 pr-3">{stageLabel(tpl.from_stage_key, stages)} → {stageLabel(tpl.to_stage_key, stages)}</td>
+              <td class="py-1 pr-3 text-[var(--color-ds-text-muted,#6b7280)]">{gateStatusLabel[g.status] ? gateStatusLabel[g.status]() : g.status}</td>
+              <td class="py-1 text-right">
+                {#if (g.status === 'not_started' || g.status === 'in_progress') && skippableStageKeys.has(tpl.to_stage_key)}
+                  {#if skipTarget === tpl.to_stage_key}
+                    <span class="inline-flex items-center gap-1">
+                      <input
+                        class="w-48 rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-0.5"
+                        placeholder={t('p3m.skipReasonPlaceholder')}
+                        value={skipReason}
+                        oninput={(e) => (skipReason = e.target.value)}
+                      />
+                      <button type="button" class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] px-2 py-0.5 hover:text-[var(--color-ds-text,#111827)]" disabled={savingSkip || !skipReason.trim()} onclick={submitStageSkip}>
+                        {t('p3m.confirm')}
+                      </button>
+                      <button type="button" class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] px-2 py-0.5 text-[var(--color-ds-text-muted,#6b7280)] hover:text-[var(--color-ds-text,#111827)]" onclick={() => (skipTarget = '')}>
+                        {t('p3m.cancel')}
+                      </button>
+                    </span>
+                  {:else}
+                    <button type="button" class="rounded-md border border-amber-300 bg-amber-50 px-2 py-0.5 text-amber-700 hover:bg-amber-100" onclick={() => { skipTarget = tpl.to_stage_key; skipReason = ''; }}>
+                      {t('p3m.skipStage')}
+                    </button>
+                  {/if}
+                {/if}
+              </td>
+            </tr>
+          {/each}
+        </tbody>
+      </table>
     {/if}
 
     <!-- Financial rollup -->
@@ -327,7 +401,7 @@
             <span class="w-24 shrink-0 tabular-nums text-[var(--color-ds-text-muted,#6b7280)]">{formatDate(item.at)}</span>
             {#if item.type === 'stage_gate'}
               <span class="shrink-0 rounded bg-blue-50 px-1.5 py-0.5 font-medium text-blue-700">{t('p3m.activityStageGate')}</span>
-              <span>{stageLabel(item.data.from_stage)} → {stageLabel(item.data.to_stage)}{item.data.reviewer_name ? ` — ${item.data.reviewer_name}` : ''}</span>
+              <span>{stageLabel(item.data.from_stage, stages)} → {stageLabel(item.data.to_stage, stages)}{item.data.reviewer_name ? ` — ${item.data.reviewer_name}` : ''}</span>
               <span class="ml-auto shrink-0 rounded px-1.5 py-0.5 font-medium {item.data.passed ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}">
                 {t(item.data.passed ? 'p3m.passed' : 'p3m.activityGateNotPassed')}
               </span>

@@ -107,6 +107,28 @@ export const p3m = {
   updateFrontDoorIntake: (id, data) => put(`/p3m/front-door/${id}`, data),
   decideFrontDoorIntake: (id, data) => post(`/p3m/front-door/${id}/decision`, data),
 
+  // Front Door screen configuration (FD-008): per-complexity required fields.
+  getFrontDoorScreens: () => fetchAPI('/p3m/front-door/screens'),
+  updateFrontDoorScreens: (screens) => put('/p3m/front-door/screens', { screens }),
+
+  // Configurable lifecycle (BRD §5.2/§5.5): global stage config, gate
+  // templates and per-project gate status / proportional skips. Stage CRUD is
+  // keyed by the immutable slug; the template list comes from getLifecycleConfig.
+  getLifecycleConfig: () => fetchAPI('/p3m/config/lifecycle'),
+  createLifecycleStage: (data) => post('/p3m/config/lifecycle/stages', data),
+  updateLifecycleStage: (key, data) =>
+    put(`/p3m/config/lifecycle/stages/${encodeURIComponent(key)}`, data),
+  deleteLifecycleStage: (key) =>
+    del(`/p3m/config/lifecycle/stages/${encodeURIComponent(key)}`),
+  gateTemplates: {
+    create: (data) => post('/p3m/config/lifecycle/gate-templates', data),
+    update: (id, data) => put(`/p3m/config/lifecycle/gate-templates/${id}`, data),
+    delete: (id) => del(`/p3m/config/lifecycle/gate-templates/${id}`),
+  },
+  getProjectGates: (projectId) => fetchAPI(`/p3m/projects/${projectId}/gates`),
+  recordStageSkip: (projectId, data) => post(`/p3m/projects/${projectId}/stage-skips`, data),
+  listStageSkips: (projectId) => fetchAPI(`/p3m/projects/${projectId}/stage-skips`),
+
   // Finance system sync (FIN-007): configs, runs and the unmatched review queue.
   getFinanceSyncConfigs: () => fetchAPI('/p3m/finance-sync/configs'),
   createFinanceSyncConfig: (data) => post('/p3m/finance-sync/configs', data),
@@ -173,6 +195,8 @@ export const p3m = {
   scoringCriteria: createCrudClient('/p3m/scoring-criteria'),
   getInvestmentCaseScores: (id) => fetchAPI(`/p3m/investment-cases/${id}/scores`),
   upsertInvestmentCaseScore: (id, data) => put(`/p3m/investment-cases/${id}/scores`, data),
+  // PO-008: score change timeline reconstructed from audit events.
+  getInvestmentCaseScoreHistory: (id) => fetchAPI(`/p3m/investment-cases/${id}/score-history`),
   getRankedInvestmentCases: (filters = {}) => fetchAPI(`/p3m/investment-cases/ranked${qs(filters)}`),
   getPortfolioRoadmap: (portfolioId) => fetchAPI(`/p3m/portfolios/${portfolioId}/roadmap`),
 

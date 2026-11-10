@@ -7,6 +7,7 @@
   import PageHeader from '../../layout/PageHeader.svelte';
   import EmptyState from '../../components/EmptyState.svelte';
   import IconTarget from '@tabler/icons-svelte-runes/icons/target';
+  import P3MFrontDoor from './P3MFrontDoor.svelte';
   import P3MOverview from './P3MOverview.svelte';
   import P3MInvestmentCases from './P3MInvestmentCases.svelte';
   import P3MHierarchyGuide from './P3MHierarchyGuide.svelte';
@@ -19,6 +20,7 @@
   import P3MPortfolioPulse from './P3MPortfolioPulse.svelte';
 
   const TABS = [
+    { id: 'frontdoor', labelKey: 'p3m.frontDoorTab' },
     { id: 'overview', labelKey: 'p3m.overview' },
     { id: 'investment', labelKey: 'p3m.investmentTab' },
     { id: 'governance', labelKey: 'p3m.governance' },
@@ -46,6 +48,11 @@
    * @type {Map<string, Array<{plan_id:number, plan_name:string, plan_color:string}>>}
    */
   let planMap = $state(new Map());
+  // Configurable lifecycle (BRD §5.2/§5.5): the enabled stage list drives the
+  // stage pickers/filters in Overview, Governance and the project form. An
+  // empty list means config is unavailable; views fall back to legacy labels.
+  /** @type {{stages: any[], gate_templates: any[]}} */
+  let lifecycle = $state({ stages: [], gate_templates: [] });
 
   const portfolioCount = $derived(hierarchy.portfolios.length);
 
@@ -114,7 +121,20 @@
     loadPlanMap();
   }
 
-  onMount(load);
+  async function loadLifecycle() {
+    try {
+      const cfg = await p3mApi.getLifecycleConfig();
+      lifecycle = { stages: cfg?.stages ?? [], gate_templates: cfg?.gate_templates ?? [] };
+    } catch (e) {
+      // Lifecycle config is optional at runtime; views fall back to the legacy
+      // four-stage labels when it cannot be loaded.
+    }
+  }
+
+  onMount(() => {
+    load();
+    loadLifecycle();
+  });
 </script>
 
 <div class="px-6">
@@ -157,15 +177,17 @@
     actions={{ label: t('p3m.retry'), onClick: load }}
   />
 {:else}
-  {#if activeTab === 'overview'}
+  {#if activeTab === 'frontdoor'}
+    <P3MFrontDoor portfolios={hierarchy.portfolios} onChanged={load} />
+  {:else if activeTab === 'overview'}
     <P3MPortfolioPulse />
     <div class="mt-4">
-      <P3MOverview portfolios={hierarchy.portfolios} summary={summary} onChanged={load} initialProjectId={initialProjectId} planMap={planMap} />
+      <P3MOverview portfolios={hierarchy.portfolios} summary={summary} onChanged={load} initialProjectId={initialProjectId} planMap={planMap} stages={lifecycle.stages} />
     </div>
   {:else if activeTab === 'investment'}
     <P3MInvestmentCases portfolios={hierarchy.portfolios} onChanged={load} />
   {:else if activeTab === 'governance'}
-    <P3MGovernance portfolios={hierarchy.portfolios} onChanged={load} />
+    <P3MGovernance portfolios={hierarchy.portfolios} onChanged={load} stages={lifecycle.stages} />
   {:else if activeTab === 'benefits'}
     <P3MBenefitsFinancials portfolios={hierarchy.portfolios} />
   {:else if activeTab === 'risk'}

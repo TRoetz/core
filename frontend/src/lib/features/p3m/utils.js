@@ -41,8 +41,12 @@ export function ragLabel(status) {
   }
 }
 
-/** Localized project stage label. */
-export function stageLabel(stage) {
+/** Localized project stage label. A configured lifecycle stage with the same
+ * key wins (its display name is admin data, not i18n); otherwise falls back to
+ * the legacy four-stage labels. */
+export function stageLabel(stage, stages = []) {
+  const configured = stages.find((s) => s.stage_key === stage);
+  if (configured?.name) return configured.name;
   switch (stage) {
     case 'initiation':
       return t('p3m.stageInitiation');
@@ -55,6 +59,17 @@ export function stageLabel(stage) {
     default:
       return stage || '';
   }
+}
+
+/** Enabled lifecycle stages in path order; empty when config is unavailable. */
+export function enabledStages(stages = []) {
+  return [...stages].filter((s) => s.enabled).sort((a, b) => a.sort_order - b.sort_order);
+}
+
+/** The configured entry stage key (first enabled stage), or the legacy default. */
+export function entryStageKey(stages = []) {
+  const list = enabledStages(stages);
+  return list.length ? list[0].stage_key : 'initiation';
 }
 
 /** Localized RAID status label. */

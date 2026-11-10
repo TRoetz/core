@@ -7,6 +7,7 @@
   import IconPencil from '@tabler/icons-svelte-runes/icons/pencil';
   import IconPlus from '@tabler/icons-svelte-runes/icons/plus';
   import IconStar from '@tabler/icons-svelte-runes/icons/star';
+  import IconClock from '@tabler/icons-svelte-runes/icons/clock';
   import IconX from '@tabler/icons-svelte-runes/icons/x';
   import { formatDate, ragColor } from './utils.js';
 
@@ -167,6 +168,42 @@
     } finally {
       saving = false;
     }
+  }
+
+  // --- Score history timeline (PO-008) -------------------------------------------------
+  /** id of the case whose history row is expanded, or null. */
+  let historyFor = $state(null);
+  /** @type {Record<number, Array<{at:string,user?:string,criterion?:string,score?:number,raw?:string}>} */
+  let histories = $state({});
+  let historyLoadingId = $state(null);
+
+  async function toggleHistory(c) {
+    if (historyFor === c.id) {
+      historyFor = null;
+      return;
+    }
+    historyFor = c.id;
+    if (!histories[c.id]) {
+      historyLoadingId = c.id;
+      try {
+        histories = { ...histories, [c.id]: (await p3mApi.getInvestmentCaseScoreHistory(c.id)) ?? [] };
+      } catch (e) {
+        error = e?.message || 'error';
+      } finally {
+        historyLoadingId = null;
+      }
+    }
+  }
+
+  /** Group consecutive entries sharing a timestamp into one timeline line. */
+  function groupedHistory(entries) {
+    const out = [];
+    for (const e of entries ?? []) {
+      const last = out[out.length - 1];
+      if (last && last.at === e.at) last.items.push(e);
+      else out.push({ at: e.at, user: e.user, items: [e] });
+    }
+    return out;
   }
 
   // --- Decision flow ----------------------------------------------------------------
@@ -639,6 +676,9 @@
                       <button type="button" class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] px-2 py-0.5 text-[var(--color-ds-text-muted,#6b7280)] hover:text-[var(--color-ds-accent-blue,#2563eb)]" onclick={() => openScorecard(c)} aria-label={t('p3m.scoreCase')}>
                         <IconStar size={13} />
                       </button>
+                      <button type="button" class="rounded-md border px-2 py-0.5 text-[var(--color-ds-text-muted,#6b7280)] hover:text-[var(--color-ds-accent-blue,#2563eb)]" class:border-[var(--color-ds-border,#e5e7eb)]={historyFor !== c.id} class:border-[var(--color-ds-accent-blue,#2563eb)]={historyFor === c.id} onclick={() => toggleHistory(c)} aria-label={t('p3m.scoreHistory')}>
+                        <IconClock size={13} />
+                      </button>
                       <button type="button" class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] px-2 py-0.5 text-[var(--color-ds-text-muted,#6b7280)] hover:text-[var(--color-ds-text,#111827)]" onclick={() => startEdit(c)} aria-label={t('p3m.edit')}>
                         <IconPencil size={13} />
                       </button>
@@ -648,6 +688,29 @@
                     </div>
                   </td>
                 </tr>
+                {#if historyFor === c.id}
+                  <tr class="bg-ds-surface-hovered">
+                    <td colspan="9" class="py-2 pr-3 text-[var(--color-ds-text-muted,#6b7280)]" data-testid={`p3m-ic-history-${c.id}`}>
+                      {#if historyLoadingId === c.id}
+                        {t('p3m.loading')}
+                      {:else if (histories[c.id] ?? []).length === 0}
+                        {t('p3m.noScoreHistory')}
+                      {:else}
+                        <ol class="space-y-1">
+                          {#each groupedHistory(histories[c.id]) as grp (grp.at)}
+                            <li class="flex flex-wrap items-baseline gap-x-2">
+                              <span class="whitespace-nowrap">{formatDate(grp.at)}</span>
+                              {#if grp.user}
+                                <span class="text-[11px]">· {grp.user}</span>
+                              {/if}
+                              <span>{grp.items.map((e) => `${e.criterion ?? e.raw}: ${e.score != null ? e.score : '?'}`).join('  ·  ')}</span>
+                            </li>
+                          {/each}
+                        </ol>
+                      {/if}
+                    </td>
+                  </tr>
+                {/if}
               {/each}
             {/each}
           </tbody>

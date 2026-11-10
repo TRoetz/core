@@ -8,9 +8,9 @@
   import IconPlus from '@tabler/icons-svelte-runes/icons/plus';
   import IconX from '@tabler/icons-svelte-runes/icons/x';
   import P3MArchitectureReviews from './P3MArchitectureReviews.svelte';
-  import { formatMoney, formatDate, stageLabel } from './utils.js';
+  import { formatMoney, formatDate, stageLabel, enabledStages } from './utils.js';
 
-  let { portfolios = [], onChanged = () => {} } = $props();
+  let { portfolios = [], stages = [], onChanged = () => {} } = $props();
 
   let gates = $state([]);
   let thresholds = $state([]);
@@ -101,7 +101,7 @@
   const userNameById = $derived(new Map(users.map((u) => [u.id, u.display_name || u.username])));
 
   // --- Stage gate creation ---------------------------------------------------
-  const STAGES = ['initiation', 'planning', 'execution', 'closure'];
+  const LEGACY_STAGES = ['initiation', 'planning', 'execution', 'closure'];
   let gateFormOpen = $state(false);
   let gateForm = $state(emptyGateForm());
   let savingGate = $state(false);
@@ -113,9 +113,12 @@
 
   /** Target-stage options exclude the selected project's current stage. */
   const toStageOptions = $derived.by(() => {
-    if (!gateForm.project_id) return STAGES;
+    // Stage keys come from the configured lifecycle (enabled, in path order);
+    // when config is unavailable they fall back to the legacy four-stage set.
+    const keys = enabledStages(stages).length ? enabledStages(stages).map((s) => s.stage_key) : LEGACY_STAGES;
+    if (!gateForm.project_id) return keys;
     const p = allProjects.find((x) => String(x.id) === String(gateForm.project_id));
-    return STAGES.filter((s) => s !== (p?.current_stage ?? ''));
+    return keys.filter((s) => s !== (p?.current_stage ?? ''));
   });
 
   function toggleGateForm() {
@@ -355,7 +358,7 @@
               >
                 <option value="">{t('p3m.noSelection')}</option>
                 {#each toStageOptions as s (s)}
-                  <option value={s}>{stageLabel(s)}</option>
+                  <option value={s}>{stageLabel(s, stages)}</option>
                 {/each}
               </select>
             </label>
@@ -440,7 +443,7 @@
                   </button>
                 </td>
                 <td class="py-1.5 pr-3">{projectTitleById.get(gate.project_id) ?? `#${gate.project_id}`}</td>
-                <td class="py-1.5 pr-3">{stageLabel(gate.from_stage)} → {stageLabel(gate.to_stage)}</td>
+                <td class="py-1.5 pr-3">{stageLabel(gate.from_stage, stages)} → {stageLabel(gate.to_stage, stages)}</td>
                 <td class="py-1.5 pr-3">
                   {#if gate.passed}
                     <span class="rounded-full bg-emerald-100 px-2 py-0.5 text-emerald-700">{t('p3m.passed')}</span>

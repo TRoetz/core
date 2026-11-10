@@ -4,7 +4,7 @@
   import { p3m as p3mApi } from '../../api/p3m.js';
   import { time } from '../../api/time.js';
   import { getUsers } from '../../api/users.js';
-  import { toISODate, toDateInputValue } from './utils.js';
+  import { toISODate, toDateInputValue, enabledStages, entryStageKey } from './utils.js';
 
   /**
    * Create/edit form for a P3M project. The parent is either a portfolio
@@ -13,9 +13,25 @@
    * server-side and is not part of the payload. When `project` is set the
    * form edits that project in place (parents are fixed to its current ones).
    */
-  let { portfolios = [], defaultPortfolioId = null, defaultProgrammeId = null, project = null, onCreated = () => {}, onCancel = () => {} } = $props();
+  let { portfolios = [], defaultPortfolioId = null, defaultProgrammeId = null, project = null, stages = [], onCreated = () => {}, onCancel = () => {} } = $props();
 
-  const STAGES = ['initiation', 'planning', 'execution', 'closure'];
+  const LEGACY_STAGES = ['initiation', 'planning', 'execution', 'closure'];
+  // P3M work types (BRD §5.5); gate templates and Front Door intakes filter on these.
+  const WORK_TYPES = [
+    { value: 'programme', labelKey: 'p3m.workTypeProgramme' },
+    { value: 'project', labelKey: 'p3m.workTypeProject' },
+    { value: 'continuous_improvement', labelKey: 'p3m.workTypeContinuousImprovement' },
+    { value: 'digital_product', labelKey: 'p3m.workTypeDigitalProduct' },
+    { value: 'operational', labelKey: 'p3m.workTypeOperational' },
+  ];
+
+  // Stage options come from the configured lifecycle (enabled stages in path
+  // order); when config is unavailable they fall back to the legacy four.
+  const stageOptions = $derived.by(() => {
+    const configured = enabledStages(stages);
+    if (configured.length) return configured.map((s) => ({ value: s.stage_key, label: s.name }));
+    return LEGACY_STAGES.map((s) => ({ value: s, label: t(`p3m.stage${s[0].toUpperCase()}${s.slice(1)}`) }));
+  });
 
   function initialForm() {
     if (project) {
@@ -25,9 +41,10 @@
         title: project.title ?? '',
         description: project.description ?? '',
         external_ref: project.external_ref ?? '',
+        work_type: project.work_type ?? '',
         manager_id: project.manager_id != null ? String(project.manager_id) : '',
         time_project_id: project.time_project_id != null ? String(project.time_project_id) : '',
-        current_stage: project.current_stage || 'initiation',
+        current_stage: project.current_stage || entryStageKey(stages),
         budget_approved: String(project.budget_approved ?? ''),
         budget_actual: String(project.budget_actual ?? ''),
         progress_percent: project.progress_percent ?? 0,
@@ -41,9 +58,10 @@
       title: '',
       description: '',
       external_ref: '',
+      work_type: '',
       manager_id: '',
       time_project_id: '',
-      current_stage: 'initiation',
+      current_stage: entryStageKey(stages),
       budget_approved: '',
       budget_actual: '',
       progress_percent: 0,
@@ -100,6 +118,8 @@
       if (form.programme_id) payload.programme_id = Number(form.programme_id);
       if (form.external_ref.trim()) payload.external_ref = form.external_ref.trim();
       else if (project) payload.external_ref = null; // full-replace update: explicit clear
+      if (form.work_type) payload.work_type = form.work_type;
+      else if (project) payload.work_type = null; // full-replace update: explicit clear
       if (form.manager_id) payload.manager_id = Number(form.manager_id);
       else if (project) payload.manager_id = null; // full-replace update: explicit clear
       if (form.time_project_id) payload.time_project_id = Number(form.time_project_id);
@@ -175,6 +195,21 @@
     </label>
 
     <label class="block">
+      <span>{t('p3m.workType')}</span>
+      <select
+        class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+        value={form.work_type}
+        disabled={saving}
+        onchange={(e) => (form = { ...form, work_type: e.target.value })}
+      >
+        <option value="">{t('p3m.noSelection')}</option>
+        {#each WORK_TYPES as wt (wt.value)}
+          <option value={wt.value}>{t(wt.labelKey)}</option>
+        {/each}
+      </select>
+    </label>
+
+    <label class="block">
       <span>{t('p3m.manager')}</span>
       <select
         class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
@@ -212,8 +247,8 @@
         disabled={saving}
         onchange={(e) => (form = { ...form, current_stage: e.target.value })}
       >
-        {#each STAGES as s (s)}
-          <option value={s}>{t(`p3m.stage${s[0].toUpperCase()}${s.slice(1)}`)}</option>
+        {#each stageOptions as opt (opt.value)}
+          <option value={opt.value}>{opt.label}</option>
         {/each}
       </select>
     </label>

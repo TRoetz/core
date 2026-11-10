@@ -13,9 +13,9 @@
   import { p3m as p3mApi } from '../../api/p3m.js';
   import { getUsers } from '../../api/users.js';
   import { navigate } from '../../router.js';
-  import { formatMoney, formatDate, ragColor, ragLabel, stageLabel, toISODate, toDateInputValue } from './utils.js';
+  import { formatMoney, formatDate, ragColor, ragLabel, stageLabel, enabledStages, toISODate, toDateInputValue } from './utils.js';
 
-  let { portfolios = [], summary = null, onChanged = () => {}, initialProjectId = null, planMap = new Map() } = $props();
+  let { portfolios = [], summary = null, onChanged = () => {}, initialProjectId = null, planMap = new Map(), stages = [] } = $props();
 
   /** Plans linked to a P3M entity (from /plans/p3m-map). */
   function plansFor(entityType, entityId) {
@@ -271,10 +271,17 @@
   let filterText = $state('');
   /** all | red | amber | green — applied to project rows. */
   let filterRag = $state('all');
-  /** all | initiation | planning | execution | closure — applied to project rows. */
+  /** any configured stage key (or the legacy four) — applied to project rows. */
   let filterStage = $state('all');
 
-  const STAGES = ['initiation', 'planning', 'execution', 'closure'];
+  // Stage filter options come from the configured lifecycle; when config is
+  // unavailable they fall back to the legacy four-stage set.
+  const LEGACY_STAGES = ['initiation', 'planning', 'execution', 'closure'];
+  const stageFilterOptions = $derived.by(() => {
+    const configured = enabledStages(stages);
+    if (configured.length) return configured.map((s) => ({ value: s.stage_key, label: s.name }));
+    return LEGACY_STAGES.map((s) => ({ value: s, label: stageLabel(s) }));
+  });
 
   const filtersActive = $derived(
     filterText.trim() !== '' || filterRag !== 'all' || filterStage !== 'all'
@@ -556,8 +563,8 @@
           class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
         >
           <option value="all">{t('p3m.allStages')}</option>
-          {#each STAGES as s (s)}
-            <option value={s}>{stageLabel(s)}</option>
+          {#each stageFilterOptions as opt (opt.value)}
+            <option value={opt.value}>{opt.label}</option>
           {/each}
         </select>
         {#if filtersActive}
@@ -751,6 +758,7 @@
               <div class="mx-10 mb-2">
                 <P3MProjectForm
                   portfolios={portfolios}
+                  stages={stages}
                   defaultPortfolioId={pf.id}
                   onCreated={() => { closeProjectForm(); onChanged(); }}
                   onCancel={closeProjectForm}
@@ -817,6 +825,7 @@
                     <div class="px-4 pb-2">
                       <P3MProjectForm
                         portfolios={portfolios}
+                        stages={stages}
                         defaultPortfolioId={pf.id}
                         defaultProgrammeId={pg.id}
                         onCreated={() => { closeProjectForm(); onChanged(); }}
@@ -871,6 +880,7 @@
                       <div class="px-4 pb-2">
                         <P3MProjectForm
                           portfolios={portfolios}
+                          stages={stages}
                           project={pr}
                           onCreated={() => { closeProjectEdit(); onChanged(); }}
                           onCancel={closeProjectEdit}
@@ -879,7 +889,7 @@
                     {/if}
 
                     {#if prOpen}
-                      <P3MProjectDetail project={pr} onChanged={onChanged} onClose={() => toggle(pr.id)} />
+                      <P3MProjectDetail project={pr} stages={stages} onChanged={onChanged} onClose={() => toggle(pr.id)} />
                     {/if}
                     {/if}
                   {/each}
@@ -920,6 +930,7 @@
                 <div class="ml-6 pb-2">
                   <P3MProjectForm
                     portfolios={portfolios}
+                    stages={stages}
                     project={pr}
                     onCreated={() => { closeProjectEdit(); onChanged(); }}
                     onCancel={closeProjectEdit}
@@ -928,7 +939,7 @@
               {/if}
 
               {#if prOpen}
-                <P3MProjectDetail project={pr} onChanged={onChanged} onClose={() => toggle(pr.id)} />
+                <P3MProjectDetail project={pr} stages={stages} onChanged={onChanged} onClose={() => toggle(pr.id)} />
               {/if}
               {/if}
             {/each}

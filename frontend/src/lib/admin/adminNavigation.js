@@ -308,6 +308,18 @@ export const adminGroups = [
         icon: IconAlertCircle,
         descriptionKey: 'settings.adminItems.p3mAlertRules.description',
       },
+      {
+        id: 'p3m-lifecycle',
+        labelKey: 'settings.adminItems.p3mLifecycle.title',
+        icon: IconGitBranch,
+        descriptionKey: 'settings.adminItems.p3mLifecycle.description',
+      },
+      {
+        id: 'p3m-gate-templates',
+        labelKey: 'settings.adminItems.p3mGateTemplates.title',
+        icon: IconFileText,
+        descriptionKey: 'settings.adminItems.p3mGateTemplates.description',
+      },
     ],
   },
   {

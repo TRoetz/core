@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"net/http"
 	"strconv"
+	"strings"
+	"time"
 
 	"windshift/internal/models"
 )
@@ -340,6 +342,69 @@ func (h *P3MHandler) ListInvestmentCaseScores(w http.ResponseWriter, r *http.Req
 			"weight":       weight,
 			"direction":    direction,
 		})
+	}
+	if err := rows.Err(); err != nil {
+		respondInternalError(w, r, err)
+		return
+	}
+	respondJSONOK(w, out)
+}
+
+// GetInvestmentCaseScoreHistory handles GET /api/p3m/investment-cases/{ic_id}/score-history.
+// Reconstructs the score timeline from the audit events emitted by
+// UpsertInvestmentCaseScore (PO-008): one entry per recorded change, oldest first.
+// The value is parsed from the event's resource name ("criterion=score"); when it
+// cannot be parsed only the raw string is returned.
+func (h *P3MHandler) GetInvestmentCaseScoreHistory(w http.ResponseWriter, r *http.Request) {
+	if _, ok := RequireAuth(w, r); !ok {
+		return
+	}
+	ctx := r.Context()
+
+	icID, ok := requireIDParam(w, r, "id")
+	if !ok {
+		return
+	}
+	var icExists int
+	if err := h.db.QueryRowContext(ctx, `SELECT id FROM p3m_investment_cases WHERE id = ?`, icID).Scan(&icExists); err != nil {
+		respondNotFound(w, r, "p3m_investment_case")
+		return
+	}
+
+	rows, err := h.db.QueryContext(ctx, `
+		SELECT al.timestamp, COALESCE(al.username, ''), COALESCE(al.resource_name, '')
+		FROM audit_logs al
+		JOIN p3m_investment_case_scores s ON s.id = al.resource_id
+		WHERE al.action_type = 'p3m_investment_case_score_upserted'
+		  AND al.resource_type = 'p3m_investment_case_score'
+		  AND s.ic_id = ?
+		ORDER BY al.timestamp ASC, al.id ASC`, icID)
+	if err != nil {
+		respondInternalError(w, r, err)
+		return
+	}
+	defer rows.Close()
+
+	out := make([]map[string]any, 0)
+	for rows.Next() {
+		var at time.Time
+		var username, resourceName string
+		if err := rows.Scan(&at, &username, &resourceName); err != nil {
+			respondInternalError(w, r, err)
+			return
+		}
+		entry := map[string]any{
+			"at":   at.Format(time.RFC3339),
+			"user": username,
+			"raw":  resourceName,
+		}
+		if i := strings.LastIndex(resourceName, "="); i > 0 {
+			entry["criterion"] = resourceName[:i]
+			if v, perr := strconv.ParseFloat(resourceName[i+1:], 64); perr == nil {
+				entry["score"] = v
+			}
+		}
+		out = append(out, entry)
 	}
 	if err := rows.Err(); err != nil {
 		respondInternalError(w, r, err)
