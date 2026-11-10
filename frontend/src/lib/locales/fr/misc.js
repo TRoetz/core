@@ -1132,6 +1132,7 @@ export default {
     emptyDescription: "Utilisez « Nouveau portefeuille » ci-dessus pour créer votre premier portefeuille.",
 
     // Tabs
+    frontDoorTab: "Porte d'entrée",
     overview: 'Aperçu',
     governance: 'Gouvernance',
     benefitsTab: 'Avantages et finances',

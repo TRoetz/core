@@ -995,6 +995,7 @@ export default {
     emptyDescription: 'Erstellen Sie oben mit „Neues Portfolio“ Ihr erstes Portfolio.',
 
     // Tabs
+    frontDoorTab: 'Eingang',
     overview: 'Übersicht',
     governance: 'Governance',
     benefitsTab: 'Nutzen & Finanzen',

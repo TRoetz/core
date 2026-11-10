@@ -825,6 +825,7 @@ export default {
     emptyDescription: 'Создайте портфель через API или интеграцию, чтобы начать структурировать инвестиционный ландшафт.',
 
     // Tabs
+    frontDoorTab: 'Вход',
     overview: 'Обзор',
     governance: 'Управление',
     benefitsTab: 'Эффекты и финансы',

@@ -1097,6 +1097,7 @@ export default {
     emptyDescription: '通过 API 或集成创建项目集，开始构建您的投资布局。',
 
     // Tabs
+    frontDoorTab: '入口',
     overview: '概览',
     governance: '治理',
     benefitsTab: '收益与财务',

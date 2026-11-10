@@ -1916,7 +1916,7 @@ func (h *P3MHandler) topTreeRisks(ctx context.Context, w http.ResponseWriter, r 
 		args = append(args, id)
 	}
 	query := `
-		SELECT entity_type, entity_id, item_type, title, description, impact_score, probability_score, mitigation_plan, owner_id, status, created_at, updated_at
+		SELECT id, entity_type, entity_id, item_type, title, description, impact_score, probability_score, mitigation_plan, owner_id, status, created_at, updated_at
 		FROM p3m_raid_items
 		WHERE ((entity_type = 'portfolio' AND entity_id = ?)
 			OR (entity_type = 'project' AND entity_id IN (`+joinPlaceholders(placeholders)+`))
@@ -1936,7 +1936,7 @@ func (h *P3MHandler) topTreeRisks(ctx context.Context, w http.ResponseWriter, r 
 	out := make([]models.P3MRaidItem, 0, 5)
 	for rows.Next() {
 		var s models.P3MRaidItem
-		if err := rows.Scan(&s.EntityType, &s.EntityID, &s.ItemType, &s.Title, &s.Description,
+		if err := rows.Scan(&s.ID, &s.EntityType, &s.EntityID, &s.ItemType, &s.Title, &s.Description,
 			&s.ImpactScore, &s.ProbabilityScore, &s.MitigationPlan, &s.OwnerID, &s.Status, &s.CreatedAt, &s.UpdatedAt); err != nil {
 			respondInternalError(w, r, err)
 			return nil

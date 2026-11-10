@@ -1552,6 +1552,7 @@ export default {
     emptyDescription: "Use \"New portfolio\" above to create your first portfolio.",
 
     // Tabs
+    frontDoorTab: 'Front Door',
     overview: 'Overview',
     investmentTab: 'Investment',
     governance: 'Governance',
@@ -2031,6 +2032,8 @@ export default {
     period: 'Period',
     overallRag: 'Overall RAG',
     categoryRags: 'Category RAGs',
+    categories: 'Categories',
+    loadFailed: 'Failed to load RAG suggestions',
     suggestedRag: 'Suggested',
     overrideReason: 'Override reason (required when differing from suggested)',
     commentary: 'Commentary',

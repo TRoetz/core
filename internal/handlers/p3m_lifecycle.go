@@ -111,7 +111,7 @@ func (h *P3MHandler) ListLifecycleConfig(w http.ResponseWriter, r *http.Request)
 // p3mMandatoryTemplatesForAll returns every enabled mandatory template that
 // applies to workType (nil = the default path).
 func (h *P3MHandler) p3mMandatoryTemplatesForAll(ctx context.Context, workType *string) ([]models.P3MStageGateTemplate, error) {
-	query := `SELECT ` + p3mStageGateTemplateColumns + ` WHERE enabled = 1 AND mandatory = 1`
+	query := `SELECT ` + p3mStageGateTemplateColumns + ` FROM p3m_stage_gate_templates WHERE enabled = 1 AND mandatory = 1`
 	args := []any{}
 	if workType != nil {
 		query += ` AND (work_type IS NULL OR work_type = ?)`
