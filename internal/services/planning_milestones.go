@@ -121,7 +121,16 @@ func scanMilestoneRow(sc milestoneScanner) (MilestoneResult, error) {
 	}
 
 	m.Description = description.String
-	m.TargetDate = targetDate.String
+	if targetDate.Valid {
+		// DATE columns come back as time.Time from the driver and surface as
+		// RFC3339 when scanned into a string; normalize to the documented
+		// YYYY-MM-DD form (same handling as scanIterationRow).
+		if t, parseErr := parseDate(targetDate.String); parseErr == nil {
+			m.TargetDate = t.Format("2006-01-02")
+		} else {
+			m.TargetDate = targetDate.String
+		}
+	}
 	m.CategoryName = categoryName.String
 	m.CategoryColor = categoryColor.String
 	m.WorkspaceName = workspaceName.String

@@ -62,7 +62,7 @@ type dqEngagementCompliance struct {
 
 // dqCrossStore summarises the WI-0.2 cross-store duplicate report.
 type dqCrossStore struct {
-	Matches   int `json:"matches"`
+	Matches    int `json:"matches"`
 	Actionable int `json:"actionable"`
 }
 
@@ -207,6 +207,28 @@ func (h *SMSHandler) GetDataQuality(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Delivery (roadworks scenario): structural checks over nodes, campaigns,
+	// RACI matrices and work packages.
+	var buildingsNoOccupants, activeCampaignsNoAudience int
+	if err := h.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM sms_nodes n JOIN sms_node_kinds k ON k.id = n.kind_id WHERE k.key = 'building' AND NOT EXISTS (SELECT 1 FROM sms_node_members m WHERE m.node_id = n.id)`).Scan(&buildingsNoOccupants); err != nil {
+		respondInternalError(w, r, err)
+		return
+	}
+	if err := h.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM sms_notification_campaigns c WHERE c.status IN ('scheduled','in_progress') AND NOT EXISTS (SELECT 1 FROM sms_notifications n WHERE n.campaign_id = c.id)`).Scan(&activeCampaignsNoAudience); err != nil {
+		respondInternalError(w, r, err)
+		return
+	}
+	var raciActivitiesMissingAccountable int
+	if err := h.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM (SELECT a.raci_id, a.activity_code FROM sms_raci_assignments a GROUP BY a.raci_id, a.activity_code HAVING SUM(CASE WHEN a.value = 'a' THEN 1 ELSE 0 END) = 0)`).Scan(&raciActivitiesMissingAccountable); err != nil {
+		respondInternalError(w, r, err)
+		return
+	}
+	var workPackagesNoContractor int
+	if err := h.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM sms_work_packages WHERE contractor_stakeholder_id IS NULL AND status IN ('planned','in_progress')`).Scan(&workPackagesNoContractor); err != nil {
+		respondInternalError(w, r, err)
+		return
+	}
+
 	if activeTotal > 0 {
 		completeness.Percent = round1(float64(completeness.Complete) / float64(activeTotal) * 100)
 	}
@@ -225,6 +247,12 @@ func (h *SMSHandler) GetDataQuality(w http.ResponseWriter, r *http.Request) {
 		"duplicate_candidates":   duplicates,
 		"engagement_compliance":  compliance,
 		"cross_store_duplicates": crossStore,
+		"delivery": map[string]any{
+			"buildings_without_occupants":         buildingsNoOccupants,
+			"active_campaigns_no_audience":        activeCampaignsNoAudience,
+			"raci_activities_missing_accountable": raciActivitiesMissingAccountable,
+			"work_packages_without_contractor":    workPackagesNoContractor,
+		},
 	})
 }
 

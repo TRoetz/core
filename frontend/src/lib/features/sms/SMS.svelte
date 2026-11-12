@@ -7,12 +7,18 @@
   import IconUsers from '@tabler/icons-svelte-runes/icons/users';
   import SMSOverview from './sections/Overview.svelte';
   import SMSStakeholders from './sections/Stakeholders.svelte';
+  import SMSStructure from './sections/Structure.svelte';
+  import SMSNotifications from './sections/Notifications.svelte';
   import SMSEngagement from './sections/Engagement.svelte';
+  import SMSDelivery from './sections/Delivery.svelte';
   import SMSReports from './sections/Reports.svelte';
 
   const TABS = [
     { id: 'overview', labelKey: 'sms.overviewTab' },
     { id: 'stakeholders', labelKey: 'sms.stakeholdersTab' },
+    { id: 'structure', labelKey: 'sms.structureTab' },
+    { id: 'notifications', labelKey: 'sms.notificationsTab' },
+    { id: 'delivery', labelKey: 'sms.deliveryTab' },
     { id: 'engagement', labelKey: 'sms.engagementTab' },
     { id: 'reports', labelKey: 'sms.reportsTab' },
   ];
@@ -78,6 +84,12 @@
     <SMSOverview dashboard={dashboard} onRefreshed={load} />
   {:else if activeTab === 'stakeholders'}
     <SMSStakeholders />
+  {:else if activeTab === 'structure'}
+    <SMSStructure />
+  {:else if activeTab === 'notifications'}
+    <SMSNotifications />
+  {:else if activeTab === 'delivery'}
+    <SMSDelivery />
   {:else if activeTab === 'engagement'}
     <SMSEngagement />
   {:else}

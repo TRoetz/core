@@ -87,7 +87,7 @@ var (
 	smsInfoClassifications  = []string{models.SMSInfoPublic, models.SMSInfoInternal, models.SMSInfoConfidential, models.SMSInfoRestricted}
 	smsConsentStatuses      = []string{models.SMSConsentNotRequired, models.SMSConsentGranted, models.SMSConsentDeclined, models.SMSConsentWithdrawn, models.SMSConsentUnknown}
 	smsReviewCadences       = []string{models.SMSReviewMonthly, models.SMSReviewQuarterly, models.SMSReviewSemiAnnual, models.SMSReviewAnnual}
-	smsChannels            = []string{models.SMSChannelEmail, models.SMSChannelPhone, models.SMSChannelMeeting, models.SMSChannelInPerson, models.SMSChannelSlack, models.SMSChannelTeams, models.SMSChannelOther}
+	smsChannels            = []string{models.SMSChannelEmail, models.SMSChannelPhone, models.SMSChannelMeeting, models.SMSChannelInPerson, models.SMSChannelSlack, models.SMSChannelTeams, models.SMSChannelLetter, models.SMSChannelSmsText, models.SMSChannelOther}
 	smsDirections          = []string{models.SMSDirectionOutbound, models.SMSDirectionInbound}
 	smsSentiments          = []string{models.SMSSentimentPositive, models.SMSSentimentNeutral, models.SMSSentimentNegative}
 	smsPlanFrequencies     = []string{models.SMSFrequencyDaily, models.SMSFrequencyWeekly, models.SMSFrequencyBiweekly, models.SMSFrequencyMonthly, models.SMSFrequencyQuarterly, models.SMSFrequencyAnnual, models.SMSFrequencyAsNeeded}

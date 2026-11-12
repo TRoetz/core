@@ -354,9 +354,10 @@ func (h *SMSHandler) GetTimeline(w http.ResponseWriter, r *http.Request) {
 	respondJSONOK(w, entries)
 }
 
-// ExportCSV streams a CSV export of either all stakeholders (with computed
-// health scores) or the full communication log. Only ?scope=stakeholders and
-// ?scope=communications are supported; format must be empty or "csv".
+// ExportCSV streams a CSV export of the register (with computed health
+// scores), the full communication log, sites or site occupancy. Supported
+// scopes: ?scope=stakeholders|communications|nodes|occupants; format must be
+// empty or "csv".
 func (h *SMSHandler) ExportCSV(w http.ResponseWriter, r *http.Request) {
 	user, ok := RequireAuth(w, r)
 	if !ok {
@@ -472,8 +473,87 @@ func (h *SMSHandler) ExportCSV(w http.ResponseWriter, r *http.Request) {
 		}
 		cw.Flush()
 
+	case "nodes":
+		filename = "sms-nodes.csv"
+		rows, err := h.db.QueryContext(ctx, `SELECT n.id, COALESCE(n.external_id, ''), k.key AS kind_key, k.label AS kind_label, COALESCE(p.name, ''), n.name, n.description, n.location_lat, n.location_lon, COALESCE(n.location_text, ''), n.custom_fields, COALESCE(n.entity_type, ''), COALESCE(n.entity_id, 0), (SELECT COUNT(*) FROM sms_node_members m WHERE m.node_id = n.id) AS occupant_count FROM sms_nodes n JOIN sms_node_kinds k ON k.id = n.kind_id LEFT JOIN sms_nodes p ON p.id = n.parent_id ORDER BY n.name COLLATE NOCASE`)
+		if err != nil {
+			respondInternalError(w, r, err)
+			return
+		}
+		defer rows.Close()
+
+		w.Header().Set("Content-Type", "text/csv; charset=utf-8")
+		w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
+		cw := csv.NewWriter(w)
+		if err := cw.Write([]string{"id", "external_id", "kind_key", "kind_label", "parent_name", "name", "description", "location_lat", "location_lon", "location_text", "custom_fields", "entity_type", "entity_id", "occupant_count"}); err != nil {
+			return
+		}
+		for rows.Next() {
+			var (
+				id, entityID, occupants int
+				external                string
+				kindKey                 string
+				kindLabel               string
+				parentName              string
+				name                    string
+				description             string
+				lat                     *float64
+				lon                     *float64
+				locationText            string
+				customFields            string
+				entityType              string
+			)
+			if err := rows.Scan(&id, &external, &kindKey, &kindLabel, &parentName, &name, &description, &lat, &lon, &locationText, &customFields, &entityType, &entityID, &occupants); err != nil {
+				return
+			}
+			record := []string{strconv.Itoa(id), external, kindKey, kindLabel, parentName, name, description, smsNullableFloat(lat), smsNullableFloat(lon), locationText, customFields, entityType, strconv.Itoa(entityID), strconv.Itoa(occupants)}
+			rowCount++
+			if err := cw.Write(record); err != nil {
+				return
+			}
+		}
+		cw.Flush()
+
+	case "occupants":
+		filename = "sms-occupants.csv"
+		rows, err := h.db.QueryContext(ctx, `SELECT m.id, n.name AS node_name, s.name AS stakeholder_name, s.organization, s.email, m.role, COALESCE(m.start_date, ''), COALESCE(m.end_date, ''), m.notes FROM sms_node_members m JOIN sms_nodes n ON n.id = m.node_id JOIN sms_stakeholders s ON s.id = m.stakeholder_id ORDER BY n.name COLLATE NOCASE, s.name COLLATE NOCASE`)
+		if err != nil {
+			respondInternalError(w, r, err)
+			return
+		}
+		defer rows.Close()
+
+		w.Header().Set("Content-Type", "text/csv; charset=utf-8")
+		w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
+		cw := csv.NewWriter(w)
+		if err := cw.Write([]string{"id", "node_name", "stakeholder_name", "organization", "email", "role", "start_date", "end_date", "notes"}); err != nil {
+			return
+		}
+		for rows.Next() {
+			var (
+				id         int
+				nodeName   string
+				shName     string
+				org        string
+				email      string
+				role       string
+				startDate  string
+				endDate    string
+				memberNote string
+			)
+			if err := rows.Scan(&id, &nodeName, &shName, &org, &email, &role, &startDate, &endDate, &memberNote); err != nil {
+				return
+			}
+			record := []string{strconv.Itoa(id), nodeName, shName, org, email, role, startDate, endDate, memberNote}
+			rowCount++
+			if err := cw.Write(record); err != nil {
+				return
+			}
+		}
+		cw.Flush()
+
 	default:
-		respondBadRequest(w, r, "scope must be 'stakeholders' or 'communications'")
+		respondBadRequest(w, r, "scope must be 'stakeholders', 'communications', 'nodes' or 'occupants'")
 	}
 	smsAudit(h, r, user, "sms_export", "sms_stakeholder", nil, filename, map[string]any{"scope": scope, "rows": rowCount})
 }
@@ -484,4 +564,12 @@ func smsNullableString(v *string) string {
 		return ""
 	}
 	return *v
+}
+
+// smsNullableFloat renders a nullable float column for CSV output.
+func smsNullableFloat(v *float64) string {
+	if v == nil {
+		return ""
+	}
+	return strconv.FormatFloat(*v, 'f', -1, 64)
 }

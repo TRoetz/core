@@ -100,6 +100,8 @@ const (
 	SMSChannelInPerson  = "in_person"
 	SMSChannelSlack     = "slack"
 	SMSChannelTeams     = "teams"
+	SMSChannelLetter    = "letter"
+	SMSChannelSmsText   = "sms_text"
 	SMSChannelOther     = "other"
 )
 
@@ -540,4 +542,243 @@ type SMSPilotBaseline struct {
 	BaselineValue *float64 `json:"baseline_value,omitempty"`
 	TargetValue   *float64 `json:"target_value,omitempty"`
 	SetAt         time.Time `json:"set_at"`
+}
+
+// ---------------------------------------------------------------------------
+// Node taxonomy: admin-configurable kinds, a generic hierarchy of nodes, and
+// role-based stakeholder↔node membership (buildings with owners/tenants, road
+// segments, areas…). Kinds and roles are data, not schema.
+// ---------------------------------------------------------------------------
+
+// SMSNodeKind is one row of sms_node_kinds. System kinds are seeded and may be
+// edited but not deleted.
+type SMSNodeKind struct {
+	ID             int       `json:"id"`
+	Key            string    `json:"key"`
+	Label          string    `json:"label"`
+	Description    string    `json:"description"`
+	AllowsChildren bool      `json:"allows_children"`
+	ChildKinds     string    `json:"child_kinds"`
+	IsSystem       bool      `json:"is_system"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
+
+	NodeCount int `json:"node_count,omitempty"`
+}
+
+// SMSNodeKindRole is one row of sms_node_kind_roles: an allowed membership role.
+type SMSNodeKindRole struct {
+	ID        int    `json:"id"`
+	KindID    int    `json:"kind_id"`
+	RoleKey   string `json:"role_key"`
+	Label     string `json:"label"`
+	SortOrder int    `json:"sort_order"`
+}
+
+// SMSNode is one row of sms_nodes.
+type SMSNode struct {
+	ID           int        `json:"id"`
+	ExternalID   *string    `json:"external_id,omitempty"`
+	KindID       int        `json:"kind_id"`
+	ParentID     *int       `json:"parent_id,omitempty"`
+	Name         string     `json:"name"`
+	Description  string     `json:"description"`
+	LocationLat  *float64   `json:"location_lat,omitempty"`
+	LocationLon  *float64   `json:"location_lon,omitempty"`
+	LocationText string     `json:"location_text"`
+	CustomFields string     `json:"custom_fields"`
+	EntityType   *string    `json:"entity_type,omitempty"`
+	EntityID     *int       `json:"entity_id,omitempty"`
+	Notes        string     `json:"notes"`
+	CreatedAt    time.Time  `json:"created_at"`
+	UpdatedAt    time.Time  `json:"updated_at"`
+
+	KindKey     string `json:"kind_key,omitempty"`
+	KindLabel   string `json:"kind_label,omitempty"`
+	ParentName  string `json:"parent_name,omitempty"`
+	ChildCount  int    `json:"child_count,omitempty"`
+	MemberCount int    `json:"member_count,omitempty"`
+}
+
+// SMSNodeMember is one row of sms_node_members: a stakeholder mapped to a node
+// in a kind-validated role (owner, tenant, lessee…).
+type SMSNodeMember struct {
+	ID            int        `json:"id"`
+	NodeID         int        `json:"node_id"`
+	StakeholderID int        `json:"stakeholder_id"`
+	Role          string     `json:"role"`
+	StartDate     *time.Time `json:"start_date,omitempty"`
+	EndDate       *time.Time `json:"end_date,omitempty"`
+	Notes         string     `json:"notes"`
+	CreatedAt     time.Time  `json:"created_at"`
+
+	Name         string `json:"name,omitempty"`
+	Organization string `json:"organization,omitempty"`
+	NodeName     string `json:"node_name,omitempty"`
+}
+
+// ---------------------------------------------------------------------------
+// Notification campaigns: a notice to be delivered, its node targets, and the
+// per-stakeholder delivery ledger ("have they been informed, by when?").
+// ---------------------------------------------------------------------------
+
+// SMS notification campaign statuses.
+const (
+	SMSCampaignStatusDraft      = "draft"
+	SMSCampaignStatusScheduled  = "scheduled"
+	SMSCampaignStatusInProgress = "in_progress"
+	SMSCampaignStatusCompleted  = "completed"
+	SMSCampaignStatusCancelled  = "cancelled"
+)
+
+// SMS per-stakeholder notification statuses.
+const (
+	SMSNotificationStatusPending       = "pending"
+	SMSNotificationStatusSent          = "sent"
+	SMSNotificationStatusRead          = "read"
+	SMSNotificationStatusAcknowledged  = "acknowledged"
+	SMSNotificationStatusFailed        = "failed"
+	SMSNotificationStatusExempt        = "exempt"
+)
+
+// SMSNotificationCampaign is one row of sms_notification_campaigns.
+type SMSNotificationCampaign struct {
+	ID          int        `json:"id"`
+	Title       string     `json:"title"`
+	Description string     `json:"description"`
+	EntityType  *string    `json:"entity_type,omitempty"`
+	EntityID    *int       `json:"entity_id,omitempty"`
+	Channel     string     `json:"channel"`
+	ScheduledAt *time.Time `json:"scheduled_at,omitempty"`
+	DueBy       *time.Time `json:"due_by,omitempty"`
+	Status      string     `json:"status"`
+	CreatedBy   *int       `json:"created_by,omitempty"`
+	CreatedAt   time.Time  `json:"created_at"`
+	UpdatedAt   time.Time  `json:"updated_at"`
+
+	TotalNotifications int     `json:"total_notifications,omitempty"`
+	InformedCount      int     `json:"informed_count,omitempty"`
+	InformedPct        float64 `json:"informed_pct,omitempty"`
+	OverdueCount       int     `json:"overdue_count,omitempty"`
+}
+
+// SMSCampaignTarget is one row of sms_campaign_targets.
+type SMSCampaignTarget struct {
+	ID                 int  `json:"id"`
+	CampaignID         int  `json:"campaign_id"`
+	NodeID             int  `json:"node_id"`
+	IncludeDescendants bool `json:"include_descendants"`
+
+	NodeName  string `json:"node_name,omitempty"`
+	KindLabel string `json:"kind_label,omitempty"`
+}
+
+// SMSNotification is one row of sms_notifications: the per-stakeholder ledger.
+type SMSNotification struct {
+	ID              int        `json:"id"`
+	CampaignID      int        `json:"campaign_id"`
+	StakeholderID   int        `json:"stakeholder_id"`
+	NodeID          *int       `json:"node_id,omitempty"`
+	RequiredBy      *time.Time `json:"required_by,omitempty"`
+	Status          string     `json:"status"`
+	Channel         string     `json:"channel"`
+	SentAt          *time.Time `json:"sent_at,omitempty"`
+	AcknowledgedAt  *time.Time `json:"acknowledged_at,omitempty"`
+	CommunicationID *int       `json:"communication_id,omitempty"`
+	Notes           string     `json:"notes"`
+	CreatedAt       time.Time  `json:"created_at"`
+	UpdatedAt       time.Time  `json:"updated_at"`
+
+	Name         string `json:"name,omitempty"`
+	Organization string `json:"organization,omitempty"`
+	NodeName     string `json:"node_name,omitempty"`
+}
+
+// ---------------------------------------------------------------------------
+// RACI + work packages: versioned R/A/C/I matrices scoped to P3M entities and
+// a work-package register tying performing contractors to impacted nodes.
+// ---------------------------------------------------------------------------
+
+// SMS RACI matrix statuses (mirrors srm_racis).
+const (
+	SMSCRACIStatusDraft           = "draft"
+	SMSCRACIStatusPreliminary     = "preliminary"
+	SMSCRACIStatusUnderDiscussion = "under_discussion"
+	SMSCRACIStatusAgreed          = "agreed"
+)
+
+// SMS RACI assignment values.
+const (
+	SMSCRACIValueResponsible = "r"
+	SMSCRACIValueAccountable = "a"
+	SMSCRACIValueConsulted   = "c"
+	SMSCRACIValueInformed    = "i"
+)
+
+// SMS work package statuses.
+const (
+	SMSWorkPackageStatusPlanned     = "planned"
+	SMSWorkPackageStatusInProgress  = "in_progress"
+	SMSWorkPackageStatusCompleted   = "completed"
+	SMSWorkPackageStatusCancelled   = "cancelled"
+)
+
+// SMSCRACI is one row of sms_racis: a versioned matrix for a P3M entity.
+type SMSCRACI struct {
+	ID             int        `json:"id"`
+	EntityType     string     `json:"entity_type"`
+	EntityID       int        `json:"entity_id"`
+	Version        int        `json:"version"`
+	Status         string     `json:"status"`
+	CreatedBy      *int       `json:"created_by,omitempty"`
+	AgreedAt       *time.Time `json:"agreed_at,omitempty"`
+	LastReviewedAt *time.Time `json:"last_reviewed_at,omitempty"`
+	CreatedAt      time.Time  `json:"created_at"`
+
+	EntityTitle string `json:"entity_title,omitempty"`
+}
+
+// SMSCRACIAssignment is one row of sms_raci_assignments. Exactly one 'a' per
+// activity_code is enforced server-side on save.
+type SMSCRACIAssignment struct {
+	ID            int    `json:"id"`
+	RaciID        int    `json:"raci_id"`
+	ActivityCode  string `json:"activity_code"`
+	Description   string `json:"description"`
+	StakeholderID *int   `json:"stakeholder_id,omitempty"`
+	UserID        *int   `json:"user_id,omitempty"`
+	Value         string `json:"value"`
+
+	AssigneeName string `json:"assignee_name,omitempty"`
+}
+
+// SMSWorkPackage is one row of sms_work_packages.
+type SMSWorkPackage struct {
+	ID                      int        `json:"id"`
+	Title                   string     `json:"title"`
+	Description             string     `json:"description"`
+	EntityType              *string    `json:"entity_type,omitempty"`
+	EntityID                *int       `json:"entity_id,omitempty"`
+	ContractorStakeholderID *int       `json:"contractor_stakeholder_id,omitempty"`
+	Status                  string     `json:"status"`
+	PlannedStart            *time.Time `json:"planned_start,omitempty"`
+	PlannedEnd              *time.Time `json:"planned_end,omitempty"`
+	ActualStart             *time.Time `json:"actual_start,omitempty"`
+	CompletedAt             *time.Time `json:"completed_at,omitempty"`
+	Notes                   string     `json:"notes"`
+	CreatedAt               time.Time  `json:"created_at"`
+	UpdatedAt               time.Time  `json:"updated_at"`
+
+	ContractorName string `json:"contractor_name,omitempty"`
+	NodeCount      int    `json:"node_count,omitempty"`
+}
+
+// SMSWorkPackageNode is one row of sms_work_package_nodes.
+type SMSWorkPackageNode struct {
+	ID            int    `json:"id"`
+	WorkPackageID int    `json:"work_package_id"`
+	NodeID        int    `json:"node_id"`
+	ImpactNotes   string `json:"impact_notes"`
+
+	NodeName string `json:"node_name,omitempty"`
 }

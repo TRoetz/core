@@ -1,5 +1,5 @@
+import { API_BASE, fetchAPI } from './core.js';
 import { createCrudClient } from './createCrudClient.js';
-import { fetchAPI, API_BASE } from './core.js';
 
 /**
  * SMS (Stakeholder Management System) API client.
@@ -29,7 +29,8 @@ export const sms = {
 
   // Register hygiene: duplicate detection + merge.
   getDuplicateStakeholders: () => fetchAPI('/sms/stakeholders/duplicates'),
-  mergeStakeholder: (targetId, sourceId) => post(`/sms/stakeholders/${targetId}/merge`, { source_id: sourceId }),
+  mergeStakeholder: (targetId, sourceId) =>
+    post(`/sms/stakeholders/${targetId}/merge`, { source_id: sourceId }),
 
   // Cross-store duplicates (p3m/srm identity links).
   getCrossStoreDuplicates: () => fetchAPI('/sms/cross-store-duplicates'),
@@ -41,8 +42,10 @@ export const sms = {
   unlinkEntity: (entityLinkId) => del(`/sms/entities/${entityLinkId}`),
 
   // Interaction log (no update endpoint; entries are immutable).
-  getCommunications: (stakeholderId) => fetchAPI(`/sms/stakeholders/${stakeholderId}/communications`),
-  createCommunication: (stakeholderId, data) => post(`/sms/stakeholders/${stakeholderId}/communications`, data),
+  getCommunications: (stakeholderId) =>
+    fetchAPI(`/sms/stakeholders/${stakeholderId}/communications`),
+  createCommunication: (stakeholderId, data) =>
+    post(`/sms/stakeholders/${stakeholderId}/communications`, data),
   deleteCommunication: (id) => del(`/sms/communications/${id}`),
 
   // Engagement plans.
@@ -83,8 +86,10 @@ export const sms = {
   createGroup: (data) => post('/sms/groups', data),
   updateGroup: (id, data) => put(`/sms/groups/${id}`, data),
   deleteGroup: (id) => del(`/sms/groups/${id}`),
-  addGroupMember: (groupId, stakeholderId) => post(`/sms/groups/${groupId}/members`, { stakeholder_id: stakeholderId }),
-  removeGroupMember: (groupId, stakeholderId) => del(`/sms/groups/${groupId}/members/${stakeholderId}`),
+  addGroupMember: (groupId, stakeholderId) =>
+    post(`/sms/groups/${groupId}/members`, { stakeholder_id: stakeholderId }),
+  removeGroupMember: (groupId, stakeholderId) =>
+    del(`/sms/groups/${groupId}/members/${stakeholderId}`),
 
   // Stakeholder network links.
   getStakeholderLinks: (stakeholderId) => fetchAPI(`/sms/stakeholders/${stakeholderId}/links`),
@@ -94,8 +99,16 @@ export const sms = {
   // Ownership transfers (handover). Completing all three review checkboxes
   // finalises the transfer server-side and moves ownership.
   getTransfers: (stakeholderId) => fetchAPI(`/sms/stakeholders/${stakeholderId}/transfers`),
-  createTransfer: (stakeholderId, data) => post(`/sms/stakeholders/${stakeholderId}/transfers`, data),
+  createTransfer: (stakeholderId, data) =>
+    post(`/sms/stakeholders/${stakeholderId}/transfers`, data),
   updateTransfer: (id, data) => put(`/sms/transfers/${id}`, data),
+
+  // Stakeholder rollups: site occupancy, notification history and RACI roles.
+  getStakeholderNodes: (stakeholderId) => fetchAPI(`/sms/stakeholders/${stakeholderId}/nodes`),
+  getStakeholderNotifications: (stakeholderId) =>
+    fetchAPI(`/sms/stakeholders/${stakeholderId}/notifications`),
+  getStakeholderRaciRoles: (stakeholderId) =>
+    fetchAPI(`/sms/stakeholders/${stakeholderId}/raci-roles`),
 
   // Tasks, feedback and relationship goals.
   tasks: createCrudClient('/tasks', {
@@ -116,7 +129,8 @@ export const sms = {
   getGlobalPlans: (params = {}) => fetchAPI(`/sms/engagement-plans${qs(params)}`),
 
   // Merged activity timeline.
-  getTimeline: (stakeholderId, limit = 50) => fetchAPI(`/sms/stakeholders/${stakeholderId}/timeline${qs({ limit })}`),
+  getTimeline: (stakeholderId, limit = 50) =>
+    fetchAPI(`/sms/stakeholders/${stakeholderId}/timeline${qs({ limit })}`),
 
   // Data movement: CSV import with preview/dedupe + exports.
   importPreview: (csvText) => post('/sms/import/preview', { csv: csvText }),
@@ -130,10 +144,67 @@ export const sms = {
   // Template artifacts (WI-5.3): catalog + downloads.
   getTemplates: () => fetchAPI('/sms/templates'),
   templateUrl: (name) => `${API_BASE}/sms/templates/${encodeURIComponent(name)}`,
+
+  // Node taxonomy: admin-configurable kinds + role vocabulary (roadworks sites).
+  getNodeKinds: () => fetchAPI('/sms/node-kinds'),
+  createNodeKind: (data) => post('/sms/node-kinds', data),
+  updateNodeKind: (id, data) => put(`/sms/node-kinds/${id}`, data),
+  deleteNodeKind: (id) => del(`/sms/node-kinds/${id}`),
+  getNodeKindRoles: (kindId) => fetchAPI(`/sms/node-kinds/${kindId}/roles`),
+  addNodeKindRole: (kindId, data) => post(`/sms/node-kinds/${kindId}/roles`, data),
+  updateNodeKindRole: (id, data) => put(`/sms/node-kind-roles/${id}`, data),
+  deleteNodeKindRole: (id) => del(`/sms/node-kind-roles/${id}`),
+
+  // Nodes (areas, road segments, buildings) + stakeholder membership.
+  getNodes: (params = {}) => fetchAPI(`/sms/nodes${qs(params)}`),
+  getNode: (id) => fetchAPI(`/sms/nodes/${id}`),
+  createNode: (data) => post('/sms/nodes', data),
+  updateNode: (id, data) => put(`/sms/nodes/${id}`, data),
+  deleteNode: (id) => del(`/sms/nodes/${id}`),
+  getNodeMembers: (nodeId) => fetchAPI(`/sms/nodes/${nodeId}/members`),
+  addNodeMember: (nodeId, data) => post(`/sms/nodes/${nodeId}/members`, data),
+  removeNodeMember: (memberLinkId) => del(`/sms/node-members/${memberLinkId}`),
+
+  // Notification campaigns + per-stakeholder delivery ledger.
+  getNotificationCampaigns: (params = {}) => fetchAPI(`/sms/notification-campaigns${qs(params)}`),
+  createNotificationCampaign: (data) => post('/sms/notification-campaigns', data),
+  getNotificationCampaign: (id) => fetchAPI(`/sms/notification-campaigns/${id}`),
+  updateNotificationCampaign: (id, data) => put(`/sms/notification-campaigns/${id}`, data),
+  deleteNotificationCampaign: (id) => del(`/sms/notification-campaigns/${id}`),
+  getCampaignTargets: (campaignId) => fetchAPI(`/sms/notification-campaigns/${campaignId}/targets`),
+  addCampaignTarget: (campaignId, data) =>
+    post(`/sms/notification-campaigns/${campaignId}/targets`, data),
+  removeCampaignTarget: (targetId) => del(`/sms/campaign-targets/${targetId}`),
+  generateCampaignAudience: (campaignId) =>
+    post(`/sms/notification-campaigns/${campaignId}/audience`),
+  getCampaignNotifications: (campaignId, params = {}) =>
+    fetchAPI(`/sms/notification-campaigns/${campaignId}/notifications${qs(params)}`),
+  updateNotification: (id, data) => put(`/sms/notifications/${id}`, data),
+  bulkUpdateNotifications: (data) => post('/sms/notifications/bulk-update', data),
+
+  // RACI matrices (versioned per P3M entity).
+  getRacis: (params = {}) => fetchAPI(`/sms/racis${qs(params)}`),
+  createRaci: (data) => post('/sms/racis', data),
+  getRaci: (id) => fetchAPI(`/sms/racis/${id}`),
+  updateRaci: (id, data) => put(`/sms/racis/${id}`, data),
+  deleteRaci: (id) => del(`/sms/racis/${id}`),
+  saveRaciAssignments: (id, assignments) => put(`/sms/racis/${id}/assignments`, { assignments }),
+
+  // Work packages (physical activities with contractors + impacted nodes).
+  getWorkPackages: (params = {}) => fetchAPI(`/sms/work-packages${qs(params)}`),
+  createWorkPackage: (data) => post('/sms/work-packages', data),
+  getWorkPackage: (id) => fetchAPI(`/sms/work-packages/${id}`),
+  updateWorkPackage: (id, data) => put(`/sms/work-packages/${id}`, data),
+  deleteWorkPackage: (id) => del(`/sms/work-packages/${id}`),
+  addWorkPackageNode: (workPackageId, data) =>
+    post(`/sms/work-packages/${workPackageId}/nodes`, data),
+  removeWorkPackageNode: (linkId) => del(`/sms/work-package-nodes/${linkId}`),
 };
 
 function qs(params = {}) {
-  const entries = Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== '');
+  const entries = Object.entries(params).filter(
+    ([, v]) => v !== undefined && v !== null && v !== ''
+  );
   if (!entries.length) return '';
   return `?${new URLSearchParams(entries.map(([k, v]) => [k, String(v)])).toString()}`;
 }

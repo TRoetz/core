@@ -63,6 +63,9 @@
 
   const SECTIONS = [
     { id: 'profile', labelKey: 'sms.profile' },
+    { id: 'occupancy', labelKey: 'sms.occupancy' },
+    { id: 'notifications', labelKey: 'sms.notificationHistory' },
+    { id: 'raciRoles', labelKey: 'sms.raciRoles' },
     { id: 'communications', labelKey: 'sms.communications' },
     { id: 'plans', labelKey: 'sms.engagementPlans' },
     { id: 'issues', labelKey: 'sms.issuesRisks' },
@@ -287,6 +290,12 @@
   let linksList = $state([]);
   let transfersList = $state([]);
   /** @type {Array<Record<string, any>>} */
+  let occupancyList = $state([]);
+  /** @type {Array<Record<string, any>>} */
+  let notifHistory = $state([]);
+  /** @type {Array<Record<string, any>>} */
+  let raciRoleList = $state([]);
+  /** @type {Array<Record<string, any>>} */
   let allStakeholders = $state([]);
   const loadedTabs = $state(new Set());
 
@@ -327,6 +336,9 @@
   async function loadSectionData(section) {
     try {
       switch (section) {
+        case 'occupancy': occupancyList = (await smsApi.getStakeholderNodes(stakeholderId)) ?? []; break;
+        case 'notifications': notifHistory = (await smsApi.getStakeholderNotifications(stakeholderId)) ?? []; break;
+        case 'raciRoles': raciRoleList = (await smsApi.getStakeholderRaciRoles(stakeholderId)) ?? []; break;
         case 'communications': comms = (await smsApi.getCommunications(stakeholderId)) ?? []; break;
         case 'plans': plans = (await smsApi.engagementPlans.getAll(stakeholderId)) ?? []; break;
         case 'issues': issues = (await smsApi.issues.getAll(stakeholderId)) ?? []; break;
@@ -352,7 +364,7 @@
   $effect(() => {
     if (!detail) return;
     const s = activeSection;
-    if ((s === 'communications' || s === 'plans' || s === 'issues' || s === 'commitments' || s === 'grievances' || s === 'decisions' || s === 'tasks' || s === 'feedback' || s === 'goals' || s === 'network' || s === 'transfers') && !loadedTabs.has(s)) {
+    if ((s === 'occupancy' || s === 'notifications' || s === 'raciRoles' || s === 'communications' || s === 'plans' || s === 'issues' || s === 'commitments' || s === 'grievances' || s === 'decisions' || s === 'tasks' || s === 'feedback' || s === 'goals' || s === 'network' || s === 'transfers') && !loadedTabs.has(s)) {
       loadSectionData(s);
     }
   });
@@ -881,6 +893,80 @@
             </button>
           </div>
         </div>
+      </section>
+    {/if}
+
+    <!-- Site occupancy -->
+    {#if activeSection === 'occupancy'}
+      <section>
+        {#if occupancyList.length === 0}
+          <div class="mb-3 text-xs text-[var(--color-ds-text-muted,#6b7280)]">{t('sms.noRecords')}</div>
+        {:else}
+          <table class="w-full text-left text-xs">
+            <thead><tr class="border-b border-[var(--color-ds-border,#e5e7eb)] text-[var(--color-ds-text-muted,#6b7280)]"><th class="py-1.5 pr-3">{t('sms.node')}</th><th class="py-1.5 pr-3">{t('sms.kind')}</th><th class="py-1.5 pr-3">{t('sms.memberRole')}</th><th class="py-1.5 pr-3">{t('sms.startDate')}</th><th class="py-1.5 pr-3">{t('sms.endDate')}</th><th class="py-1.5 pr-3">{t('sms.notes')}</th></tr></thead>
+            <tbody>
+              {#each occupancyList as o (o.node_id)}
+                <tr class="border-b border-[var(--color-ds-border,#e5e7eb)] last:border-0">
+                  <td class="py-1.5 pr-3 font-medium">{o.name}</td>
+                  <td class="py-1.5 pr-3">{o.kind_label}</td>
+                  <td class="py-1.5 pr-3">{o.role || '—'}</td>
+                  <td class="py-1.5 pr-3 whitespace-nowrap">{formatDate(o.start_date)}</td>
+                  <td class="py-1.5 pr-3 whitespace-nowrap">{formatDate(o.end_date)}</td>
+                  <td class="max-w-xs truncate py-1.5 pr-3 text-[var(--color-ds-text-muted,#6b7280)]">{o.notes}</td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
+        {/if}
+      </section>
+    {/if}
+
+    <!-- Notification history -->
+    {#if activeSection === 'notifications'}
+      <section>
+        {#if notifHistory.length === 0}
+          <div class="mb-3 text-xs text-[var(--color-ds-text-muted,#6b7280)]">{t('sms.noRecords')}</div>
+        {:else}
+          <table class="w-full text-left text-xs">
+            <thead><tr class="border-b border-[var(--color-ds-border,#e5e7eb)] text-[var(--color-ds-text-muted,#6b7280)]"><th class="py-1.5 pr-3">{t('sms.campaigns')}</th><th class="py-1.5 pr-3">{t('sms.node')}</th><th class="py-1.5 pr-3">{t('sms.channel')}</th><th class="py-1.5 pr-3">{t('sms.dueBy')}</th><th class="py-1.5 pr-3">{t('sms.sentAt')}</th><th class="py-1.5 pr-3">{t('sms.status')}</th></tr></thead>
+            <tbody>
+              {#each notifHistory as n (n.id)}
+                <tr class="border-b border-[var(--color-ds-border,#e5e7eb)] last:border-0">
+                  <td class="py-1.5 pr-3 font-medium">{n.campaign_title}</td>
+                  <td class="py-1.5 pr-3">{n.node_name || '—'}</td>
+                  <td class="py-1.5 pr-3">{t(`sms.ch${(n.channel || 'email') === 'in_person' ? 'InPerson' : (n.channel || 'email').charAt(0).toUpperCase() + (n.channel || 'email').slice(1)}`)}</td>
+                  <td class="py-1.5 pr-3 whitespace-nowrap">{formatDate(n.required_by)}</td>
+                  <td class="py-1.5 pr-3 whitespace-nowrap">{formatDate(n.sent_at)}</td>
+                  <td class="py-1.5 pr-3"><span class="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium">{t(`sms.notif${n.status.charAt(0).toUpperCase()}${n.status.slice(1)}`)}</span></td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
+        {/if}
+      </section>
+    {/if}
+
+    <!-- RACI roles -->
+    {#if activeSection === 'raciRoles'}
+      <section>
+        {#if raciRoleList.length === 0}
+          <div class="mb-3 text-xs text-[var(--color-ds-text-muted,#6b7280)]">{t('sms.noRecords')}</div>
+        {:else}
+          <table class="w-full text-left text-xs">
+            <thead><tr class="border-b border-[var(--color-ds-border,#e5e7eb)] text-[var(--color-ds-text-muted,#6b7280)]"><th class="py-1.5 pr-3">{t('sms.entity')}</th><th class="py-1.5 pr-3">{t('sms.version')}</th><th class="py-1.5 pr-3">{t('sms.activityCode')}</th><th class="py-1.5 pr-3">{t('sms.description')}</th><th class="py-1.5 pr-3">{t('sms.raciValue')}</th></tr></thead>
+            <tbody>
+              {#each raciRoleList as r (r.id)}
+                <tr class="border-b border-[var(--color-ds-border,#e5e7eb)] last:border-0">
+                  <td class="py-1.5 pr-3 whitespace-nowrap">{planEntityName(r)}</td>
+                  <td class="py-1.5 pr-3">v{r.version}</td>
+                  <td class="py-1.5 pr-3 font-medium">{r.activity_code}</td>
+                  <td class="max-w-md truncate py-1.5 pr-3 text-[var(--color-ds-text-muted,#6b7280)]">{r.description}</td>
+                  <td class="py-1.5 pr-3"><span class="rounded-full bg-slate-100 px-2 py-0.5 font-mono text-[10px] font-medium">{t(`sms.raci${r.value.toUpperCase()}`)}</span></td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
+        {/if}
       </section>
     {/if}
 

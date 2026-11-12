@@ -113,7 +113,7 @@ func (h *SMSHandler) PowerBIFeed(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ctx := r.Context()
-	rows, err := h.db.QueryContext(ctx, `SELECT s.id, s.name, s.organization, COALESCE(s.tier, ''), s.relationship_status, COALESCE(s.trust_level, ''), s.engagement_status, s.last_engagement_at, (SELECT COUNT(*) FROM sms_issues i WHERE i.stakeholder_id = s.id AND i.status = 'open') AS open_issues, (SELECT COUNT(*) FROM sms_issues i WHERE i.stakeholder_id = s.id AND i.status = 'open' AND i.priority = 'critical') AS open_critical, (SELECT COUNT(*) FROM sms_issues i WHERE i.stakeholder_id = s.id AND i.status = 'open' AND i.escalation_level > 0) AS escalated_open, (SELECT COUNT(*) FROM sms_commitments c WHERE c.stakeholder_id = s.id AND c.status = 'open') AS open_commitments, (SELECT COUNT(*) FROM sms_grievances g WHERE g.stakeholder_id = s.id AND g.status <> 'closed') AS open_grievances FROM sms_stakeholders s ORDER BY s.name COLLATE NOCASE`)
+	rows, err := h.db.QueryContext(ctx, `SELECT s.id, s.name, s.organization, COALESCE(s.tier, ''), s.relationship_status, COALESCE(s.trust_level, ''), s.engagement_status, s.last_engagement_at, (SELECT COUNT(*) FROM sms_issues i WHERE i.stakeholder_id = s.id AND i.status = 'open') AS open_issues, (SELECT COUNT(*) FROM sms_issues i WHERE i.stakeholder_id = s.id AND i.status = 'open' AND i.priority = 'critical') AS open_critical, (SELECT COUNT(*) FROM sms_issues i WHERE i.stakeholder_id = s.id AND i.status = 'open' AND i.escalation_level > 0) AS escalated_open, (SELECT COUNT(*) FROM sms_commitments c WHERE c.stakeholder_id = s.id AND c.status = 'open') AS open_commitments, (SELECT COUNT(*) FROM sms_grievances g WHERE g.stakeholder_id = s.id AND g.status <> 'closed') AS open_grievances, (SELECT COUNT(*) FROM sms_node_members m WHERE m.stakeholder_id = s.id) AS site_count, (SELECT COUNT(*) FROM sms_notifications n JOIN sms_notification_campaigns c ON c.id = n.campaign_id WHERE n.stakeholder_id = s.id AND c.status IN ('scheduled','in_progress') AND n.status NOT IN ('read','acknowledged')) AS notifications_pending, (SELECT COUNT(*) FROM sms_work_packages wp WHERE wp.contractor_stakeholder_id = s.id AND wp.status IN ('planned','in_progress')) AS open_work_packages FROM sms_stakeholders s ORDER BY s.name COLLATE NOCASE`)
 	if err != nil {
 		respondInternalError(w, r, err)
 		return
@@ -134,8 +134,11 @@ func (h *SMSHandler) PowerBIFeed(w http.ResponseWriter, r *http.Request) {
 			escalatedOpen       int
 			openCommitments     int
 			openGrievances      int
+			siteCount           int
+			notificationsPending int
+			openWorkPackages    int
 		)
-		if err := rows.Scan(&id, &name, &org, &tier, &relStatus, &trustLevel, &engStatus, &lastEngagement, &openIssues, &openCritical, &escalatedOpen, &openCommitments, &openGrievances); err != nil {
+		if err := rows.Scan(&id, &name, &org, &tier, &relStatus, &trustLevel, &engStatus, &lastEngagement, &openIssues, &openCritical, &escalatedOpen, &openCommitments, &openGrievances, &siteCount, &notificationsPending, &openWorkPackages); err != nil {
 			respondInternalError(w, r, err)
 			return
 		}
@@ -152,6 +155,9 @@ func (h *SMSHandler) PowerBIFeed(w http.ResponseWriter, r *http.Request) {
 			"escalated_open_issues": escalatedOpen,
 			"open_commitments":  openCommitments,
 			"open_grievances":   openGrievances,
+			"site_count":        siteCount,
+			"notifications_pending": notificationsPending,
+			"open_work_packages": openWorkPackages,
 			"health_score":      smsHealthScore(relStatus, engStatus, openCritical, escalatedOpen),
 		}
 		if lastEngagement.Valid {

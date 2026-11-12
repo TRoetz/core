@@ -76,13 +76,13 @@ func (h *SMSHandler) smsRollup(ctx context.Context, scopeCond string, args []any
 		buckets[idx].Count++
 		if score < 50 || critical[id] > 0 {
 			atRisk = append(atRisk, map[string]any{
-				"stakeholder_id":        id,
-				"name":                  name,
-				"organization":          org,
-				"tier":                  tier,
-				"relationship_status":   relationship,
-				"health_score":          score,
-				"open_critical_issues":  critical[id],
+				"stakeholder_id":       id,
+				"name":                 name,
+				"organization":         org,
+				"tier":                 tier,
+				"relationship_status":  relationship,
+				"health_score":         score,
+				"open_critical_issues": critical[id],
 			})
 		}
 	}
@@ -155,14 +155,44 @@ func (h *SMSHandler) smsRollup(ctx context.Context, scopeCond string, args []any
 		coveragePct = float64(activePlans) / float64(total) * 100
 	}
 
+	// Delivery (roadworks scenario): node structure, notification coverage,
+	// RACI matrices and work packages. Global counts; per-entity views use the
+	// dedicated list endpoints with entity filters.
+	var nodesTotal int
+	if err := h.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM sms_nodes`).Scan(&nodesTotal); err != nil {
+		return nil, err
+	}
+	nodesByKind, err := counts(`SELECT k.key, COUNT(*) FROM sms_nodes n JOIN sms_node_kinds k ON k.id = n.kind_id GROUP BY k.key ORDER BY k.key`)
+	if err != nil {
+		return nil, err
+	}
+
+	var campaignsActive int
+	if err := h.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM sms_notification_campaigns WHERE status IN ('scheduled','in_progress')`).Scan(&campaignsActive); err != nil {
+		return nil, err
+	}
+	var notificationsTotal, notificationsInformed, notificationsOverdue int
+	if err := h.db.QueryRowContext(ctx, `SELECT COUNT(*), COALESCE(SUM(CASE WHEN n.status IN ('sent','read','acknowledged') THEN 1 ELSE 0 END), 0), COALESCE(SUM(CASE WHEN n.required_by < date('now') AND n.status = 'pending' THEN 1 ELSE 0 END), 0) FROM sms_notifications n JOIN sms_notification_campaigns c ON c.id = n.campaign_id WHERE c.status <> 'cancelled'`).Scan(&notificationsTotal, &notificationsInformed, &notificationsOverdue); err != nil {
+		return nil, err
+	}
+
+	var racisTotal, racisAgreed int
+	if err := h.db.QueryRowContext(ctx, `SELECT COUNT(*), COALESCE(SUM(CASE WHEN status = 'agreed' THEN 1 ELSE 0 END), 0) FROM sms_racis`).Scan(&racisTotal, &racisAgreed); err != nil {
+		return nil, err
+	}
+	workPackagesByStatus, err := counts(`SELECT status, COUNT(*) FROM sms_work_packages GROUP BY status ORDER BY status`)
+	if err != nil {
+		return nil, err
+	}
+
 	return map[string]any{
 		"totals": map[string]any{
-			"stakeholders":             total,
-			"by_tier":                  byTier,
+			"stakeholders":              total,
+			"by_tier":                   byTier,
 			"relationship_distribution": relationshipDistribution,
 		},
-		"health_buckets":          buckets,
-		"at_risk":                 atRisk,
+		"health_buckets": buckets,
+		"at_risk":        atRisk,
 		"commitments": map[string]any{
 			"open":           commitmentsOpen,
 			"due_within_30d": dueSoon,
@@ -173,10 +203,21 @@ func (h *SMSHandler) smsRollup(ctx context.Context, scopeCond string, args []any
 			"escalated_open":   grievancesEscalated,
 		},
 		"issues": map[string]any{
-			"escalated":       issuesEscalated,
-			"critical_open":   issuesCriticalOpen,
+			"escalated":     issuesEscalated,
+			"critical_open": issuesCriticalOpen,
 		},
 		"engagement_coverage_pct": coveragePct,
+		"delivery": map[string]any{
+			"nodes_total":             nodesTotal,
+			"nodes_by_kind":           nodesByKind,
+			"campaigns_active":        campaignsActive,
+			"notifications_total":     notificationsTotal,
+			"notifications_informed":  notificationsInformed,
+			"notifications_overdue":   notificationsOverdue,
+			"racis_total":             racisTotal,
+			"racis_agreed":            racisAgreed,
+			"work_packages_by_status": workPackagesByStatus,
+		},
 	}, nil
 }
 
@@ -279,6 +320,39 @@ func (h *SMSHandler) smsPilotMetricCurrents(ctx context.Context) (map[string]flo
 	}
 	if issuesTotal > 0 {
 		out["issues_resolved_rate_pct"] = float64(issuesResolved) / float64(issuesTotal) * 100
+	}
+
+	var notifCovered, notifTotal int
+	if err := h.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM sms_notifications n JOIN sms_notification_campaigns c ON c.id = n.campaign_id WHERE c.status <> 'cancelled' AND n.status IN ('read','acknowledged')`).Scan(&notifCovered); err != nil {
+		return nil, err
+	}
+	if err := h.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM sms_notifications n JOIN sms_notification_campaigns c ON c.id = n.campaign_id WHERE c.status <> 'cancelled'`).Scan(&notifTotal); err != nil {
+		return nil, err
+	}
+	if notifTotal > 0 {
+		out["notification_coverage_pct"] = float64(notifCovered) / float64(notifTotal) * 100
+	}
+
+	var raciComplete, raciActivities int
+	if err := h.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM (SELECT a.raci_id, a.activity_code FROM sms_raci_assignments a GROUP BY a.raci_id, a.activity_code HAVING SUM(CASE WHEN a.value = 'a' THEN 1 ELSE 0 END) = 1)`).Scan(&raciComplete); err != nil {
+		return nil, err
+	}
+	if err := h.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM (SELECT a.raci_id, a.activity_code FROM sms_raci_assignments a GROUP BY a.raci_id, a.activity_code)`).Scan(&raciActivities); err != nil {
+		return nil, err
+	}
+	if raciActivities > 0 {
+		out["raci_completeness_pct"] = float64(raciComplete) / float64(raciActivities) * 100
+	}
+
+	var buildingsWithOcc, buildingsTotal int
+	if err := h.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM sms_nodes n JOIN sms_node_kinds k ON k.id = n.kind_id WHERE k.key = 'building' AND EXISTS (SELECT 1 FROM sms_node_members m WHERE m.node_id = n.id)`).Scan(&buildingsWithOcc); err != nil {
+		return nil, err
+	}
+	if err := h.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM sms_nodes n JOIN sms_node_kinds k ON k.id = n.kind_id WHERE k.key = 'building'`).Scan(&buildingsTotal); err != nil {
+		return nil, err
+	}
+	if buildingsTotal > 0 {
+		out["sites_with_occupants_pct"] = float64(buildingsWithOcc) / float64(buildingsTotal) * 100
 	}
 
 	return out, nil

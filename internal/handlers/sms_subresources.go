@@ -1421,3 +1421,165 @@ func (h *SMSHandler) DeleteGoal(w http.ResponseWriter, r *http.Request) {
 	smsAudit(h, r, user, "sms_goal_deleted", "sms_relationship_goal", &id, name, nil)
 	w.WriteHeader(http.StatusNoContent)
 }
+
+// ListStakeholderNodes returns the sites a stakeholder occupies (owner, tenant,
+// lessee, ...) with their kind labels and tenancy periods. Read-only rollup for
+// the stakeholder detail view.
+func (h *SMSHandler) ListStakeholderNodes(w http.ResponseWriter, r *http.Request) {
+	if _, ok := RequireAuth(w, r); !ok {
+		return
+	}
+	id, ok := requireIDParam(w, r, "id")
+	if !ok {
+		return
+	}
+	ctx := r.Context()
+
+	rows, err := h.db.QueryContext(ctx, `SELECT n.id, n.name, k.label AS kind_label, m.role, COALESCE(m.start_date, ''), COALESCE(m.end_date, ''), COALESCE(m.notes, '')
+		FROM sms_node_members AS m
+		JOIN sms_nodes AS n ON n.id = m.node_id
+		JOIN sms_node_kinds AS k ON k.id = n.kind_id
+		WHERE m.stakeholder_id = ?
+		ORDER BY n.name COLLATE NOCASE`, id)
+	if err != nil {
+		respondInternalError(w, r, err)
+		return
+	}
+	defer rows.Close()
+
+	out := make([]map[string]any, 0)
+	for rows.Next() {
+		var nodeID int
+		var name, kindLabel, role, startDate, endDate, notes string
+		if err := rows.Scan(&nodeID, &name, &kindLabel, &role, &startDate, &endDate, &notes); err != nil {
+			rows.Close()
+			respondInternalError(w, r, err)
+			return
+		}
+		out = append(out, map[string]any{
+			"node_id":    nodeID,
+			"name":       name,
+			"kind_label": kindLabel,
+			"role":       role,
+			"start_date": startDate,
+			"end_date":   endDate,
+			"notes":      notes,
+		})
+	}
+	if err := rows.Err(); err != nil {
+		respondInternalError(w, r, err)
+		return
+	}
+	respondJSONOK(w, out)
+}
+
+// ListStakeholderNotifications returns the per-stakeholder notification ledger
+// across all campaigns: who was told what, by when, and whether it landed.
+func (h *SMSHandler) ListStakeholderNotifications(w http.ResponseWriter, r *http.Request) {
+	if _, ok := RequireAuth(w, r); !ok {
+		return
+	}
+	id, ok := requireIDParam(w, r, "id")
+	if !ok {
+		return
+	}
+	ctx := r.Context()
+
+	rows, err := h.db.QueryContext(ctx, `SELECT n.id, n.campaign_id, c.title AS campaign_title, COALESCE(nd.name, '') AS node_name,
+		COALESCE(n.required_by, ''), n.status, n.channel, n.sent_at, n.acknowledged_at, COALESCE(n.notes, ''), n.created_at
+		FROM sms_notifications AS n
+		JOIN sms_notification_campaigns AS c ON c.id = n.campaign_id
+		LEFT JOIN sms_nodes AS nd ON nd.id = n.node_id
+		WHERE n.stakeholder_id = ?
+		ORDER BY (n.required_by IS NULL), n.required_by DESC, n.created_at DESC`, id)
+	if err != nil {
+		respondInternalError(w, r, err)
+		return
+	}
+	defer rows.Close()
+
+	out := make([]map[string]any, 0)
+	for rows.Next() {
+		var notifID, campaignID int
+		var campaignTitle, nodeName, requiredBy, status, channel, notes string
+		var sentAt, acknowledgedAt *time.Time
+		var createdAt time.Time
+		if err := rows.Scan(&notifID, &campaignID, &campaignTitle, &nodeName, &requiredBy, &status, &channel, &sentAt, &acknowledgedAt, &notes, &createdAt); err != nil {
+			rows.Close()
+			respondInternalError(w, r, err)
+			return
+		}
+		out = append(out, map[string]any{
+			"id":              notifID,
+			"campaign_id":     campaignID,
+			"campaign_title":  campaignTitle,
+			"node_name":       nodeName,
+			"required_by":     requiredBy,
+			"status":          status,
+			"channel":         channel,
+			"sent_at":         sentAt,
+			"acknowledged_at": acknowledgedAt,
+			"notes":           notes,
+			"created_at":      createdAt.Format(time.RFC3339),
+		})
+	}
+	if err := rows.Err(); err != nil {
+		respondInternalError(w, r, err)
+		return
+	}
+	respondJSONOK(w, out)
+}
+
+// ListStakeholderRaciRoles returns every RACI assignment where the stakeholder
+// is the assignee, across all matrices: which activities they are R/A/C/I for.
+func (h *SMSHandler) ListStakeholderRaciRoles(w http.ResponseWriter, r *http.Request) {
+	if _, ok := RequireAuth(w, r); !ok {
+		return
+	}
+	id, ok := requireIDParam(w, r, "id")
+	if !ok {
+		return
+	}
+	ctx := r.Context()
+
+	rows, err := h.db.QueryContext(ctx, `SELECT a.id, r.entity_type, r.entity_id, r.version, r.status AS matrix_status,
+		a.activity_code, COALESCE(a.description, ''), a.value
+		FROM sms_raci_assignments AS a
+		JOIN sms_racis AS r ON r.id = a.raci_id
+		WHERE a.stakeholder_id = ?
+		ORDER BY r.entity_type COLLATE NOCASE, r.entity_id, r.version DESC, a.activity_code COLLATE NOCASE`, id)
+	if err != nil {
+		respondInternalError(w, r, err)
+		return
+	}
+	defer rows.Close()
+
+	out := make([]map[string]any, 0)
+	for rows.Next() {
+		var assignID int
+		var entityType string
+		var entityID *int
+		var version int
+		var matrixStatus, activityCode, description, value string
+		if err := rows.Scan(&assignID, &entityType, &entityID, &version, &matrixStatus, &activityCode, &description, &value); err != nil {
+			rows.Close()
+			respondInternalError(w, r, err)
+			return
+		}
+		out = append(out, map[string]any{
+			"id":            assignID,
+			"entity_type":   entityType,
+			"entity_id":     entityID,
+			"version":       version,
+			"matrix_status": matrixStatus,
+			"activity_code": activityCode,
+			"description":   description,
+			"value":         value,
+		})
+	}
+	if err := rows.Err(); err != nil {
+		respondInternalError(w, r, err)
+		return
+	}
+	respondJSONOK(w, out)
+}

@@ -65,7 +65,7 @@ CREATE INDEX IF NOT EXISTS idx_sms_stakeholder_entities_entity ON sms_stakeholde
 CREATE TABLE IF NOT EXISTS sms_communications (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
 	stakeholder_id INTEGER NOT NULL REFERENCES sms_stakeholders(id) ON DELETE CASCADE,
-	channel TEXT NOT NULL DEFAULT 'email' CHECK (channel IN ('email','phone','meeting','in_person','slack','teams','other')),
+	channel TEXT NOT NULL DEFAULT 'email' CHECK (channel IN ('email','phone','meeting','in_person','slack','teams','letter','sms_text','other')),
 	direction TEXT NOT NULL DEFAULT 'outbound' CHECK (direction IN ('outbound','inbound')),
 	subject TEXT NOT NULL DEFAULT '',
 	body TEXT NOT NULL DEFAULT '',
@@ -86,7 +86,7 @@ CREATE TABLE IF NOT EXISTS sms_engagement_plans (
 	key_messages TEXT NOT NULL DEFAULT '',
 	success_measures TEXT NOT NULL DEFAULT '',
 	frequency TEXT NOT NULL DEFAULT 'monthly' CHECK (frequency IN ('daily','weekly','biweekly','monthly','quarterly','annual','as_needed')),
-	channel TEXT NOT NULL DEFAULT 'email' CHECK (channel IN ('email','phone','meeting','in_person','slack','teams','other')),
+	channel TEXT NOT NULL DEFAULT 'email' CHECK (channel IN ('email','phone','meeting','in_person','slack','teams','letter','sms_text','other')),
 	status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('draft','active','paused','completed')),
 	entity_type TEXT,                          -- optional programme/project scope
 	entity_id INTEGER,
@@ -287,4 +287,172 @@ CREATE TABLE IF NOT EXISTS sms_pilot_baselines (
 	baseline_value REAL,
 	target_value REAL,
 	set_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ---------------------------------------------------------------------------
+-- Node taxonomy: admin-configurable kinds, a generic hierarchy of nodes, and
+-- role-based stakeholder↔node membership. Kinds/roles are data, not schema —
+-- new structures (wards, precincts, asset registers) need no migration.
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS sms_node_kinds (
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	key TEXT NOT NULL UNIQUE,                 -- 'building', 'road_segment', 'area'…
+	label TEXT NOT NULL,                      -- "Building"
+	description TEXT NOT NULL DEFAULT '',
+	allows_children BOOLEAN NOT NULL DEFAULT 1,
+	child_kinds TEXT NOT NULL DEFAULT '',     -- comma list of allowed child kind keys; '' = any
+	is_system BOOLEAN NOT NULL DEFAULT 0,     -- seeded kinds can't be deleted (only edited)
+	created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Allowed membership roles per kind — the mapping vocabulary is configurable.
+CREATE TABLE IF NOT EXISTS sms_node_kind_roles (
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	kind_id INTEGER NOT NULL REFERENCES sms_node_kinds(id) ON DELETE CASCADE,
+	role_key TEXT NOT NULL,                   -- 'owner', 'tenant', 'lessee'…
+	label TEXT NOT NULL DEFAULT '',
+	sort_order INTEGER NOT NULL DEFAULT 0,
+	UNIQUE (kind_id, role_key)
+);
+
+CREATE TABLE IF NOT EXISTS sms_nodes (
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	external_id TEXT UNIQUE,
+	kind_id INTEGER NOT NULL REFERENCES sms_node_kinds(id),
+	parent_id INTEGER REFERENCES sms_nodes(id) ON DELETE CASCADE,  -- hierarchy; NULL = root
+	name TEXT NOT NULL,                       -- "42 Main St" / "Main St kerbside works"
+	description TEXT NOT NULL DEFAULT '',
+	location_lat REAL, location_lon REAL, location_text TEXT NOT NULL DEFAULT '',
+	custom_fields TEXT NOT NULL DEFAULT '{}', -- kind-specific attributes (access constraints…)
+	entity_type TEXT, entity_id INTEGER,      -- optional P3M scope link (same pattern as sms_stakeholder_entities)
+	notes TEXT NOT NULL DEFAULT '',
+	created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_sms_nodes_parent ON sms_nodes(parent_id);
+CREATE INDEX IF NOT EXISTS idx_sms_nodes_kind ON sms_nodes(kind_id);
+
+-- Generic mapping mechanism: stakeholder ↔ node with a kind-validated role.
+CREATE TABLE IF NOT EXISTS sms_node_members (
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	node_id INTEGER NOT NULL REFERENCES sms_nodes(id) ON DELETE CASCADE,
+	stakeholder_id INTEGER NOT NULL REFERENCES sms_stakeholders(id) ON DELETE CASCADE,
+	role TEXT NOT NULL DEFAULT '',            -- must be in the kind's roles ('' = unrestricted kind)
+	start_date DATE, end_date DATE,           -- optional period (tenancy etc.)
+	notes TEXT NOT NULL DEFAULT '',
+	created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	UNIQUE (node_id, stakeholder_id, role)
+);
+CREATE INDEX IF NOT EXISTS idx_sms_node_members_stakeholder ON sms_node_members(stakeholder_id);
+
+-- Seeded system kinds: editable via the API, not deletable. Idempotent so
+-- fresh installs and migration re-runs converge on the same rows.
+INSERT OR IGNORE INTO sms_node_kinds (key, label, description, allows_children, child_kinds, is_system) VALUES
+	('area', 'Area', 'Top-level area or precinct grouping nodes.', 1, '', 1),
+	('road_segment', 'Road segment', 'A stretch of road affected by works.', 1, 'building', 1),
+	('building', 'Building', 'A building with occupants (owners and tenants).', 0, '', 1);
+
+INSERT OR IGNORE INTO sms_node_kind_roles (kind_id, role_key, label, sort_order) SELECT id, 'affected_business', 'Affected business', 1 FROM sms_node_kinds WHERE key = 'road_segment';
+INSERT OR IGNORE INTO sms_node_kind_roles (kind_id, role_key, label, sort_order) SELECT id, 'resident_representative', 'Resident representative', 2 FROM sms_node_kinds WHERE key = 'road_segment';
+INSERT OR IGNORE INTO sms_node_kind_roles (kind_id, role_key, label, sort_order) SELECT id, 'owner', 'Owner', 1 FROM sms_node_kinds WHERE key = 'building';
+INSERT OR IGNORE INTO sms_node_kind_roles (kind_id, role_key, label, sort_order) SELECT id, 'tenant', 'Tenant', 2 FROM sms_node_kinds WHERE key = 'building';
+INSERT OR IGNORE INTO sms_node_kind_roles (kind_id, role_key, label, sort_order) SELECT id, 'lessee', 'Lessee', 3 FROM sms_node_kinds WHERE key = 'building';
+INSERT OR IGNORE INTO sms_node_kind_roles (kind_id, role_key, label, sort_order) SELECT id, 'body_corporate_manager', 'Body corporate manager', 4 FROM sms_node_kinds WHERE key = 'building';
+
+-- ---------------------------------------------------------------------------
+-- Notification campaigns: a notice to be delivered, its node targets, and the
+-- per-stakeholder delivery ledger ("have they been informed, by when?").
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS sms_notification_campaigns (
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	title TEXT NOT NULL,
+	description TEXT NOT NULL DEFAULT '',
+	entity_type TEXT, entity_id INTEGER,      -- optional P3M scope
+	channel TEXT NOT NULL DEFAULT 'email',    -- preferred channel; per-row channel may differ
+	scheduled_at DATETIME,
+	due_by DATE,                              -- must be informed by
+	status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft','scheduled','in_progress','completed','cancelled')),
+	created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+	created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Campaign → node targets. include_descendants pulls the whole subtree's members.
+CREATE TABLE IF NOT EXISTS sms_campaign_targets (
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	campaign_id INTEGER NOT NULL REFERENCES sms_notification_campaigns(id) ON DELETE CASCADE,
+	node_id INTEGER NOT NULL REFERENCES sms_nodes(id) ON DELETE CASCADE,
+	include_descendants BOOLEAN NOT NULL DEFAULT 0,
+	UNIQUE (campaign_id, node_id)
+);
+
+-- Per-stakeholder delivery ledger — the "have they been informed" table.
+CREATE TABLE IF NOT EXISTS sms_notifications (
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	campaign_id INTEGER NOT NULL REFERENCES sms_notification_campaigns(id) ON DELETE CASCADE,
+	stakeholder_id INTEGER NOT NULL REFERENCES sms_stakeholders(id) ON DELETE CASCADE,
+	node_id INTEGER REFERENCES sms_nodes(id) ON DELETE SET NULL,  -- which node they're notified about
+	required_by DATE,
+	status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','sent','read','acknowledged','failed','exempt')),
+	channel TEXT NOT NULL DEFAULT '',
+	sent_at DATETIME, acknowledged_at DATETIME,
+	communication_id INTEGER REFERENCES sms_communications(id) ON DELETE SET NULL,  -- linked log entry when delivered
+	notes TEXT NOT NULL DEFAULT '',
+	created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	UNIQUE (campaign_id, stakeholder_id)
+);
+CREATE INDEX IF NOT EXISTS idx_sms_notifications_campaign ON sms_notifications(campaign_id, status);
+
+-- ---------------------------------------------------------------------------
+-- RACI + work packages: versioned R/A/C/I matrices scoped to P3M entities
+-- (mirrors srm_racis; assignees are SMS stakeholders and/or internal users)
+-- and a work-package register tying performing contractors to impacted nodes.
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS sms_racis (
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	entity_type TEXT NOT NULL CHECK (entity_type IN ('portfolio','programme','project')),
+	entity_id INTEGER NOT NULL,
+	version INTEGER NOT NULL DEFAULT 1,
+	status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft','preliminary','under_discussion','agreed')),
+	created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+	agreed_at DATETIME, last_reviewed_at DATE,
+	created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	UNIQUE (entity_type, entity_id, version)
+);
+
+CREATE TABLE IF NOT EXISTS sms_raci_assignments (
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	raci_id INTEGER NOT NULL REFERENCES sms_racis(id) ON DELETE CASCADE,
+	activity_code TEXT NOT NULL,              -- "Notify affected residents", "Relocate water main"…
+	description TEXT NOT NULL DEFAULT '',
+	stakeholder_id INTEGER REFERENCES sms_stakeholders(id) ON DELETE SET NULL,  -- contractor / owner / tenant…
+	user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,                    -- internal role
+	value TEXT NOT NULL CHECK (value IN ('r','a','c','i'))
+);
+CREATE INDEX IF NOT EXISTS idx_sms_raci_assign ON sms_raci_assignments(raci_id, activity_code);
+
+-- Work packages: physical activities with a performing contractor and impacted nodes.
+CREATE TABLE IF NOT EXISTS sms_work_packages (
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	title TEXT NOT NULL, description TEXT NOT NULL DEFAULT '',
+	entity_type TEXT, entity_id INTEGER,      -- optional P3M scope
+	contractor_stakeholder_id INTEGER REFERENCES sms_stakeholders(id) ON DELETE SET NULL,
+	status TEXT NOT NULL DEFAULT 'planned' CHECK (status IN ('planned','in_progress','completed','cancelled')),
+	planned_start DATE, planned_end DATE, actual_start DATETIME, completed_at DATETIME,
+	notes TEXT NOT NULL DEFAULT '',
+	created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS sms_work_package_nodes (
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	work_package_id INTEGER NOT NULL REFERENCES sms_work_packages(id) ON DELETE CASCADE,
+	node_id INTEGER NOT NULL REFERENCES sms_nodes(id) ON DELETE CASCADE,
+	impact_notes TEXT NOT NULL DEFAULT '',
+	UNIQUE (work_package_id, node_id)
 );

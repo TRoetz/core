@@ -3109,6 +3109,11 @@ var Catalog = []Migration{
 			// updates); schema objects unchanged, so restamp forward.
 			"c42d1f22a859adadd118dc38dc40df7502e2429856c04d61bef4d08982229e6f", // SQLite, pre feff9dce1 stakeholder updates
 		},
+		// The embedded DDL gained node-taxonomy/campaign/RACI tables and a
+		// widened channel enum after this body shipped (migrations
+		// 20261126–20261128 add the objects to existing databases); advance
+		// already-stamped checksums instead of mismatching.
+		ReconcileChecksum: true,
 		// Reuses the embedded fresh-install DDL (idempotent CREATE ... IF NOT
 		// EXISTS) plus the sms.view permission seed for pre-existing databases.
 		SQLite: smsSchema + `
@@ -4384,6 +4389,324 @@ var Catalog = []Migration{
 			ALTER TABLE p3m_raid_items ADD COLUMN IF NOT EXISTS srm_contract_id INTEGER;
 		`,
 	},
+	{
+		Version:       "20261126_sms_node_taxonomy",
+		Name:          "Add SMS node taxonomy (kinds, nodes, role-based stakeholder membership)",
+		CheckSQLite: `
+			SELECT CASE WHEN COUNT(*) = 4 THEN 1 ELSE 0 END
+			FROM sqlite_master
+			WHERE type = 'table' AND name IN (
+				'sms_node_kinds',
+				'sms_node_kind_roles',
+				'sms_nodes',
+				'sms_node_members'
+			)
+		`,
+		CheckPostgres: `
+			SELECT CASE WHEN COUNT(*) = 4 THEN 1 ELSE 0 END
+			FROM information_schema.tables
+			WHERE table_schema = current_schema() AND table_name IN (
+				'sms_node_kinds',
+				'sms_node_kind_roles',
+				'sms_nodes',
+				'sms_node_members'
+			)
+		`,
+		SQLite: `
+			CREATE TABLE IF NOT EXISTS sms_node_kinds (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				key TEXT NOT NULL UNIQUE,
+				label TEXT NOT NULL,
+				description TEXT NOT NULL DEFAULT '',
+				allows_children BOOLEAN NOT NULL DEFAULT 1,
+				child_kinds TEXT NOT NULL DEFAULT '',
+				is_system BOOLEAN NOT NULL DEFAULT 0,
+				created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+				updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE TABLE IF NOT EXISTS sms_node_kind_roles (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				kind_id INTEGER NOT NULL REFERENCES sms_node_kinds(id) ON DELETE CASCADE,
+				role_key TEXT NOT NULL,
+				label TEXT NOT NULL DEFAULT '',
+				sort_order INTEGER NOT NULL DEFAULT 0,
+				UNIQUE (kind_id, role_key)
+			);
+			CREATE TABLE IF NOT EXISTS sms_nodes (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				external_id TEXT UNIQUE,
+				kind_id INTEGER NOT NULL REFERENCES sms_node_kinds(id),
+				parent_id INTEGER REFERENCES sms_nodes(id) ON DELETE CASCADE,
+				name TEXT NOT NULL,
+				description TEXT NOT NULL DEFAULT '',
+				location_lat REAL, location_lon REAL, location_text TEXT NOT NULL DEFAULT '',
+				custom_fields TEXT NOT NULL DEFAULT '{}',
+				entity_type TEXT, entity_id INTEGER,
+				notes TEXT NOT NULL DEFAULT '',
+				created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+				updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE INDEX IF NOT EXISTS idx_sms_nodes_parent ON sms_nodes(parent_id);
+			CREATE INDEX IF NOT EXISTS idx_sms_nodes_kind ON sms_nodes(kind_id);
+			CREATE TABLE IF NOT EXISTS sms_node_members (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				node_id INTEGER NOT NULL REFERENCES sms_nodes(id) ON DELETE CASCADE,
+				stakeholder_id INTEGER NOT NULL REFERENCES sms_stakeholders(id) ON DELETE CASCADE,
+				role TEXT NOT NULL DEFAULT '',
+				start_date DATE, end_date DATE,
+				notes TEXT NOT NULL DEFAULT '',
+				created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+				UNIQUE (node_id, stakeholder_id, role)
+			);
+			CREATE INDEX IF NOT EXISTS idx_sms_node_members_stakeholder ON sms_node_members(stakeholder_id);
+
+			INSERT OR IGNORE INTO sms_node_kinds (key, label, description, allows_children, child_kinds, is_system) VALUES
+				('area', 'Area', 'Top-level area or precinct grouping nodes.', 1, '', 1),
+				('road_segment', 'Road segment', 'A stretch of road affected by works.', 1, 'building', 1),
+				('building', 'Building', 'A building with occupants (owners and tenants).', 0, '', 1);
+
+			INSERT OR IGNORE INTO sms_node_kind_roles (kind_id, role_key, label, sort_order) SELECT id, 'affected_business', 'Affected business', 1 FROM sms_node_kinds WHERE key = 'road_segment';
+			INSERT OR IGNORE INTO sms_node_kind_roles (kind_id, role_key, label, sort_order) SELECT id, 'resident_representative', 'Resident representative', 2 FROM sms_node_kinds WHERE key = 'road_segment';
+			INSERT OR IGNORE INTO sms_node_kind_roles (kind_id, role_key, label, sort_order) SELECT id, 'owner', 'Owner', 1 FROM sms_node_kinds WHERE key = 'building';
+			INSERT OR IGNORE INTO sms_node_kind_roles (kind_id, role_key, label, sort_order) SELECT id, 'tenant', 'Tenant', 2 FROM sms_node_kinds WHERE key = 'building';
+			INSERT OR IGNORE INTO sms_node_kind_roles (kind_id, role_key, label, sort_order) SELECT id, 'lessee', 'Lessee', 3 FROM sms_node_kinds WHERE key = 'building';
+			INSERT OR IGNORE INTO sms_node_kind_roles (kind_id, role_key, label, sort_order) SELECT id, 'body_corporate_manager', 'Body corporate manager', 4 FROM sms_node_kinds WHERE key = 'building';
+		`,
+		Postgres: `
+			CREATE TABLE IF NOT EXISTS sms_node_kinds (
+				id SERIAL PRIMARY KEY,
+				key TEXT NOT NULL UNIQUE,
+				label TEXT NOT NULL,
+				description TEXT NOT NULL DEFAULT '',
+				allows_children BOOLEAN NOT NULL DEFAULT true,
+				child_kinds TEXT NOT NULL DEFAULT '',
+				is_system BOOLEAN NOT NULL DEFAULT false,
+				created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+				updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE TABLE IF NOT EXISTS sms_node_kind_roles (
+				id SERIAL PRIMARY KEY,
+				kind_id INTEGER NOT NULL REFERENCES sms_node_kinds(id) ON DELETE CASCADE,
+				role_key TEXT NOT NULL,
+				label TEXT NOT NULL DEFAULT '',
+				sort_order INTEGER NOT NULL DEFAULT 0,
+				UNIQUE (kind_id, role_key)
+			);
+			CREATE TABLE IF NOT EXISTS sms_nodes (
+				id SERIAL PRIMARY KEY,
+				external_id TEXT UNIQUE,
+				kind_id INTEGER NOT NULL REFERENCES sms_node_kinds(id),
+				parent_id INTEGER REFERENCES sms_nodes(id) ON DELETE CASCADE,
+				name TEXT NOT NULL,
+				description TEXT NOT NULL DEFAULT '',
+				location_lat REAL, location_lon REAL, location_text TEXT NOT NULL DEFAULT '',
+				custom_fields TEXT NOT NULL DEFAULT '{}',
+				entity_type TEXT, entity_id INTEGER,
+				notes TEXT NOT NULL DEFAULT '',
+				created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+				updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE INDEX IF NOT EXISTS idx_sms_nodes_parent ON sms_nodes(parent_id);
+			CREATE INDEX IF NOT EXISTS idx_sms_nodes_kind ON sms_nodes(kind_id);
+			CREATE TABLE IF NOT EXISTS sms_node_members (
+				id SERIAL PRIMARY KEY,
+				node_id INTEGER NOT NULL REFERENCES sms_nodes(id) ON DELETE CASCADE,
+				stakeholder_id INTEGER NOT NULL REFERENCES sms_stakeholders(id) ON DELETE CASCADE,
+				role TEXT NOT NULL DEFAULT '',
+				start_date DATE, end_date DATE,
+				notes TEXT NOT NULL DEFAULT '',
+				created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+				UNIQUE (node_id, stakeholder_id, role)
+			);
+			CREATE INDEX IF NOT EXISTS idx_sms_node_members_stakeholder ON sms_node_members(stakeholder_id);
+
+			INSERT INTO sms_node_kinds (key, label, description, allows_children, child_kinds, is_system) VALUES
+				('area', 'Area', 'Top-level area or precinct grouping nodes.', true, '', true),
+				('road_segment', 'Road segment', 'A stretch of road affected by works.', true, 'building', true),
+				('building', 'Building', 'A building with occupants (owners and tenants).', false, '', true)
+			ON CONFLICT (key) DO NOTHING;
+
+			INSERT INTO sms_node_kind_roles (kind_id, role_key, label, sort_order) SELECT id, 'affected_business', 'Affected business', 1 FROM sms_node_kinds WHERE key = 'road_segment' ON CONFLICT (kind_id, role_key) DO NOTHING;
+			INSERT INTO sms_node_kind_roles (kind_id, role_key, label, sort_order) SELECT id, 'resident_representative', 'Resident representative', 2 FROM sms_node_kinds WHERE key = 'road_segment' ON CONFLICT (kind_id, role_key) DO NOTHING;
+			INSERT INTO sms_node_kind_roles (kind_id, role_key, label, sort_order) SELECT id, 'owner', 'Owner', 1 FROM sms_node_kinds WHERE key = 'building' ON CONFLICT (kind_id, role_key) DO NOTHING;
+			INSERT INTO sms_node_kind_roles (kind_id, role_key, label, sort_order) SELECT id, 'tenant', 'Tenant', 2 FROM sms_node_kinds WHERE key = 'building' ON CONFLICT (kind_id, role_key) DO NOTHING;
+			INSERT INTO sms_node_kind_roles (kind_id, role_key, label, sort_order) SELECT id, 'lessee', 'Lessee', 3 FROM sms_node_kinds WHERE key = 'building' ON CONFLICT (kind_id, role_key) DO NOTHING;
+			INSERT INTO sms_node_kind_roles (kind_id, role_key, label, sort_order) SELECT id, 'body_corporate_manager', 'Body corporate manager', 4 FROM sms_node_kinds WHERE key = 'building' ON CONFLICT (kind_id, role_key) DO NOTHING;
+		`,
+	},
+	{
+		Version:       "20261127_sms_notification_campaigns",
+		Name:          "Add SMS notification campaigns and widen channel enum with letter/sms_text",
+		CheckSQLite: `
+			SELECT CASE WHEN
+				EXISTS (SELECT 1 FROM sqlite_master WHERE type='table' AND name='sms_notification_campaigns')
+				AND EXISTS (SELECT 1 FROM sqlite_master WHERE type='table' AND name='sms_campaign_targets')
+				AND EXISTS (SELECT 1 FROM sqlite_master WHERE type='table' AND name='sms_notifications')
+				AND EXISTS (SELECT 1 FROM sqlite_master WHERE type='table' AND name='sms_communications' AND sql LIKE '%letter%')
+				AND EXISTS (SELECT 1 FROM sqlite_master WHERE type='table' AND name='sms_engagement_plans' AND sql LIKE '%letter%')
+			THEN 1 ELSE 0 END
+		`,
+		CheckPostgres: `
+			SELECT CASE WHEN
+				EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema=current_schema() AND table_name='sms_notification_campaigns')
+				AND EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema=current_schema() AND table_name='sms_campaign_targets')
+				AND EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema=current_schema() AND table_name='sms_notifications')
+				AND EXISTS (SELECT 1 FROM pg_constraint c JOIN pg_class t ON t.oid = c.conrelid WHERE t.relname='sms_communications' AND c.contype='c' AND pg_get_constraintdef(c.oid) LIKE '%letter%')
+				AND EXISTS (SELECT 1 FROM pg_constraint c JOIN pg_class t ON t.oid = c.conrelid WHERE t.relname='sms_engagement_plans' AND c.contype='c' AND pg_get_constraintdef(c.oid) LIKE '%letter%')
+			THEN 1 ELSE 0 END
+		`,
+		SQLite:        "applySQLiteSMSCampaignChannelWiden:v1",
+		ApplySQLite:   applySQLiteSMSCampaignChannelWiden,
+		Postgres: `
+			CREATE TABLE IF NOT EXISTS sms_notification_campaigns (
+				id SERIAL PRIMARY KEY,
+				title TEXT NOT NULL,
+				description TEXT NOT NULL DEFAULT '',
+				entity_type TEXT, entity_id INTEGER,
+				channel TEXT NOT NULL DEFAULT 'email',
+				scheduled_at TIMESTAMPTZ,
+				due_by DATE,
+				status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft','scheduled','in_progress','completed','cancelled')),
+				created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+				updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE TABLE IF NOT EXISTS sms_campaign_targets (
+				id SERIAL PRIMARY KEY,
+				campaign_id INTEGER NOT NULL REFERENCES sms_notification_campaigns(id) ON DELETE CASCADE,
+				node_id INTEGER NOT NULL REFERENCES sms_nodes(id) ON DELETE CASCADE,
+				include_descendants BOOLEAN NOT NULL DEFAULT false,
+				UNIQUE (campaign_id, node_id)
+			);
+			CREATE TABLE IF NOT EXISTS sms_notifications (
+				id SERIAL PRIMARY KEY,
+				campaign_id INTEGER NOT NULL REFERENCES sms_notification_campaigns(id) ON DELETE CASCADE,
+				stakeholder_id INTEGER NOT NULL REFERENCES sms_stakeholders(id) ON DELETE CASCADE,
+				node_id INTEGER REFERENCES sms_nodes(id) ON DELETE SET NULL,
+				required_by DATE,
+				status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','sent','read','acknowledged','failed','exempt')),
+				channel TEXT NOT NULL DEFAULT '',
+				sent_at TIMESTAMPTZ, acknowledged_at TIMESTAMPTZ,
+				communication_id INTEGER REFERENCES sms_communications(id) ON DELETE SET NULL,
+				notes TEXT NOT NULL DEFAULT '',
+				created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+				updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+				UNIQUE (campaign_id, stakeholder_id)
+			);
+			CREATE INDEX IF NOT EXISTS idx_sms_notifications_campaign ON sms_notifications(campaign_id, status);
+
+			ALTER TABLE sms_communications DROP CONSTRAINT IF EXISTS sms_communications_channel_check;
+			ALTER TABLE sms_communications ADD CONSTRAINT sms_communications_channel_check CHECK (channel IN ('email','phone','meeting','in_person','slack','teams','letter','sms_text','other'));
+			ALTER TABLE sms_engagement_plans DROP CONSTRAINT IF EXISTS sms_engagement_plans_channel_check;
+			ALTER TABLE sms_engagement_plans ADD CONSTRAINT sms_engagement_plans_channel_check CHECK (channel IN ('email','phone','meeting','in_person','slack','teams','letter','sms_text','other'));
+		`,
+	},
+	{
+		Version:       "20261128_sms_raci_work_packages",
+		Name:          "Add SMS RACI matrices and work packages (contractor/site impact register)",
+		CheckSQLite: `
+			SELECT CASE WHEN COUNT(*) = 4 THEN 1 ELSE 0 END
+			FROM sqlite_master
+			WHERE type = 'table' AND name IN (
+				'sms_racis',
+				'sms_raci_assignments',
+				'sms_work_packages',
+				'sms_work_package_nodes'
+			)
+		`,
+		CheckPostgres: `
+			SELECT CASE WHEN COUNT(*) = 4 THEN 1 ELSE 0 END
+			FROM information_schema.tables
+			WHERE table_schema = current_schema() AND table_name IN (
+				'sms_racis',
+				'sms_raci_assignments',
+				'sms_work_packages',
+				'sms_work_package_nodes'
+			)
+		`,
+		SQLite: `
+			CREATE TABLE IF NOT EXISTS sms_racis (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				entity_type TEXT NOT NULL CHECK (entity_type IN ('portfolio','programme','project')),
+				entity_id INTEGER NOT NULL,
+				version INTEGER NOT NULL DEFAULT 1,
+				status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft','preliminary','under_discussion','agreed')),
+				created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				agreed_at DATETIME, last_reviewed_at DATE,
+				created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+				UNIQUE (entity_type, entity_id, version)
+			);
+			CREATE TABLE IF NOT EXISTS sms_raci_assignments (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				raci_id INTEGER NOT NULL REFERENCES sms_racis(id) ON DELETE CASCADE,
+				activity_code TEXT NOT NULL,
+				description TEXT NOT NULL DEFAULT '',
+				stakeholder_id INTEGER REFERENCES sms_stakeholders(id) ON DELETE SET NULL,
+				user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				value TEXT NOT NULL CHECK (value IN ('r','a','c','i'))
+			);
+			CREATE INDEX IF NOT EXISTS idx_sms_raci_assign ON sms_raci_assignments(raci_id, activity_code);
+			CREATE TABLE IF NOT EXISTS sms_work_packages (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				title TEXT NOT NULL, description TEXT NOT NULL DEFAULT '',
+				entity_type TEXT, entity_id INTEGER,
+				contractor_stakeholder_id INTEGER REFERENCES sms_stakeholders(id) ON DELETE SET NULL,
+				status TEXT NOT NULL DEFAULT 'planned' CHECK (status IN ('planned','in_progress','completed','cancelled')),
+				planned_start DATE, planned_end DATE, actual_start DATETIME, completed_at DATETIME,
+				notes TEXT NOT NULL DEFAULT '',
+				created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+				updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE TABLE IF NOT EXISTS sms_work_package_nodes (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				work_package_id INTEGER NOT NULL REFERENCES sms_work_packages(id) ON DELETE CASCADE,
+				node_id INTEGER NOT NULL REFERENCES sms_nodes(id) ON DELETE CASCADE,
+				impact_notes TEXT NOT NULL DEFAULT '',
+				UNIQUE (work_package_id, node_id)
+			);
+		`,
+		Postgres: `
+			CREATE TABLE IF NOT EXISTS sms_racis (
+				id SERIAL PRIMARY KEY,
+				entity_type TEXT NOT NULL CHECK (entity_type IN ('portfolio','programme','project')),
+				entity_id INTEGER NOT NULL,
+				version INTEGER NOT NULL DEFAULT 1,
+				status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft','preliminary','under_discussion','agreed')),
+				created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				agreed_at TIMESTAMPTZ, last_reviewed_at DATE,
+				created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+				UNIQUE (entity_type, entity_id, version)
+			);
+			CREATE TABLE IF NOT EXISTS sms_raci_assignments (
+				id SERIAL PRIMARY KEY,
+				raci_id INTEGER NOT NULL REFERENCES sms_racis(id) ON DELETE CASCADE,
+				activity_code TEXT NOT NULL,
+				description TEXT NOT NULL DEFAULT '',
+				stakeholder_id INTEGER REFERENCES sms_stakeholders(id) ON DELETE SET NULL,
+				user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				value TEXT NOT NULL CHECK (value IN ('r','a','c','i'))
+			);
+			CREATE INDEX IF NOT EXISTS idx_sms_raci_assign ON sms_raci_assignments(raci_id, activity_code);
+			CREATE TABLE IF NOT EXISTS sms_work_packages (
+				id SERIAL PRIMARY KEY,
+				title TEXT NOT NULL, description TEXT NOT NULL DEFAULT '',
+				entity_type TEXT, entity_id INTEGER,
+				contractor_stakeholder_id INTEGER REFERENCES sms_stakeholders(id) ON DELETE SET NULL,
+				status TEXT NOT NULL DEFAULT 'planned' CHECK (status IN ('planned','in_progress','completed','cancelled')),
+				planned_start DATE, planned_end DATE, actual_start TIMESTAMPTZ, completed_at TIMESTAMPTZ,
+				notes TEXT NOT NULL DEFAULT '',
+				created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+				updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE TABLE IF NOT EXISTS sms_work_package_nodes (
+				id SERIAL PRIMARY KEY,
+				work_package_id INTEGER NOT NULL REFERENCES sms_work_packages(id) ON DELETE CASCADE,
+				node_id INTEGER NOT NULL REFERENCES sms_nodes(id) ON DELETE CASCADE,
+				impact_notes TEXT NOT NULL DEFAULT '',
+				UNIQUE (work_package_id, node_id)
+			);
+		`,
+	},
 }
 
 // checkP3MDecisionARBSQLite reports whether the P3M decision/ARB migration's
@@ -5238,6 +5561,148 @@ func applySQLiteSMSPlanChannelCheck(db Database) (retErr error) {
 
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("commit sms_engagement_plans rebuild: %w", err)
+	}
+	return nil
+}
+
+// applySQLiteSMSCampaignChannelWiden creates the notification-campaign tables
+// and rebuilds sms_communications / sms_engagement_plans with the widened
+// channel CHECK (letter, sms_text). SQLite cannot add a value to an existing
+// column's CHECK in place, so rows are copied into new tables and swapped.
+func applySQLiteSMSCampaignChannelWiden(db Database) (retErr error) {
+	sqliteDB, ok := db.(*SQLiteDB)
+	if !ok {
+		return fmt.Errorf("expected SQLite database, got %T", db)
+	}
+
+	ctx := context.Background()
+	conn, err := sqliteDB.writeConn.Conn(ctx)
+	if err != nil {
+		return fmt.Errorf("acquire SQLite write connection: %w", err)
+	}
+	defer func() { _ = conn.Close() }()
+
+	var foreignKeysEnabled bool
+	if err := conn.QueryRowContext(ctx, "PRAGMA foreign_keys").Scan(&foreignKeysEnabled); err != nil {
+		return fmt.Errorf("read foreign_keys pragma: %w", err)
+	}
+	if foreignKeysEnabled {
+		if _, err := conn.ExecContext(ctx, "PRAGMA foreign_keys=OFF"); err != nil {
+			return fmt.Errorf("disable foreign keys: %w", err)
+		}
+		defer func() {
+			if _, err := conn.ExecContext(ctx, "PRAGMA foreign_keys=ON"); retErr == nil && err != nil {
+				retErr = fmt.Errorf("restore foreign keys: %w", err)
+			}
+		}()
+	}
+
+	tx, err := conn.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin sms campaign channel widen: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	statements := []string{
+		`CREATE TABLE IF NOT EXISTS sms_notification_campaigns (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			title TEXT NOT NULL,
+			description TEXT NOT NULL DEFAULT '',
+			entity_type TEXT, entity_id INTEGER,
+			channel TEXT NOT NULL DEFAULT 'email',
+			scheduled_at DATETIME,
+			due_by DATE,
+			status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft','scheduled','in_progress','completed','cancelled')),
+			created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+		)`,
+		`CREATE TABLE IF NOT EXISTS sms_campaign_targets (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			campaign_id INTEGER NOT NULL REFERENCES sms_notification_campaigns(id) ON DELETE CASCADE,
+			node_id INTEGER NOT NULL REFERENCES sms_nodes(id) ON DELETE CASCADE,
+			include_descendants BOOLEAN NOT NULL DEFAULT 0,
+			UNIQUE (campaign_id, node_id)
+		)`,
+		`CREATE TABLE IF NOT EXISTS sms_notifications (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			campaign_id INTEGER NOT NULL REFERENCES sms_notification_campaigns(id) ON DELETE CASCADE,
+			stakeholder_id INTEGER NOT NULL REFERENCES sms_stakeholders(id) ON DELETE CASCADE,
+			node_id INTEGER REFERENCES sms_nodes(id) ON DELETE SET NULL,
+			required_by DATE,
+			status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','sent','read','acknowledged','failed','exempt')),
+			channel TEXT NOT NULL DEFAULT '',
+			sent_at DATETIME, acknowledged_at DATETIME,
+			communication_id INTEGER REFERENCES sms_communications(id) ON DELETE SET NULL,
+			notes TEXT NOT NULL DEFAULT '',
+			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			UNIQUE (campaign_id, stakeholder_id)
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_sms_notifications_campaign ON sms_notifications(campaign_id, status)`,
+
+		// Rebuild sms_communications with the widened channel enum.
+		`CREATE TABLE sms_communications_migration (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			stakeholder_id INTEGER NOT NULL REFERENCES sms_stakeholders(id) ON DELETE CASCADE,
+			channel TEXT NOT NULL DEFAULT 'email' CHECK (channel IN ('email','phone','meeting','in_person','slack','teams','letter','sms_text','other')),
+			direction TEXT NOT NULL DEFAULT 'outbound' CHECK (direction IN ('outbound','inbound')),
+			subject TEXT NOT NULL DEFAULT '',
+			body TEXT NOT NULL DEFAULT '',
+			sentiment TEXT CHECK (sentiment IS NULL OR sentiment IN ('positive','neutral','negative')),
+			created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+		)`,
+		`INSERT INTO sms_communications_migration (
+			id, stakeholder_id, channel, direction, subject, body, sentiment, created_by, created_at
+		)
+		SELECT id, stakeholder_id,
+			CASE WHEN channel IN ('email','phone','meeting','in_person','slack','teams','letter','sms_text','other') THEN channel ELSE 'other' END,
+			direction, subject, body, sentiment, created_by, created_at
+		FROM sms_communications`,
+		`DROP TABLE sms_communications`,
+		`ALTER TABLE sms_communications_migration RENAME TO sms_communications`,
+		`CREATE INDEX idx_sms_communications_stakeholder ON sms_communications(stakeholder_id, created_at DESC)`,
+
+		// Rebuild sms_engagement_plans with the widened channel enum.
+		`CREATE TABLE sms_engagement_plans_migration (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			stakeholder_id INTEGER NOT NULL REFERENCES sms_stakeholders(id) ON DELETE CASCADE,
+			strategy TEXT NOT NULL DEFAULT '',
+			objective TEXT NOT NULL DEFAULT '',
+			approach TEXT CHECK (approach IS NULL OR approach IN ('inform','consult','involve','collaborate','partner')),
+			key_messages TEXT NOT NULL DEFAULT '',
+			success_measures TEXT NOT NULL DEFAULT '',
+			frequency TEXT NOT NULL DEFAULT 'monthly' CHECK (frequency IN ('daily','weekly','biweekly','monthly','quarterly','annual','as_needed')),
+			channel TEXT NOT NULL DEFAULT 'email' CHECK (channel IN ('email','phone','meeting','in_person','slack','teams','letter','sms_text','other')),
+			status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('draft','active','paused','completed')),
+			entity_type TEXT,
+			entity_id INTEGER,
+			start_date DATETIME,
+			end_date DATETIME,
+			notes TEXT NOT NULL DEFAULT '',
+			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+		)`,
+		`INSERT INTO sms_engagement_plans_migration (
+			id, stakeholder_id, strategy, objective, approach, key_messages, success_measures, frequency, channel, status, entity_type, entity_id, start_date, end_date, notes, created_at, updated_at
+		)
+		SELECT id, stakeholder_id, strategy, objective, approach, key_messages, success_measures, frequency,
+			CASE WHEN channel IN ('email','phone','meeting','in_person','slack','teams','letter','sms_text','other') THEN channel ELSE 'email' END,
+			status, entity_type, entity_id, start_date, end_date, notes, created_at, updated_at
+		FROM sms_engagement_plans`,
+		`DROP TABLE sms_engagement_plans`,
+		`ALTER TABLE sms_engagement_plans_migration RENAME TO sms_engagement_plans`,
+		`CREATE INDEX idx_sms_engagement_plans_stakeholder ON sms_engagement_plans(stakeholder_id)`,
+	}
+	for _, statement := range statements {
+		if _, err := tx.ExecContext(ctx, statement); err != nil {
+			return fmt.Errorf("sms campaign channel widen: %w", err)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit sms campaign channel widen: %w", err)
 	}
 	return nil
 }

@@ -499,9 +499,9 @@ func linkedItemIDs(links []CreateItemLinkParams) []int {
 }
 
 // ListLinksForEntityWithChecks returns visible outgoing and incoming links;
-// inaccessible endpoints are dropped. entityType is item, test_case, or page.
+// inaccessible endpoints are dropped. entityType is item, test_case, asset, or page.
 func (s *ItemLinkService) ListLinksForEntityWithChecks(userID int, entityType string, entityID int) (outgoing, incoming []models.ItemLink, err error) {
-	if entityType != "item" && entityType != "test_case" && entityType != "page" {
+	if entityType != "item" && entityType != "test_case" && entityType != "asset" && entityType != "page" {
 		return nil, nil, ErrLinkInvalidEntityType
 	}
 	if err := s.CheckEntityPermission(userID, entityType, entityID, models.PermissionItemView, AssetPermissionKeyView); err != nil {

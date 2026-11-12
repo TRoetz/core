@@ -139,6 +139,11 @@ func RegisterSMSRoutes(deps *Deps) {
 	api.HandleH("POST /sms/stakeholders/{id}/transfers", auth(smsManage(http.HandlerFunc(deps.SMS.CreateTransfer))))
 	api.HandleH("PUT /sms/transfers/{tid}", auth(smsManage(http.HandlerFunc(deps.SMS.UpdateTransfer))))
 
+	// Stakeholder rollups: site occupancy, notification history and RACI roles.
+	api.HandleH("GET /sms/stakeholders/{id}/nodes", auth(smsView(http.HandlerFunc(deps.SMS.ListStakeholderNodes))))
+	api.HandleH("GET /sms/stakeholders/{id}/notifications", auth(smsView(http.HandlerFunc(deps.SMS.ListStakeholderNotifications))))
+	api.HandleH("GET /sms/stakeholders/{id}/raci-roles", auth(smsView(http.HandlerFunc(deps.SMS.ListStakeholderRaciRoles))))
+
 	// Pilot success-measure baselines.
 	api.HandleH("GET /sms/pilot-baselines", auth(smsView(http.HandlerFunc(deps.SMS.ListPilotBaselines))))
 	api.HandleH("PUT /sms/pilot-baselines", auth(smsManage(http.HandlerFunc(deps.SMS.UpsertPilotBaseline))))
@@ -150,6 +155,9 @@ func RegisterSMSRoutes(deps *Deps) {
 	// GeoJSON location feed.
 	api.HandleH("POST /sms/import/preview", auth(smsManage(http.HandlerFunc(deps.SMS.ImportPreview))))
 	api.HandleH("POST /sms/import/execute", auth(smsManage(http.HandlerFunc(deps.SMS.ImportExecute))))
+	// Site & occupancy import (roadworks structure capture).
+	api.HandleH("POST /sms/import/sites/preview", auth(smsManage(http.HandlerFunc(deps.SMS.ImportSitesPreview))))
+	api.HandleH("POST /sms/import/sites/execute", auth(smsManage(http.HandlerFunc(deps.SMS.ImportSitesExecute))))
 	// Full-register restore: round-trips GET /sms/export/full with IDs intact.
 	api.HandleH("POST /sms/import/full", auth(smsManage(http.HandlerFunc(deps.SMS.ImportFull))))
 	api.HandleH("GET /sms/export/full", auth(smsView(http.HandlerFunc(deps.SMS.ExportFullJSON))))
@@ -163,4 +171,55 @@ func RegisterSMSRoutes(deps *Deps) {
 	// Integrations (WI-6.1, WI-6.3): email-forward ingestion + BI feed.
 	api.HandleH("POST /sms/ingest/email", auth(smsManage(http.HandlerFunc(deps.SMS.IngestEmail))))
 	api.HandleH("GET /sms/feed/powerbi", auth(smsView(http.HandlerFunc(deps.SMS.PowerBIFeed))))
+
+	// Node taxonomy: admin-configurable kinds + role vocabulary (roadworks
+	// sites & occupancy). Kinds seed on migration; is_system kinds are protected.
+	api.HandleH("GET /sms/node-kinds", auth(smsView(http.HandlerFunc(deps.SMS.ListNodeKinds))))
+	api.HandleH("POST /sms/node-kinds", auth(smsManage(http.HandlerFunc(deps.SMS.CreateNodeKind))))
+	api.HandleH("PUT /sms/node-kinds/{id}", auth(smsManage(http.HandlerFunc(deps.SMS.UpdateNodeKind))))
+	api.HandleH("DELETE /sms/node-kinds/{id}", auth(smsManage(http.HandlerFunc(deps.SMS.DeleteNodeKind))))
+	api.HandleH("GET /sms/node-kinds/{id}/roles", auth(smsView(http.HandlerFunc(deps.SMS.ListNodeKindRoles))))
+	api.HandleH("POST /sms/node-kinds/{id}/roles", auth(smsManage(http.HandlerFunc(deps.SMS.AddNodeKindRole))))
+	api.HandleH("PUT /sms/node-kind-roles/{id}", auth(smsManage(http.HandlerFunc(deps.SMS.UpdateNodeKindRole))))
+	api.HandleH("DELETE /sms/node-kind-roles/{id}", auth(smsManage(http.HandlerFunc(deps.SMS.DeleteNodeKindRole))))
+
+	// Nodes (areas, road segments, buildings) + stakeholder membership.
+	api.HandleH("GET /sms/nodes", auth(smsView(http.HandlerFunc(deps.SMS.ListNodes))))
+	api.HandleH("POST /sms/nodes", auth(smsManage(http.HandlerFunc(deps.SMS.CreateNode))))
+	api.HandleH("GET /sms/nodes/{id}", auth(smsView(http.HandlerFunc(deps.SMS.GetNode))))
+	api.HandleH("PUT /sms/nodes/{id}", auth(smsManage(http.HandlerFunc(deps.SMS.UpdateNode))))
+	api.HandleH("DELETE /sms/nodes/{id}", auth(smsManage(http.HandlerFunc(deps.SMS.DeleteNode))))
+	api.HandleH("GET /sms/nodes/{id}/members", auth(smsView(http.HandlerFunc(deps.SMS.ListNodeMembers))))
+	api.HandleH("POST /sms/nodes/{id}/members", auth(smsManage(http.HandlerFunc(deps.SMS.AddNodeMember))))
+	api.HandleH("DELETE /sms/node-members/{mid}", auth(smsManage(http.HandlerFunc(deps.SMS.RemoveNodeMember))))
+
+	// Notification campaigns + per-stakeholder delivery ledger.
+	api.HandleH("GET /sms/notification-campaigns", auth(smsView(http.HandlerFunc(deps.SMS.ListNotificationCampaigns))))
+	api.HandleH("POST /sms/notification-campaigns", auth(smsManage(http.HandlerFunc(deps.SMS.CreateNotificationCampaign))))
+	api.HandleH("GET /sms/notification-campaigns/{id}", auth(smsView(http.HandlerFunc(deps.SMS.GetNotificationCampaign))))
+	api.HandleH("PUT /sms/notification-campaigns/{id}", auth(smsManage(http.HandlerFunc(deps.SMS.UpdateNotificationCampaign))))
+	api.HandleH("DELETE /sms/notification-campaigns/{id}", auth(smsManage(http.HandlerFunc(deps.SMS.DeleteNotificationCampaign))))
+	api.HandleH("GET /sms/notification-campaigns/{id}/targets", auth(smsView(http.HandlerFunc(deps.SMS.ListCampaignTargets))))
+	api.HandleH("POST /sms/notification-campaigns/{id}/targets", auth(smsManage(http.HandlerFunc(deps.SMS.AddCampaignTarget))))
+	api.HandleH("DELETE /sms/campaign-targets/{tid}", auth(smsManage(http.HandlerFunc(deps.SMS.RemoveCampaignTarget))))
+	api.HandleH("POST /sms/notification-campaigns/{id}/audience", auth(smsManage(http.HandlerFunc(deps.SMS.GenerateCampaignAudience))))
+	api.HandleH("GET /sms/notification-campaigns/{id}/notifications", auth(smsView(http.HandlerFunc(deps.SMS.ListCampaignNotifications))))
+	api.HandleH("PUT /sms/notifications/{id}", auth(smsManage(http.HandlerFunc(deps.SMS.UpdateNotification))))
+	api.HandleH("POST /sms/notifications/bulk-update", auth(smsManage(http.HandlerFunc(deps.SMS.BulkUpdateNotifications))))
+
+	// RACI matrices (versioned, per P3M entity) + work packages.
+	api.HandleH("GET /sms/racis", auth(smsView(http.HandlerFunc(deps.SMS.ListRacis))))
+	api.HandleH("POST /sms/racis", auth(smsManage(http.HandlerFunc(deps.SMS.CreateRaci))))
+	api.HandleH("GET /sms/racis/{id}", auth(smsView(http.HandlerFunc(deps.SMS.GetRaci))))
+	api.HandleH("PUT /sms/racis/{id}", auth(smsManage(http.HandlerFunc(deps.SMS.UpdateRaci))))
+	api.HandleH("DELETE /sms/racis/{id}", auth(smsManage(http.HandlerFunc(deps.SMS.DeleteRaci))))
+	api.HandleH("PUT /sms/racis/{id}/assignments", auth(smsManage(http.HandlerFunc(deps.SMS.SaveRaciAssignments))))
+
+	api.HandleH("GET /sms/work-packages", auth(smsView(http.HandlerFunc(deps.SMS.ListWorkPackages))))
+	api.HandleH("POST /sms/work-packages", auth(smsManage(http.HandlerFunc(deps.SMS.CreateWorkPackage))))
+	api.HandleH("GET /sms/work-packages/{id}", auth(smsView(http.HandlerFunc(deps.SMS.GetWorkPackage))))
+	api.HandleH("PUT /sms/work-packages/{id}", auth(smsManage(http.HandlerFunc(deps.SMS.UpdateWorkPackage))))
+	api.HandleH("DELETE /sms/work-packages/{id}", auth(smsManage(http.HandlerFunc(deps.SMS.DeleteWorkPackage))))
+	api.HandleH("POST /sms/work-packages/{id}/nodes", auth(smsManage(http.HandlerFunc(deps.SMS.AddWorkPackageNode))))
+	api.HandleH("DELETE /sms/work-package-nodes/{lid}", auth(smsManage(http.HandlerFunc(deps.SMS.RemoveWorkPackageNode))))
 }
