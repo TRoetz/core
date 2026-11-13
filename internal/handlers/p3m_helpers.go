@@ -256,7 +256,7 @@ func (h *P3MHandler) validateEnabledStageKey(ctx context.Context, w http.Respons
 // targeting toKey that apply to workType (a NULL template work type applies to
 // every project; a typed template only to matching projects).
 func (h *P3MHandler) p3mMandatoryTemplatesFor(ctx context.Context, toKey string, workType *string) ([]models.P3MStageGateTemplate, error) {
-	query := `SELECT ` + p3mStageGateTemplateColumns + ` WHERE enabled = 1 AND mandatory = 1 AND to_stage_key = ?`
+	query := `SELECT ` + p3mStageGateTemplateColumns + ` FROM p3m_stage_gate_templates WHERE enabled = 1 AND mandatory = 1 AND to_stage_key = ?`
 	args := []any{toKey}
 	if workType != nil {
 		query += ` AND (work_type IS NULL OR work_type = ?)`

@@ -160,6 +160,16 @@ func (h *P3MHandler) ListRaidItems(w http.ResponseWriter, r *http.Request) {
 	respondJSONOK(w, items)
 }
 
+// p3mRaidSubtypeArg binds an optional RAID subtype column argument: the API
+// accepts an omitted (empty) subtype, which must be stored as NULL to satisfy
+// the CHECK constraint - matching rows created by the escalation path.
+func p3mRaidSubtypeArg(v string) any {
+	if v == "" {
+		return nil
+	}
+	return v
+}
+
 // CreateRaidItem handles POST /api/p3m/raid-items.
 func (h *P3MHandler) CreateRaidItem(w http.ResponseWriter, r *http.Request) {
 	user, ok := RequireAuth(w, r)
@@ -239,7 +249,7 @@ func (h *P3MHandler) CreateRaidItem(w http.ResponseWriter, r *http.Request) {
 
 	now := time.Now().UTC()
 	res, err := h.db.ExecContext(r.Context(), `INSERT INTO p3m_raid_items (entity_type, entity_id, item_type, title, description, impact_score, probability_score, mitigation_plan, owner_id, status, due_date, item_subtype, decision_subtype, srm_contract_id, item_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		in.EntityType, in.EntityID, in.ItemType, in.Title, in.Description, in.ImpactScore, in.ProbabilityScore, in.MitigationPlan, in.OwnerID, in.Status, nullTimePtr(in.DueDate), in.ItemSubtype, in.DecisionSubtype, in.SRMContractID, in.ItemID, now, now)
+		in.EntityType, in.EntityID, in.ItemType, in.Title, in.Description, in.ImpactScore, in.ProbabilityScore, in.MitigationPlan, in.OwnerID, in.Status, nullTimePtr(in.DueDate), p3mRaidSubtypeArg(in.ItemSubtype), p3mRaidSubtypeArg(in.DecisionSubtype), in.SRMContractID, in.ItemID, now, now)
 	if err != nil {
 		respondInternalError(w, r, err)
 		return
@@ -350,7 +360,7 @@ func (h *P3MHandler) UpdateRaidItem(w http.ResponseWriter, r *http.Request) {
 
 	now := time.Now().UTC()
 	res, err := h.db.ExecContext(r.Context(), `UPDATE p3m_raid_items SET entity_type = ?, entity_id = ?, item_type = ?, title = ?, description = ?, impact_score = ?, probability_score = ?, mitigation_plan = ?, owner_id = ?, status = ?, due_date = ?, item_subtype = ?, decision_subtype = ?, srm_contract_id = ?, item_id = ?, updated_at = ? WHERE id = ?`,
-		in.EntityType, in.EntityID, in.ItemType, in.Title, in.Description, in.ImpactScore, in.ProbabilityScore, in.MitigationPlan, in.OwnerID, in.Status, nullTimePtr(in.DueDate), in.ItemSubtype, in.DecisionSubtype, in.SRMContractID, in.ItemID, now, id)
+		in.EntityType, in.EntityID, in.ItemType, in.Title, in.Description, in.ImpactScore, in.ProbabilityScore, in.MitigationPlan, in.OwnerID, in.Status, nullTimePtr(in.DueDate), p3mRaidSubtypeArg(in.ItemSubtype), p3mRaidSubtypeArg(in.DecisionSubtype), in.SRMContractID, in.ItemID, now, id)
 	if err != nil {
 		respondInternalError(w, r, err)
 		return
