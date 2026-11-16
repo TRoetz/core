@@ -3,9 +3,14 @@
   import { t } from '../../stores/i18n.svelte.js';
   import PageHeader from '../../layout/PageHeader.svelte';
   import IconNotebook from '@tabler/icons-svelte-runes/icons/notebook';
+  import IconPlus from '@tabler/icons-svelte-runes/icons/plus';
   import IconSearch from '@tabler/icons-svelte-runes/icons/search';
   import { pages as pagesApi } from '../../api/pages.js';
   import { workspaces as wsApi } from '../../api/workspaces.js';
+  import { workspacePermissions } from '../../stores/workspacePermissions.svelte.js';
+  import { navigate } from '../../router.js';
+  import Modal from '../../dialogs/Modal.svelte';
+  import ModalHeader from '../../dialogs/ModalHeader.svelte';
 
   let workspaces = $state([]);
   /** workspace_id -> [{ page_id, title }] */
@@ -13,6 +18,37 @@
   let loading = $state(true);
   let error = $state('');
   let query = $state('');
+
+  // "New page" dialog: pages belong to a workspace, so the picker chooses
+  // where the untitled root page is created before navigating into it.
+  let createDialogOpen = $state(false);
+  let creatingWorkspaceId = $state(null);
+  let createError = $state('');
+
+  const creatableWorkspaces = $derived(
+    workspaces.filter((ws) => workspacePermissions.canCreatePages(ws.id))
+  );
+  const viewableWorkspaces = $derived(
+    workspaces.filter((ws) => workspacePermissions.canViewPages(ws.id))
+  );
+
+  async function createPageIn(workspaceId) {
+    if (creatingWorkspaceId != null) return;
+    creatingWorkspaceId = workspaceId;
+    createError = '';
+    try {
+      const page = await pagesApi.createPage(workspaceId, {
+        title: t('pages.untitled'),
+        content: '',
+      });
+      createDialogOpen = false;
+      navigate(`/workspaces/${workspaceId}/pages/${page.id}`);
+    } catch (e) {
+      createError = e?.message || t('pages.errorCreate');
+    } finally {
+      creatingWorkspaceId = null;
+    }
+  }
 
   const filteredGroups = $derived.by(() => {
     const q = query.trim().toLowerCase();
@@ -58,15 +94,30 @@
 </script>
 
 <PageHeader icon={IconNotebook} title={t('nav.pages')} subtitle={t('pages.subtitle')} marginClass="mt-4 mb-8">
-  <div class="relative w-full max-w-sm">
-    <IconSearch size={14} class="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--color-ds-text-muted,#6b7280)]" />
-    <input
-      type="search"
-      class="w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input py-1.5 pl-8 pr-3 text-xs"
-      placeholder={t('pages.searchPlaceholder')}
-      bind:value={query}
-    />
-  </div>
+  {#snippet actions()}
+    <div class="flex w-full items-center gap-2">
+      <div class="relative w-full max-w-sm">
+        <IconSearch size={14} class="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--color-ds-text-muted,#6b7280)]" />
+        <input
+          type="search"
+          class="w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input py-1.5 pl-8 pr-3 text-xs"
+          placeholder={t('pages.searchPlaceholder')}
+          bind:value={query}
+        />
+      </div>
+      {#if creatableWorkspaces.length > 0}
+        <button
+          type="button"
+          class="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-3 py-1.5 text-xs font-medium hover:bg-ds-background-neutral-hovered"
+          data-testid="org-pages-new-page"
+          onclick={() => (createDialogOpen = true)}
+        >
+          <IconPlus size={14} />
+          {t('pages.newPageButton')}
+        </button>
+      {/if}
+    </div>
+  {/snippet}
 </PageHeader>
 
 {#if loading}
@@ -76,8 +127,22 @@
 {:else if error}
   <div class="rounded-md border border-red-200 bg-red-50 p-3 text-xs text-red-700">{error}</div>
 {:else if filteredGroups.length === 0}
-  <div class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] p-4 text-xs text-[var(--color-ds-text-muted,#6b7280)]">
-    {t('pages.noPages')}
+  <div class="space-y-3">
+    <div class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] p-4 text-xs text-[var(--color-ds-text-muted,#6b7280)]">
+      {t('pages.noPages')}
+    </div>
+    {#if viewableWorkspaces.length > 0}
+      <p class="text-xs text-[var(--color-ds-text-muted,#6b7280)]">{t('pages.noPagesHint')}</p>
+      <ul class="divide-y divide-[var(--color-ds-border,#e5e7eb)] rounded-md border border-[var(--color-ds-border,#e5e7eb)]">
+        {#each viewableWorkspaces as ws (ws.id)}
+          <li>
+            <a href="/workspaces/{ws.id}/pages" class="block px-3 py-2 text-xs hover:bg-ds-background-neutral-hovered">
+              {ws.name}
+            </a>
+          </li>
+        {/each}
+      </ul>
+    {/if}
   </div>
 {:else}
   <div class="space-y-6">
@@ -97,3 +162,31 @@
     {/each}
   </div>
 {/if}
+
+<Modal bind:isOpen={createDialogOpen} maxWidth="max-w-md">
+  <ModalHeader
+    title={t('pages.newPageTitle')}
+    subtitle={t('pages.newPageSubtitle')}
+    onClose={() => (createDialogOpen = false)}
+  />
+  <div class="p-4 pt-0">
+    {#if createError}
+      <div role="alert" class="mb-3 rounded-md border border-red-200 bg-red-50 p-3 text-xs text-red-700">{createError}</div>
+    {/if}
+    <ul class="divide-y divide-[var(--color-ds-border,#e5e7eb)] overflow-hidden rounded-md border border-[var(--color-ds-border,#e5e7eb)]">
+      {#each creatableWorkspaces as ws (ws.id)}
+        <li>
+          <button
+            type="button"
+            class="block w-full px-3 py-2 text-left text-xs hover:bg-ds-background-neutral-hovered disabled:opacity-50"
+            data-testid="org-pages-new-page-workspace"
+            disabled={creatingWorkspaceId != null}
+            onclick={() => createPageIn(ws.id)}
+          >
+            {ws.name}
+          </button>
+        </li>
+      {/each}
+    </ul>
+  </div>
+</Modal>

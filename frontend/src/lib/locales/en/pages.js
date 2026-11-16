@@ -12,6 +12,10 @@ export default {
     subtitle: 'Knowledge pages across all workspaces you can access',
     searchPlaceholder: 'Search page titles...',
     noPages: 'No visible pages found.',
+    noPagesHint: 'Open a workspace below to start adding pages:',
+    newPageButton: 'New page',
+    newPageTitle: 'Create a new page',
+    newPageSubtitle: 'Pick the workspace that should contain the new page.',
 
     // Sidebar / drilldown nav
     backWorkspace: 'Workspace',

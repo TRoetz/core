@@ -429,5 +429,9 @@ export default {
     subtitle: "Pages de connaissance de tous les espaces accessibles",
     searchPlaceholder: 'Rechercher un titre…',
     noPages: 'Aucune page visible trouvée.',
+    noPagesHint: 'Ouvrez un espace de travail ci-dessous pour commencer à ajouter des pages :',
+    newPageButton: 'Nouvelle page',
+    newPageTitle: 'Créer une nouvelle page',
+    newPageSubtitle: "Choisissez l'espace de travail qui doit contenir la nouvelle page.",
   },
 };
