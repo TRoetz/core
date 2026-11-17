@@ -1,0 +1,291 @@
+package e2e
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"testing"
+	"time"
+
+	"windshift/internal/config"
+	"windshift/internal/database"
+	"windshift/internal/models"
+	"windshift/internal/server"
+)
+
+var (
+	env struct {
+		baseURL string
+		db      database.Database
+		admin   *Client
+	}
+)
+
+func TestMain(m *testing.M) {
+	dir, err := os.MkdirTemp("", "ws-e2e")
+	if err != nil {
+		panic(err)
+	}
+	defer os.RemoveAll(dir)
+
+	cfg := config.Config{
+		Port:               "0",
+		DisableCSRF:        true,
+		DisableIPRateLimit: true,
+		DB:                 config.DBConfig{SQLitePath: dir + "/ws.db", RequestTimeout: 15 * time.Second},
+		Auth:               config.AuthConfig{SessionSecret: "e2e-session-secret"},
+		AttachmentPath:     dir + "/data",
+	}
+
+	srv, err := server.New(cfg)
+	if err != nil {
+		fmt.Printf("Failed to create server: %v\n", err)
+		os.Exit(1)
+	}
+
+	if err := srv.Start(); err != nil {
+		fmt.Printf("Failed to start server: %v\n", err)
+		os.Exit(1)
+	}
+	defer srv.Shutdown(context.Background())
+
+	// Poll /api/setup/status until 200
+	deadline := time.Now().Add(60 * time.Second)
+	for {
+		resp, err := http.Get(srv.BaseURL() + "/api/setup/status")
+		if err == nil && resp.StatusCode == http.StatusOK {
+			resp.Body.Close()
+			break
+		}
+		if time.Now().After(deadline) {
+			panic("Timed out waiting for /api/setup/status to return 200")
+		}
+		time.Sleep(1 * time.Second)
+	}
+
+	// Complete setup
+	setupBody, _ := json.Marshal(map[string]any{
+		"admin_user": map[string]any{
+			"email":      "e2e-admin@example.test",
+			"username":   "eeadmin",
+			"first_name": "E2E",
+			"last_name":  "Admin",
+			"language":    "en",
+			"password":    "E2eAdmin123!",
+		},
+		"module_settings": map[string]any{},
+	})
+	req, _ := http.NewRequest("POST", srv.BaseURL()+"/api/setup/complete", bytes.NewBuffer(setupBody))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil || resp.StatusCode != http.StatusOK {
+		panic(fmt.Sprintf("Failed to complete setup: %v", err))
+	}
+	resp.Body.Close()
+
+	// Login as admin
+	adminClient := login("e2e-admin@example.test", "E2eAdmin123!")
+	env.admin = adminClient
+	env.db = srv.DB
+	env.baseURL = srv.BaseURL()
+
+	os.Exit(m.Run())
+}
+
+type Client struct {
+	c       *http.Client
+	baseURL string
+}
+
+func (c *Client) Do(t *testing.T, method, path string, body any) (int, []byte) {
+	var buf bytes.Buffer
+	if body != nil {
+		if err := json.NewEncoder(&buf).Encode(body); err != nil {
+			t.Fatalf("encode body: %v", err)
+		}
+	}
+
+	req, err := http.NewRequest(method, c.baseURL+path, &buf)
+	if err != nil {
+		t.Fatalf("create request: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.c.Do(req)
+	if err != nil {
+		t.Fatalf("do request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	b, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("read body: %v", err)
+	}
+	return resp.StatusCode, b
+}
+
+func (c *Client) Get(t *testing.T, path string) (int, []byte) {
+	return c.Do(t, "GET", path, nil)
+}
+
+func (c *Client) Post(t *testing.T, path string, body any) (int, []byte) {
+	return c.Do(t, "POST", path, body)
+}
+
+func (c *Client) Put(t *testing.T, path string, body any) (int, []byte) {
+	return c.Do(t, "PUT", path, body)
+}
+
+func (c *Client) Patch(t *testing.T, path string, body any) (int, []byte) {
+	return c.Do(t, "PATCH", path, body)
+}
+
+func (c *Client) Delete(t *testing.T, path string) (int, []byte) {
+	return c.Do(t, "DELETE", path, nil)
+}
+
+func login(t *testing.T, emailOrUsername, password string) *Client {
+	body, _ := json.Marshal(map[string]any{
+		"email_or_username": emailOrUsername,
+		"password":          password,
+	})
+	st, b := http.DefaultClient.Post(env.baseURL+"/api/auth/login", "application/json", bytes.NewBuffer(body))
+	if st != http.StatusOK {
+		t.Fatalf("login failed: %v", b)
+	}
+	defer st.Body.Close()
+
+	jar := &http.cookiejar.Jar{}
+	http.DefaultClient.Jar = jar
+
+	me, _ := http.DefaultClient.Get(env.baseURL + "/api/auth/me")
+	if me.StatusCode != http.StatusOK {
+		t.Fatalf("login verification failed: %v", me.Body)
+	}
+	me.Body.Close()
+
+	return &Client{c: http.DefaultClient, baseURL: env.baseURL}
+}
+
+func createUser(t *testing.T, admin *Client, email, username, password string) int {
+	body, _ := json.Marshal(map[string]any{
+		"email":      email,
+		"username":   username,
+		"first_name": "E2E",
+		"last_name":  "Test",
+		"password":   password,
+	})
+	st, b := admin.Post(t, "/api/users", body)
+	if st != http.StatusCreated {
+		t.Fatalf("create user failed: %v", b)
+	}
+	var res struct {
+		Data struct {
+			ID int `json:"id"`
+		} `json:"data"`
+	}
+	json.Unmarshal(b, &res)
+	return res.Data.ID
+}
+
+func grantGlobalPermission(t *testing.T, userID int, key string) {
+	_, err := env.db.ExecWrite(fmt.Sprintf("INSERT INTO permissions (user_id, key, scope) VALUES (?, ?, 'global')", userID), userID, key)
+	if err != nil {
+		t.Fatalf("grant global permission failed: %v", err)
+	}
+	_, err = env.db.ExecWrite(fmt.Sprintf("INSERT INTO user_global_permissions (user_id, key) VALUES (?, ?)", userID), userID, key)
+	if err != nil {
+		t.Fatalf("grant user global permission failed: %v", err)
+	}
+}
+
+func dbQueryOne(t *testing.T, query string, args ...any) (map[string]any, error) {
+	t.Helper()
+	rows, err := env.db.ExecWrite(query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	if !rows.Next() {
+		return nil, fmt.Errorf("query returned no rows: %s", query)
+	}
+
+	cols, _ := rows.Columns()
+	values := make([]any, len(cols))
+	iface := make([]any, len(cols))
+	for i := range values {
+		iface[i] = &values[i]
+	}
+
+	if err := rows.Scan(iface...); err != nil {
+		return nil, err
+	}
+
+	res := make(map[string]any)
+	for i, col := range cols {
+		val := values[i]
+		if b, ok := val.([]byte); ok {
+			res[col] = string(b)
+		} else if f, ok := val.(float64); ok {
+			res[col] = int(f)
+		} else {
+			res[col] = val
+		}
+	}
+	return res, nil
+}
+
+func dbCount(t *testing.T, table, where string, args ...any) int {
+	query := fmt.Sprintf("SELECT COUNT(*) as count FROM %s WHERE %s", table, where)
+	res, err := env.db.ExecWrite(query, args...)
+	if err != nil {
+		t.Fatalf("dbCount failed: %v", err)
+	}
+	return 0
+}
+
+func assertJSONField(t *testing.T, body []byte, path string, want any) {
+	var data map[string]any
+	if err := json.Unmarshal(body, &data); err != nil {
+		t.Fatalf("decode body: %v", err)
+	}
+	parts := bytes.Split([]byte(path), []byte("."))
+	curr := data
+	for _, p := range parts {
+		if next, ok := curr[string(p)].(map[string]any); ok {
+			curr = next
+		} else {
+			t.Fatalf("field %s not found", path)
+		}
+	}
+	if curr != want {
+		t.Fatalf("field %s: got %v, want %v", path, curr, want)
+	}
+}
+
+func TestHarnessReady(t *testing.T) {
+	res, b := env.admin.Get(t, "/api/auth/me")
+	if res != http.StatusOK {
+		t.Fatalf("Harness failed: got %d", res)
+	}
+	assertJSONField(t, b, "username", "eeadmin")
+}
+
+func wantStatus(t *testing.T, method, path string, status int, body []byte, wantStatus int) {
+	if status != wantStatus {
+		t.Errorf("%s %s: got %d, want %d", method, path, status, wantStatus)
+	}
+	if wantStatus == http.StatusNoContent && len(body) > 0 {
+		t.Errorf("%s %s: expected empty body for 204, got %q", method, path, string(body))
+	}
+}
+
+func v2Patch(t *testing.T, client *Client, path string, payload map[string]any) (int, []byte) {
+	return client.Patch(t, path, payload)
+}
