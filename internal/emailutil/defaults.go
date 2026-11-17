@@ -75,6 +75,13 @@ func DefaultTemplates() []DefaultTemplate {
 			HTMLBody:    intakeConfirmationHTML,
 			TextBody:    intakeConfirmationText,
 		},
+		{
+			Name:        TemplateFinanceSyncFailure,
+			Description: "Sent to the finance-sync distribution list when a P3M financial-system sync run fails or partially fails (FIN-007).",
+			Subject:     `P3M finance sync {{.Status}}: {{.ConfigName}}`,
+			HTMLBody:    financeSyncFailureHTML,
+			TextBody:    financeSyncFailureText,
+		},
 	}
 }
 
@@ -88,6 +95,7 @@ const (
 	TemplatePortalReply        = "portal_reply"
 	TemplateApprovalRequested  = "approval_requested"
 	TemplateIntakeConfirmation = "intake_confirmation"
+	TemplateFinanceSyncFailure = "finance_sync_failure"
 )
 
 const emailShellOpen = `<!DOCTYPE html>
@@ -300,4 +308,20 @@ const approvalRequestedText = `{{t "email.common.greeting" "name" .FirstName}}
 {{.ApprovalURL}}
 
 {{t "email.approval.note"}}
+`
+
+const financeSyncFailureHTML = emailShellOpen + `<h1 style="margin:0 0 16px;font-size:22px;font-weight:600;color:#0f172a;letter-spacing:-0.01em;">P3M finance sync {{.Status}}</h1>
+<p style="margin:0 0 8px;">The financial-system sync for <strong>{{.ConfigName}}</strong> finished with status <strong>{{.Status}}</strong> (run #{{.RunID}}).</p>
+<p style="margin:0 0 8px;">Rows: {{.RowsTotal}} total · {{.RowsMatched}} matched · {{.RowsUnmatched}} unmatched · {{.RowsFailed}} failed.</p>
+{{if .ErrorSummary}}<pre style="margin:0 0 24px;padding:12px;background:#f8fafc;border-radius:6px;font-size:12px;color:#334155;white-space:pre-wrap;">{{.ErrorSummary}}</pre>{{else}}<p style="margin:0 0 24px;">No row-level errors were recorded.</p>{{end}}
+<p style="margin:0;font-size:13px;color:#6b7280;">Review the run under Settings → P3M → Financial Sync in Windshift.</p>
+` + emailShellClose
+
+const financeSyncFailureText = `The P3M financial-system sync for "{{.ConfigName}}" finished with status {{.Status}} (run #{{.RunID}}).
+
+Rows: {{.RowsTotal}} total, {{.RowsMatched}} matched, {{.RowsUnmatched}} unmatched, {{.RowsFailed}} failed.
+{{if .ErrorSummary}}First errors:
+{{.ErrorSummary}}{{end}}
+
+Review the run under Settings → P3M → Financial Sync in Windshift.
 `

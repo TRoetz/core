@@ -289,8 +289,10 @@
       </ItemDetailBreadcrumbLevel>
       <span class="flex-shrink-0">/</span>
     {/each}
-  {:else if !item.parent_id && !(workspace?.is_personal && item.related_work_item_id)}
-    <!-- Show placeholder for "no parent" scenario (not shown for personal tasks with linked work items) -->
+  {:else if !item.parent_id && !(workspace?.is_personal && item.related_work_item_id) && currentItemHierarchyLevel !== 0}
+    <!-- Show placeholder for "no parent" scenario (not shown for personal tasks with linked
+         work items, nor for top-level items at hierarchy level 0 — the workspace itself is
+         their container, so a "no parent" hint would be misleading) -->
     {#if canEditParent}
       <button
         onclick={openParentSelector}

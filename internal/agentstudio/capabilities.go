@@ -15,6 +15,13 @@ const (
 	CapabilityTests             CapabilityGroup = "tests"
 	CapabilityTime              CapabilityGroup = "time"
 	CapabilityUsersApprovals    CapabilityGroup = "users_approvals"
+
+	// Governance and relationship suites (global-scope modules, not
+	// workspace-scoped like the delivery groups above).
+	CapabilityPlans CapabilityGroup = "plans"
+	CapabilityP3M   CapabilityGroup = "p3m"
+	CapabilitySRM   CapabilityGroup = "srm"
+	CapabilitySMS   CapabilityGroup = "sms"
 )
 
 // AllCapabilityGroups returns the closed set of persisted keys. The executable
@@ -31,5 +38,9 @@ func AllCapabilityGroups() []CapabilityGroup {
 		CapabilityTests,
 		CapabilityTime,
 		CapabilityUsersApprovals,
+		CapabilityPlans,
+		CapabilityP3M,
+		CapabilitySRM,
+		CapabilitySMS,
 	}
 }

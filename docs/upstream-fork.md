@@ -211,10 +211,61 @@ Three accidentally-committed paths were dropped from the squashed feature commit
 | `internal/e2e/harness_test.go")/Overwrite harness_test.go with clean content\n<\|channel>thought\n<channel\|><\|tool_call>call:bash{command:` (file, name contains newlines) | commit `474f3d641` | AI-agent artifact: a shell command created a directory + file from transcript text. Content is a duplicate of the real `internal/e2e/harness_test.go`; not valid Go path; unreferenced |
 | `internal/e2e/harness_test.go")/Rewrite harness_test.go with clean, valid Go code\n<\|channel>thought\n<channel\|><\|tool_call>call:bash{command:` (file) | commit `474f3d641` | Same artifact, second variant; identical blob to the first |
 | `.tmp-bcryptgen/main.go` | commit `1526cbdb3` | Throwaway bcrypt-hash generator for a P3M E2E test password (`p3mtest123`); unreferenced by any build/script |
+| `internal/e2e/go.mod` | commit `474f3d641` | Not a valid module file (contains Go source text, no `module` directive); created the spurious nested-module boundary that hid broken files from `go build ./...` |
+| `internal/e2e/main.go` | commit `474f3d641` | Invalid Go (bare assignment statement, malformed import) — AI-agent hallucination; breaks `gofmt`/`go vet` on the tree |
+| `internal/e2e/runner.go` | commit `474f3d641` | Same artifact as `main.go`, in package `runner`; invalid Go |
+
+Note: the real E2E suite (`harness_test.go`, `e2e_*_test.go`) is **not** part of
+this repository — per `.gitignore` (upstream convention) test sources live in
+the adjacent private `core-tests` repo and are overlaid by its runners. Only
+`internal/e2e/KNOWN_BUGS.md` is tracked here (appended to by the suite at run
+time).
 
 ### 4.5 Per-file conflict resolutions
 
-_Filled in during the cherry-pick (step 5)._
+Picks that applied with auto-merge only (no manual resolution): `7c4bd7683`,
+`1526cbdb3`, `8ae48b5d0`, `fc2b48ede`, `542248b9b`, `f938899db`, `ba687232d`,
+`19021908e`, `31d0c5f17`, `40d429b03`, `d13cd889f`, `45b35428b`, `127d61633`.
+Auto-merged regions were spot-checked (nav items, embeds, schema vars) and the
+full build gate (§4.6).
+
+**Pick 2 — `a6920e0dc` P3M-Added**
+- `internal/database/migrations.go`: union — inserted our `20261028_p3m_module` entry before the catalog array close; all v0.9.4 entries and helper functions kept verbatim.
+- `internal/database/sqlite.go`: single-line schema concatenation — union: v0.9.4 token list + `p3mSchema` after `incidentsSchema`; upstream tail (`milestoneCommentsSchema`, `milestoneHistorySchema`) preserved at end.
+
+**Pick 3 — `2c39ad65e` Stakeholders and CSS updates**
+- `frontend/src/lib/navigation/mainNavigation.js`: import conflict — kept `IconHeartHandshake` (used by the srm item); dropped `IconMessage2Plus`: its only usage (portal-hub) was replaced with `IconWorldSearch` by upstream's RTL pass, so keeping it would be an unused import.
+- `internal/database/migrations.go`: union — inserted 4 entries before array close: `20261029_srm_module`, `20261030_p3m_project_links`, `20261031_sms_module`, `20261031_sms_plan_channel_check`.
+- `internal/database/sqlite.go`: schema line rebuilt to the fork's final module order (authoritative = `main`): `…incidentsSchema + smsSchema + p3mSchema + srmSchema + conditionSetsSchema…`; upstream milestone tail kept at end.
+
+**Pick 7 — `41e8d9ca8` Add Plans module, P3M plan linking + hierarchy guide, Big Gantt grouping**
+- `mainNavigation.js`: kept `IconMap` (plans item); dropped `IconMessage2Plus` again (still orphaned by the upstream portal-hub icon swap).
+- `internal/database/migrations.go`: inserted `20261120_plans_module` entry before array close.
+- `internal/database/sqlite.go`: schema line — added `plansSchema` after `itemSupportEventsSchema`, before the upstream milestone tail (matches `main`, where plans is last); also repaired a doubled `schema :=` prefix introduced by an earlier mechanical edit in this session (caught by `go build`).
+
+**Pick 10 — `9514f7410` Pages and P3M updates**
+- `mainNavigation.js` (2 blocks): kept `IconNotebook` import + the `pages` nav item; dropped the `logbook` item (feature removed in v0.9.4) and its now-unused icon refs; dropped orphaned `IconMessage2Plus`.
+- `frontend/src/lib/pages/mainAppRoutes.js`: added `'org-pages'` to the view list; dropped `'logbook-document'` (removed feature).
+- `internal/database/migrations.go` imports: kept HEAD superset (`strconv`, `strings`, `github.com/lib/pq`) — required by v0.9.4 code; fork side contributed only `strings`.
+
+**Pick 11 — `076af60b0` Stakeholders updates**
+- `internal/database/sqlite.go`: schema line — kept ours verbatim; theirs was a strict subset (this commit is where the fork moved `smsSchema` before `p3mSchema`, matching the order already on our side).
+
+**Pick 14 — `aaaec4fd4` Plans updated**
+- `frontend/src/lib/pages/Homepage.svelte`: additive import conflict — kept both: `onWorkItemRefresh` (v0.9.4) and `getUserTimezone` (fork plan-date display); verified each is used exactly once in the merged file.
+
+**Pick 18 — `60cd7fb5c` E2E Testing work**
+- `Makefile`: `.PHONY` union — `vulncheck` (v0.9.4) + `e2e` (fork's new target, defined at line 229).
+
+**Pick 21 — `474f3d641` Pages enhanced**
+- `go.mod` (4 blocks): union of indirect deps; higher version kept for shared modules (`beevik/etree v1.8.1`, `russellhaering/goxmldsig v1.6.1`, `golang.org/x/sys v0.49.0`, `golang.org/x/tools v0.51.0`); fork's extra indirects (MCP/E2E transitive closure) kept.
+- `go.sum`: regenerated via `go mod tidy` after the go.mod resolution.
+
+**Post-merge API-drift fixes** (compile errors a text merge cannot see — fork code written against pre-v0.9.4 signatures):
+- `internal/scheduler/finance_sync_scheduler.go:277`: v0.9.4 added a `locale` parameter to `SMTPSender.SendTransactionalContext`; pass `"en"` for the ops-facing finance-sync failure alert (no user context).
+- `respondLLMError` gained a `*services.PermissionService` param in v0.9.4 (admin error diagnostics): wired it into `SMSHandler` via a new `SetPermissionService` setter (`internal/handlers/sms.go`, called at `internal/server/server.go:1690`) so SMS AI endpoints get admin diagnostics like their upstream siblings, instead of passing nil.
+
+**Formatting**: `gofmt -w` applied to 40 tracked files that were not gofmt-clean on the fork (no semantic change); required for the lint gate.
 
 ### 4.6 Verification results
 

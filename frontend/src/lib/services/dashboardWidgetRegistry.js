@@ -97,6 +97,15 @@ export const dashboardWidgetRegistry = [
     defaultWidth: 12,
     minWidth: 4,
   },
+  {
+    type: 'p3m-portfolio-pulse',
+    nameKey: 'dashboard.widgetCatalog.p3mPortfolioPulse.name',
+    descriptionKey: 'dashboard.widgetCatalog.p3mPortfolioPulse.description',
+    category: dashboardWidgetCategories.WORK,
+    icon: 'Activity',
+    defaultWidth: 6,
+    minWidth: 4,
+  },
 
   // Navigation
   {

@@ -1,6 +1,8 @@
 // Package mcp provides a Model Context Protocol server for Windshift Core.
 // It exposes work management capabilities (items, workspaces, comments,
-// labels, time tracking) as MCP tools over Streamable HTTP.
+// labels, time tracking) plus the governance modules — Plans, P3M, SRM, and
+// SMS — as MCP tools over Streamable HTTP. The full tool catalog is the
+// shared aitools registry, so in-product chat and MCP never drift apart.
 package mcp
 
 import (

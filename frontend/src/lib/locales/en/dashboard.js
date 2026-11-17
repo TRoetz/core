@@ -59,6 +59,10 @@ export default {
         name: 'Upcoming Milestones',
         description: 'Milestones with approaching target dates',
       },
+      p3mPortfolioPulse: {
+        name: 'Portfolio Pulse',
+        description: 'RAG status, budget burn, and open gates/risks across your P3M portfolios',
+      },
       recentWorkspaces: {
         name: 'Recent Workspaces',
         description: 'Workspaces you recently visited',

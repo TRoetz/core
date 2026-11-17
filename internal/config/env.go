@@ -31,6 +31,17 @@ func parseBoolEnv(name string) bool {
 	return false
 }
 
+// isEnvFalse reports whether the named env var is explicitly set to a falsy
+// value ("false" / "0" / "no", case-insensitive). Unset or unrecognised values
+// return false, so callers can implement kill-switches that are on by default.
+func isEnvFalse(name string) bool {
+	switch os.Getenv(name) {
+	case "false", "FALSE", "False", "0", "no", "NO", "No":
+		return true
+	}
+	return false
+}
+
 // parseIntEnv reads the named env var and returns its parsed int value, or
 // fallback when the var is unset or unparseable.
 func parseIntEnv(name string, fallback int) int {

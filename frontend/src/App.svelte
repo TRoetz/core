@@ -30,6 +30,7 @@
     welcome: () => import('./lib/pages/WelcomeAssistant.svelte'),
     portal: () => import('./lib/layout/Portal.svelte'),
     publicForm: () => import('./lib/features/forms/PublicFormPage.svelte'),
+    publicSMSGrievance: () => import('./lib/features/sms/PublicGrievanceIntake.svelte'),
     setPassword: () => import('./lib/pages/SetPassword.svelte'),
     desktop: () => import('./lib/pages/MainApp.svelte'),
     mobile: () => import('./lib/mobile/MobileShell.svelte'),
@@ -201,6 +202,7 @@
       appInitialized &&
       $currentRoute.view !== 'portal' &&
       $currentRoute.view !== 'public-form' &&
+      $currentRoute.view !== 'public-sms-grievance' &&
       $currentRoute.view !== 'set-password' &&
       $currentRoute.view !== 'public-board'
   );
@@ -320,6 +322,7 @@
     '404',
     'portal',
     'public-form',
+    'public-sms-grievance',
     'public-board',
     'set-password',
     'page-print',
@@ -453,6 +456,9 @@
   <!-- Public form route - no authentication required -->
   {:else if $currentRoute.view === 'public-form'}
     <LazyRootView loader={ROOT_VIEW_LOADERS.publicForm} label="form" />
+  <!-- Public SMS grievance intake webform (WI-5.3) - no authentication required -->
+  {:else if $currentRoute.view === 'public-sms-grievance'}
+    <LazyRootView loader={ROOT_VIEW_LOADERS.publicSMSGrievance} label="grievance intake" />
   <!-- Set password route - public with token -->
   {:else if $currentRoute.view === 'set-password'}
     <LazyRootView loader={ROOT_VIEW_LOADERS.setPassword} label="password setup" />

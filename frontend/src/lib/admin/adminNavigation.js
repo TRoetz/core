@@ -305,6 +305,37 @@ export const adminGroups = [
     ],
   },
   {
+    id: 'p3m',
+    labelKey: 'settings.adminGroups.p3m',
+    icon: IconDatabase,
+    items: [
+      {
+        id: 'p3m-finance-sync',
+        labelKey: 'settings.adminItems.p3mFinanceSync.title',
+        icon: IconDatabase,
+        descriptionKey: 'settings.adminItems.p3mFinanceSync.description',
+      },
+      {
+        id: 'p3m-alert-rules',
+        labelKey: 'settings.adminItems.p3mAlertRules.title',
+        icon: IconAlertCircle,
+        descriptionKey: 'settings.adminItems.p3mAlertRules.description',
+      },
+      {
+        id: 'p3m-lifecycle',
+        labelKey: 'settings.adminItems.p3mLifecycle.title',
+        icon: IconGitBranch,
+        descriptionKey: 'settings.adminItems.p3mLifecycle.description',
+      },
+      {
+        id: 'p3m-gate-templates',
+        labelKey: 'settings.adminItems.p3mGateTemplates.title',
+        icon: IconFileText,
+        descriptionKey: 'settings.adminItems.p3mGateTemplates.description',
+      },
+    ],
+  },
+  {
     id: 'system',
     labelKey: 'settings.adminGroups.system',
     icon: IconActivity,

@@ -33,6 +33,12 @@ export const MAIN_APP_COMPONENT_LOADERS = {
   'test-run-detail': () => import('../features/testing/TestRunDetail.svelte'),
   'test-template-detail': () => import('../features/testing/TestTemplateDetail.svelte'),
   milestones: () => import('../features/milestones/Milestones.svelte'),
+  'big-gantt': () => import('../features/gantt/BigGantt.svelte'),
+  plans: () => import('../features/plans/Plans.svelte'),
+  'plan-detail': () => import('../features/plans/PlanDetail.svelte'),
+  p3m: () => import('../features/p3m/P3M.svelte'),
+  srm: () => import('../features/srm/SRM.svelte'),
+  sms: () => import('../features/sms/SMS.svelte'),
   'milestone-detail': () => import('../features/milestones/MilestoneDetail.svelte'),
   iterations: () => import('../features/iterations/Iterations.svelte'),
   'iteration-detail': () => import('../features/iterations/IterationDetail.svelte'),
@@ -52,6 +58,7 @@ export const MAIN_APP_COMPONENT_LOADERS = {
   'workspace-roadmap': () => import('../features/collections/CollectionRoadmap.svelte'),
   'workspace-pages': () => import('../features/pages/PagesView.svelte'),
   'workspace-pages-archived': () => import('../features/pages/ArchivedPagesPage.svelte'),
+  'org-pages': () => import('../features/pages/OrgPagesView.svelte'),
   'collection-board': () => import('../features/collections/CollectionBoard.svelte'),
   'collection-board-config': () => import('../settings/BoardConfigurationPage.svelte'),
   'collection-nav-config': () => import('../workspaces/NavigationConfigPage.svelte'),
@@ -220,6 +227,30 @@ export const MAIN_APP_ROUTE_CONFIG = {
     wrapper: 'none',
   }),
   milestones: route('Loading Milestones...', 'Failed to load Milestones', {
+    wrapper: 'surface-full',
+  }),
+  'big-gantt': route('Loading Big Gantt...', 'Failed to load Big Gantt', {
+    wrapper: 'surface-full',
+  }),
+  plans: route('Loading Plans...', 'Failed to load Plans', {
+    wrapper: 'surface-full',
+  }),
+  'plan-detail': route('Loading Plan...', 'Failed to load Plan', {
+    wrapper: 'surface-full',
+    getProps: (currentRoute) => ({
+      id: Number(currentRoute.params.id),
+    }),
+  }),
+  p3m: route('Loading P3M...', 'Failed to load P3M', {
+    wrapper: 'surface-full',
+  }),
+  'org-pages': route('Loading pages...', 'Failed to load pages', {
+    wrapper: 'surface-full',
+  }),
+  srm: route('Loading SRM...', 'Failed to load SRM', {
+    wrapper: 'surface-full',
+  }),
+  sms: route('Loading SMS...', 'Failed to load SMS', {
     wrapper: 'surface-full',
   }),
   'milestone-detail': route('Loading Milestone...', 'Failed to load Milestone', {
@@ -509,6 +540,7 @@ export const MAIN_APP_FOOTER_VIEWS = new Set([
   'workspace-nav-config',
   'collection-nav-config',
   'asset-settings',
+  'org-pages',
 ]);
 
 export const WORKSPACE_SETTINGS_TABS = {

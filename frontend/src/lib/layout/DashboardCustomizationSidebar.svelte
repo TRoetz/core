@@ -13,6 +13,7 @@
   import PenLine from '@lucide/svelte/icons/pen-line';
   import Search from '@lucide/svelte/icons/search';
   import Palette from '@lucide/svelte/icons/palette';
+  import Activity from '@lucide/svelte/icons/activity';
   import {
     dashboardWidgetCategories,
     getDashboardWidgetsByCategory,
@@ -38,6 +39,7 @@
     ListChecks,
     PenLine,
     Search,
+    Activity,
   };
 
   const categories = $derived([

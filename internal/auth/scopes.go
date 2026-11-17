@@ -63,6 +63,29 @@ const (
 	ScopeIterationsWrite  = "iterations:write"
 	ScopeIterationsDelete = "iterations:delete"
 
+	// Plans (the cross-workspace planning container: plans, filters,
+	// scenarios, and plan-scoped item dependencies). Global-scope module; the
+	// per-item permission checks still apply to any item touched through a
+	// plan tool.
+	ScopePlansRead  = "plans:read"
+	ScopePlansWrite = "plans:write"
+
+	// P3M (portfolio / programme / project governance: hierarchy, RAID, budget
+	// approvals, benefits, stage gates). Distinct from items:*, which covers
+	// the delivery work items that P3M projects roll up.
+	ScopeP3MRead  = "p3m:read"
+	ScopeP3MWrite = "p3m:write"
+
+	// SRM (supplier relationship management: suppliers, contracts, segmentation,
+	// validation, value propositions, meetings, JBPs, scorecards, disputes).
+	ScopeSRMRead  = "srm:read"
+	ScopeSRMWrite = "srm:write"
+
+	// SMS (stakeholder management: engagement plans, stakeholders, issues,
+	// feedback, relationship goals).
+	ScopeSMSRead  = "sms:read"
+	ScopeSMSWrite = "sms:write"
+
 	// MCP — single binary scope; the MCP server exposes both read and write
 	// tools so we don't split this into :read/:write. It only opens the
 	// transport: every tool still declares the resource scopes it needs and
@@ -222,6 +245,18 @@ var scopeCatalog = []ScopeInfo{
 	{Scope: ScopeIterationsRead, Resource: "iterations", ResourceLabel: "Iterations", Action: "read", Label: "Read iterations", Description: "Read iterations and their contents.", AgentDefault: true},
 	{Scope: ScopeIterationsWrite, Resource: "iterations", ResourceLabel: "Iterations", Action: "write", Label: "Manage iterations", Description: "Create and update iterations."},
 	{Scope: ScopeIterationsDelete, Resource: "iterations", ResourceLabel: "Iterations", Action: "delete", Label: "Delete iterations", Description: "Delete iterations. Destructive — opt in deliberately."},
+
+	{Scope: ScopePlansRead, Resource: "plans", ResourceLabel: "Plans", Action: "read", Label: "Read plans", Description: "Read delivery plans, their items, scenarios, and dependencies.", AgentDefault: true},
+	{Scope: ScopePlansWrite, Resource: "plans", ResourceLabel: "Plans", Action: "write", Label: "Manage plans", Description: "Create and update plans, scenarios, and plan-scoped item dependencies.", AgentDefault: true},
+
+	{Scope: ScopeP3MRead, Resource: "p3m", ResourceLabel: "P3M", Action: "read", Label: "Read P3M governance", Description: "Read portfolios, programmes, projects, RAID items, budget approvals, benefits, and stage gates.", AgentDefault: true},
+	{Scope: ScopeP3MWrite, Resource: "p3m", ResourceLabel: "P3M", Action: "write", Label: "Manage P3M governance", Description: "Create and update P3M RAID items, budget approvals, benefits, and stage-gate decisions.", AgentDefault: true},
+
+	{Scope: ScopeSRMRead, Resource: "srm", ResourceLabel: "SRM", Action: "read", Label: "Read supplier relationships", Description: "Read suppliers, contracts, segmentation, validation, value propositions, meetings, JBPs, scorecards, and disputes.", AgentDefault: true},
+	{Scope: ScopeSRMWrite, Resource: "srm", ResourceLabel: "SRM", Action: "write", Label: "Manage supplier relationships", Description: "Create and update suppliers, validation requests, meetings, JBPs, metric results, and disputes.", AgentDefault: true},
+
+	{Scope: ScopeSMSRead, Resource: "sms", ResourceLabel: "SMS", Action: "read", Label: "Read stakeholder management", Description: "Read engagement plans, stakeholders, issues, feedback, and relationship goals.", AgentDefault: true},
+	{Scope: ScopeSMSWrite, Resource: "sms", ResourceLabel: "SMS", Action: "write", Label: "Manage stakeholder management", Description: "Create and update engagement plans, stakeholders, and issues.", AgentDefault: true},
 
 	{Scope: ScopeItemTemplatesRead, Resource: "item-templates", ResourceLabel: "Work item templates", Action: "read", Label: "Read templates", Description: "Read the reusable bodies that pre-fill new items.", AgentDefault: true},
 	{Scope: ScopeItemTemplatesWrite, Resource: "item-templates", ResourceLabel: "Work item templates", Action: "write", Label: "Manage templates", Description: "Create and update work item templates."},

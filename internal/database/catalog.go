@@ -43,3 +43,36 @@ func pgIndexCheck(idx string) string {
 		idx,
 	)
 }
+
+// sqliteAllTablesCheck / pgAllTablesCheck build an "every named table exists"
+// check for migrations that create several tables in one body. A single COUNT
+// query would report a partially applied migration as complete.
+func sqliteAllTablesCheck(tables ...string) func(Database) (bool, error) {
+	return func(db Database) (bool, error) {
+		for _, table := range tables {
+			var count int
+			if err := db.QueryRow(sqliteTableCheck(table)).Scan(&count); err != nil {
+				return false, err
+			}
+			if count == 0 {
+				return false, nil
+			}
+		}
+		return true, nil
+	}
+}
+
+func pgAllTablesCheck(tables ...string) func(Database) (bool, error) {
+	return func(db Database) (bool, error) {
+		for _, table := range tables {
+			var count int
+			if err := db.QueryRow(pgTableCheck(table)).Scan(&count); err != nil {
+				return false, err
+			}
+			if count == 0 {
+				return false, nil
+			}
+		}
+		return true, nil
+	}
+}

@@ -242,8 +242,7 @@ func seedDefaultData(w seedWriter) error {
 		}
 	}
 
-	// 12. Bind the selected item types to the default configuration set
-	// (excluding Initiative for the simplified setup).
+	// 12. Bind the selected item types to the default configuration set.
 	for _, typeName := range defaultItemTypeBindings {
 		var itemTypeID int64
 		if err := w.QueryRow("SELECT id FROM item_types WHERE name = ?", typeName).Scan(&itemTypeID); err != nil {

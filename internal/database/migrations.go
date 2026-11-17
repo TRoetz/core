@@ -3332,6 +3332,1752 @@ var Catalog = []Migration{
 			ALTER TABLE themes ADD COLUMN IF NOT EXISTS brand_layout TEXT NOT NULL DEFAULT 'mark_text';
 		`,
 	},
+	{
+		Version:       "20261028_p3m_module",
+		Name:          "Add P3M portfolio, programme, and project management module tables",
+		CheckSQLite:   sqliteTableCheck("p3m_portfolios"),
+		CheckPostgres: pgTableCheck("p3m_portfolios"),
+		// The embedded DDL gained time_project_id and the workspace bridge in
+		// 20261030_p3m_project_links; accept installs stamped with the
+		// pre-change body and restamp them forward. Existing databases get
+		// the new objects from that migration, not a re-run of this one.
+		Superseded: []string{
+			"3f51803f29600ebffa50cc9c8bae1456dbb2829c4139fc1f4966cafbe073e60b", // SQLite, pre time_project_id/workspace bridge
+			"9bcbb72c492fe1e4bc1428f417121a035fe4f4ab2e5c1ed65054da7d41da11ba", // Postgres, pre time_project_id/workspace bridge
+			// p3m.sql gained sms_stakeholder_id + index after this body shipped;
+			// existing databases get the column from 20261124_sms_sot_links.
+			"51960f8bb8e5e78e563debb4ab92a46a8dba951ba308b4c83bf7a822658f3656", // SQLite, pre sms_stakeholder_id
+			// Intermediate bodies shipped in 1501ec45..05e28159; each change's
+			// schema objects come from their own migrations.
+			"4c9cbb40476e4321392ff7b19365fa26192e955c1a1957d6237e4994c105b0aa", // SQLite, as of 1501ec45
+			"27b029c8151c8d3df6e401afc13758d9f73b418fd8ab2c8a3f8040268acafa59", // Postgres, as of 1501ec45
+			"4c3f9fe153f3af6d0f046164b24fc70486aa627528e567e0abeed29074ee43f5", // Postgres, as of 0328dbf4
+			// p3m.sql/p3m_postgres.sql gained p3m_investment_cases in 05e28159;
+			// existing databases get the table from 20261107_p3m_investment_cases.
+			"2d8f88c5d161b6514de578143da916b0e2eed04ead92c6308d00c52b168f0e0b", // SQLite, pre p3m_investment_cases
+			"32809ae921038f2589c17c233988525d870d9fa3ea68e17624a0bbb70e97399e", // Postgres, pre p3m_investment_cases
+			"367e1e277143099390b731befaf4094d6cf7d2c512d52889ab4739425ec9bf3f", // SQLite, as of 05e28159
+			"e7578ef2a4baeb2c34c913d422890feb83c20eee05a4cc99ce6467d1bbd25887", // Postgres, as of 05e28159
+		},
+		// Reuses the embedded fresh-install DDL (idempotent CREATE ... IF NOT
+		// EXISTS) plus the p3m.view permission seed for pre-existing databases.
+		SQLite: p3mSchema + `
+			INSERT OR IGNORE INTO permissions (permission_key, permission_name, description, scope) VALUES ('p3m.view', 'View P3M Module', 'Can view the Portfolio, Programme, and Project Management (P3M) module', 'global');`,
+		Postgres: p3mSchemaPostgres + `
+			INSERT INTO permissions (permission_key, permission_name, description, scope, is_system) VALUES ('p3m.view', 'View P3M Module', 'Can view the Portfolio, Programme, and Project Management (P3M) module', 'global', false) ON CONFLICT (permission_key) DO NOTHING;`,
+	},
+	{
+		Version:       "20261029_srm_module",
+		Name:          "Add SRM supplier relationship management module tables",
+		CheckSQLite:   sqliteTableCheck("srm_suppliers"),
+		CheckPostgres: pgTableCheck("srm_suppliers"),
+		// Reuses the embedded fresh-install DDL (idempotent CREATE ... IF NOT
+		// EXISTS) plus the srm.view permission seed for pre-existing databases.
+		// The body embeds srmSchema/srmSchemaPostgres; the nzbn -> business_id
+		// column rename edited those files after this migration shipped, so
+		// already-stamped rows advance their checksum instead of mismatching.
+		ReconcileChecksum: true,
+		SQLite: srmSchema + `
+			INSERT OR IGNORE INTO permissions (permission_key, permission_name, description, scope) VALUES ('srm.view', 'View SRM Module', 'Can view the Supplier Relationship Management (SRM) module', 'global');`,
+		Postgres: srmSchemaPostgres + `
+			INSERT INTO permissions (permission_key, permission_name, description, scope, is_system) VALUES ('srm.view', 'View SRM Module', 'Can view the Supplier Relationship Management (SRM) module', 'global', false) ON CONFLICT (permission_key) DO NOTHING;`,
+	},
+	{
+		Version:       "20261030_p3m_project_links",
+		Name:          "Link P3M projects to core time projects and workspaces for cross-module tracking",
+		CheckSQLite:   `SELECT (SELECT COUNT(*) FROM pragma_table_info('p3m_projects') WHERE name='time_project_id') * (SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='workspace_p3m_projects')`,
+		CheckPostgres: `SELECT (SELECT COUNT(*) FROM information_schema.columns WHERE table_name='p3m_projects' AND column_name='time_project_id') * (SELECT COUNT(*) FROM information_schema.tables WHERE table_name='workspace_p3m_projects')`,
+		SQLite: `
+			ALTER TABLE p3m_projects ADD COLUMN time_project_id INTEGER REFERENCES time_projects(id) ON DELETE SET NULL;
+			CREATE INDEX IF NOT EXISTS idx_p3m_projects_time_project_id ON p3m_projects(time_project_id);
+			CREATE TABLE IF NOT EXISTS workspace_p3m_projects (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				workspace_id INTEGER NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+				p3m_project_id INTEGER NOT NULL REFERENCES p3m_projects(id) ON DELETE CASCADE,
+				created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+				UNIQUE(workspace_id, p3m_project_id)
+			);
+			CREATE INDEX IF NOT EXISTS idx_workspace_p3m_projects_workspace_id ON workspace_p3m_projects(workspace_id);
+			CREATE INDEX IF NOT EXISTS idx_workspace_p3m_projects_project_id ON workspace_p3m_projects(p3m_project_id);
+		`,
+		Postgres: `
+			ALTER TABLE p3m_projects ADD COLUMN IF NOT EXISTS time_project_id INTEGER REFERENCES time_projects(id) ON DELETE SET NULL;
+			CREATE INDEX IF NOT EXISTS idx_p3m_projects_time_project_id ON p3m_projects(time_project_id);
+			CREATE TABLE IF NOT EXISTS workspace_p3m_projects (
+				id SERIAL PRIMARY KEY,
+				workspace_id INTEGER NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+				p3m_project_id INTEGER NOT NULL REFERENCES p3m_projects(id) ON DELETE CASCADE,
+				created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+				UNIQUE(workspace_id, p3m_project_id)
+			);
+			CREATE INDEX IF NOT EXISTS idx_workspace_p3m_projects_workspace_id ON workspace_p3m_projects(workspace_id);
+			CREATE INDEX IF NOT EXISTS idx_workspace_p3m_projects_project_id ON workspace_p3m_projects(p3m_project_id);
+		`,
+	},
+	{
+		Version:       "20261031_sms_module",
+		Name:          "Add SMS stakeholder management system module tables",
+		CheckSQLite:   sqliteTableCheck("sms_stakeholders"),
+		CheckPostgres: pgTableCheck("sms_stakeholders"),
+		// The embedded DDL gained the engagement-plan channel CHECK in
+		// 20261031_sms_plan_channel_check; accept installs stamped with the
+		// pre-checksum-change body and restamp them forward.
+		Superseded: []string{
+			"268941e8b1c82041ac0f704ccc46d776aefec3950f35c04d6e1fbc3811bc7631", // SQLite, pre channel CHECK
+			"e0e447d2779a9d5701276f460bf3e00f6367cf039eb4ed9202e7c161888ed14e", // Postgres, pre channel CHECK
+			// Embedded DDL comments anonymized after shipping; accept installs
+			// stamped with the pre-anonymization body and restamp forward.
+			"571a4ed3b5937970603724d9f1869f604ddc7ac254332ac9fdb20b40289d3312", // SQLite, pre spec-reference anonymization
+			"17955d4874c4145a28bbfa0971690e573635c3d7230cbc5cc4e532115816794d", // Postgres, pre spec-reference anonymization
+			// A relationship_status comment was reworded after this body shipped;
+			// the schema objects are unchanged, so restamp forward.
+			"e0b891ba015fc73f41ef38f70a894704dbf650266ac82afb98ae549496b84fe4", // SQLite, pre relationship-status comment reword
+			// Body as of 1501ec45..0328dbf4 (before feff9dce1's stakeholder
+			// updates); schema objects unchanged, so restamp forward.
+			"c42d1f22a859adadd118dc38dc40df7502e2429856c04d61bef4d08982229e6f", // SQLite, pre feff9dce1 stakeholder updates
+		},
+		// The embedded DDL gained node-taxonomy/campaign/RACI tables and a
+		// widened channel enum after this body shipped (migrations
+		// 20261126–20261128 add the objects to existing databases); advance
+		// already-stamped checksums instead of mismatching.
+		ReconcileChecksum: true,
+		// Reuses the embedded fresh-install DDL (idempotent CREATE ... IF NOT
+		// EXISTS) plus the sms.view permission seed for pre-existing databases.
+		SQLite: smsSchema + `
+			INSERT OR IGNORE INTO permissions (permission_key, permission_name, description, scope) VALUES ('sms.view', 'View SMS Module', 'Can view the Stakeholder Management System (SMS) module', 'global');`,
+		Postgres: smsSchemaPostgres + `
+			INSERT INTO permissions (permission_key, permission_name, description, scope, is_system) VALUES ('sms.view', 'View SMS Module', 'Can view the Stakeholder Management System (SMS) module', 'global', false) ON CONFLICT (permission_key) DO NOTHING;`,
+	},
+	{
+		Version:       "20261031_sms_plan_channel_check",
+		Name:          "Constrain engagement plan channels to the known enum (SMS)",
+		CheckSQLite:   `SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='sms_engagement_plans' AND sql LIKE '%DEFAULT ''email'' CHECK (channel IN (%'`,
+		CheckPostgres: `SELECT COUNT(*) FROM pg_constraint c JOIN pg_class t ON t.oid = c.conrelid WHERE t.relname='sms_engagement_plans' AND c.contype='c' AND pg_get_constraintdef(c.oid) LIKE '%(channel IN%'`,
+		// Legacy rows with a channel outside the enum (possible before backend
+		// validation existed) are normalized to the 'email' default so the
+		// constraint can be added without aborting startup.
+		Postgres: `
+			UPDATE sms_engagement_plans SET channel='email' WHERE channel NOT IN ('email','phone','meeting','in_person','slack','teams','other');
+			ALTER TABLE sms_engagement_plans ADD CONSTRAINT chk_sms_plan_channel CHECK (channel IN ('email','phone','meeting','in_person','slack','teams','other'));
+		`,
+		// SQLite cannot add a CHECK to an existing column without a table
+		// rebuild. The SQL field stays non-empty so the runner reaches
+		// ApplySQLite instead of stamping the row.
+		SQLite:      "applySQLiteSMSPlanChannelCheck:v1",
+		ApplySQLite: applySQLiteSMSPlanChannelCheck,
+	},
+	{
+		Version:       "20261120_plans_module",
+		Name:          "Add Plans module tables (cross-workspace plan grouping)",
+		CheckSQLite:   sqliteTableCheck("plans"),
+		CheckPostgres: pgTableCheck("plans"),
+		// Reuses the embedded fresh-install DDL (idempotent CREATE ... IF NOT
+		// EXISTS) plus the plans.view permission seed for pre-existing
+		// databases.
+		SQLite: plansSchema + `
+			INSERT OR IGNORE INTO permissions (permission_key, permission_name, description, scope) VALUES ('plans.view', 'View Plans Module', 'Can view the Plans module, which groups workspaces, P3M entities, and stakeholders into delivery plans', 'global');`,
+		Postgres: plansSchemaPostgres + `
+			INSERT INTO permissions (permission_key, permission_name, description, scope, is_system) VALUES ('plans.view', 'View Plans Module', 'Can view the Plans module, which groups workspaces, P3M entities, and stakeholders into delivery plans', 'global', false) ON CONFLICT (permission_key) DO NOTHING;`,
+	},
+	{
+		Version:         "20261121_plans_planning",
+		Name:            "Add plan planning tables (filter sources, item dependencies, scenarios, team capacity)",
+		CheckSQLiteFn:   sqliteAllTablesCheck("plan_filters", "item_dependencies", "plan_scenarios", "plan_scenario_items", "team_capacities"),
+		CheckPostgresFn: pgAllTablesCheck("plan_filters", "item_dependencies", "plan_scenarios", "plan_scenario_items", "team_capacities"),
+		SQLite: `
+			CREATE TABLE IF NOT EXISTS plan_filters (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				plan_id INTEGER NOT NULL REFERENCES plans(id) ON DELETE CASCADE,
+				name TEXT NOT NULL,
+				cql_query TEXT NOT NULL DEFAULT '',
+				created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+				UNIQUE(plan_id, name)
+			);
+			CREATE INDEX IF NOT EXISTS idx_plan_filters_plan ON plan_filters(plan_id);
+
+			CREATE TABLE IF NOT EXISTS item_dependencies (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				source_item_id INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+				target_item_id INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+				dep_type TEXT NOT NULL DEFAULT 'blocks' CHECK (dep_type IN ('blocks', 'related')),
+				created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+				UNIQUE(source_item_id, target_item_id),
+				CHECK (source_item_id <> target_item_id)
+			);
+			CREATE INDEX IF NOT EXISTS idx_item_dependencies_source ON item_dependencies(source_item_id);
+			CREATE INDEX IF NOT EXISTS idx_item_dependencies_target ON item_dependencies(target_item_id);
+
+			CREATE TABLE IF NOT EXISTS plan_scenarios (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				plan_id INTEGER NOT NULL REFERENCES plans(id) ON DELETE CASCADE,
+				name TEXT NOT NULL,
+				description TEXT NOT NULL DEFAULT '',
+				status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'active', 'archived')),
+				created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+				updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+				UNIQUE(plan_id, name)
+			);
+			CREATE INDEX IF NOT EXISTS idx_plan_scenarios_plan ON plan_scenarios(plan_id);
+
+			CREATE TABLE IF NOT EXISTS plan_scenario_items (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				scenario_id INTEGER NOT NULL REFERENCES plan_scenarios(id) ON DELETE CASCADE,
+				item_id INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+				start_date DATE,
+				end_date DATE,
+				due_date DATE,
+				notes TEXT NOT NULL DEFAULT '',
+				UNIQUE(scenario_id, item_id)
+			);
+			CREATE INDEX IF NOT EXISTS idx_plan_scenario_items_item ON plan_scenario_items(item_id);
+
+			CREATE TABLE IF NOT EXISTS team_capacities (
+				team_id INTEGER PRIMARY KEY REFERENCES teams(id) ON DELETE CASCADE,
+				unit TEXT NOT NULL DEFAULT 'hours' CHECK (unit IN ('points', 'days', 'hours')),
+				weekly_value REAL NOT NULL DEFAULT 0,
+				updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+			);
+		`,
+		Postgres: `
+			CREATE TABLE IF NOT EXISTS plan_filters (
+				id SERIAL PRIMARY KEY,
+				plan_id INTEGER NOT NULL REFERENCES plans(id) ON DELETE CASCADE,
+				name TEXT NOT NULL,
+				cql_query TEXT NOT NULL DEFAULT '',
+				created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+				UNIQUE(plan_id, name)
+			);
+			CREATE INDEX IF NOT EXISTS idx_plan_filters_plan ON plan_filters(plan_id);
+
+			CREATE TABLE IF NOT EXISTS item_dependencies (
+				id SERIAL PRIMARY KEY,
+				source_item_id INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+				target_item_id INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+				dep_type TEXT NOT NULL DEFAULT 'blocks' CHECK (dep_type IN ('blocks', 'related')),
+				created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+				UNIQUE(source_item_id, target_item_id),
+				CHECK (source_item_id <> target_item_id)
+			);
+			CREATE INDEX IF NOT EXISTS idx_item_dependencies_source ON item_dependencies(source_item_id);
+			CREATE INDEX IF NOT EXISTS idx_item_dependencies_target ON item_dependencies(target_item_id);
+
+			CREATE TABLE IF NOT EXISTS plan_scenarios (
+				id SERIAL PRIMARY KEY,
+				plan_id INTEGER NOT NULL REFERENCES plans(id) ON DELETE CASCADE,
+				name TEXT NOT NULL,
+				description TEXT NOT NULL DEFAULT '',
+				status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'active', 'archived')),
+				created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+				updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+				UNIQUE(plan_id, name)
+			);
+			CREATE INDEX IF NOT EXISTS idx_plan_scenarios_plan ON plan_scenarios(plan_id);
+
+			CREATE TABLE IF NOT EXISTS plan_scenario_items (
+				id SERIAL PRIMARY KEY,
+				scenario_id INTEGER NOT NULL REFERENCES plan_scenarios(id) ON DELETE CASCADE,
+				item_id INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+				start_date DATE,
+				end_date DATE,
+				due_date DATE,
+				notes TEXT NOT NULL DEFAULT '',
+				UNIQUE(scenario_id, item_id)
+			);
+			CREATE INDEX IF NOT EXISTS idx_plan_scenario_items_item ON plan_scenario_items(item_id);
+
+			CREATE TABLE IF NOT EXISTS team_capacities (
+				team_id INTEGER PRIMARY KEY REFERENCES teams(id) ON DELETE CASCADE,
+				unit TEXT NOT NULL DEFAULT 'hours' CHECK (unit IN ('points', 'days', 'hours')),
+				weekly_value REAL NOT NULL DEFAULT 0,
+				updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+			);
+		`,
+	},
+	{
+		// The decision register reuses p3m_raid_items with item_type='decision'
+		// and links entries to work items; ARB reviews track per-project
+		// architecture sign-off. SQLite cannot alter a CHECK in place, so the
+		// RAID table is rebuilt with the widened constraint plus the new
+		// item_id column (P3M expansion).
+		Version:         "20261122_p3m_decision_arb",
+		Name:            "Add P3M decision register linkage and architecture review board tracking",
+		CheckSQLiteFn:   checkP3MDecisionARBSQLite,
+		CheckPostgresFn: checkP3MDecisionARBPostgres,
+		SQLite: `
+			CREATE TABLE p3m_raid_items_rebuild (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				entity_type TEXT NOT NULL CHECK (entity_type IN ('portfolio', 'programme', 'project')),
+				entity_id INTEGER NOT NULL,
+				item_type TEXT NOT NULL CHECK (item_type IN ('risk', 'assumption', 'issue', 'dependency', 'decision')),
+				title TEXT NOT NULL,
+				description TEXT DEFAULT '',
+				impact_score INTEGER NOT NULL DEFAULT 1 CHECK (impact_score BETWEEN 1 AND 5),
+				probability_score INTEGER NOT NULL DEFAULT 1 CHECK (probability_score BETWEEN 1 AND 5),
+				mitigation_plan TEXT DEFAULT '',
+				owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+				status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'mitigating', 'closed', 'escalated')),
+				item_id INTEGER REFERENCES items(id) ON DELETE SET NULL,
+				created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+				updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+			);
+			INSERT INTO p3m_raid_items_rebuild (id, entity_type, entity_id, item_type, title, description, impact_score, probability_score, mitigation_plan, owner_id, status, created_at, updated_at)
+				SELECT id, entity_type, entity_id, item_type, title, description, impact_score, probability_score, mitigation_plan, owner_id, status, created_at, updated_at FROM p3m_raid_items;
+			DROP TABLE p3m_raid_items;
+			ALTER TABLE p3m_raid_items_rebuild RENAME TO p3m_raid_items;
+			CREATE INDEX IF NOT EXISTS idx_p3m_raid_entity ON p3m_raid_items(entity_type, entity_id);
+			CREATE INDEX IF NOT EXISTS idx_p3m_raid_item ON p3m_raid_items(item_id);
+
+			CREATE TABLE IF NOT EXISTS p3m_architecture_reviews (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				project_id INTEGER NOT NULL REFERENCES p3m_projects(id) ON DELETE CASCADE,
+				title TEXT NOT NULL,
+				description TEXT DEFAULT '',
+				status TEXT NOT NULL DEFAULT 'wip' CHECK (status IN ('wip', 'in_review', 'needs_work', 'approved')),
+				reviewer_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				decided_at DATETIME,
+				comments TEXT DEFAULT '',
+				architecture_page_id INTEGER REFERENCES pages(id) ON DELETE SET NULL,
+				decision_item_id INTEGER REFERENCES p3m_raid_items(id) ON DELETE SET NULL,
+				created_by INTEGER NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+				created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+				updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE INDEX IF NOT EXISTS idx_p3m_arch_reviews_project ON p3m_architecture_reviews(project_id);
+		`,
+		Postgres: `
+			ALTER TABLE p3m_raid_items ADD COLUMN IF NOT EXISTS item_id INTEGER REFERENCES items(id) ON DELETE SET NULL;
+			CREATE INDEX IF NOT EXISTS idx_p3m_raid_item ON p3m_raid_items(item_id);
+
+			DO $$
+			DECLARE con record;
+			BEGIN
+				FOR con IN
+					SELECT c.conname AS name
+					FROM pg_constraint c
+					JOIN pg_class t ON t.oid = c.conrelid
+					WHERE t.relname = 'p3m_raid_items' AND c.contype = 'c'
+					  AND pg_get_constraintdef(c.oid) LIKE '%item_type%'
+				LOOP
+					EXECUTE format('ALTER TABLE p3m_raid_items DROP CONSTRAINT %I', con.name);
+				END LOOP;
+			END $$;
+			ALTER TABLE p3m_raid_items ADD CONSTRAINT p3m_raid_items_item_type_check CHECK (item_type IN ('risk', 'assumption', 'issue', 'dependency', 'decision'));
+
+			CREATE TABLE IF NOT EXISTS p3m_architecture_reviews (
+				id SERIAL PRIMARY KEY,
+				project_id INTEGER NOT NULL REFERENCES p3m_projects(id) ON DELETE CASCADE,
+				title TEXT NOT NULL,
+				description TEXT DEFAULT '',
+				status TEXT NOT NULL DEFAULT 'wip' CHECK (status IN ('wip', 'in_review', 'needs_work', 'approved')),
+				reviewer_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				decided_at TIMESTAMPTZ,
+				comments TEXT DEFAULT '',
+				architecture_page_id INTEGER REFERENCES pages(id) ON DELETE SET NULL,
+				decision_item_id INTEGER REFERENCES p3m_raid_items(id) ON DELETE SET NULL,
+				created_by INTEGER NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+				created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+				updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE INDEX IF NOT EXISTS idx_p3m_arch_reviews_project ON p3m_architecture_reviews(project_id);
+		`,
+	},
+	{
+		Version:         "20261123_sms_register_v2",
+		Name:            "SMS register v2 for SRM gap closure (register fields, relationship entities, permission split)",
+		CheckSQLiteFn:   checkSMSRegisterV2SQLite,
+		CheckPostgresFn: checkSMSRegisterV2Postgres,
+		// The Postgres body lost a spec-reference comment after shipping; accept
+		// installs stamped with the pre-anonymization body and restamp forward.
+		Superseded: []string{
+			"93bfd4b0ad49d34aa700a86d34085b361ff565bf57142d968b3a96dd27b2f952", // Postgres, pre spec-reference anonymization
+		},
+		// SQLite cannot add a CHECK to an existing column without a table
+		// rebuild; the SQL field stays non-empty so the runner reaches
+		// ApplySQLite instead of stamping the row.
+		SQLite:      "applySQLiteSMSRegisterV2:v1",
+		ApplySQLite: applySQLiteSMSRegisterV2,
+		Postgres: `
+			-- Map legacy relationship_status values onto the five-point scale.
+			UPDATE sms_stakeholders SET relationship_status = CASE relationship_status
+				WHEN 'positive' THEN 'supportive'
+				WHEN 'tense' THEN 'concerned'
+				ELSE relationship_status END;
+			DO $$ BEGIN
+				IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'sms_stakeholders_relationship_status_check') THEN
+					ALTER TABLE sms_stakeholders DROP CONSTRAINT sms_stakeholders_relationship_status_check;
+				END IF;
+			END $$;
+			ALTER TABLE sms_stakeholders ADD CONSTRAINT chk_sms_stakeholder_rel_status CHECK (relationship_status IN ('advocate','supportive','neutral','concerned','opposed'));
+			ALTER TABLE sms_stakeholders ADD COLUMN IF NOT EXISTS external_id TEXT UNIQUE;
+			ALTER TABLE sms_stakeholders ADD COLUMN IF NOT EXISTS stakeholder_type TEXT CHECK (stakeholder_type IS NULL OR stakeholder_type IN ('mana_whenua','elected_member','government_agency','regional_authority','regulatory_partner','infrastructure_partner','business','developer','business_association','strategic_supplier','utility_provider','community_organisation','industry_group','advocacy_group','educational_institution','major_landowner','project_stakeholder','other'));
+			ALTER TABLE sms_stakeholders ADD COLUMN IF NOT EXISTS category TEXT NOT NULL DEFAULT '';
+			ALTER TABLE sms_stakeholders ADD COLUMN IF NOT EXISTS tier TEXT NOT NULL DEFAULT 'tier_3' CHECK (tier IN ('tier_1','tier_2','tier_3','tier_4'));
+			ALTER TABLE sms_stakeholders ADD COLUMN IF NOT EXISTS business_unit TEXT NOT NULL DEFAULT '';
+			ALTER TABLE sms_stakeholders ADD COLUMN IF NOT EXISTS backup_owner_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL;
+			ALTER TABLE sms_stakeholders ADD COLUMN IF NOT EXISTS executive_sponsor_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL;
+			ALTER TABLE sms_stakeholders ADD COLUMN IF NOT EXISTS risk_rating TEXT CHECK (risk_rating IS NULL OR risk_rating IN ('low','medium','high','critical'));
+			ALTER TABLE sms_stakeholders ADD COLUMN IF NOT EXISTS trust_level TEXT CHECK (trust_level IS NULL OR trust_level IN ('very_high','high','moderate','low','critical'));
+			ALTER TABLE sms_stakeholders ADD COLUMN IF NOT EXISTS last_engagement_at TIMESTAMPTZ;
+			ALTER TABLE sms_stakeholders ADD COLUMN IF NOT EXISTS next_engagement_at TIMESTAMPTZ;
+			ALTER TABLE sms_stakeholders ADD COLUMN IF NOT EXISTS info_classification TEXT NOT NULL DEFAULT 'internal' CHECK (info_classification IN ('public','internal','confidential','restricted'));
+			ALTER TABLE sms_stakeholders ADD COLUMN IF NOT EXISTS consent_status TEXT NOT NULL DEFAULT 'not_required' CHECK (consent_status IN ('not_required','granted','declined','withdrawn','unknown'));
+			ALTER TABLE sms_stakeholders ADD COLUMN IF NOT EXISTS retention_category TEXT NOT NULL DEFAULT '';
+			ALTER TABLE sms_stakeholders ADD COLUMN IF NOT EXISTS last_reviewed_at TIMESTAMPTZ;
+			ALTER TABLE sms_stakeholders ADD COLUMN IF NOT EXISTS review_cadence TEXT NOT NULL DEFAULT 'quarterly' CHECK (review_cadence IN ('monthly','quarterly','semi_annual','annual'));
+			ALTER TABLE sms_stakeholders ADD COLUMN IF NOT EXISTS location_lat REAL;
+			ALTER TABLE sms_stakeholders ADD COLUMN IF NOT EXISTS location_lon REAL;
+			ALTER TABLE sms_stakeholders ADD COLUMN IF NOT EXISTS location_text TEXT NOT NULL DEFAULT '';
+			CREATE INDEX IF NOT EXISTS idx_sms_stakeholders_tier ON sms_stakeholders(tier);
+			-- Engagement plan upgrade (Std §14).
+			ALTER TABLE sms_engagement_plans ADD COLUMN IF NOT EXISTS objective TEXT NOT NULL DEFAULT '';
+			ALTER TABLE sms_engagement_plans ADD COLUMN IF NOT EXISTS approach TEXT CHECK (approach IS NULL OR approach IN ('inform','consult','involve','collaborate','partner'));
+			ALTER TABLE sms_engagement_plans ADD COLUMN IF NOT EXISTS key_messages TEXT NOT NULL DEFAULT '';
+			ALTER TABLE sms_engagement_plans ADD COLUMN IF NOT EXISTS success_measures TEXT NOT NULL DEFAULT '';
+			ALTER TABLE sms_engagement_plans ADD COLUMN IF NOT EXISTS entity_type TEXT;
+			ALTER TABLE sms_engagement_plans ADD COLUMN IF NOT EXISTS entity_id INTEGER;
+			CREATE TABLE IF NOT EXISTS sms_engagement_plan_stakeholders (
+				id SERIAL PRIMARY KEY,
+				plan_id INTEGER NOT NULL REFERENCES sms_engagement_plans(id) ON DELETE CASCADE,
+				stakeholder_id INTEGER NOT NULL REFERENCES sms_stakeholders(id) ON DELETE CASCADE,
+				UNIQUE (plan_id, stakeholder_id)
+			);
+			CREATE INDEX IF NOT EXISTS idx_sms_plan_stakeholders_stakeholder ON sms_engagement_plan_stakeholders(stakeholder_id);
+			-- Migrate existing per-stakeholder plans into single-member plans.
+			INSERT INTO sms_engagement_plan_stakeholders (plan_id, stakeholder_id)
+			SELECT id, stakeholder_id FROM sms_engagement_plans ON CONFLICT DO NOTHING;
+			-- Issue/risk category taxonomy (Std §15).
+			ALTER TABLE sms_issues ADD COLUMN IF NOT EXISTS category TEXT NOT NULL DEFAULT 'other' CHECK (category IN ('relationship','reputation','delivery','communication','dependency','knowledge_loss','commitment','other'));
+			ALTER TABLE sms_issues ADD COLUMN IF NOT EXISTS escalation_path TEXT NOT NULL DEFAULT '';
+			CREATE TABLE IF NOT EXISTS sms_commitments (
+				id SERIAL PRIMARY KEY,
+				stakeholder_id INTEGER NOT NULL REFERENCES sms_stakeholders(id) ON DELETE CASCADE,
+				direction TEXT NOT NULL DEFAULT 'from_them' CHECK (direction IN ('from_us','from_them','mutual')),
+				title TEXT NOT NULL,
+				description TEXT NOT NULL DEFAULT '',
+				owner_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				due_date TIMESTAMPTZ,
+				status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open','in_progress','at_risk','completed','cancelled')),
+				escalated BOOLEAN NOT NULL DEFAULT false,
+				escalation_level INTEGER NOT NULL DEFAULT 0,
+				source_communication_id INTEGER REFERENCES sms_communications(id) ON DELETE SET NULL,
+				linked_issue_id INTEGER REFERENCES sms_issues(id) ON DELETE SET NULL,
+				notes TEXT NOT NULL DEFAULT '',
+				created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+				updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE INDEX IF NOT EXISTS idx_sms_commitments_stakeholder ON sms_commitments(stakeholder_id);
+			CREATE INDEX IF NOT EXISTS idx_sms_commitments_due ON sms_commitments(due_date);
+			CREATE TABLE IF NOT EXISTS sms_grievances (
+				id SERIAL PRIMARY KEY,
+				stakeholder_id INTEGER NOT NULL REFERENCES sms_stakeholders(id) ON DELETE CASCADE,
+				title TEXT NOT NULL,
+				description TEXT NOT NULL DEFAULT '',
+				category TEXT NOT NULL DEFAULT '',
+				severity TEXT NOT NULL DEFAULT 'medium' CHECK (severity IN ('low','medium','high','critical')),
+				status TEXT NOT NULL DEFAULT 'received' CHECK (status IN ('received','acknowledged','investigating','responded','closed')),
+				escalated BOOLEAN NOT NULL DEFAULT false,
+				escalation_level INTEGER NOT NULL DEFAULT 0,
+				acknowledged_at TIMESTAMPTZ,
+				response_due_at TIMESTAMPTZ,
+				response TEXT NOT NULL DEFAULT '',
+				resolution TEXT NOT NULL DEFAULT '',
+				created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+				updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE INDEX IF NOT EXISTS idx_sms_grievances_stakeholder ON sms_grievances(stakeholder_id);
+			CREATE TABLE IF NOT EXISTS sms_decisions (
+				id SERIAL PRIMARY KEY,
+				stakeholder_id INTEGER NOT NULL REFERENCES sms_stakeholders(id) ON DELETE CASCADE,
+				title TEXT NOT NULL,
+				decision TEXT NOT NULL DEFAULT '',
+				context TEXT NOT NULL DEFAULT '',
+				decided_at TIMESTAMPTZ,
+				decided_by_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				entity_type TEXT,
+				entity_id INTEGER,
+				created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE INDEX IF NOT EXISTS idx_sms_decisions_stakeholder ON sms_decisions(stakeholder_id);
+			CREATE TABLE IF NOT EXISTS sms_stakeholder_groups (
+				id SERIAL PRIMARY KEY,
+				name TEXT NOT NULL UNIQUE,
+				description TEXT NOT NULL DEFAULT '',
+				created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE TABLE IF NOT EXISTS sms_stakeholder_group_members (
+				id SERIAL PRIMARY KEY,
+				group_id INTEGER NOT NULL REFERENCES sms_stakeholder_groups(id) ON DELETE CASCADE,
+				stakeholder_id INTEGER NOT NULL REFERENCES sms_stakeholders(id) ON DELETE CASCADE,
+				UNIQUE (group_id, stakeholder_id)
+			);
+			CREATE INDEX IF NOT EXISTS idx_sms_group_members_stakeholder ON sms_stakeholder_group_members(stakeholder_id);
+			CREATE TABLE IF NOT EXISTS sms_stakeholder_links (
+				id SERIAL PRIMARY KEY,
+				source_id INTEGER NOT NULL REFERENCES sms_stakeholders(id) ON DELETE CASCADE,
+				target_id INTEGER NOT NULL REFERENCES sms_stakeholders(id) ON DELETE CASCADE,
+				relation_type TEXT NOT NULL DEFAULT '',
+				notes TEXT NOT NULL DEFAULT '',
+				created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+				UNIQUE (source_id, target_id)
+			);
+			CREATE INDEX IF NOT EXISTS idx_sms_links_target ON sms_stakeholder_links(target_id);
+			CREATE TABLE IF NOT EXISTS sms_ownership_transfers (
+				id SERIAL PRIMARY KEY,
+				stakeholder_id INTEGER NOT NULL REFERENCES sms_stakeholders(id) ON DELETE CASCADE,
+				from_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				to_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				reason TEXT NOT NULL DEFAULT '',
+				history_reviewed BOOLEAN NOT NULL DEFAULT false,
+				risks_reviewed BOOLEAN NOT NULL DEFAULT false,
+				commitments_reviewed BOOLEAN NOT NULL DEFAULT false,
+				notes TEXT NOT NULL DEFAULT '',
+				completed_at TIMESTAMPTZ,
+				created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE INDEX IF NOT EXISTS idx_sms_transfers_stakeholder ON sms_ownership_transfers(stakeholder_id);
+			CREATE TABLE IF NOT EXISTS sms_pilot_baselines (
+				metric_key TEXT PRIMARY KEY,
+				baseline_value REAL,
+				target_value REAL,
+				set_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+			);
+			INSERT INTO permissions (permission_key, permission_name, description, scope, is_system) VALUES
+				('sms.manage', 'Manage SMS Module', 'Can create and modify Stakeholder Management System records', 'global', false),
+				('sms.sensitive.view', 'View Sensitive SMS Data', 'Can view restricted stakeholder fields and communications in the SMS module', 'global', false)
+			ON CONFLICT (permission_key) DO NOTHING;
+		`,
+	},
+	{
+		Version:       "20261124_sms_sot_links",
+		Name:          "Link P3M and SRM stakeholder rows to the SMS register (single source of truth)",
+		CheckSQLite:   `SELECT (SELECT COUNT(*) FROM pragma_table_info('p3m_stakeholders') WHERE name='sms_stakeholder_id') * (SELECT COUNT(*) FROM pragma_table_info('srm_stakeholders') WHERE name='sms_stakeholder_id')`,
+		CheckPostgres: `SELECT (SELECT COUNT(*) FROM information_schema.columns WHERE table_name='p3m_stakeholders' AND column_name='sms_stakeholder_id') * (SELECT COUNT(*) FROM information_schema.columns WHERE table_name='srm_stakeholders' AND column_name='sms_stakeholder_id')`,
+		SQLite: `
+			ALTER TABLE p3m_stakeholders ADD COLUMN sms_stakeholder_id INTEGER REFERENCES sms_stakeholders(id) ON DELETE SET NULL;
+			CREATE INDEX IF NOT EXISTS idx_p3m_stakeholders_sms ON p3m_stakeholders(sms_stakeholder_id);
+			ALTER TABLE srm_stakeholders ADD COLUMN sms_stakeholder_id INTEGER REFERENCES sms_stakeholders(id) ON DELETE SET NULL;
+			CREATE INDEX IF NOT EXISTS idx_srm_stakeholders_sms ON srm_stakeholders(sms_stakeholder_id);
+			-- Backfill: SRM rows match on exact email (case-insensitive).
+			UPDATE srm_stakeholders SET sms_stakeholder_id = (SELECT MIN(id) FROM sms_stakeholders WHERE lower(email) = lower(srm_stakeholders.email)) WHERE email <> '' AND EXISTS (SELECT 1 FROM sms_stakeholders WHERE lower(email) = lower(srm_stakeholders.email));
+			-- Backfill: P3M rows carry no email; link only unambiguous exact name matches.
+			UPDATE p3m_stakeholders SET sms_stakeholder_id = (SELECT MIN(id) FROM sms_stakeholders WHERE lower(name) = lower(p3m_stakeholders.name)) WHERE (SELECT COUNT(*) FROM sms_stakeholders WHERE lower(name) = lower(p3m_stakeholders.name)) = 1;
+		`,
+		Postgres: `
+			ALTER TABLE p3m_stakeholders ADD COLUMN IF NOT EXISTS sms_stakeholder_id INTEGER REFERENCES sms_stakeholders(id) ON DELETE SET NULL;
+			CREATE INDEX IF NOT EXISTS idx_p3m_stakeholders_sms ON p3m_stakeholders(sms_stakeholder_id);
+			ALTER TABLE srm_stakeholders ADD COLUMN IF NOT EXISTS sms_stakeholder_id INTEGER REFERENCES sms_stakeholders(id) ON DELETE SET NULL;
+			CREATE INDEX IF NOT EXISTS idx_srm_stakeholders_sms ON srm_stakeholders(sms_stakeholder_id);
+			UPDATE srm_stakeholders ss SET sms_stakeholder_id = (SELECT MIN(id) FROM sms_stakeholders WHERE lower(email) = lower(ss.email)) WHERE email <> '' AND EXISTS (SELECT 1 FROM sms_stakeholders WHERE lower(email) = lower(ss.email));
+			UPDATE p3m_stakeholders ps SET sms_stakeholder_id = (SELECT MIN(id) FROM sms_stakeholders WHERE lower(name) = lower(ps.name)) WHERE (SELECT COUNT(*) FROM sms_stakeholders WHERE lower(name) = lower(ps.name)) = 1;
+		`,
+	},
+	{
+		Version:       "20261125_srm_business_id",
+		Name:          "Rename srm_suppliers.nzbn to vendor-neutral business_id",
+		CheckSQLite:   `SELECT (SELECT COUNT(*) FROM pragma_table_info('srm_suppliers') WHERE name='business_id') * (SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='srm_suppliers')`,
+		CheckPostgres: `SELECT (SELECT COUNT(*) FROM information_schema.columns WHERE table_name='srm_suppliers' AND column_name='business_id') * (SELECT COUNT(*) FROM information_schema.tables WHERE table_name='srm_suppliers')`,
+		// SQLite RENAME COLUMN keeps the legacy 9-digit CHECK constraint
+		// (rewritten against business_id), so the column is rebuilt to drop
+		// it; the rebuild toggles foreign_keys outside its transaction, hence
+		// ApplySQLite with a stable implementation marker.
+		SQLite:      "applySQLiteSRMBusinessID:v1",
+		ApplySQLite: applySQLiteSRMBusinessID,
+		Postgres: `
+			ALTER TABLE srm_suppliers RENAME COLUMN nzbn TO business_id;
+			ALTER TABLE srm_suppliers DROP CONSTRAINT IF EXISTS srm_suppliers_nzbn_check;
+		`,
+	},
+	{
+		Version:       "20261107_p3m_investment_cases",
+		Name:          "Add P3M investment cases (prioritisation pipeline and scores)",
+		CheckSQLite:   sqliteTableCheck("p3m_investment_cases"),
+		CheckPostgres: pgTableCheck("p3m_investment_cases"),
+		SQLite: `
+			CREATE TABLE IF NOT EXISTS p3m_investment_cases (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				project_id INTEGER NOT NULL UNIQUE REFERENCES p3m_projects(id) ON DELETE CASCADE,
+				status TEXT NOT NULL DEFAULT 'proposed' CHECK (status IN ('proposed', 'under_review', 'approved', 'rejected', 'deferred')),
+				benefit_score INTEGER NOT NULL DEFAULT 3 CHECK (benefit_score BETWEEN 1 AND 5),
+				risk_score INTEGER NOT NULL DEFAULT 3 CHECK (risk_score BETWEEN 1 AND 5),
+				roi_percent REAL,
+				payback_months INTEGER,
+				business_case TEXT NOT NULL DEFAULT '',
+				page_id INTEGER REFERENCES pages(id) ON DELETE SET NULL,
+				decided_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				decision_date DATE,
+				created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+				updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+			);
+		`,
+		Postgres: `
+			CREATE TABLE IF NOT EXISTS p3m_investment_cases (
+				id SERIAL PRIMARY KEY,
+				project_id INTEGER NOT NULL UNIQUE REFERENCES p3m_projects(id) ON DELETE CASCADE,
+				status TEXT NOT NULL DEFAULT 'proposed' CHECK (status IN ('proposed', 'under_review', 'approved', 'rejected', 'deferred')),
+				benefit_score INTEGER NOT NULL DEFAULT 3 CHECK (benefit_score BETWEEN 1 AND 5),
+				risk_score INTEGER NOT NULL DEFAULT 3 CHECK (risk_score BETWEEN 1 AND 5),
+				roi_percent REAL,
+				payback_months INTEGER,
+				business_case TEXT NOT NULL DEFAULT '',
+				page_id INTEGER REFERENCES pages(id) ON DELETE SET NULL,
+				decided_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				decision_date DATE,
+				created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+				updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+			);
+		`,
+	},
+	{
+		Version:       "20261109_p3m_configurable_lifecycle",
+		Name:          "Replace hard-coded P3M stages with admin-configurable lifecycle, gate templates and proportional skips",
+		CheckSQLite:   `SELECT (SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='p3m_lifecycle_stages') * (SELECT COUNT(*) FROM pragma_table_info('p3m_projects') WHERE name='work_type')`,
+		CheckPostgres: `SELECT (SELECT COUNT(*) FROM information_schema.tables WHERE table_name='p3m_lifecycle_stages') * (SELECT COUNT(*) FROM information_schema.columns WHERE table_name='p3m_projects' AND column_name='work_type')`,
+		// SQLite cannot drop the legacy stage CHECK constraints without full
+		// rebuilds of p3m_projects and p3m_stage_gate_reviews, so the body runs
+		// as an Apply function that toggles foreign_keys outside its
+		// transaction (same pattern as applySQLiteSRMBusinessID).
+		SQLite:      "applySQLiteP3MConfigurableLifecycle:v1",
+		ApplySQLite: applySQLiteP3MConfigurableLifecycle,
+		Postgres: `
+			-- Drop the legacy stage CHECKs before remapping values into them.
+			ALTER TABLE p3m_projects DROP CONSTRAINT IF EXISTS p3m_projects_current_stage_check;
+			ALTER TABLE p3m_stage_gate_reviews DROP CONSTRAINT IF EXISTS p3m_stage_gate_reviews_from_stage_check;
+			ALTER TABLE p3m_stage_gate_reviews DROP CONSTRAINT IF EXISTS p3m_stage_gate_reviews_to_stage_check;
+			-- Remap legacy stage values to the proportional lifecycle keys.
+			UPDATE p3m_projects SET current_stage = CASE current_stage WHEN 'initiation' THEN 'front_door' WHEN 'planning' THEN 'proposal' WHEN 'execution' THEN 'implement_deliver' WHEN 'closure' THEN 'close' ELSE current_stage END;
+			UPDATE p3m_stage_gate_reviews SET from_stage = CASE from_stage WHEN 'initiation' THEN 'front_door' WHEN 'planning' THEN 'proposal' WHEN 'execution' THEN 'implement_deliver' WHEN 'closure' THEN 'close' ELSE from_stage END;
+			UPDATE p3m_stage_gate_reviews SET to_stage = CASE to_stage WHEN 'initiation' THEN 'front_door' WHEN 'planning' THEN 'proposal' WHEN 'execution' THEN 'implement_deliver' WHEN 'closure' THEN 'close' ELSE to_stage END;
+			CREATE TABLE IF NOT EXISTS p3m_lifecycle_stages (
+				id SERIAL PRIMARY KEY,
+				stage_key TEXT NOT NULL UNIQUE,
+				name TEXT NOT NULL,
+				description TEXT DEFAULT '',
+				sort_order INTEGER NOT NULL UNIQUE,
+				is_entry INTEGER NOT NULL DEFAULT 0,
+				is_exit INTEGER NOT NULL DEFAULT 0,
+				gate_required INTEGER NOT NULL DEFAULT 1,
+				skippable INTEGER NOT NULL DEFAULT 1,
+				enabled INTEGER NOT NULL DEFAULT 1,
+				created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+				updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE TABLE IF NOT EXISTS p3m_stage_gate_templates (
+				id SERIAL PRIMARY KEY,
+				name TEXT NOT NULL,
+				from_stage_key TEXT,
+				to_stage_key TEXT NOT NULL REFERENCES p3m_lifecycle_stages(stage_key) ON DELETE RESTRICT,
+				mandatory INTEGER NOT NULL DEFAULT 1,
+				work_type TEXT,
+				required_artifacts TEXT DEFAULT '[]',
+				description TEXT DEFAULT '',
+				enabled INTEGER NOT NULL DEFAULT 1,
+				created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+				updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE INDEX IF NOT EXISTS idx_p3m_gate_templates_to ON p3m_stage_gate_templates(to_stage_key, enabled);
+			ALTER TABLE p3m_projects ADD COLUMN IF NOT EXISTS work_type TEXT;
+			ALTER TABLE p3m_projects ADD COLUMN IF NOT EXISTS external_ref TEXT;
+			CREATE UNIQUE INDEX IF NOT EXISTS uq_p3m_projects_external_ref ON p3m_projects(external_ref);
+			ALTER TABLE p3m_projects ALTER COLUMN current_stage SET DEFAULT 'front_door';
+			ALTER TABLE p3m_stage_gate_reviews ADD COLUMN IF NOT EXISTS template_id INTEGER REFERENCES p3m_stage_gate_templates(id) ON DELETE SET NULL;
+			CREATE TABLE IF NOT EXISTS p3m_project_stage_skips (
+				id SERIAL PRIMARY KEY,
+				project_id INTEGER NOT NULL REFERENCES p3m_projects(id) ON DELETE CASCADE,
+				stage_key TEXT NOT NULL REFERENCES p3m_lifecycle_stages(stage_key) ON DELETE RESTRICT,
+				reason TEXT NOT NULL,
+				decided_by INTEGER NOT NULL,
+				decided_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+				UNIQUE(project_id, stage_key)
+			);
+			CREATE INDEX IF NOT EXISTS idx_p3m_stage_skips_project ON p3m_project_stage_skips(project_id);
+			INSERT INTO p3m_lifecycle_stages (stage_key, name, description, sort_order, is_entry, is_exit, gate_required, skippable, enabled) VALUES
+				('front_door', 'Idea / Front Door', 'Intake and initial assessment of the idea or request.', 0, 1, 0, 0, 0, 1),
+				('proposal', 'Proposal', 'Business proposal with indicative cost and strategic alignment.', 1, 0, 0, 1, 1, 1),
+				('define_planning', 'Define / Planning', 'Detailed definition, planning and baseline approval.', 2, 0, 0, 1, 0, 1),
+				('implement_deliver', 'Implement / Deliver & Monitor', 'Delivery execution with monitoring against the baseline.', 3, 0, 0, 1, 0, 1),
+				('close', 'Close', 'Delivery acceptance and financial close-out.', 4, 0, 0, 1, 0, 1),
+				('benefits_realisation', 'Benefits Realisation', 'Post-implementation review and benefit tracking to target.', 5, 0, 1, 1, 1, 1)
+			ON CONFLICT (stage_key) DO NOTHING;
+			INSERT INTO p3m_stage_gate_templates (name, from_stage_key, to_stage_key, mandatory, work_type, required_artifacts, description)
+			SELECT 'Front Door assessment', 'front_door', 'proposal', 1, NULL, '[{"name":"Classification","required":true},{"name":"Initial assessment","required":true}]', 'Mandatory intake gate: classify the idea and record the initial assessment.'
+			WHERE NOT EXISTS (SELECT 1 FROM p3m_stage_gate_templates WHERE name = 'Front Door assessment' AND from_stage_key IS 'front_door' AND to_stage_key = 'proposal');
+			INSERT INTO p3m_stage_gate_templates (name, from_stage_key, to_stage_key, mandatory, work_type, required_artifacts, description)
+			SELECT 'Governance go/no-go', 'proposal', 'define_planning', 1, NULL, '[{"name":"Governance go/no-go decision","required":true},{"name":"Financial endorsement","required":true}]', 'Governance go/no-go with financial endorsement before detailed planning.'
+			WHERE NOT EXISTS (SELECT 1 FROM p3m_stage_gate_templates WHERE name = 'Governance go/no-go' AND from_stage_key IS 'proposal' AND to_stage_key = 'define_planning');
+			INSERT INTO p3m_stage_gate_templates (name, from_stage_key, to_stage_key, mandatory, work_type, required_artifacts, description)
+			SELECT 'Baseline & sponsor approval', 'define_planning', 'implement_deliver', 1, NULL, '[{"name":"Approved baseline","required":true},{"name":"Sponsor approval","required":true}]', 'Baseline (scope/schedule/cost) approved by the sponsor before delivery starts.'
+			WHERE NOT EXISTS (SELECT 1 FROM p3m_stage_gate_templates WHERE name = 'Baseline & sponsor approval' AND from_stage_key IS 'define_planning' AND to_stage_key = 'implement_deliver');
+			INSERT INTO p3m_stage_gate_templates (name, from_stage_key, to_stage_key, mandatory, work_type, required_artifacts, description)
+			SELECT 'Delivery acceptance & financial close-out', 'implement_deliver', 'close', 1, NULL, '[{"name":"Delivery acceptance","required":true},{"name":"Financial close-out","required":true}]', 'Delivered scope accepted and finances closed out before closure.'
+			WHERE NOT EXISTS (SELECT 1 FROM p3m_stage_gate_templates WHERE name = 'Delivery acceptance & financial close-out' AND from_stage_key IS 'implement_deliver' AND to_stage_key = 'close');
+			INSERT INTO p3m_stage_gate_templates (name, from_stage_key, to_stage_key, mandatory, work_type, required_artifacts, description)
+			SELECT 'Post-implementation review (PIR)', 'close', 'benefits_realisation', 1, NULL, '[{"name":"PIR report","required":true}]', 'Mandatory-but-skippable PIR gate into benefits realisation; projects may remain at Close when the skip is recorded.'
+			WHERE NOT EXISTS (SELECT 1 FROM p3m_stage_gate_templates WHERE name = 'Post-implementation review (PIR)' AND from_stage_key IS 'close' AND to_stage_key = 'benefits_realisation');
+			INSERT INTO p3m_stage_gate_templates (name, from_stage_key, to_stage_key, mandatory, work_type, required_artifacts, description)
+			SELECT 'Return for information', 'proposal', 'front_door', 0, NULL, '[]', 'Optional return-to-intake path when a proposal needs more information.'
+			WHERE NOT EXISTS (SELECT 1 FROM p3m_stage_gate_templates WHERE name = 'Return for information' AND from_stage_key IS 'proposal' AND to_stage_key IS 'front_door');
+		`,
+	},
+	{
+		Version:       "20261110_p3m_financial_fields",
+		Name:          "Add P3M financial record fields and close-out records (FIN-002/006/010)",
+		CheckSQLite:   `SELECT (SELECT COUNT(*) FROM pragma_table_info('p3m_projects') WHERE name='funding_source') * (SELECT COUNT(*) FROM pragma_table_info('p3m_budget_tranches') WHERE name='expenditure_class') * (SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='p3m_financial_close_outs')`,
+		CheckPostgres: `SELECT (SELECT COUNT(*) FROM information_schema.columns WHERE table_name='p3m_projects' AND column_name='funding_source') * (SELECT COUNT(*) FROM information_schema.columns WHERE table_name='p3m_budget_tranches' AND column_name='expenditure_class') * (SELECT COUNT(*) FROM information_schema.tables WHERE table_name='p3m_financial_close_outs')`,
+		SQLite: `
+			ALTER TABLE p3m_projects ADD COLUMN funding_source TEXT;
+			ALTER TABLE p3m_projects ADD COLUMN contingency REAL NOT NULL DEFAULT 0;
+			-- SQLite's ALTER cannot attach a CHECK to the added column, so the
+			-- one_off|ongoing domain is enforced in the handlers.
+			ALTER TABLE p3m_budget_tranches ADD COLUMN expenditure_class TEXT;
+			CREATE TABLE IF NOT EXISTS p3m_financial_close_outs (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				project_id INTEGER NOT NULL UNIQUE REFERENCES p3m_projects(id) ON DELETE CASCADE,
+				final_budget REAL NOT NULL DEFAULT 0,
+				actual_to_date REAL NOT NULL DEFAULT 0,
+				outstanding_commitments REAL NOT NULL DEFAULT 0,
+				ongoing_obligations TEXT DEFAULT '',
+				finance_reviewer_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'validated')),
+				notes TEXT DEFAULT '',
+				closed_at DATETIME,
+				created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+				updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+			);
+		`,
+		Postgres: `
+			ALTER TABLE p3m_projects ADD COLUMN IF NOT EXISTS funding_source TEXT;
+			ALTER TABLE p3m_projects ADD COLUMN IF NOT EXISTS contingency REAL NOT NULL DEFAULT 0;
+			ALTER TABLE p3m_budget_tranches ADD COLUMN IF NOT EXISTS expenditure_class TEXT CHECK (expenditure_class IN ('one_off', 'ongoing'));
+			CREATE TABLE IF NOT EXISTS p3m_financial_close_outs (
+				id SERIAL PRIMARY KEY,
+				project_id INTEGER NOT NULL UNIQUE REFERENCES p3m_projects(id) ON DELETE CASCADE,
+				final_budget REAL NOT NULL DEFAULT 0,
+				actual_to_date REAL NOT NULL DEFAULT 0,
+				outstanding_commitments REAL NOT NULL DEFAULT 0,
+				ongoing_obligations TEXT DEFAULT '',
+				finance_reviewer_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'validated')),
+				notes TEXT DEFAULT '',
+				closed_at TIMESTAMPTZ,
+				created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+				updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+			);
+		`,
+	},
+	{
+		Version:       "20261111_p3m_front_door",
+		Name:          "Add P3M Front Door intake pack (FD-001..005, FD-008/010/011)",
+		CheckSQLite:   `SELECT (SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='p3m_intakes') * (SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='p3m_front_door_screens')`,
+		CheckPostgres: `SELECT (SELECT COUNT(*) FROM information_schema.tables WHERE table_name='p3m_intakes') * (SELECT COUNT(*) FROM information_schema.tables WHERE table_name='p3m_front_door_screens')`,
+		SQLite: `
+			CREATE TABLE IF NOT EXISTS p3m_intakes (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				title TEXT NOT NULL,
+				source TEXT NOT NULL DEFAULT 'standard',
+				description TEXT NOT NULL DEFAULT '',
+				problem_opportunity TEXT NOT NULL DEFAULT '',
+				strategic_alignment TEXT NOT NULL DEFAULT '',
+				intended_outcomes TEXT NOT NULL DEFAULT '',
+				indicative_cost REAL,
+				resource_requirements TEXT NOT NULL DEFAULT '',
+				risk_notes TEXT NOT NULL DEFAULT '',
+				change_impact_notes TEXT NOT NULL DEFAULT '',
+				business_group TEXT NOT NULL DEFAULT '',
+				work_type TEXT,
+				complexity TEXT NOT NULL DEFAULT 'med' CHECK (complexity IN ('low', 'med', 'high')),
+				status TEXT NOT NULL DEFAULT 'captured' CHECK (status IN ('captured', 'assessing', 'decided')),
+				decision TEXT CHECK (decision IS NULL OR decision IN ('proceed', 'redirect', 'defer', 'decline', 'return_info')),
+				decided_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				decision_date DATETIME,
+				conditions TEXT NOT NULL DEFAULT '',
+				rationale TEXT NOT NULL DEFAULT '',
+				target_project_id INTEGER REFERENCES p3m_projects(id) ON DELETE SET NULL,
+				lifecycle_position TEXT,
+				created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				created_at DATETIME NOT NULL,
+				updated_at DATETIME NOT NULL
+			);
+			CREATE INDEX IF NOT EXISTS idx_p3m_intakes_status ON p3m_intakes(status);
+			CREATE TABLE IF NOT EXISTS p3m_front_door_screens (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				complexity TEXT NOT NULL CHECK (complexity IN ('low', 'med', 'high')),
+				field_key TEXT NOT NULL,
+				required INTEGER NOT NULL DEFAULT 0,
+				UNIQUE (complexity, field_key)
+			);
+			INSERT OR IGNORE INTO p3m_front_door_screens (complexity, field_key, required) VALUES
+				('low', 'title', 1), ('low', 'source', 1), ('low', 'description', 1),
+				('low', 'problem_opportunity', 1), ('low', 'strategic_alignment', 1),
+				('low', 'intended_outcomes', 1), ('low', 'work_type', 1), ('low', 'business_group', 1),
+				('med', 'title', 1), ('med', 'source', 1), ('med', 'description', 1),
+				('med', 'problem_opportunity', 1), ('med', 'strategic_alignment', 1),
+				('med', 'intended_outcomes', 1), ('med', 'work_type', 1), ('med', 'business_group', 1),
+				('med', 'resource_requirements', 1), ('med', 'risk_notes', 1),
+				('high', 'title', 1), ('high', 'source', 1), ('high', 'description', 1),
+				('high', 'problem_opportunity', 1), ('high', 'strategic_alignment', 1),
+				('high', 'intended_outcomes', 1), ('high', 'work_type', 1), ('high', 'business_group', 1),
+				('high', 'resource_requirements', 1), ('high', 'risk_notes', 1),
+				('high', 'change_impact_notes', 1), ('high', 'indicative_cost', 1);
+		`,
+		Postgres: `
+			CREATE TABLE IF NOT EXISTS p3m_intakes (
+				id SERIAL PRIMARY KEY,
+				title TEXT NOT NULL,
+				source TEXT NOT NULL DEFAULT 'standard',
+				description TEXT NOT NULL DEFAULT '',
+				problem_opportunity TEXT NOT NULL DEFAULT '',
+				strategic_alignment TEXT NOT NULL DEFAULT '',
+				intended_outcomes TEXT NOT NULL DEFAULT '',
+				indicative_cost REAL,
+				resource_requirements TEXT NOT NULL DEFAULT '',
+				risk_notes TEXT NOT NULL DEFAULT '',
+				change_impact_notes TEXT NOT NULL DEFAULT '',
+				business_group TEXT NOT NULL DEFAULT '',
+				work_type TEXT,
+				complexity TEXT NOT NULL DEFAULT 'med' CHECK (complexity IN ('low', 'med', 'high')),
+				status TEXT NOT NULL DEFAULT 'captured' CHECK (status IN ('captured', 'assessing', 'decided')),
+				decision TEXT CHECK (decision IS NULL OR decision IN ('proceed', 'redirect', 'defer', 'decline', 'return_info')),
+				decided_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				decision_date TIMESTAMPTZ,
+				conditions TEXT NOT NULL DEFAULT '',
+				rationale TEXT NOT NULL DEFAULT '',
+				target_project_id INTEGER REFERENCES p3m_projects(id) ON DELETE SET NULL,
+				lifecycle_position TEXT,
+				created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+				updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE INDEX IF NOT EXISTS idx_p3m_intakes_status ON p3m_intakes(status);
+			CREATE TABLE IF NOT EXISTS p3m_front_door_screens (
+				id SERIAL PRIMARY KEY,
+				complexity TEXT NOT NULL CHECK (complexity IN ('low', 'med', 'high')),
+				field_key TEXT NOT NULL,
+				required BOOLEAN NOT NULL DEFAULT false,
+				UNIQUE (complexity, field_key)
+			);
+			INSERT INTO p3m_front_door_screens (complexity, field_key, required) VALUES
+				('low', 'title', true), ('low', 'source', true), ('low', 'description', true),
+				('low', 'problem_opportunity', true), ('low', 'strategic_alignment', true),
+				('low', 'intended_outcomes', true), ('low', 'work_type', true), ('low', 'business_group', true),
+				('med', 'title', true), ('med', 'source', true), ('med', 'description', true),
+				('med', 'problem_opportunity', true), ('med', 'strategic_alignment', true),
+				('med', 'intended_outcomes', true), ('med', 'work_type', true), ('med', 'business_group', true),
+				('med', 'resource_requirements', true), ('med', 'risk_notes', true),
+				('high', 'title', true), ('high', 'source', true), ('high', 'description', true),
+				('high', 'problem_opportunity', true), ('high', 'strategic_alignment', true),
+				('high', 'intended_outcomes', true), ('high', 'work_type', true), ('high', 'business_group', true),
+				('high', 'resource_requirements', true), ('high', 'risk_notes', true),
+			('high', 'change_impact_notes', true), ('high', 'indicative_cost', true)
+		ON CONFLICT (complexity, field_key) DO NOTHING;
+	`,
+	},
+	{
+		Version:       "20261112_p3m_finance_sync",
+		Name:          "Add P3M financial system sync tables (FIN-007)",
+		CheckSQLite:   `SELECT (SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='p3m_finance_sync_configs') * (SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='p3m_finance_actuals') * (SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='p3m_finance_sync_runs') * (SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='p3m_finance_sync_rejections')`,
+		CheckPostgres: `SELECT (SELECT COUNT(*) FROM information_schema.tables WHERE table_name='p3m_finance_sync_configs') * (SELECT COUNT(*) FROM information_schema.tables WHERE table_name='p3m_finance_actuals') * (SELECT COUNT(*) FROM information_schema.tables WHERE table_name='p3m_finance_sync_runs') * (SELECT COUNT(*) FROM information_schema.tables WHERE table_name='p3m_finance_sync_rejections')`,
+		SQLite: `
+			CREATE TABLE IF NOT EXISTS p3m_finance_sync_configs (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				name TEXT NOT NULL,
+				enabled INTEGER NOT NULL DEFAULT 1,
+				source_type TEXT NOT NULL CHECK (source_type IN ('file_path', 's3')),
+				source_ref TEXT NOT NULL,
+				schedule_minutes INTEGER NOT NULL DEFAULT 60,
+				period_format TEXT NOT NULL DEFAULT 'yyyy-mm',
+				default_currency TEXT NOT NULL DEFAULT 'NZD',
+				match_mode TEXT NOT NULL DEFAULT 'ref_then_title' CHECK (match_mode IN ('ref_only', 'ref_then_title')),
+				last_run_at DATETIME,
+				last_run_status TEXT,
+				last_file_hash TEXT,
+				created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				updated_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+				updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE INDEX IF NOT EXISTS idx_p3m_fin_sync_configs_enabled ON p3m_finance_sync_configs(enabled);
+			CREATE TABLE IF NOT EXISTS p3m_finance_sync_runs (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				config_id INTEGER NOT NULL REFERENCES p3m_finance_sync_configs(id) ON DELETE CASCADE,
+				trigger TEXT NOT NULL CHECK (trigger IN ('schedule', 'manual', 'upload')),
+				started_at DATETIME NOT NULL,
+				completed_at DATETIME,
+				status TEXT NOT NULL DEFAULT 'running' CHECK (status IN ('running', 'success', 'partial', 'failed')),
+				file_hash TEXT,
+				rows_total INTEGER NOT NULL DEFAULT 0,
+				rows_matched INTEGER NOT NULL DEFAULT 0,
+				rows_unmatched INTEGER NOT NULL DEFAULT 0,
+				rows_failed INTEGER NOT NULL DEFAULT 0,
+				error_summary TEXT
+			);
+			CREATE INDEX IF NOT EXISTS idx_p3m_fin_runs_config ON p3m_finance_sync_runs(config_id, started_at DESC);
+			CREATE TABLE IF NOT EXISTS p3m_finance_actuals (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				config_id INTEGER NOT NULL REFERENCES p3m_finance_sync_configs(id) ON DELETE CASCADE,
+				run_id INTEGER REFERENCES p3m_finance_sync_runs(id) ON DELETE SET NULL,
+				project_id INTEGER REFERENCES p3m_projects(id) ON DELETE SET NULL,
+				external_ref TEXT NOT NULL,
+				cost_center TEXT,
+				work_order TEXT,
+				period TEXT NOT NULL,
+				line_type TEXT NOT NULL CHECK (line_type IN ('actual', 'commitment', 'forecast')),
+				amount REAL NOT NULL,
+				currency TEXT NOT NULL DEFAULT 'NZD',
+				description TEXT,
+				match_status TEXT NOT NULL DEFAULT 'unmatched' CHECK (match_status IN ('matched', 'unmatched', 'rejected')),
+				raw_row TEXT,
+				imported_at DATETIME DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE INDEX IF NOT EXISTS idx_p3m_fin_actuals_proj_period ON p3m_finance_actuals(project_id, period, line_type);
+			CREATE INDEX IF NOT EXISTS idx_p3m_fin_actuals_ref ON p3m_finance_actuals(external_ref, period);
+			CREATE INDEX IF NOT EXISTS idx_p3m_fin_actuals_unmatched ON p3m_finance_actuals(match_status) WHERE match_status = 'unmatched';
+			CREATE INDEX IF NOT EXISTS idx_p3m_fin_actuals_run ON p3m_finance_actuals(run_id);
+			CREATE TABLE IF NOT EXISTS p3m_finance_sync_rejections (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				external_ref TEXT NOT NULL,
+				period TEXT NOT NULL,
+				line_type TEXT NOT NULL CHECK (line_type IN ('actual', 'commitment', 'forecast')),
+				reason TEXT NOT NULL,
+				rejected_by INTEGER NOT NULL,
+				created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE UNIQUE INDEX IF NOT EXISTS uq_p3m_fin_rejections ON p3m_finance_sync_rejections(external_ref, period, line_type);
+		`,
+		Postgres: `
+			CREATE TABLE IF NOT EXISTS p3m_finance_sync_configs (
+				id SERIAL PRIMARY KEY,
+				name TEXT NOT NULL,
+				enabled BOOLEAN NOT NULL DEFAULT TRUE,
+				source_type TEXT NOT NULL CHECK (source_type IN ('file_path', 's3')),
+				source_ref TEXT NOT NULL,
+				schedule_minutes INTEGER NOT NULL DEFAULT 60,
+				period_format TEXT NOT NULL DEFAULT 'yyyy-mm',
+				default_currency TEXT NOT NULL DEFAULT 'NZD',
+				match_mode TEXT NOT NULL DEFAULT 'ref_then_title' CHECK (match_mode IN ('ref_only', 'ref_then_title')),
+				last_run_at TIMESTAMPTZ,
+				last_run_status TEXT,
+				last_file_hash TEXT,
+				created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				updated_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+				updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE INDEX IF NOT EXISTS idx_p3m_fin_sync_configs_enabled ON p3m_finance_sync_configs(enabled);
+			CREATE TABLE IF NOT EXISTS p3m_finance_sync_runs (
+				id SERIAL PRIMARY KEY,
+				config_id INTEGER NOT NULL REFERENCES p3m_finance_sync_configs(id) ON DELETE CASCADE,
+				trigger TEXT NOT NULL CHECK (trigger IN ('schedule', 'manual', 'upload')),
+				started_at TIMESTAMPTZ NOT NULL,
+				completed_at TIMESTAMPTZ,
+				status TEXT NOT NULL DEFAULT 'running' CHECK (status IN ('running', 'success', 'partial', 'failed')),
+				file_hash TEXT,
+				rows_total INTEGER NOT NULL DEFAULT 0,
+				rows_matched INTEGER NOT NULL DEFAULT 0,
+				rows_unmatched INTEGER NOT NULL DEFAULT 0,
+				rows_failed INTEGER NOT NULL DEFAULT 0,
+				error_summary TEXT
+			);
+			CREATE INDEX IF NOT EXISTS idx_p3m_fin_runs_config ON p3m_finance_sync_runs(config_id, started_at DESC);
+			CREATE TABLE IF NOT EXISTS p3m_finance_actuals (
+				id SERIAL PRIMARY KEY,
+				config_id INTEGER NOT NULL REFERENCES p3m_finance_sync_configs(id) ON DELETE CASCADE,
+				run_id INTEGER REFERENCES p3m_finance_sync_runs(id) ON DELETE SET NULL,
+				project_id INTEGER REFERENCES p3m_projects(id) ON DELETE SET NULL,
+				external_ref TEXT NOT NULL,
+				cost_center TEXT,
+				work_order TEXT,
+				period TEXT NOT NULL,
+				line_type TEXT NOT NULL CHECK (line_type IN ('actual', 'commitment', 'forecast')),
+				amount REAL NOT NULL,
+				currency TEXT NOT NULL DEFAULT 'NZD',
+				description TEXT,
+				match_status TEXT NOT NULL DEFAULT 'unmatched' CHECK (match_status IN ('matched', 'unmatched', 'rejected')),
+				raw_row TEXT,
+				imported_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE INDEX IF NOT EXISTS idx_p3m_fin_actuals_proj_period ON p3m_finance_actuals(project_id, period, line_type);
+			CREATE INDEX IF NOT EXISTS idx_p3m_fin_actuals_ref ON p3m_finance_actuals(external_ref, period);
+			CREATE INDEX IF NOT EXISTS idx_p3m_fin_actuals_unmatched ON p3m_finance_actuals(match_status) WHERE match_status = 'unmatched';
+			CREATE INDEX IF NOT EXISTS idx_p3m_fin_actuals_run ON p3m_finance_actuals(run_id);
+			CREATE TABLE IF NOT EXISTS p3m_finance_sync_rejections (
+				id SERIAL PRIMARY KEY,
+				external_ref TEXT NOT NULL,
+				period TEXT NOT NULL,
+				line_type TEXT NOT NULL CHECK (line_type IN ('actual', 'commitment', 'forecast')),
+				reason TEXT NOT NULL,
+				rejected_by INTEGER NOT NULL,
+				created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE UNIQUE INDEX IF NOT EXISTS uq_p3m_fin_rejections ON p3m_finance_sync_rejections(external_ref, period, line_type);
+		`,
+	},
+	{
+		Version:       "20261113_p3m_change_calendar",
+		Name:          "Add P3M change calendar entries (CHG-008/009)",
+		CheckSQLite:   `SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='p3m_change_calendar_entries'`,
+		CheckPostgres: `SELECT COUNT(*) FROM information_schema.tables WHERE table_name='p3m_change_calendar_entries'`,
+		SQLite: `
+			CREATE TABLE IF NOT EXISTS p3m_change_calendar_entries (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				entity_type TEXT CHECK (entity_type IN ('portfolio', 'programme', 'project')),
+				entity_id INTEGER,
+				activity TEXT NOT NULL,
+				business_unit TEXT,
+				start_week TEXT NOT NULL,
+				end_week TEXT NOT NULL,
+				impact_level INTEGER NOT NULL DEFAULT 3 CHECK (impact_level BETWEEN 1 AND 5),
+				source TEXT NOT NULL DEFAULT 'local' CHECK (source IN ('corporate_project', 'corporate_activity', 'bau', 'local')),
+				notes TEXT,
+				created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+				updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE INDEX IF NOT EXISTS idx_p3m_change_cal_weeks ON p3m_change_calendar_entries(start_week, end_week);
+			CREATE INDEX IF NOT EXISTS idx_p3m_change_cal_bu ON p3m_change_calendar_entries(business_unit);
+		`,
+		Postgres: `
+			CREATE TABLE IF NOT EXISTS p3m_change_calendar_entries (
+				id SERIAL PRIMARY KEY,
+				entity_type TEXT CHECK (entity_type IN ('portfolio', 'programme', 'project')),
+				entity_id INTEGER,
+				activity TEXT NOT NULL,
+				business_unit TEXT,
+				start_week TEXT NOT NULL,
+				end_week TEXT NOT NULL,
+				impact_level INTEGER NOT NULL DEFAULT 3 CHECK (impact_level BETWEEN 1 AND 5),
+				source TEXT NOT NULL DEFAULT 'local' CHECK (source IN ('corporate_project', 'corporate_activity', 'bau', 'local')),
+				notes TEXT,
+				created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+				updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE INDEX IF NOT EXISTS idx_p3m_change_cal_weeks ON p3m_change_calendar_entries(start_week, end_week);
+			CREATE INDEX IF NOT EXISTS idx_p3m_change_cal_bu ON p3m_change_calendar_entries(business_unit);
+		`,
+	},
+	{
+		Version:       "20261114_p3m_change_readiness",
+		Name:          "Add P3M change impact and readiness assessments (CHG-002/003/004/006)",
+		CheckSQLite:   `SELECT (SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='p3m_change_assessments') * (SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='p3m_readiness_assessments')`,
+		CheckPostgres: `SELECT (SELECT COUNT(*) FROM information_schema.tables WHERE table_name='p3m_change_assessments') * (SELECT COUNT(*) FROM information_schema.tables WHERE table_name='p3m_readiness_assessments')`,
+		SQLite: `
+			CREATE TABLE IF NOT EXISTS p3m_change_assessments (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				entity_type TEXT NOT NULL CHECK (entity_type IN ('project', 'programme')),
+				entity_id INTEGER NOT NULL,
+				impacted_groups TEXT,
+				impact_by_characteristic TEXT,
+				overall_rating INTEGER NOT NULL DEFAULT 3 CHECK (overall_rating BETWEEN 1 AND 5),
+				support_level TEXT NOT NULL DEFAULT 'none' CHECK (support_level IN ('none', 'light', 'full')),
+				approach TEXT,
+				deliverables TEXT,
+				created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+				updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE UNIQUE INDEX IF NOT EXISTS uq_p3m_change_assessments ON p3m_change_assessments(entity_type, entity_id);
+			CREATE TABLE IF NOT EXISTS p3m_readiness_assessments (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				entity_type TEXT NOT NULL CHECK (entity_type IN ('project', 'programme')),
+				entity_id INTEGER NOT NULL,
+				questions TEXT NOT NULL,
+				answers TEXT,
+				assessed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+				outcome TEXT NOT NULL CHECK (outcome IN ('go', 'no_go', 'reassess')),
+				reassessment_of INTEGER REFERENCES p3m_readiness_assessments(id) ON DELETE SET NULL,
+				created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE INDEX IF NOT EXISTS idx_p3m_readiness_entity ON p3m_readiness_assessments(entity_type, entity_id, assessed_at DESC);
+		`,
+		Postgres: `
+			CREATE TABLE IF NOT EXISTS p3m_change_assessments (
+				id SERIAL PRIMARY KEY,
+				entity_type TEXT NOT NULL CHECK (entity_type IN ('project', 'programme')),
+				entity_id INTEGER NOT NULL,
+				impacted_groups TEXT,
+				impact_by_characteristic TEXT,
+				overall_rating INTEGER NOT NULL DEFAULT 3 CHECK (overall_rating BETWEEN 1 AND 5),
+				support_level TEXT NOT NULL DEFAULT 'none' CHECK (support_level IN ('none', 'light', 'full')),
+				approach TEXT,
+				deliverables TEXT,
+				created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+				updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE UNIQUE INDEX IF NOT EXISTS uq_p3m_change_assessments ON p3m_change_assessments(entity_type, entity_id);
+			CREATE TABLE IF NOT EXISTS p3m_readiness_assessments (
+				id SERIAL PRIMARY KEY,
+				entity_type TEXT NOT NULL CHECK (entity_type IN ('project', 'programme')),
+				entity_id INTEGER NOT NULL,
+				questions TEXT NOT NULL,
+				answers TEXT,
+				assessed_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+				outcome TEXT NOT NULL CHECK (outcome IN ('go', 'no_go', 'reassess')),
+				reassessment_of INTEGER REFERENCES p3m_readiness_assessments(id) ON DELETE SET NULL,
+				created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE INDEX IF NOT EXISTS idx_p3m_readiness_entity ON p3m_readiness_assessments(entity_type, entity_id, assessed_at DESC);
+		`,
+	},
+	{
+		Version:       "20261115_p3m_benefits_profile",
+		Name:          "Add P3M benefit profile fields and measurement schedules (BEN-003/007/008/009)",
+		CheckSQLite:   `SELECT (SELECT COUNT(*) FROM pragma_table_info('p3m_benefits') WHERE name='measurement_method') * (SELECT COUNT(*) FROM pragma_table_info('p3m_benefits') WHERE name='status') * (SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='p3m_benefit_measurements')`,
+		CheckPostgres: `SELECT (SELECT COUNT(*) FROM information_schema.columns WHERE table_name='p3m_benefits' AND column_name='measurement_method') * (SELECT COUNT(*) FROM information_schema.columns WHERE table_name='p3m_benefits' AND column_name='status') * (SELECT COUNT(*) FROM information_schema.tables WHERE table_name='p3m_benefit_measurements')`,
+		SQLite: `
+			-- SQLite's ALTER cannot attach a CHECK to the added columns, so the
+			-- frequency/status/validation domains are enforced in the handlers.
+			ALTER TABLE p3m_benefits ADD COLUMN measurement_method TEXT;
+			ALTER TABLE p3m_benefits ADD COLUMN measurement_frequency TEXT;
+			ALTER TABLE p3m_benefits ADD COLUMN status TEXT NOT NULL DEFAULT 'planned';
+			ALTER TABLE p3m_benefits ADD COLUMN evidence TEXT;
+			ALTER TABLE p3m_benefits ADD COLUMN finance_validator_id INTEGER REFERENCES users(id) ON DELETE SET NULL;
+			ALTER TABLE p3m_benefits ADD COLUMN validation_status TEXT NOT NULL DEFAULT 'not_required';
+			ALTER TABLE p3m_benefits ADD COLUMN capability_ref TEXT;
+			CREATE TABLE IF NOT EXISTS p3m_benefit_measurements (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				benefit_id INTEGER NOT NULL REFERENCES p3m_benefits(id) ON DELETE CASCADE,
+				due_date DATE NOT NULL,
+				completed_at DATETIME,
+				value REAL,
+				evidence TEXT,
+				recorded_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE INDEX IF NOT EXISTS idx_p3m_benefit_measurements_due ON p3m_benefit_measurements(due_date) WHERE completed_at IS NULL;
+		`,
+		Postgres: `
+			ALTER TABLE p3m_benefits ADD COLUMN IF NOT EXISTS measurement_method TEXT;
+			ALTER TABLE p3m_benefits ADD COLUMN IF NOT EXISTS measurement_frequency TEXT CHECK (measurement_frequency IN ('monthly', 'quarterly', 'annual', 'one_off'));
+			ALTER TABLE p3m_benefits ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'planned' CHECK (status IN ('planned', 'measuring', 'realised', 'shortfall', 'retired'));
+			ALTER TABLE p3m_benefits ADD COLUMN IF NOT EXISTS evidence TEXT;
+			ALTER TABLE p3m_benefits ADD COLUMN IF NOT EXISTS finance_validator_id INTEGER REFERENCES users(id) ON DELETE SET NULL;
+			ALTER TABLE p3m_benefits ADD COLUMN IF NOT EXISTS validation_status TEXT NOT NULL DEFAULT 'not_required' CHECK (validation_status IN ('not_required', 'pending', 'validated'));
+			ALTER TABLE p3m_benefits ADD COLUMN IF NOT EXISTS capability_ref TEXT;
+			CREATE TABLE IF NOT EXISTS p3m_benefit_measurements (
+				id SERIAL PRIMARY KEY,
+				benefit_id INTEGER NOT NULL REFERENCES p3m_benefits(id) ON DELETE CASCADE,
+				due_date DATE NOT NULL,
+				completed_at TIMESTAMPTZ,
+				value REAL,
+				evidence TEXT,
+				recorded_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE INDEX IF NOT EXISTS idx_p3m_benefit_measurements_due ON p3m_benefit_measurements(due_date) WHERE completed_at IS NULL;
+		`,
+	},
+	{
+		Version:       "20261116_p3m_report_snapshots",
+		Name:          "Add P3M report snapshots and tolerance profiles (RPT-005/006/007/009)",
+		CheckSQLite:   `SELECT (SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='p3m_report_snapshots') * (SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='p3m_tolerance_profiles')`,
+		CheckPostgres: `SELECT (SELECT COUNT(*) FROM information_schema.tables WHERE table_name='p3m_report_snapshots') * (SELECT COUNT(*) FROM information_schema.tables WHERE table_name='p3m_tolerance_profiles')`,
+		SQLite: `
+			CREATE TABLE IF NOT EXISTS p3m_report_snapshots (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				entity_type TEXT NOT NULL CHECK (entity_type IN ('project', 'programme', 'portfolio')),
+				entity_id INTEGER NOT NULL,
+				period TEXT NOT NULL,
+				overall_rag TEXT NOT NULL CHECK (overall_rag IN ('green', 'amber', 'red')),
+				category_rags TEXT,
+				suggested_category_rags TEXT,
+				rag_override_reasons TEXT,
+				commentary TEXT,
+				escalations TEXT,
+				metrics TEXT,
+				captured_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				captured_at DATETIME DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE INDEX IF NOT EXISTS idx_p3m_snapshots_entity ON p3m_report_snapshots(entity_type, entity_id, captured_at DESC);
+			CREATE TABLE IF NOT EXISTS p3m_tolerance_profiles (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				scope TEXT NOT NULL CHECK (scope IN ('portfolio', 'project')),
+				entity_id INTEGER NOT NULL,
+				schedule_days INTEGER NOT NULL DEFAULT 14,
+				budget_pct REAL NOT NULL DEFAULT 10.0,
+				risk_score INTEGER NOT NULL DEFAULT 3 CHECK (risk_score BETWEEN 1 AND 5),
+				updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE UNIQUE INDEX IF NOT EXISTS uq_p3m_tolerance_profiles ON p3m_tolerance_profiles(scope, entity_id);
+		`,
+		Postgres: `
+			CREATE TABLE IF NOT EXISTS p3m_report_snapshots (
+				id SERIAL PRIMARY KEY,
+				entity_type TEXT NOT NULL CHECK (entity_type IN ('project', 'programme', 'portfolio')),
+				entity_id INTEGER NOT NULL,
+				period TEXT NOT NULL,
+				overall_rag TEXT NOT NULL CHECK (overall_rag IN ('green', 'amber', 'red')),
+				category_rags TEXT,
+				suggested_category_rags TEXT,
+				rag_override_reasons TEXT,
+				commentary TEXT,
+				escalations TEXT,
+				metrics TEXT,
+				captured_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				captured_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE INDEX IF NOT EXISTS idx_p3m_snapshots_entity ON p3m_report_snapshots(entity_type, entity_id, captured_at DESC);
+			CREATE TABLE IF NOT EXISTS p3m_tolerance_profiles (
+				id SERIAL PRIMARY KEY,
+				scope TEXT NOT NULL CHECK (scope IN ('portfolio', 'project')),
+				entity_id INTEGER NOT NULL,
+				schedule_days INTEGER NOT NULL DEFAULT 14,
+				budget_pct REAL NOT NULL DEFAULT 10.0,
+				risk_score INTEGER NOT NULL DEFAULT 3 CHECK (risk_score BETWEEN 1 AND 5),
+				updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE UNIQUE INDEX IF NOT EXISTS uq_p3m_tolerance_profiles ON p3m_tolerance_profiles(scope, entity_id);
+		`,
+	},
+	{
+		Version:       "20261117_p3m_raid_rollup",
+		Name:          "Add P3M RAID due dates and item subtypes (RAID-001/004/006)",
+		CheckSQLite:   `SELECT (SELECT COUNT(*) FROM pragma_table_info('p3m_raid_items') WHERE name='due_date') * (SELECT COUNT(*) FROM pragma_table_info('p3m_raid_items') WHERE name='item_subtype')`,
+		CheckPostgres: `SELECT (SELECT COUNT(*) FROM information_schema.columns WHERE table_name='p3m_raid_items' AND column_name='due_date') * (SELECT COUNT(*) FROM information_schema.columns WHERE table_name='p3m_raid_items' AND column_name='item_subtype')`,
+		SQLite: `
+			-- SQLite's ALTER cannot attach a CHECK to the added column, so the
+			-- change_risk|adoption_risk domain is enforced in the handlers.
+			ALTER TABLE p3m_raid_items ADD COLUMN due_date DATE;
+			ALTER TABLE p3m_raid_items ADD COLUMN item_subtype TEXT;
+		`,
+		Postgres: `
+			ALTER TABLE p3m_raid_items ADD COLUMN IF NOT EXISTS due_date DATE;
+			ALTER TABLE p3m_raid_items ADD COLUMN IF NOT EXISTS item_subtype TEXT CHECK (item_subtype IN ('change_risk', 'adoption_risk'));
+		`,
+	},
+	{
+		Version:       "20261118_p3m_resource_scenarios",
+		Name:          "Add P3M resource pools and BAU allocation class (RES-004/005/006)",
+		CheckSQLite:   `SELECT (SELECT COUNT(*) FROM pragma_table_info('p3m_resources') WHERE name='pool') * (SELECT COUNT(*) FROM pragma_table_info('p3m_resource_allocations') WHERE name='allocation_class')`,
+		CheckPostgres: `SELECT (SELECT COUNT(*) FROM information_schema.columns WHERE table_name='p3m_resources' AND column_name='pool') * (SELECT COUNT(*) FROM information_schema.columns WHERE table_name='p3m_resource_allocations' AND column_name='allocation_class')`,
+		SQLite: `
+			ALTER TABLE p3m_resources ADD COLUMN pool TEXT;
+			-- SQLite's ALTER cannot attach a CHECK to the added column, so the
+			-- project|bau domain is enforced in the handlers.
+			ALTER TABLE p3m_resource_allocations ADD COLUMN allocation_class TEXT NOT NULL DEFAULT 'project';
+		`,
+		Postgres: `
+			ALTER TABLE p3m_resources ADD COLUMN IF NOT EXISTS pool TEXT;
+			ALTER TABLE p3m_resource_allocations ADD COLUMN IF NOT EXISTS allocation_class TEXT NOT NULL DEFAULT 'project' CHECK (allocation_class IN ('project', 'bau'));
+		`,
+	},
+	{
+		Version:       "20261119_p3m_prioritization",
+		Name:          "Add P3M portfolio prioritisation scoring (PO-003/004/008)",
+		CheckSQLite:   `SELECT (SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='p3m_scoring_criteria') * (SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='p3m_investment_case_scores')`,
+		CheckPostgres: `SELECT (SELECT COUNT(*) FROM information_schema.tables WHERE table_name='p3m_scoring_criteria') * (SELECT COUNT(*) FROM information_schema.tables WHERE table_name='p3m_investment_case_scores')`,
+		SQLite: `
+			CREATE TABLE IF NOT EXISTS p3m_scoring_criteria (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				name TEXT NOT NULL UNIQUE,
+				weight REAL NOT NULL DEFAULT 1.0 CHECK (weight >= 0),
+				direction TEXT NOT NULL DEFAULT 'higher_better' CHECK (direction IN ('higher_better', 'lower_better')),
+				description TEXT,
+				enabled INTEGER NOT NULL DEFAULT 1,
+				created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+				updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE TABLE IF NOT EXISTS p3m_investment_case_scores (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				ic_id INTEGER NOT NULL REFERENCES p3m_investment_cases(id) ON DELETE CASCADE,
+				criterion_id INTEGER NOT NULL REFERENCES p3m_scoring_criteria(id) ON DELETE CASCADE,
+				score REAL NOT NULL CHECK (score BETWEEN 1 AND 5),
+				rationale TEXT,
+				scored_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+				updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE UNIQUE INDEX IF NOT EXISTS uq_p3m_ic_scores ON p3m_investment_case_scores(ic_id, criterion_id);
+		`,
+		Postgres: `
+			CREATE TABLE IF NOT EXISTS p3m_scoring_criteria (
+				id SERIAL PRIMARY KEY,
+				name TEXT NOT NULL UNIQUE,
+				weight REAL NOT NULL DEFAULT 1.0 CHECK (weight >= 0),
+				direction TEXT NOT NULL DEFAULT 'higher_better' CHECK (direction IN ('higher_better', 'lower_better')),
+				description TEXT,
+				enabled BOOLEAN NOT NULL DEFAULT TRUE,
+				created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+				updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE TABLE IF NOT EXISTS p3m_investment_case_scores (
+				id SERIAL PRIMARY KEY,
+				ic_id INTEGER NOT NULL REFERENCES p3m_investment_cases(id) ON DELETE CASCADE,
+				criterion_id INTEGER NOT NULL REFERENCES p3m_scoring_criteria(id) ON DELETE CASCADE,
+				score REAL NOT NULL CHECK (score BETWEEN 1 AND 5),
+				rationale TEXT,
+				scored_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+				updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE UNIQUE INDEX IF NOT EXISTS uq_p3m_ic_scores ON p3m_investment_case_scores(ic_id, criterion_id);
+		`,
+	},
+	{
+		Version:       "20261120_p3m_finance_alerts",
+		Name:          "Add P3M financial exception alert rules (FIN-009)",
+		CheckSQLite:   `SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='p3m_finance_alert_rules'`,
+		CheckPostgres: `SELECT COUNT(*) FROM information_schema.tables WHERE table_name='p3m_finance_alert_rules'`,
+		SQLite: `
+			CREATE TABLE IF NOT EXISTS p3m_finance_alert_rules (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				name TEXT NOT NULL,
+				scope TEXT NOT NULL CHECK (scope IN ('portfolio', 'project')),
+				portfolio_id INTEGER REFERENCES p3m_portfolios(id) ON DELETE CASCADE,
+				project_id INTEGER REFERENCES p3m_projects(id) ON DELETE CASCADE,
+				metric TEXT NOT NULL CHECK (metric IN ('forecast_overrun_pct', 'variance_vs_budget', 'commitment_vs_remaining')),
+				comparator TEXT NOT NULL DEFAULT '>' CHECK (comparator IN ('>', '<', '>=', '<=')),
+				threshold REAL NOT NULL,
+				notify_email TEXT,
+				enabled INTEGER NOT NULL DEFAULT 1,
+				created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+				updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE INDEX IF NOT EXISTS idx_p3m_finance_alert_rules_enabled ON p3m_finance_alert_rules(enabled);
+		`,
+		Postgres: `
+			CREATE TABLE IF NOT EXISTS p3m_finance_alert_rules (
+				id SERIAL PRIMARY KEY,
+				name TEXT NOT NULL,
+				scope TEXT NOT NULL CHECK (scope IN ('portfolio', 'project')),
+				portfolio_id INTEGER REFERENCES p3m_portfolios(id) ON DELETE CASCADE,
+				project_id INTEGER REFERENCES p3m_projects(id) ON DELETE CASCADE,
+				metric TEXT NOT NULL CHECK (metric IN ('forecast_overrun_pct', 'variance_vs_budget', 'commitment_vs_remaining')),
+				comparator TEXT NOT NULL DEFAULT '>' CHECK (comparator IN ('>', '<', '>=', '<=')),
+				threshold REAL NOT NULL,
+				notify_email TEXT,
+				enabled BOOLEAN NOT NULL DEFAULT TRUE,
+				created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+				updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE INDEX IF NOT EXISTS idx_p3m_finance_alert_rules_enabled ON p3m_finance_alert_rules(enabled);
+		`,
+	},
+	{
+		Version:       "20261121_p3m_closure_records",
+		Name:          "Add P3M closure and handover records (CLS-001/002)",
+		CheckSQLite:   `SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='p3m_closure_records'`,
+		CheckPostgres: `SELECT COUNT(*) FROM information_schema.tables WHERE table_name='p3m_closure_records'`,
+		SQLite: `
+			CREATE TABLE IF NOT EXISTS p3m_closure_records (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				project_id INTEGER NOT NULL UNIQUE REFERENCES p3m_projects(id) ON DELETE CASCADE,
+				closure_report_page_id TEXT,
+				acceptance_signoff_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				acceptance_signoff_at DATETIME,
+				outstanding_items TEXT,
+				lessons_learned TEXT,
+				cost_ownership TEXT,
+				handover_to TEXT,
+				status TEXT NOT NULL DEFAULT 'recommended' CHECK (status IN ('recommended', 'approved')),
+				created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+				updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+			);
+		`,
+		Postgres: `
+			CREATE TABLE IF NOT EXISTS p3m_closure_records (
+				id SERIAL PRIMARY KEY,
+				project_id INTEGER NOT NULL UNIQUE REFERENCES p3m_projects(id) ON DELETE CASCADE,
+				closure_report_page_id TEXT,
+				acceptance_signoff_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				acceptance_signoff_at TIMESTAMPTZ,
+				outstanding_items TEXT,
+				lessons_learned TEXT,
+				cost_ownership TEXT,
+				handover_to TEXT,
+				status TEXT NOT NULL DEFAULT 'recommended' CHECK (status IN ('recommended', 'approved')),
+				created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+				updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+			);
+		`,
+	},
+	{
+		Version:       "20261122_p3m_procurement_decisions",
+		Name:          "Add P3M procurement decision subtype and SRM contract link (GOV-007)",
+		CheckSQLite:   `SELECT (SELECT COUNT(*) FROM pragma_table_info('p3m_raid_items') WHERE name='decision_subtype') * (SELECT COUNT(*) FROM pragma_table_info('p3m_raid_items') WHERE name='srm_contract_id')`,
+		CheckPostgres: `SELECT (SELECT COUNT(*) FROM information_schema.columns WHERE table_name='p3m_raid_items' AND column_name='decision_subtype') * (SELECT COUNT(*) FROM information_schema.columns WHERE table_name='p3m_raid_items' AND column_name='srm_contract_id')`,
+		SQLite: `
+			-- SQLite's ALTER cannot attach a CHECK to the added column, so the
+			-- subtype domain is enforced in the handlers. srm_contract_id has no
+			-- FK because p3m.sql loads before srm.sql on fresh installs; the
+			-- handler validates the reference.
+			ALTER TABLE p3m_raid_items ADD COLUMN decision_subtype TEXT;
+			ALTER TABLE p3m_raid_items ADD COLUMN srm_contract_id INTEGER;
+		`,
+		Postgres: `
+			ALTER TABLE p3m_raid_items ADD COLUMN IF NOT EXISTS decision_subtype TEXT CHECK (decision_subtype IN ('governance', 'funding', 'procurement', 'plan', 'closure'));
+			-- No FK to srm_contracts: p3m_postgres.sql loads before srm_postgres.sql.
+			ALTER TABLE p3m_raid_items ADD COLUMN IF NOT EXISTS srm_contract_id INTEGER;
+		`,
+	},
+	{
+		Version: "20261126_sms_node_taxonomy",
+		Name:    "Add SMS node taxonomy (kinds, nodes, role-based stakeholder membership)",
+		CheckSQLite: `
+			SELECT CASE WHEN COUNT(*) = 4 THEN 1 ELSE 0 END
+			FROM sqlite_master
+			WHERE type = 'table' AND name IN (
+				'sms_node_kinds',
+				'sms_node_kind_roles',
+				'sms_nodes',
+				'sms_node_members'
+			)
+		`,
+		CheckPostgres: `
+			SELECT CASE WHEN COUNT(*) = 4 THEN 1 ELSE 0 END
+			FROM information_schema.tables
+			WHERE table_schema = current_schema() AND table_name IN (
+				'sms_node_kinds',
+				'sms_node_kind_roles',
+				'sms_nodes',
+				'sms_node_members'
+			)
+		`,
+		SQLite: `
+			CREATE TABLE IF NOT EXISTS sms_node_kinds (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				key TEXT NOT NULL UNIQUE,
+				label TEXT NOT NULL,
+				description TEXT NOT NULL DEFAULT '',
+				allows_children BOOLEAN NOT NULL DEFAULT 1,
+				child_kinds TEXT NOT NULL DEFAULT '',
+				is_system BOOLEAN NOT NULL DEFAULT 0,
+				created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+				updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE TABLE IF NOT EXISTS sms_node_kind_roles (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				kind_id INTEGER NOT NULL REFERENCES sms_node_kinds(id) ON DELETE CASCADE,
+				role_key TEXT NOT NULL,
+				label TEXT NOT NULL DEFAULT '',
+				sort_order INTEGER NOT NULL DEFAULT 0,
+				UNIQUE (kind_id, role_key)
+			);
+			CREATE TABLE IF NOT EXISTS sms_nodes (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				external_id TEXT UNIQUE,
+				kind_id INTEGER NOT NULL REFERENCES sms_node_kinds(id),
+				parent_id INTEGER REFERENCES sms_nodes(id) ON DELETE CASCADE,
+				name TEXT NOT NULL,
+				description TEXT NOT NULL DEFAULT '',
+				location_lat REAL, location_lon REAL, location_text TEXT NOT NULL DEFAULT '',
+				custom_fields TEXT NOT NULL DEFAULT '{}',
+				entity_type TEXT, entity_id INTEGER,
+				notes TEXT NOT NULL DEFAULT '',
+				created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+				updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE INDEX IF NOT EXISTS idx_sms_nodes_parent ON sms_nodes(parent_id);
+			CREATE INDEX IF NOT EXISTS idx_sms_nodes_kind ON sms_nodes(kind_id);
+			CREATE TABLE IF NOT EXISTS sms_node_members (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				node_id INTEGER NOT NULL REFERENCES sms_nodes(id) ON DELETE CASCADE,
+				stakeholder_id INTEGER NOT NULL REFERENCES sms_stakeholders(id) ON DELETE CASCADE,
+				role TEXT NOT NULL DEFAULT '',
+				start_date DATE, end_date DATE,
+				notes TEXT NOT NULL DEFAULT '',
+				created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+				UNIQUE (node_id, stakeholder_id, role)
+			);
+			CREATE INDEX IF NOT EXISTS idx_sms_node_members_stakeholder ON sms_node_members(stakeholder_id);
+
+			INSERT OR IGNORE INTO sms_node_kinds (key, label, description, allows_children, child_kinds, is_system) VALUES
+				('area', 'Area', 'Top-level area or precinct grouping nodes.', 1, '', 1),
+				('road_segment', 'Road segment', 'A stretch of road affected by works.', 1, 'building', 1),
+				('building', 'Building', 'A building with occupants (owners and tenants).', 0, '', 1);
+
+			INSERT OR IGNORE INTO sms_node_kind_roles (kind_id, role_key, label, sort_order) SELECT id, 'affected_business', 'Affected business', 1 FROM sms_node_kinds WHERE key = 'road_segment';
+			INSERT OR IGNORE INTO sms_node_kind_roles (kind_id, role_key, label, sort_order) SELECT id, 'resident_representative', 'Resident representative', 2 FROM sms_node_kinds WHERE key = 'road_segment';
+			INSERT OR IGNORE INTO sms_node_kind_roles (kind_id, role_key, label, sort_order) SELECT id, 'owner', 'Owner', 1 FROM sms_node_kinds WHERE key = 'building';
+			INSERT OR IGNORE INTO sms_node_kind_roles (kind_id, role_key, label, sort_order) SELECT id, 'tenant', 'Tenant', 2 FROM sms_node_kinds WHERE key = 'building';
+			INSERT OR IGNORE INTO sms_node_kind_roles (kind_id, role_key, label, sort_order) SELECT id, 'lessee', 'Lessee', 3 FROM sms_node_kinds WHERE key = 'building';
+			INSERT OR IGNORE INTO sms_node_kind_roles (kind_id, role_key, label, sort_order) SELECT id, 'body_corporate_manager', 'Body corporate manager', 4 FROM sms_node_kinds WHERE key = 'building';
+		`,
+		Postgres: `
+			CREATE TABLE IF NOT EXISTS sms_node_kinds (
+				id SERIAL PRIMARY KEY,
+				key TEXT NOT NULL UNIQUE,
+				label TEXT NOT NULL,
+				description TEXT NOT NULL DEFAULT '',
+				allows_children BOOLEAN NOT NULL DEFAULT true,
+				child_kinds TEXT NOT NULL DEFAULT '',
+				is_system BOOLEAN NOT NULL DEFAULT false,
+				created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+				updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE TABLE IF NOT EXISTS sms_node_kind_roles (
+				id SERIAL PRIMARY KEY,
+				kind_id INTEGER NOT NULL REFERENCES sms_node_kinds(id) ON DELETE CASCADE,
+				role_key TEXT NOT NULL,
+				label TEXT NOT NULL DEFAULT '',
+				sort_order INTEGER NOT NULL DEFAULT 0,
+				UNIQUE (kind_id, role_key)
+			);
+			CREATE TABLE IF NOT EXISTS sms_nodes (
+				id SERIAL PRIMARY KEY,
+				external_id TEXT UNIQUE,
+				kind_id INTEGER NOT NULL REFERENCES sms_node_kinds(id),
+				parent_id INTEGER REFERENCES sms_nodes(id) ON DELETE CASCADE,
+				name TEXT NOT NULL,
+				description TEXT NOT NULL DEFAULT '',
+				location_lat REAL, location_lon REAL, location_text TEXT NOT NULL DEFAULT '',
+				custom_fields TEXT NOT NULL DEFAULT '{}',
+				entity_type TEXT, entity_id INTEGER,
+				notes TEXT NOT NULL DEFAULT '',
+				created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+				updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE INDEX IF NOT EXISTS idx_sms_nodes_parent ON sms_nodes(parent_id);
+			CREATE INDEX IF NOT EXISTS idx_sms_nodes_kind ON sms_nodes(kind_id);
+			CREATE TABLE IF NOT EXISTS sms_node_members (
+				id SERIAL PRIMARY KEY,
+				node_id INTEGER NOT NULL REFERENCES sms_nodes(id) ON DELETE CASCADE,
+				stakeholder_id INTEGER NOT NULL REFERENCES sms_stakeholders(id) ON DELETE CASCADE,
+				role TEXT NOT NULL DEFAULT '',
+				start_date DATE, end_date DATE,
+				notes TEXT NOT NULL DEFAULT '',
+				created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+				UNIQUE (node_id, stakeholder_id, role)
+			);
+			CREATE INDEX IF NOT EXISTS idx_sms_node_members_stakeholder ON sms_node_members(stakeholder_id);
+
+			INSERT INTO sms_node_kinds (key, label, description, allows_children, child_kinds, is_system) VALUES
+				('area', 'Area', 'Top-level area or precinct grouping nodes.', true, '', true),
+				('road_segment', 'Road segment', 'A stretch of road affected by works.', true, 'building', true),
+				('building', 'Building', 'A building with occupants (owners and tenants).', false, '', true)
+			ON CONFLICT (key) DO NOTHING;
+
+			INSERT INTO sms_node_kind_roles (kind_id, role_key, label, sort_order) SELECT id, 'affected_business', 'Affected business', 1 FROM sms_node_kinds WHERE key = 'road_segment' ON CONFLICT (kind_id, role_key) DO NOTHING;
+			INSERT INTO sms_node_kind_roles (kind_id, role_key, label, sort_order) SELECT id, 'resident_representative', 'Resident representative', 2 FROM sms_node_kinds WHERE key = 'road_segment' ON CONFLICT (kind_id, role_key) DO NOTHING;
+			INSERT INTO sms_node_kind_roles (kind_id, role_key, label, sort_order) SELECT id, 'owner', 'Owner', 1 FROM sms_node_kinds WHERE key = 'building' ON CONFLICT (kind_id, role_key) DO NOTHING;
+			INSERT INTO sms_node_kind_roles (kind_id, role_key, label, sort_order) SELECT id, 'tenant', 'Tenant', 2 FROM sms_node_kinds WHERE key = 'building' ON CONFLICT (kind_id, role_key) DO NOTHING;
+			INSERT INTO sms_node_kind_roles (kind_id, role_key, label, sort_order) SELECT id, 'lessee', 'Lessee', 3 FROM sms_node_kinds WHERE key = 'building' ON CONFLICT (kind_id, role_key) DO NOTHING;
+			INSERT INTO sms_node_kind_roles (kind_id, role_key, label, sort_order) SELECT id, 'body_corporate_manager', 'Body corporate manager', 4 FROM sms_node_kinds WHERE key = 'building' ON CONFLICT (kind_id, role_key) DO NOTHING;
+		`,
+	},
+	{
+		Version: "20261127_sms_notification_campaigns",
+		Name:    "Add SMS notification campaigns and widen channel enum with letter/sms_text",
+		CheckSQLite: `
+			SELECT CASE WHEN
+				EXISTS (SELECT 1 FROM sqlite_master WHERE type='table' AND name='sms_notification_campaigns')
+				AND EXISTS (SELECT 1 FROM sqlite_master WHERE type='table' AND name='sms_campaign_targets')
+				AND EXISTS (SELECT 1 FROM sqlite_master WHERE type='table' AND name='sms_notifications')
+				AND EXISTS (SELECT 1 FROM sqlite_master WHERE type='table' AND name='sms_communications' AND sql LIKE '%letter%')
+				AND EXISTS (SELECT 1 FROM sqlite_master WHERE type='table' AND name='sms_engagement_plans' AND sql LIKE '%letter%')
+			THEN 1 ELSE 0 END
+		`,
+		CheckPostgres: `
+			SELECT CASE WHEN
+				EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema=current_schema() AND table_name='sms_notification_campaigns')
+				AND EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema=current_schema() AND table_name='sms_campaign_targets')
+				AND EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema=current_schema() AND table_name='sms_notifications')
+				AND EXISTS (SELECT 1 FROM pg_constraint c JOIN pg_class t ON t.oid = c.conrelid WHERE t.relname='sms_communications' AND c.contype='c' AND pg_get_constraintdef(c.oid) LIKE '%letter%')
+				AND EXISTS (SELECT 1 FROM pg_constraint c JOIN pg_class t ON t.oid = c.conrelid WHERE t.relname='sms_engagement_plans' AND c.contype='c' AND pg_get_constraintdef(c.oid) LIKE '%letter%')
+			THEN 1 ELSE 0 END
+		`,
+		SQLite:      "applySQLiteSMSCampaignChannelWiden:v1",
+		ApplySQLite: applySQLiteSMSCampaignChannelWiden,
+		Postgres: `
+			CREATE TABLE IF NOT EXISTS sms_notification_campaigns (
+				id SERIAL PRIMARY KEY,
+				title TEXT NOT NULL,
+				description TEXT NOT NULL DEFAULT '',
+				entity_type TEXT, entity_id INTEGER,
+				channel TEXT NOT NULL DEFAULT 'email',
+				scheduled_at TIMESTAMPTZ,
+				due_by DATE,
+				status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft','scheduled','in_progress','completed','cancelled')),
+				created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+				updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE TABLE IF NOT EXISTS sms_campaign_targets (
+				id SERIAL PRIMARY KEY,
+				campaign_id INTEGER NOT NULL REFERENCES sms_notification_campaigns(id) ON DELETE CASCADE,
+				node_id INTEGER NOT NULL REFERENCES sms_nodes(id) ON DELETE CASCADE,
+				include_descendants BOOLEAN NOT NULL DEFAULT false,
+				UNIQUE (campaign_id, node_id)
+			);
+			CREATE TABLE IF NOT EXISTS sms_notifications (
+				id SERIAL PRIMARY KEY,
+				campaign_id INTEGER NOT NULL REFERENCES sms_notification_campaigns(id) ON DELETE CASCADE,
+				stakeholder_id INTEGER NOT NULL REFERENCES sms_stakeholders(id) ON DELETE CASCADE,
+				node_id INTEGER REFERENCES sms_nodes(id) ON DELETE SET NULL,
+				required_by DATE,
+				status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','sent','read','acknowledged','failed','exempt')),
+				channel TEXT NOT NULL DEFAULT '',
+				sent_at TIMESTAMPTZ, acknowledged_at TIMESTAMPTZ,
+				communication_id INTEGER REFERENCES sms_communications(id) ON DELETE SET NULL,
+				notes TEXT NOT NULL DEFAULT '',
+				created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+				updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+				UNIQUE (campaign_id, stakeholder_id)
+			);
+			CREATE INDEX IF NOT EXISTS idx_sms_notifications_campaign ON sms_notifications(campaign_id, status);
+
+			ALTER TABLE sms_communications DROP CONSTRAINT IF EXISTS sms_communications_channel_check;
+			ALTER TABLE sms_communications ADD CONSTRAINT sms_communications_channel_check CHECK (channel IN ('email','phone','meeting','in_person','slack','teams','letter','sms_text','other'));
+			ALTER TABLE sms_engagement_plans DROP CONSTRAINT IF EXISTS sms_engagement_plans_channel_check;
+			ALTER TABLE sms_engagement_plans ADD CONSTRAINT sms_engagement_plans_channel_check CHECK (channel IN ('email','phone','meeting','in_person','slack','teams','letter','sms_text','other'));
+		`,
+	},
+	{
+		Version: "20261128_sms_raci_work_packages",
+		Name:    "Add SMS RACI matrices and work packages (contractor/site impact register)",
+		CheckSQLite: `
+			SELECT CASE WHEN COUNT(*) = 4 THEN 1 ELSE 0 END
+			FROM sqlite_master
+			WHERE type = 'table' AND name IN (
+				'sms_racis',
+				'sms_raci_assignments',
+				'sms_work_packages',
+				'sms_work_package_nodes'
+			)
+		`,
+		CheckPostgres: `
+			SELECT CASE WHEN COUNT(*) = 4 THEN 1 ELSE 0 END
+			FROM information_schema.tables
+			WHERE table_schema = current_schema() AND table_name IN (
+				'sms_racis',
+				'sms_raci_assignments',
+				'sms_work_packages',
+				'sms_work_package_nodes'
+			)
+		`,
+		SQLite: `
+			CREATE TABLE IF NOT EXISTS sms_racis (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				entity_type TEXT NOT NULL CHECK (entity_type IN ('portfolio','programme','project')),
+				entity_id INTEGER NOT NULL,
+				version INTEGER NOT NULL DEFAULT 1,
+				status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft','preliminary','under_discussion','agreed')),
+				created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				agreed_at DATETIME, last_reviewed_at DATE,
+				created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+				UNIQUE (entity_type, entity_id, version)
+			);
+			CREATE TABLE IF NOT EXISTS sms_raci_assignments (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				raci_id INTEGER NOT NULL REFERENCES sms_racis(id) ON DELETE CASCADE,
+				activity_code TEXT NOT NULL,
+				description TEXT NOT NULL DEFAULT '',
+				stakeholder_id INTEGER REFERENCES sms_stakeholders(id) ON DELETE SET NULL,
+				user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				value TEXT NOT NULL CHECK (value IN ('r','a','c','i'))
+			);
+			CREATE INDEX IF NOT EXISTS idx_sms_raci_assign ON sms_raci_assignments(raci_id, activity_code);
+			CREATE TABLE IF NOT EXISTS sms_work_packages (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				title TEXT NOT NULL, description TEXT NOT NULL DEFAULT '',
+				entity_type TEXT, entity_id INTEGER,
+				contractor_stakeholder_id INTEGER REFERENCES sms_stakeholders(id) ON DELETE SET NULL,
+				status TEXT NOT NULL DEFAULT 'planned' CHECK (status IN ('planned','in_progress','completed','cancelled')),
+				planned_start DATE, planned_end DATE, actual_start DATETIME, completed_at DATETIME,
+				notes TEXT NOT NULL DEFAULT '',
+				created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+				updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE TABLE IF NOT EXISTS sms_work_package_nodes (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				work_package_id INTEGER NOT NULL REFERENCES sms_work_packages(id) ON DELETE CASCADE,
+				node_id INTEGER NOT NULL REFERENCES sms_nodes(id) ON DELETE CASCADE,
+				impact_notes TEXT NOT NULL DEFAULT '',
+				UNIQUE (work_package_id, node_id)
+			);
+		`,
+		Postgres: `
+			CREATE TABLE IF NOT EXISTS sms_racis (
+				id SERIAL PRIMARY KEY,
+				entity_type TEXT NOT NULL CHECK (entity_type IN ('portfolio','programme','project')),
+				entity_id INTEGER NOT NULL,
+				version INTEGER NOT NULL DEFAULT 1,
+				status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft','preliminary','under_discussion','agreed')),
+				created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				agreed_at TIMESTAMPTZ, last_reviewed_at DATE,
+				created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+				UNIQUE (entity_type, entity_id, version)
+			);
+			CREATE TABLE IF NOT EXISTS sms_raci_assignments (
+				id SERIAL PRIMARY KEY,
+				raci_id INTEGER NOT NULL REFERENCES sms_racis(id) ON DELETE CASCADE,
+				activity_code TEXT NOT NULL,
+				description TEXT NOT NULL DEFAULT '',
+				stakeholder_id INTEGER REFERENCES sms_stakeholders(id) ON DELETE SET NULL,
+				user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				value TEXT NOT NULL CHECK (value IN ('r','a','c','i'))
+			);
+			CREATE INDEX IF NOT EXISTS idx_sms_raci_assign ON sms_raci_assignments(raci_id, activity_code);
+			CREATE TABLE IF NOT EXISTS sms_work_packages (
+				id SERIAL PRIMARY KEY,
+				title TEXT NOT NULL, description TEXT NOT NULL DEFAULT '',
+				entity_type TEXT, entity_id INTEGER,
+				contractor_stakeholder_id INTEGER REFERENCES sms_stakeholders(id) ON DELETE SET NULL,
+				status TEXT NOT NULL DEFAULT 'planned' CHECK (status IN ('planned','in_progress','completed','cancelled')),
+				planned_start DATE, planned_end DATE, actual_start TIMESTAMPTZ, completed_at TIMESTAMPTZ,
+				notes TEXT NOT NULL DEFAULT '',
+				created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+				updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE TABLE IF NOT EXISTS sms_work_package_nodes (
+				id SERIAL PRIMARY KEY,
+				work_package_id INTEGER NOT NULL REFERENCES sms_work_packages(id) ON DELETE CASCADE,
+				node_id INTEGER NOT NULL REFERENCES sms_nodes(id) ON DELETE CASCADE,
+				impact_notes TEXT NOT NULL DEFAULT '',
+				UNIQUE (work_package_id, node_id)
+			);
+		`,
+	},
+}
+
+// checkP3MDecisionARBSQLite reports whether the P3M decision/ARB migration's
+// effect is fully present: p3m_raid_items carries item_id, its item_type CHECK
+// admits 'decision', and p3m_architecture_reviews exists. Fresh installs get
+// all three from the schema files, so this stamps them as applied.
+func checkP3MDecisionARBSQLite(db Database) (bool, error) {
+	var count int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM pragma_table_info('p3m_raid_items') WHERE name = 'item_id'`).Scan(&count); err != nil || count == 0 {
+		return false, err
+	}
+	var tableSQL string
+	if err := db.QueryRow(`SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'p3m_raid_items'`).Scan(&tableSQL); err != nil {
+		return false, err
+	}
+	if !strings.Contains(tableSQL, "'decision'") {
+		return false, nil
+	}
+	var tables int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'p3m_architecture_reviews'`).Scan(&tables); err != nil || tables == 0 {
+		return false, err
+	}
+	return true, nil
+}
+
+// checkP3MDecisionARBPostgres is the PostgreSQL counterpart of
+// checkP3MDecisionARBSQLite.
+func checkP3MDecisionARBPostgres(db Database) (bool, error) {
+	var count int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'p3m_raid_items' AND column_name = 'item_id'`).Scan(&count); err != nil || count == 0 {
+		return false, err
+	}
+	var def string
+	if err := db.QueryRow(`SELECT pg_get_constraintdef(c.oid) FROM pg_constraint c JOIN pg_class t ON t.oid = c.conrelid WHERE t.relname = 'p3m_raid_items' AND c.contype = 'c' AND pg_get_constraintdef(c.oid) LIKE '%item_type%'`).Scan(&def); err != nil {
+		return false, err
+	}
+	if !strings.Contains(def, "'decision'") {
+		return false, nil
+	}
+	var tables int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = current_schema() AND table_name = 'p3m_architecture_reviews'`).Scan(&tables); err != nil || tables == 0 {
+		return false, err
+	}
+	return true, nil
 }
 
 // isNumericJSONKey reports whether a custom-field value key is a numeric field
@@ -4392,6 +6138,226 @@ func applySQLiteEmailReplyOutboxPerRecipient(db Database) (retErr error) {
 	return nil
 }
 
+// applySQLiteSMSPlanChannelCheck rebuilds sms_engagement_plans with the
+// channel CHECK constraint that mirrors sms_communications. SQLite cannot add
+// a CHECK to an existing column in place, so rows are copied into a new table
+// and swapped. Legacy rows whose channel is outside the enum (possible before
+// backend validation existed) are normalized to the 'email' default rather
+// than aborting startup.
+func applySQLiteSMSPlanChannelCheck(db Database) (retErr error) {
+	sqliteDB, ok := db.(*SQLiteDB)
+	if !ok {
+		return fmt.Errorf("expected SQLite database, got %T", db)
+	}
+
+	ctx := context.Background()
+	conn, err := sqliteDB.writeConn.Conn(ctx)
+	if err != nil {
+		return fmt.Errorf("acquire SQLite write connection: %w", err)
+	}
+	defer func() { _ = conn.Close() }()
+
+	var foreignKeysEnabled bool
+	if err := conn.QueryRowContext(ctx, "PRAGMA foreign_keys").Scan(&foreignKeysEnabled); err != nil {
+		return fmt.Errorf("read foreign_keys pragma: %w", err)
+	}
+	if foreignKeysEnabled {
+		if _, err := conn.ExecContext(ctx, "PRAGMA foreign_keys=OFF"); err != nil {
+			return fmt.Errorf("disable foreign keys: %w", err)
+		}
+		defer func() {
+			if _, err := conn.ExecContext(ctx, "PRAGMA foreign_keys=ON"); retErr == nil && err != nil {
+				retErr = fmt.Errorf("restore foreign keys: %w", err)
+			}
+		}()
+	}
+
+	tx, err := conn.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin sms_engagement_plans rebuild: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	statements := []string{
+		`CREATE TABLE sms_engagement_plans_migration (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			stakeholder_id INTEGER NOT NULL,
+			strategy TEXT NOT NULL DEFAULT '',
+			frequency TEXT NOT NULL DEFAULT 'monthly' CHECK (frequency IN ('daily','weekly','biweekly','monthly','quarterly','annual','as_needed')),
+			channel TEXT NOT NULL DEFAULT 'email' CHECK (channel IN ('email','phone','meeting','in_person','slack','teams','other')),
+			status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('draft','active','paused','completed')),
+			start_date DATETIME,
+			end_date DATETIME,
+			notes TEXT NOT NULL DEFAULT '',
+			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			FOREIGN KEY (stakeholder_id) REFERENCES sms_stakeholders(id) ON DELETE CASCADE
+		)`,
+		`INSERT INTO sms_engagement_plans_migration (
+			id, stakeholder_id, strategy, frequency, channel, status, start_date, end_date, notes, created_at, updated_at
+		)
+		SELECT id, stakeholder_id, strategy, frequency,
+			CASE WHEN channel IN ('email','phone','meeting','in_person','slack','teams','other') THEN channel ELSE 'email' END,
+			status, start_date, end_date, notes, created_at, updated_at
+		FROM sms_engagement_plans`,
+		`DROP TABLE sms_engagement_plans`,
+		`ALTER TABLE sms_engagement_plans_migration RENAME TO sms_engagement_plans`,
+		`CREATE INDEX idx_sms_engagement_plans_stakeholder ON sms_engagement_plans(stakeholder_id)`,
+	}
+	for _, statement := range statements {
+		if _, err := tx.ExecContext(ctx, statement); err != nil {
+			return fmt.Errorf("rebuild sms_engagement_plans: %w", err)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit sms_engagement_plans rebuild: %w", err)
+	}
+	return nil
+}
+
+// applySQLiteSMSCampaignChannelWiden creates the notification-campaign tables
+// and rebuilds sms_communications / sms_engagement_plans with the widened
+// channel CHECK (letter, sms_text). SQLite cannot add a value to an existing
+// column's CHECK in place, so rows are copied into new tables and swapped.
+func applySQLiteSMSCampaignChannelWiden(db Database) (retErr error) {
+	sqliteDB, ok := db.(*SQLiteDB)
+	if !ok {
+		return fmt.Errorf("expected SQLite database, got %T", db)
+	}
+
+	ctx := context.Background()
+	conn, err := sqliteDB.writeConn.Conn(ctx)
+	if err != nil {
+		return fmt.Errorf("acquire SQLite write connection: %w", err)
+	}
+	defer func() { _ = conn.Close() }()
+
+	var foreignKeysEnabled bool
+	if err := conn.QueryRowContext(ctx, "PRAGMA foreign_keys").Scan(&foreignKeysEnabled); err != nil {
+		return fmt.Errorf("read foreign_keys pragma: %w", err)
+	}
+	if foreignKeysEnabled {
+		if _, err := conn.ExecContext(ctx, "PRAGMA foreign_keys=OFF"); err != nil {
+			return fmt.Errorf("disable foreign keys: %w", err)
+		}
+		defer func() {
+			if _, err := conn.ExecContext(ctx, "PRAGMA foreign_keys=ON"); retErr == nil && err != nil {
+				retErr = fmt.Errorf("restore foreign keys: %w", err)
+			}
+		}()
+	}
+
+	tx, err := conn.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin sms campaign channel widen: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	statements := []string{
+		`CREATE TABLE IF NOT EXISTS sms_notification_campaigns (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			title TEXT NOT NULL,
+			description TEXT NOT NULL DEFAULT '',
+			entity_type TEXT, entity_id INTEGER,
+			channel TEXT NOT NULL DEFAULT 'email',
+			scheduled_at DATETIME,
+			due_by DATE,
+			status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft','scheduled','in_progress','completed','cancelled')),
+			created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+		)`,
+		`CREATE TABLE IF NOT EXISTS sms_campaign_targets (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			campaign_id INTEGER NOT NULL REFERENCES sms_notification_campaigns(id) ON DELETE CASCADE,
+			node_id INTEGER NOT NULL REFERENCES sms_nodes(id) ON DELETE CASCADE,
+			include_descendants BOOLEAN NOT NULL DEFAULT 0,
+			UNIQUE (campaign_id, node_id)
+		)`,
+		`CREATE TABLE IF NOT EXISTS sms_notifications (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			campaign_id INTEGER NOT NULL REFERENCES sms_notification_campaigns(id) ON DELETE CASCADE,
+			stakeholder_id INTEGER NOT NULL REFERENCES sms_stakeholders(id) ON DELETE CASCADE,
+			node_id INTEGER REFERENCES sms_nodes(id) ON DELETE SET NULL,
+			required_by DATE,
+			status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','sent','read','acknowledged','failed','exempt')),
+			channel TEXT NOT NULL DEFAULT '',
+			sent_at DATETIME, acknowledged_at DATETIME,
+			communication_id INTEGER REFERENCES sms_communications(id) ON DELETE SET NULL,
+			notes TEXT NOT NULL DEFAULT '',
+			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			UNIQUE (campaign_id, stakeholder_id)
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_sms_notifications_campaign ON sms_notifications(campaign_id, status)`,
+
+		// Rebuild sms_communications with the widened channel enum.
+		`CREATE TABLE sms_communications_migration (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			stakeholder_id INTEGER NOT NULL REFERENCES sms_stakeholders(id) ON DELETE CASCADE,
+			channel TEXT NOT NULL DEFAULT 'email' CHECK (channel IN ('email','phone','meeting','in_person','slack','teams','letter','sms_text','other')),
+			direction TEXT NOT NULL DEFAULT 'outbound' CHECK (direction IN ('outbound','inbound')),
+			subject TEXT NOT NULL DEFAULT '',
+			body TEXT NOT NULL DEFAULT '',
+			sentiment TEXT CHECK (sentiment IS NULL OR sentiment IN ('positive','neutral','negative')),
+			created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+		)`,
+		`INSERT INTO sms_communications_migration (
+			id, stakeholder_id, channel, direction, subject, body, sentiment, created_by, created_at
+		)
+		SELECT id, stakeholder_id,
+			CASE WHEN channel IN ('email','phone','meeting','in_person','slack','teams','letter','sms_text','other') THEN channel ELSE 'other' END,
+			direction, subject, body, sentiment, created_by, created_at
+		FROM sms_communications`,
+		`DROP TABLE sms_communications`,
+		`ALTER TABLE sms_communications_migration RENAME TO sms_communications`,
+		`CREATE INDEX idx_sms_communications_stakeholder ON sms_communications(stakeholder_id, created_at DESC)`,
+
+		// Rebuild sms_engagement_plans with the widened channel enum.
+		`CREATE TABLE sms_engagement_plans_migration (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			stakeholder_id INTEGER NOT NULL REFERENCES sms_stakeholders(id) ON DELETE CASCADE,
+			strategy TEXT NOT NULL DEFAULT '',
+			objective TEXT NOT NULL DEFAULT '',
+			approach TEXT CHECK (approach IS NULL OR approach IN ('inform','consult','involve','collaborate','partner')),
+			key_messages TEXT NOT NULL DEFAULT '',
+			success_measures TEXT NOT NULL DEFAULT '',
+			frequency TEXT NOT NULL DEFAULT 'monthly' CHECK (frequency IN ('daily','weekly','biweekly','monthly','quarterly','annual','as_needed')),
+			channel TEXT NOT NULL DEFAULT 'email' CHECK (channel IN ('email','phone','meeting','in_person','slack','teams','letter','sms_text','other')),
+			status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('draft','active','paused','completed')),
+			entity_type TEXT,
+			entity_id INTEGER,
+			start_date DATETIME,
+			end_date DATETIME,
+			notes TEXT NOT NULL DEFAULT '',
+			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+		)`,
+		`INSERT INTO sms_engagement_plans_migration (
+			id, stakeholder_id, strategy, objective, approach, key_messages, success_measures, frequency, channel, status, entity_type, entity_id, start_date, end_date, notes, created_at, updated_at
+		)
+		SELECT id, stakeholder_id, strategy, objective, approach, key_messages, success_measures, frequency,
+			CASE WHEN channel IN ('email','phone','meeting','in_person','slack','teams','letter','sms_text','other') THEN channel ELSE 'email' END,
+			status, entity_type, entity_id, start_date, end_date, notes, created_at, updated_at
+		FROM sms_engagement_plans`,
+		`DROP TABLE sms_engagement_plans`,
+		`ALTER TABLE sms_engagement_plans_migration RENAME TO sms_engagement_plans`,
+		`CREATE INDEX idx_sms_engagement_plans_stakeholder ON sms_engagement_plans(stakeholder_id)`,
+	}
+	for _, statement := range statements {
+		if _, err := tx.ExecContext(ctx, statement); err != nil {
+			return fmt.Errorf("sms campaign channel widen: %w", err)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit sms campaign channel widen: %w", err)
+	}
+	return nil
+}
+
 // applySQLiteEmailReplyOutboxConfirmation rebuilds email_reply_outbox with a
 // nullable comment_id, a kind discriminator, and the partial unique indexes
 // that keep replies and intake receipts idempotent (WI-1769). SQLite cannot
@@ -5355,6 +7321,523 @@ func applySQLiteQueuesCollectionScope(db Database) (retErr error) {
 
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("commit queues scope rebuild: %w", err)
+	}
+	return nil
+}
+
+// checkSMSRegisterV2SQLite reports whether the SMS register v2 migration's
+// effect is fully present: sms_stakeholders carries external_id and all
+// relationship-entity tables exist. Fresh installs get everything from the
+// schema files, so this stamps them as applied.
+func checkSMSRegisterV2SQLite(db Database) (bool, error) {
+	var count int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM pragma_table_info('sms_stakeholders') WHERE name = 'external_id'`).Scan(&count); err != nil || count == 0 {
+		return false, err
+	}
+	return sqliteAllTablesCheck(
+		"sms_engagement_plan_stakeholders", "sms_commitments", "sms_grievances", "sms_decisions",
+		"sms_stakeholder_groups", "sms_stakeholder_group_members", "sms_stakeholder_links",
+		"sms_ownership_transfers", "sms_pilot_baselines",
+	)(db)
+}
+
+// checkSMSRegisterV2Postgres is the Postgres twin of checkSMSRegisterV2SQLite.
+func checkSMSRegisterV2Postgres(db Database) (bool, error) {
+	var count int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM information_schema.columns WHERE table_name = 'sms_stakeholders' AND column_name = 'external_id'`).Scan(&count); err != nil || count == 0 {
+		return false, err
+	}
+	return pgAllTablesCheck(
+		"sms_engagement_plan_stakeholders", "sms_commitments", "sms_grievances", "sms_decisions",
+		"sms_stakeholder_groups", "sms_stakeholder_group_members", "sms_stakeholder_links",
+		"sms_ownership_transfers", "sms_pilot_baselines",
+	)(db)
+}
+
+// applySQLiteSMSRegisterV2 rebuilds sms_stakeholders with the register v2
+// columns (SQLite cannot add a CHECK to an existing column in place), maps
+// legacy relationship_status values onto the five-point scale, upgrades
+// engagement plans and issues, creates the relationship-entity tables, and
+// seeds the permission split. IDs are preserved so every referencing row stays
+// valid; smsRegisterV2Statements returns the DDL/DML statements applied by
+// applySQLiteSMSRegisterV2, in order.
+func smsRegisterV2Statements() []string {
+	return []string{
+		`CREATE TABLE sms_stakeholders_migration (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			external_id TEXT UNIQUE,
+			name TEXT NOT NULL,
+			title TEXT NOT NULL DEFAULT '',
+			organization TEXT NOT NULL DEFAULT '',
+			email TEXT NOT NULL DEFAULT '',
+			phone TEXT NOT NULL DEFAULT '',
+			stakeholder_type TEXT CHECK (stakeholder_type IS NULL OR stakeholder_type IN ('mana_whenua','elected_member','government_agency','regional_authority','regulatory_partner','infrastructure_partner','business','developer','business_association','strategic_supplier','utility_provider','community_organisation','industry_group','advocacy_group','educational_institution','major_landowner','project_stakeholder','other')),
+			category TEXT NOT NULL DEFAULT '',
+			tier TEXT NOT NULL DEFAULT 'tier_3' CHECK (tier IN ('tier_1','tier_2','tier_3','tier_4')),
+			business_unit TEXT NOT NULL DEFAULT '',
+			role_classification TEXT NOT NULL DEFAULT 'support' CHECK (role_classification IN ('key','decision_maker','support','influencer','observer')),
+			influence_level INTEGER NOT NULL DEFAULT 3 CHECK (influence_level BETWEEN 1 AND 5),
+			interest_level INTEGER NOT NULL DEFAULT 3 CHECK (interest_level BETWEEN 1 AND 5),
+			interests TEXT NOT NULL DEFAULT '',
+			engagement_status TEXT NOT NULL DEFAULT 'passive' CHECK (engagement_status IN ('passive','engaged','active','disengaged')),
+			lifecycle_stage TEXT NOT NULL DEFAULT 'onboarding' CHECK (lifecycle_stage IN ('onboarding','active','retained','exited')),
+			relationship_status TEXT NOT NULL DEFAULT 'neutral' CHECK (relationship_status IN ('advocate','supportive','neutral','concerned','opposed')),
+			trust_level TEXT CHECK (trust_level IS NULL OR trust_level IN ('very_high','high','moderate','low','critical')),
+			risk_rating TEXT CHECK (risk_rating IS NULL OR risk_rating IN ('low','medium','high','critical')),
+			communication_preferences TEXT NOT NULL DEFAULT '',
+			owner_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+			backup_owner_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+			executive_sponsor_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+			last_engagement_at DATETIME,
+			next_engagement_at DATETIME,
+			info_classification TEXT NOT NULL DEFAULT 'internal' CHECK (info_classification IN ('public','internal','confidential','restricted')),
+			consent_status TEXT NOT NULL DEFAULT 'not_required' CHECK (consent_status IN ('not_required','granted','declined','withdrawn','unknown')),
+			retention_category TEXT NOT NULL DEFAULT '',
+			last_reviewed_at DATETIME,
+			review_cadence TEXT NOT NULL DEFAULT 'quarterly' CHECK (review_cadence IN ('monthly','quarterly','semi_annual','annual')),
+			location_lat REAL,
+			location_lon REAL,
+			location_text TEXT NOT NULL DEFAULT '',
+			custom_fields TEXT NOT NULL DEFAULT '{}',
+			notes TEXT NOT NULL DEFAULT '',
+			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+		)`,
+		`INSERT INTO sms_stakeholders_migration (
+			id, name, title, organization, email, phone, role_classification, influence_level, interest_level, interests,
+			engagement_status, lifecycle_stage, relationship_status, communication_preferences, owner_user_id, custom_fields, notes, created_at, updated_at
+		)
+		SELECT id, name, title, organization, email, phone, role_classification, influence_level, interest_level, interests,
+			engagement_status, lifecycle_stage,
+			CASE relationship_status WHEN 'positive' THEN 'supportive' WHEN 'tense' THEN 'concerned' ELSE relationship_status END,
+			communication_preferences, owner_user_id, custom_fields, notes, created_at, updated_at
+		FROM sms_stakeholders`,
+		`DROP TABLE sms_stakeholders`,
+		`ALTER TABLE sms_stakeholders_migration RENAME TO sms_stakeholders`,
+		`CREATE INDEX IF NOT EXISTS idx_sms_stakeholders_classification ON sms_stakeholders(role_classification)`,
+		`CREATE INDEX IF NOT EXISTS idx_sms_stakeholders_owner ON sms_stakeholders(owner_user_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_sms_stakeholders_tier ON sms_stakeholders(tier)`,
+		// Engagement plan upgrade (Std §14).
+		`ALTER TABLE sms_engagement_plans ADD COLUMN objective TEXT NOT NULL DEFAULT ''`,
+		`ALTER TABLE sms_engagement_plans ADD COLUMN approach TEXT CHECK (approach IS NULL OR approach IN ('inform','consult','involve','collaborate','partner'))`,
+		`ALTER TABLE sms_engagement_plans ADD COLUMN key_messages TEXT NOT NULL DEFAULT ''`,
+		`ALTER TABLE sms_engagement_plans ADD COLUMN success_measures TEXT NOT NULL DEFAULT ''`,
+		`ALTER TABLE sms_engagement_plans ADD COLUMN entity_type TEXT`,
+		`ALTER TABLE sms_engagement_plans ADD COLUMN entity_id INTEGER`,
+		`CREATE TABLE IF NOT EXISTS sms_engagement_plan_stakeholders (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			plan_id INTEGER NOT NULL REFERENCES sms_engagement_plans(id) ON DELETE CASCADE,
+			stakeholder_id INTEGER NOT NULL REFERENCES sms_stakeholders(id) ON DELETE CASCADE,
+			UNIQUE (plan_id, stakeholder_id)
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_sms_plan_stakeholders_stakeholder ON sms_engagement_plan_stakeholders(stakeholder_id)`,
+		// Migrate existing per-stakeholder plans into single-member plans.
+		// (INSERT OR IGNORE: SQLite's parser rejects ON CONFLICT after a
+		// SELECT ... FROM source.)
+		`INSERT OR IGNORE INTO sms_engagement_plan_stakeholders (plan_id, stakeholder_id) SELECT id, stakeholder_id FROM sms_engagement_plans`,
+		// Issue/risk category taxonomy (Std §15).
+		`ALTER TABLE sms_issues ADD COLUMN category TEXT NOT NULL DEFAULT 'other' CHECK (category IN ('relationship','reputation','delivery','communication','dependency','knowledge_loss','commitment','other'))`,
+		`ALTER TABLE sms_issues ADD COLUMN escalation_path TEXT NOT NULL DEFAULT ''`,
+		// Relationship entities.
+		`CREATE TABLE IF NOT EXISTS sms_commitments (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			stakeholder_id INTEGER NOT NULL REFERENCES sms_stakeholders(id) ON DELETE CASCADE,
+			direction TEXT NOT NULL DEFAULT 'from_them' CHECK (direction IN ('from_us','from_them','mutual')),
+			title TEXT NOT NULL,
+			description TEXT NOT NULL DEFAULT '',
+			owner_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+			due_date DATETIME,
+			status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open','in_progress','at_risk','completed','cancelled')),
+			escalated BOOLEAN NOT NULL DEFAULT false,
+			escalation_level INTEGER NOT NULL DEFAULT 0,
+			source_communication_id INTEGER REFERENCES sms_communications(id) ON DELETE SET NULL,
+			linked_issue_id INTEGER REFERENCES sms_issues(id) ON DELETE SET NULL,
+			notes TEXT NOT NULL DEFAULT '',
+			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_sms_commitments_stakeholder ON sms_commitments(stakeholder_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_sms_commitments_due ON sms_commitments(due_date)`,
+		`CREATE TABLE IF NOT EXISTS sms_grievances (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			stakeholder_id INTEGER NOT NULL REFERENCES sms_stakeholders(id) ON DELETE CASCADE,
+			title TEXT NOT NULL,
+			description TEXT NOT NULL DEFAULT '',
+			category TEXT NOT NULL DEFAULT '',
+			severity TEXT NOT NULL DEFAULT 'medium' CHECK (severity IN ('low','medium','high','critical')),
+			status TEXT NOT NULL DEFAULT 'received' CHECK (status IN ('received','acknowledged','investigating','responded','closed')),
+			escalated BOOLEAN NOT NULL DEFAULT false,
+			escalation_level INTEGER NOT NULL DEFAULT 0,
+			acknowledged_at DATETIME,
+			response_due_at DATETIME,
+			response TEXT NOT NULL DEFAULT '',
+			resolution TEXT NOT NULL DEFAULT '',
+			created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_sms_grievances_stakeholder ON sms_grievances(stakeholder_id)`,
+		`CREATE TABLE IF NOT EXISTS sms_decisions (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			stakeholder_id INTEGER NOT NULL REFERENCES sms_stakeholders(id) ON DELETE CASCADE,
+			title TEXT NOT NULL,
+			decision TEXT NOT NULL DEFAULT '',
+			context TEXT NOT NULL DEFAULT '',
+			decided_at DATETIME,
+			decided_by_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+			entity_type TEXT,
+			entity_id INTEGER,
+			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_sms_decisions_stakeholder ON sms_decisions(stakeholder_id)`,
+		`CREATE TABLE IF NOT EXISTS sms_stakeholder_groups (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			name TEXT NOT NULL UNIQUE,
+			description TEXT NOT NULL DEFAULT '',
+			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+		)`,
+		`CREATE TABLE IF NOT EXISTS sms_stakeholder_group_members (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			group_id INTEGER NOT NULL REFERENCES sms_stakeholder_groups(id) ON DELETE CASCADE,
+			stakeholder_id INTEGER NOT NULL REFERENCES sms_stakeholders(id) ON DELETE CASCADE,
+			UNIQUE (group_id, stakeholder_id)
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_sms_group_members_stakeholder ON sms_stakeholder_group_members(stakeholder_id)`,
+		`CREATE TABLE IF NOT EXISTS sms_stakeholder_links (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			source_id INTEGER NOT NULL REFERENCES sms_stakeholders(id) ON DELETE CASCADE,
+			target_id INTEGER NOT NULL REFERENCES sms_stakeholders(id) ON DELETE CASCADE,
+			relation_type TEXT NOT NULL DEFAULT '',
+			notes TEXT NOT NULL DEFAULT '',
+			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			UNIQUE (source_id, target_id)
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_sms_links_target ON sms_stakeholder_links(target_id)`,
+		`CREATE TABLE IF NOT EXISTS sms_ownership_transfers (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			stakeholder_id INTEGER NOT NULL REFERENCES sms_stakeholders(id) ON DELETE CASCADE,
+			from_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+			to_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+			reason TEXT NOT NULL DEFAULT '',
+			history_reviewed BOOLEAN NOT NULL DEFAULT false,
+			risks_reviewed BOOLEAN NOT NULL DEFAULT false,
+			commitments_reviewed BOOLEAN NOT NULL DEFAULT false,
+			notes TEXT NOT NULL DEFAULT '',
+			completed_at DATETIME,
+			created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_sms_transfers_stakeholder ON sms_ownership_transfers(stakeholder_id)`,
+		`CREATE TABLE IF NOT EXISTS sms_pilot_baselines (
+			metric_key TEXT PRIMARY KEY,
+			baseline_value REAL,
+			target_value REAL,
+			set_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+		)`,
+		// Permission split: sms.view stays read; writes move to sms.manage.
+		`INSERT OR IGNORE INTO permissions (permission_key, permission_name, description, scope) VALUES ('sms.manage', 'Manage SMS Module', 'Can create and modify Stakeholder Management System records', 'global')`,
+		`INSERT OR IGNORE INTO permissions (permission_key, permission_name, description, scope) VALUES ('sms.sensitive.view', 'View Sensitive SMS Data', 'Can view restricted stakeholder fields and communications in the SMS module', 'global')`,
+	}
+}
+
+// applySQLiteSMSRegisterV2 rebuilds sms_stakeholders with the register v2
+// columns (SQLite cannot add a CHECK to an existing column in place), maps
+// legacy relationship_status values onto the five-point scale, upgrades
+// engagement plans and issues, creates the relationship-entity tables, and
+// seeds the permission split. IDs are preserved so every referencing row stays
+// valid; foreign_keys is disabled for the rebuild window only.
+func applySQLiteSMSRegisterV2(db Database) (retErr error) {
+	sqliteDB, ok := db.(*SQLiteDB)
+	if !ok {
+		return fmt.Errorf("expected SQLite database, got %T", db)
+	}
+
+	ctx := context.Background()
+	conn, err := sqliteDB.writeConn.Conn(ctx)
+	if err != nil {
+		return fmt.Errorf("acquire SQLite write connection: %w", err)
+	}
+	defer func() { _ = conn.Close() }()
+
+	var foreignKeysEnabled bool
+	if err := conn.QueryRowContext(ctx, "PRAGMA foreign_keys").Scan(&foreignKeysEnabled); err != nil {
+		return fmt.Errorf("read foreign_keys pragma: %w", err)
+	}
+	if foreignKeysEnabled {
+		if _, err := conn.ExecContext(ctx, "PRAGMA foreign_keys=OFF"); err != nil {
+			return fmt.Errorf("disable foreign keys: %w", err)
+		}
+		defer func() {
+			if _, err := conn.ExecContext(ctx, "PRAGMA foreign_keys=ON"); retErr == nil && err != nil {
+				retErr = fmt.Errorf("restore foreign keys: %w", err)
+			}
+		}()
+	}
+
+	tx, err := conn.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin sms_stakeholders rebuild: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	statements := smsRegisterV2Statements()
+	for _, statement := range statements {
+		if _, err := tx.ExecContext(ctx, statement); err != nil {
+			return fmt.Errorf("apply sms register v2: %w", err)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit sms_stakeholders rebuild: %w", err)
+	}
+	return nil
+}
+
+// srmBusinessIDStatements rebuilds srm_suppliers so the legacy nzbn column
+// (carrying a 9-digit CHECK) becomes a vendor-neutral business_id with no
+// format constraint. IDs are preserved so every referencing row (contacts,
+// contracts, metrics, disputes, ...) stays valid.
+func srmBusinessIDStatements() []string {
+	return []string{
+		`CREATE TABLE srm_suppliers_migration (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			company_name TEXT NOT NULL,
+			business_id TEXT UNIQUE,
+			tax_id_number TEXT UNIQUE,
+			website TEXT DEFAULT '',
+			tier TEXT NOT NULL DEFAULT 'tier_3' CHECK (tier IN ('tier_1','tier_2','tier_3','tier_4')),
+			relationship_state TEXT NOT NULL DEFAULT 'registered' CHECK (relationship_state IN ('registered','segmented','planning_ready','implementation_ready','kicked_off','jbp_formalised','monitoring_active','closed')),
+			is_active BOOLEAN NOT NULL DEFAULT true,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		)`,
+		`INSERT INTO srm_suppliers_migration (id, company_name, business_id, tax_id_number, website, tier, relationship_state, is_active, created_at, updated_at)
+			SELECT id, company_name, nzbn, tax_id_number, website, tier, relationship_state, is_active, created_at, updated_at FROM srm_suppliers`,
+		`DROP TABLE srm_suppliers`,
+		`ALTER TABLE srm_suppliers_migration RENAME TO srm_suppliers`,
+	}
+}
+
+// applySQLiteSRMBusinessID renames srm_suppliers.nzbn to business_id for
+// pre-existing SQLite databases by rebuilding the table (a plain RENAME
+// COLUMN would keep the legacy 9-digit CHECK constraint). foreign_keys is
+// disabled for the rebuild window only.
+func applySQLiteSRMBusinessID(db Database) (retErr error) {
+	sqliteDB, ok := db.(*SQLiteDB)
+	if !ok {
+		return fmt.Errorf("expected SQLite database, got %T", db)
+	}
+
+	ctx := context.Background()
+	conn, err := sqliteDB.writeConn.Conn(ctx)
+	if err != nil {
+		return fmt.Errorf("acquire SQLite write connection: %w", err)
+	}
+	defer func() { _ = conn.Close() }()
+
+	var foreignKeysEnabled bool
+	if err := conn.QueryRowContext(ctx, "PRAGMA foreign_keys").Scan(&foreignKeysEnabled); err != nil {
+		return fmt.Errorf("read foreign_keys pragma: %w", err)
+	}
+	if foreignKeysEnabled {
+		if _, err := conn.ExecContext(ctx, "PRAGMA foreign_keys=OFF"); err != nil {
+			return fmt.Errorf("disable foreign keys: %w", err)
+		}
+		defer func() {
+			if _, err := conn.ExecContext(ctx, "PRAGMA foreign_keys=ON"); retErr == nil && err != nil {
+				retErr = fmt.Errorf("restore foreign keys: %w", err)
+			}
+		}()
+	}
+
+	tx, err := conn.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin srm_suppliers rebuild: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	for _, statement := range srmBusinessIDStatements() {
+		if _, err := tx.ExecContext(ctx, statement); err != nil {
+			return fmt.Errorf("apply srm business_id rename: %w", err)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit srm_suppliers rebuild: %w", err)
+	}
+	return nil
+}
+
+// p3mLifecycleStageRemap rewrites the legacy four-stage values into the
+// proportional lifecycle keys (BRD §5.2).
+const p3mLegacyStageCase = `CASE current_stage WHEN 'initiation' THEN 'front_door' WHEN 'planning' THEN 'proposal' WHEN 'execution' THEN 'implement_deliver' WHEN 'closure' THEN 'close' ELSE current_stage END`
+
+// p3mConfigurableLifecycleStatements rebuilds p3m_projects and
+// p3m_stage_gate_reviews without the legacy stage CHECK constraints, adds the
+// work_type/external_ref/template_id columns, creates the lifecycle config
+// tables, and seeds the default stages and gate templates. Runs with
+// foreign_keys disabled (toggled by applySQLiteP3MConfigurableLifecycle).
+func p3mConfigurableLifecycleStatements() []string {
+	return []string{
+		`CREATE TABLE p3m_projects_new (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			portfolio_id INTEGER REFERENCES p3m_portfolios(id) ON DELETE CASCADE,
+			programme_id INTEGER REFERENCES p3m_programmes(id) ON DELETE SET NULL,
+			title TEXT NOT NULL,
+			description TEXT DEFAULT '',
+			manager_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+			time_project_id INTEGER REFERENCES time_projects(id) ON DELETE SET NULL,
+			work_type TEXT,
+			external_ref TEXT UNIQUE,
+			current_stage TEXT NOT NULL DEFAULT 'front_door',
+			budget_approved REAL NOT NULL DEFAULT 0,
+			budget_actual REAL NOT NULL DEFAULT 0,
+			progress_percent INTEGER NOT NULL DEFAULT 0 CHECK (progress_percent BETWEEN 0 AND 100),
+			start_date DATE,
+			target_completion_date DATE,
+			rag_status TEXT NOT NULL DEFAULT 'green' CHECK (rag_status IN ('red', 'amber', 'green')),
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		)`,
+		`INSERT INTO p3m_projects_new (id, portfolio_id, programme_id, title, description, manager_id, time_project_id, current_stage, budget_approved, budget_actual, progress_percent, start_date, target_completion_date, rag_status, created_at, updated_at)
+			SELECT id, portfolio_id, programme_id, title, description, manager_id, time_project_id, current_stage, budget_approved, budget_actual, progress_percent, start_date, target_completion_date, rag_status, created_at, updated_at FROM p3m_projects`,
+		`DROP TABLE p3m_projects`,
+		`ALTER TABLE p3m_projects_new RENAME TO p3m_projects`,
+		`CREATE INDEX IF NOT EXISTS idx_p3m_projects_portfolio ON p3m_projects(portfolio_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_p3m_projects_programme ON p3m_projects(programme_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_p3m_projects_time_project_id ON p3m_projects(time_project_id)`,
+		"UPDATE p3m_projects SET current_stage = " + p3mLegacyStageCase,
+		`UPDATE p3m_stage_gate_reviews SET from_stage = CASE from_stage WHEN 'initiation' THEN 'front_door' WHEN 'planning' THEN 'proposal' WHEN 'execution' THEN 'implement_deliver' WHEN 'closure' THEN 'close' ELSE from_stage END`,
+		`UPDATE p3m_stage_gate_reviews SET to_stage = CASE to_stage WHEN 'initiation' THEN 'front_door' WHEN 'planning' THEN 'proposal' WHEN 'execution' THEN 'implement_deliver' WHEN 'closure' THEN 'close' ELSE to_stage END`,
+		`CREATE TABLE IF NOT EXISTS p3m_lifecycle_stages (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			stage_key TEXT NOT NULL UNIQUE,
+			name TEXT NOT NULL,
+			description TEXT DEFAULT '',
+			sort_order INTEGER NOT NULL UNIQUE,
+			is_entry INTEGER NOT NULL DEFAULT 0,
+			is_exit INTEGER NOT NULL DEFAULT 0,
+			gate_required INTEGER NOT NULL DEFAULT 1,
+			skippable INTEGER NOT NULL DEFAULT 1,
+			enabled INTEGER NOT NULL DEFAULT 1,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		)`,
+		`CREATE TABLE IF NOT EXISTS p3m_stage_gate_templates (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			name TEXT NOT NULL,
+			from_stage_key TEXT,
+			to_stage_key TEXT NOT NULL REFERENCES p3m_lifecycle_stages(stage_key) ON DELETE RESTRICT,
+			mandatory INTEGER NOT NULL DEFAULT 1,
+			work_type TEXT,
+			required_artifacts TEXT DEFAULT '[]',
+			description TEXT DEFAULT '',
+			enabled INTEGER NOT NULL DEFAULT 1,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_p3m_gate_templates_to ON p3m_stage_gate_templates(to_stage_key, enabled)`,
+		`CREATE TABLE p3m_stage_gate_reviews_new (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			project_id INTEGER NOT NULL REFERENCES p3m_projects(id) ON DELETE CASCADE,
+			from_stage TEXT NOT NULL,
+			to_stage TEXT NOT NULL,
+			template_id INTEGER REFERENCES p3m_stage_gate_templates(id) ON DELETE SET NULL,
+			passed BOOLEAN NOT NULL DEFAULT false,
+			reviewer_id INTEGER NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+			review_date DATE,
+			comments TEXT DEFAULT '',
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		)`,
+		`INSERT INTO p3m_stage_gate_reviews_new (id, project_id, from_stage, to_stage, passed, reviewer_id, review_date, comments, created_at)
+			SELECT id, project_id, from_stage, to_stage, passed, reviewer_id, review_date, comments, created_at FROM p3m_stage_gate_reviews`,
+		`DROP TABLE p3m_stage_gate_reviews`,
+		`ALTER TABLE p3m_stage_gate_reviews_new RENAME TO p3m_stage_gate_reviews`,
+		`CREATE INDEX IF NOT EXISTS idx_p3m_stage_gates_project ON p3m_stage_gate_reviews(project_id)`,
+		`CREATE TABLE IF NOT EXISTS p3m_project_stage_skips (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			project_id INTEGER NOT NULL REFERENCES p3m_projects(id) ON DELETE CASCADE,
+			stage_key TEXT NOT NULL REFERENCES p3m_lifecycle_stages(stage_key) ON DELETE RESTRICT,
+			reason TEXT NOT NULL,
+			decided_by INTEGER NOT NULL,
+			decided_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			UNIQUE(project_id, stage_key)
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_p3m_stage_skips_project ON p3m_project_stage_skips(project_id)`,
+		`INSERT OR IGNORE INTO p3m_lifecycle_stages (stage_key, name, description, sort_order, is_entry, is_exit, gate_required, skippable, enabled) VALUES
+			('front_door', 'Idea / Front Door', 'Intake and initial assessment of the idea or request.', 0, 1, 0, 0, 0, 1),
+			('proposal', 'Proposal', 'Business proposal with indicative cost and strategic alignment.', 1, 0, 0, 1, 1, 1),
+			('define_planning', 'Define / Planning', 'Detailed definition, planning and baseline approval.', 2, 0, 0, 1, 0, 1),
+			('implement_deliver', 'Implement / Deliver & Monitor', 'Delivery execution with monitoring against the baseline.', 3, 0, 0, 1, 0, 1),
+			('close', 'Close', 'Delivery acceptance and financial close-out.', 4, 0, 0, 1, 0, 1),
+			('benefits_realisation', 'Benefits Realisation', 'Post-implementation review and benefit tracking to target.', 5, 0, 1, 1, 1, 1)`,
+		`INSERT INTO p3m_stage_gate_templates (name, from_stage_key, to_stage_key, mandatory, work_type, required_artifacts, description)
+			SELECT 'Front Door assessment', 'front_door', 'proposal', 1, NULL, '[{"name":"Classification","required":true},{"name":"Initial assessment","required":true}]', 'Mandatory intake gate: classify the idea and record the initial assessment.'
+			WHERE NOT EXISTS (SELECT 1 FROM p3m_stage_gate_templates WHERE name = 'Front Door assessment' AND from_stage_key IS 'front_door' AND to_stage_key = 'proposal')`,
+		`INSERT INTO p3m_stage_gate_templates (name, from_stage_key, to_stage_key, mandatory, work_type, required_artifacts, description)
+			SELECT 'Governance go/no-go', 'proposal', 'define_planning', 1, NULL, '[{"name":"Governance go/no-go decision","required":true},{"name":"Financial endorsement","required":true}]', 'Governance go/no-go with financial endorsement before detailed planning.'
+			WHERE NOT EXISTS (SELECT 1 FROM p3m_stage_gate_templates WHERE name = 'Governance go/no-go' AND from_stage_key IS 'proposal' AND to_stage_key = 'define_planning')`,
+		`INSERT INTO p3m_stage_gate_templates (name, from_stage_key, to_stage_key, mandatory, work_type, required_artifacts, description)
+			SELECT 'Baseline & sponsor approval', 'define_planning', 'implement_deliver', 1, NULL, '[{"name":"Approved baseline","required":true},{"name":"Sponsor approval","required":true}]', 'Baseline (scope/schedule/cost) approved by the sponsor before delivery starts.'
+			WHERE NOT EXISTS (SELECT 1 FROM p3m_stage_gate_templates WHERE name = 'Baseline & sponsor approval' AND from_stage_key IS 'define_planning' AND to_stage_key = 'implement_deliver')`,
+		`INSERT INTO p3m_stage_gate_templates (name, from_stage_key, to_stage_key, mandatory, work_type, required_artifacts, description)
+			SELECT 'Delivery acceptance & financial close-out', 'implement_deliver', 'close', 1, NULL, '[{"name":"Delivery acceptance","required":true},{"name":"Financial close-out","required":true}]', 'Delivered scope accepted and finances closed out before closure.'
+			WHERE NOT EXISTS (SELECT 1 FROM p3m_stage_gate_templates WHERE name = 'Delivery acceptance & financial close-out' AND from_stage_key IS 'implement_deliver' AND to_stage_key = 'close')`,
+		`INSERT INTO p3m_stage_gate_templates (name, from_stage_key, to_stage_key, mandatory, work_type, required_artifacts, description)
+			SELECT 'Post-implementation review (PIR)', 'close', 'benefits_realisation', 1, NULL, '[{"name":"PIR report","required":true}]', 'Mandatory-but-skippable PIR gate into benefits realisation; projects may remain at Close when the skip is recorded.'
+			WHERE NOT EXISTS (SELECT 1 FROM p3m_stage_gate_templates WHERE name = 'Post-implementation review (PIR)' AND from_stage_key IS 'close' AND to_stage_key = 'benefits_realisation')`,
+		`INSERT INTO p3m_stage_gate_templates (name, from_stage_key, to_stage_key, mandatory, work_type, required_artifacts, description)
+			SELECT 'Return for information', 'proposal', 'front_door', 0, NULL, '[]', 'Optional return-to-intake path when a proposal needs more information.'
+			WHERE NOT EXISTS (SELECT 1 FROM p3m_stage_gate_templates WHERE name = 'Return for information' AND from_stage_key IS 'proposal' AND to_stage_key = 'front_door')`,
+	}
+}
+
+// applySQLiteP3MConfigurableLifecycle migrates pre-existing SQLite databases
+// to the configurable P3M lifecycle. The two table rebuilds require
+// foreign_keys disabled for the window, so it follows the raw-connection
+// pattern of applySQLiteSRMBusinessID.
+func applySQLiteP3MConfigurableLifecycle(db Database) (retErr error) {
+	sqliteDB, ok := db.(*SQLiteDB)
+	if !ok {
+		return fmt.Errorf("expected SQLite database, got %T", db)
+	}
+
+	ctx := context.Background()
+	conn, err := sqliteDB.writeConn.Conn(ctx)
+	if err != nil {
+		return fmt.Errorf("acquire SQLite write connection: %w", err)
+	}
+	defer func() { _ = conn.Close() }()
+
+	var foreignKeysEnabled bool
+	if err := conn.QueryRowContext(ctx, "PRAGMA foreign_keys").Scan(&foreignKeysEnabled); err != nil {
+		return fmt.Errorf("read foreign_keys pragma: %w", err)
+	}
+	if foreignKeysEnabled {
+		if _, err := conn.ExecContext(ctx, "PRAGMA foreign_keys=OFF"); err != nil {
+			return fmt.Errorf("disable foreign keys: %w", err)
+		}
+		defer func() {
+			if _, err := conn.ExecContext(ctx, "PRAGMA foreign_keys=ON"); retErr == nil && err != nil {
+				retErr = fmt.Errorf("restore foreign keys: %w", err)
+			}
+		}()
+	}
+
+	tx, err := conn.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin p3m lifecycle migration: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	for _, statement := range p3mConfigurableLifecycleStatements() {
+		if _, err := tx.ExecContext(ctx, statement); err != nil {
+			return fmt.Errorf("apply p3m configurable lifecycle: %w", err)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit p3m lifecycle migration: %w", err)
 	}
 	return nil
 }

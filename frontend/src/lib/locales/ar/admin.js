@@ -744,7 +744,6 @@ export default {
       defaults: {
         initiative: 'مبادرة',
         epic: 'ملحمة',
-        story: 'قصة',
         task: 'مهمة',
         bug: 'خطأ',
         subtask: 'مهمة فرعية',
@@ -782,19 +781,11 @@ export default {
         },
         epic: {
           name: 'ملحمة',
-          description: 'عنصر عمل كبير يمكن تقسيمه إلى قصص',
-        },
-        story: {
-          name: 'قصة',
-          description: 'قصة مستخدم أو ميزة تقدم قيمة',
+          description: 'عنصر عمل كبير يمكن تقسيمه إلى مهام',
         },
         task: {
           name: 'مهمة',
           description: 'عنصر عمل فردي أو مهمة تقنية',
-        },
-        activity: {
-          name: 'نشاط',
-          description: 'نشاط محدد ضمن مهمة',
         },
       },
     },

@@ -4,6 +4,13 @@
  */
 export default {
   "pages": {
+    "subtitle": "您有权访问的所有工作区中的知识页面",
+    "searchPlaceholder": "搜索页面标题...",
+    "noPages": "未找到可见页面。",
+    "noPagesHint": "打开下方工作区以开始添加页面：",
+    "newPageButton": "新建页面",
+    "newPageTitle": "创建新页面",
+    "newPageSubtitle": "选择要包含该新页面的工作区。",
     "backWorkspace": "工作区",
     "treeHeading": "页面",
     "addPageAria": "添加页面",

@@ -212,7 +212,13 @@ INSERT OR IGNORE INTO permissions (permission_key, permission_name, description,
 	('action.credential.manage', 'Manage Action Credentials', 'Can create, rotate, and delete workspace-scoped action credentials (API tokens for HTTP capabilities)', 'workspace', 0),
 	('action.set_actor', 'Set Action Actor', 'Can configure an action to run as a specific user (impersonation); grants cross-workspace reach', 'global', 0),
 	('teams.manage', 'Manage Teams', 'Can create, edit, and delete teams', 'global', 0),
-	('public_board.manage', 'Manage Public Boards', 'Can make collections public and configure public board sharing', 'global', 0);
+	('public_board.manage', 'Manage Public Boards', 'Can make collections public and configure public board sharing', 'global', 0),
+	('p3m.view', 'View P3M Module', 'Can view the Portfolio, Programme, and Project Management (P3M) module', 'global', 0),
+	('srm.view', 'View SRM Module', 'Can view the Supplier Relationship Management (SRM) module', 'global', 0),
+	('sms.view', 'View SMS Module', 'Can view the Stakeholder Management System (SMS) module', 'global', 0),
+	('sms.manage', 'Manage SMS Module', 'Can create and modify Stakeholder Management System records', 'global', 0),
+	('sms.sensitive.view', 'View Sensitive SMS Data', 'Can view restricted stakeholder fields and communications in the SMS module', 'global', 0),
+	('plans.view', 'View Plans Module', 'Can view the Plans module, which groups workspaces, P3M entities, and stakeholders into delivery plans', 'global', 0);
 
 -- Default workspace roles
 INSERT OR IGNORE INTO workspace_roles (builtin_key, name, description, is_system, display_order)

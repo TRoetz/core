@@ -35,7 +35,7 @@
 import * as http from 'http';
 import * as https from 'https';
 import * as path from 'path';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
 import { spawn } from 'child_process';
 import * as fs from 'fs';
 import * as crypto from 'crypto';
@@ -65,6 +65,7 @@ import {
   assets,
   personalTasks
 } from './demo-data.js';
+import { seedPortfolioModules } from './seed-portfolio.js';
 
 // Date utility functions for relative date generation
 function getWeekStart() {
@@ -362,14 +363,27 @@ function cleanDatabase(dbPath) {
   }
 }
 
+// Quote arguments containing spaces for cmd.exe (single quotes are not
+// quotes in cmd, so e.g. -ldflags '-s -w' would otherwise split apart).
+function quoteForWin32Shell(arg) {
+  if (/[ "\t]/.test(arg)) {
+    return '"' + arg.replace(/"/g, '\\"') + '"';
+  }
+  return arg;
+}
+
 function runCommand(command, args, options = {}) {
+  const useShell = process.platform === 'win32';
+  const spawnArgs = useShell ? args.map(quoteForWin32Shell) : args;
   return new Promise((resolve, reject) => {
     logInfo(`$ ${command} ${args.join(' ')}`);
-    const child = spawn(command, args, {
+    // On Windows, commands like npm/go resolve to .cmd/.exe shims that
+    // require a shell (spawn('npm') fails with ENOENT otherwise).
+    const child = spawn(command, spawnArgs, {
       cwd: options.cwd || PROJECT_ROOT,
       stdio: 'inherit',
       env: { ...process.env, ...(options.env || {}) },
-      shell: false
+      shell: process.platform === 'win32'
     });
 
     child.on('error', reject);
@@ -687,6 +701,20 @@ async function createUsers(baseURL, token, usersData = demoUsers) {
         logInfo(`Activated existing user: ${user.username}`);
       } catch (_) { /* best effort */ }
     }
+  }
+
+  // POST /api/users does not accept timezone/language, so set them via the
+  // regional-settings endpoint; time-of-day features (daily briefing
+  // greetings, "due today" boundaries) resolve against the user's timezone.
+  for (const user of usersData) {
+    const resolved = createdUsers[user.username];
+    if (!resolved || !user.timezone) continue;
+    try {
+      await makeAuthRequest(baseURL, 'PUT', `/api/users/${resolved.id}/regional-settings`, {
+        timezone: user.timezone,
+        language: user.language || 'en',
+      }, token);
+    } catch (_) { /* best effort */ }
   }
 
   return createdUsers;
@@ -1126,23 +1154,22 @@ function determineItemType(item, depth, itemTypes) {
     description.includes('bug') || description.includes('defect');
 
   if (depth === 0) {
-    // Top-level: use Bug if detected, otherwise Epic
+    // Top-level: use Bug if detected, otherwise Epic (hierarchy level 1)
     if (isBugRelated && itemTypes['Bug']) {
       return itemTypes['Bug'];
     }
     return itemTypes['Epic'] || null;
   } else if (depth === 1) {
-    // Children of Epic (level 1) — must be Story (level 2) for hierarchy
-    return itemTypes['Story'] || null;
-  } else if (depth === 2) {
-    // Children of Story (level 2) — Bug (level 3) or Task (level 3) both valid
+    // Children of Epic (level 1) — Task or Bug (both level 2)
     if (isBugRelated && itemTypes['Bug']) {
       return itemTypes['Bug'];
     }
     return itemTypes['Task'] || null;
   } else {
-    // Deep nesting (depth 3+) - Sub-tasks
-    return itemTypes['Sub-task'] || itemTypes['Task'] || null;
+    // Children of Task/Bug (level 2) — only the generic Sub-task sentinel
+    // (level -1) may sit below a regular level-2 item; regular types must be
+    // exactly one level deeper, so no other type is valid here.
+    return itemTypes['Sub-task'] || null;
   }
 }
 
@@ -2200,6 +2227,19 @@ ${colors.reset}`);
     // Personal Tasks for admin user (with calendar scheduling)
     const personalTaskCount = await createPersonalTasks(options.baseURL, token, getMergedData(personalTasks, 'challengePersonalTasks'));
 
+    // Portfolio modules (P3M, SRM, SMS, Plans) — seeded through the API so
+    // validation, permissions, and the real state machines are exercised.
+    const portfolioResult = await seedPortfolioModules({
+      baseURL: options.baseURL,
+      makeRequest,
+      token,
+      users,
+      workspaceMap,
+      itemMap,
+      timeProjectMap: projectMap,
+      log: { section: logSection, success: logSuccess, info: logInfo, error: logError },
+    });
+
     // Summary
     logSection('Summary');
     logSuccess(`Created ${Object.keys(users).length} users`);
@@ -2274,7 +2314,9 @@ ${colors.reset}`);
 }
 
 // Run if called directly
-if (import.meta.url === `file://${process.argv[1]}`) {
+// Use pathToFileURL so the comparison works on Windows, where
+// import.meta.url is file:///C:/... but process.argv[1] uses C:\....
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   main().catch(error => {
     logError(`Unhandled error: ${error.message}`);
     process.exit(1);

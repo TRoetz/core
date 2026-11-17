@@ -150,6 +150,7 @@ type Server struct {
 	cfvCleanupScheduler          *scheduler.CFVCleanupScheduler
 	todoistSyncScheduler         *scheduler.TodoistSyncScheduler
 	zammadSyncScheduler          *scheduler.ZammadSyncScheduler
+	financeSyncScheduler         *scheduler.FinanceSyncScheduler
 	runnerLeaseReaper            *scheduler.RunnerLeaseReaper
 	globalRankMigrationScheduler *scheduler.GlobalRankMigrationScheduler
 	codingRunService             *services.RunService
@@ -161,6 +162,8 @@ type Server struct {
 	approvalEscalationSweeper    *services.ApprovalEscalationSweeper
 	incidentEscalationSweeper    *services.IncidentEscalationSweeper
 	actionInactivitySweeper      *services.ActionInactivitySweeper
+	smsReminderSweeper           *services.SMSReminderSweeper
+	p3mGovernanceTick            *p3mGovernanceTick
 	slaEngine                    *sla.Engine
 	slaLoop                      *sla.Loop
 	slaLoopCancel                context.CancelFunc
@@ -1317,6 +1320,10 @@ func (s *Server) initialize() error {
 	s.actionInactivitySweeper = services.NewActionInactivitySweeper(s.db, s.actionService, services.DefaultActionInactivitySweeperConfig())
 	s.actionInactivitySweeper.Start()
 
+	// Posts due-date reminders for SMS commitments, engagements and reviews.
+	s.smsReminderSweeper = services.NewSMSReminderSweeper(s.db, services.DefaultSMSReminderSweeperConfig())
+	s.smsReminderSweeper.Start()
+
 	// SLA evaluation runs inline with item facts, and one process-wide
 	// goroutine fires deadline and recalculation jobs. Under the e2e test hook
 	// a manually advanced clock drives derivation and the loop stays off, so a
@@ -1664,6 +1671,25 @@ func (s *Server) initialize() error {
 
 	// Build route dependencies
 	slaHandler := handlers.NewSLAHandler(s.db, s.slaEngine, permService)
+	p3mHandler := handlers.NewP3MHandler(s.db, permService)
+	if cfg.FinanceSync.Enabled {
+		finOpts := scheduler.FinanceSyncOptions{PathPrefix: cfg.FinanceSync.PathPrefix, NotifyEmails: cfg.FinanceSync.NotifyEmails, SMTPSender: smtpSender}
+		p3mHandler.SetFinanceSync(attachmentStorage, finOpts)
+		s.financeSyncScheduler = scheduler.NewFinanceSyncScheduler(s.db, attachmentStorage, cfg.FinanceSync, smtpSender)
+		s.financeSyncScheduler.Start()
+	}
+
+	// Evaluates P3M financial exception rules and posts benefit-measurement
+	// reminders on an hourly tick (idempotent via delivery_key dedupe). Started
+	// after the P3M handler is fully wired so alert evaluation sees finance-sync state.
+	s.p3mGovernanceTick = newP3MGovernanceTick(s.db, p3mHandler)
+	s.p3mGovernanceTick.Start()
+
+	srmHandler := handlers.NewSRMHandler(s.db)
+	smsHandler := handlers.NewSMSHandler(s.db)
+	smsHandler.SetPermissionService(permService) // admin diagnostics in LLM error responses
+	smsHandler.SetLLMManager(llmManager)         // AI assist (WI-6.5), off until an LLM connection resolves for "sms_assist"
+	plansHandler := handlers.NewPlanHandler(s.db)
 	routeDeps := &routes.Deps{
 		SLA:       slaHandler,
 		API:       api,
@@ -1855,7 +1881,11 @@ func (s *Server) initialize() error {
 		Pages: routes.PageHandlers{
 			KnowledgeSearch: knowledgeSearchHandler,
 		},
-		Push: pushHandler,
+		Push:  pushHandler,
+		P3M:   p3mHandler,
+		SRM:   srmHandler,
+		SMS:   smsHandler,
+		Plans: plansHandler,
 	}
 	routes.RegisterAll(routeDeps)
 
@@ -2160,6 +2190,7 @@ func (s *Server) initialize() error {
 			mux.Handle("GET /apple-touch-startup-image-1290x2796.png", revalidatingAssets)
 			mux.Handle("GET /apple-touch-startup-image-2048x2732.png", revalidatingAssets)
 			mux.Handle("GET /forms/widget.js", revalidatingAssets)
+			mux.Handle("GET /images/", revalidatingAssets)
 			mux.Handle("GET /embed/", revalidatingAssets)
 
 			// PWA entry points. These need explicit routes (the SPA fallback at
@@ -2453,6 +2484,11 @@ func (s *Server) Shutdown(ctx context.Context) error {
 		s.zammadSyncScheduler.Stop()
 	}
 
+	if s.financeSyncScheduler != nil {
+		slog.Info("stopping P3M finance sync scheduler")
+		s.financeSyncScheduler.Stop()
+	}
+
 	if s.runnerLeaseReaper != nil {
 		slog.Info("stopping runner lease reaper")
 		s.runnerLeaseReaper.Stop()
@@ -2481,6 +2517,16 @@ func (s *Server) Shutdown(ctx context.Context) error {
 	if s.approvalEscalationSweeper != nil {
 		slog.Info("stopping approval escalation sweeper")
 		s.approvalEscalationSweeper.Stop()
+	}
+
+	if s.smsReminderSweeper != nil {
+		slog.Info("stopping sms reminder sweeper")
+		s.smsReminderSweeper.Stop()
+	}
+
+	if s.p3mGovernanceTick != nil {
+		slog.Info("stopping p3m governance tick")
+		s.p3mGovernanceTick.Stop()
 	}
 
 	if s.incidentEscalationSweeper != nil {
@@ -2617,6 +2663,9 @@ func (s *Server) cleanup() {
 	}
 	if s.zammadSyncScheduler != nil {
 		s.zammadSyncScheduler.Stop()
+	}
+	if s.financeSyncScheduler != nil {
+		s.financeSyncScheduler.Stop()
 	}
 	// Stop rate limiters
 	if s.loginRateLimiter != nil {

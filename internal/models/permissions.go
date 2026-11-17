@@ -62,6 +62,17 @@ const (
 	PermissionCustomersManage = "customers.manage"
 	PermissionActionSetActor  = "action.set_actor" // Configure an action's actor_user_id to impersonate any user at execution time
 
+	// P3M module access (granted per group via global permissions).
+	PermissionP3MView = "p3m.view" // View the Portfolio, Programme, and Project Management module
+	PermissionSRMView = "srm.view" // View the Supplier Relationship Management module
+	PermissionSMSView = "sms.view" // View the Stakeholder Management System module (read-only)
+	// PermissionSMSManage gates all write actions in the SMS module.
+	PermissionSMSManage = "sms.manage" // Create and modify Stakeholder Management System records
+	// PermissionSMSSensitiveView unlocks restricted-classification fields
+	// (notes, custom_fields, communication bodies) on sensitive stakeholders.
+	PermissionSMSSensitiveView = "sms.sensitive.view" // View restricted SMS stakeholder fields
+	PermissionPlansView        = "plans.view"         // View the Plans module (cross-workspace plan grouping)
+
 	// Workspace permissions
 	PermissionWorkspaceAdmin = "workspace.admin" // Manage workspace (administer workspace)
 

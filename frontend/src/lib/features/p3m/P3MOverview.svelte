@@ -1,0 +1,1104 @@
+<script>
+  import { t } from '../../stores/i18n.svelte.js';
+  import IconChevronRight from '@tabler/icons-svelte-runes/icons/chevron-right';
+  import IconDownload from '@tabler/icons-svelte-runes/icons/download';
+  import IconPencil from '@tabler/icons-svelte-runes/icons/pencil';
+  import IconPlus from '@tabler/icons-svelte-runes/icons/plus';
+  import IconX from '@tabler/icons-svelte-runes/icons/x';
+  import { confirm } from '../../composables/useConfirm.js';
+  import P3MCriticalPath from './P3MCriticalPath.svelte';
+  import P3MRaidRollup from './P3MRaidRollup.svelte';
+  import P3MProjectDetail from './P3MProjectDetail.svelte';
+  import P3MProjectForm from './P3MProjectForm.svelte';
+  import { p3m as p3mApi } from '../../api/p3m.js';
+  import { getUsers } from '../../api/users.js';
+  import { navigate } from '../../router.js';
+  import { formatMoney, formatDate, ragColor, ragLabel, stageLabel, enabledStages, toISODate, toDateInputValue } from './utils.js';
+
+  let { portfolios = [], summary = null, onChanged = () => {}, initialProjectId = null, planMap = new Map(), stages = [] } = $props();
+
+  /** Plans linked to a P3M entity (from /plans/p3m-map). */
+  function plansFor(entityType, entityId) {
+    return planMap.get(`${entityType}:${entityId}`) ?? [];
+  }
+
+  // node id -> bool; default: portfolios open. A /p3m/projects/:id (or ?project=)
+  // deep link expands that project's detail, including when the route changes
+  // while this page stays mounted.
+  const expanded = $state({});
+
+  $effect(() => {
+    if (initialProjectId) expanded[initialProjectId] = true;
+  });
+
+  function toggle(id) {
+    expanded[id] = !expanded[id];
+  }
+
+  // --- Creation forms -----------------------------------------------------
+  const RAGS = ['green', 'amber', 'red'];
+
+  let newPortfolioOpen = $state(false);
+  /** Portfolio id being edited, or null when the form creates a new one. */
+  let editingPortfolioId = $state(null);
+  let portfolioForm = $state(emptyPortfolioForm());
+  let savingPortfolio = $state(false);
+  let portfolioError = $state('');
+
+  /** Portfolio id the programme form is open for, or null. */
+  let programmeFormFor = $state(null);
+  /** Programme being edited in place, or null when creating. */
+  let editingProgramme = $state(null);
+  let programmeForm = $state(emptyProgrammeForm());
+  let savingProgramme = $state(false);
+  let programmeError = $state('');
+  /** @type {Array<{id:number,display_name?:string,username?:string}>} */
+  let users = $state([]);
+
+  /** { portfolioId: number, programmeId: number|null } while the project form is open. */
+  let projectFormCtx = $state(null);
+  /** Project being edited in place (P3MProjectForm with `project` set), or null. */
+  let editingProject = $state(null);
+
+  function emptyPortfolioForm() {
+    return { title: '', description: '', strategic_objective: '', budget_allocated: '', rag_status: 'green', owner_id: '' };
+  }
+
+  function emptyProgrammeForm() {
+    return { title: '', description: '', manager_id: '', budget_allocated: '', target_start_date: '', target_end_date: '', rag_status: 'green' };
+  }
+
+  function toggleNewPortfolio() {
+    newPortfolioOpen = !newPortfolioOpen;
+    if (newPortfolioOpen) {
+      editingPortfolioId = null;
+      portfolioForm = emptyPortfolioForm();
+      portfolioError = '';
+      if (!users.length) getUsers().then((u) => (users = u || [])).catch(() => {});
+    }
+  }
+
+  function openPortfolioEdit(pf) {
+    newPortfolioOpen = true;
+    editingPortfolioId = pf.id;
+    portfolioForm = {
+      title: pf.title ?? '',
+      description: pf.description ?? '',
+      strategic_objective: pf.strategic_objective ?? '',
+      budget_allocated: String(pf.budget_allocated ?? ''),
+      rag_status: pf.rag_status || 'green',
+      owner_id: pf.owner_id != null ? String(pf.owner_id) : '',
+    };
+    portfolioError = '';
+    if (!users.length) getUsers().then((u) => (users = u || [])).catch(() => {});
+  }
+
+  async function submitPortfolio() {
+    if (savingPortfolio) return;
+    portfolioError = '';
+    if (!portfolioForm.title.trim()) {
+      portfolioError = t('p3m.titleRequired');
+      return;
+    }
+    savingPortfolio = true;
+    try {
+      const payload = {
+        title: portfolioForm.title.trim(),
+        description: portfolioForm.description,
+        strategic_objective: portfolioForm.strategic_objective,
+        budget_allocated: Number(portfolioForm.budget_allocated) || 0,
+        rag_status: portfolioForm.rag_status,
+      };
+      if (portfolioForm.owner_id) payload.owner_id = Number(portfolioForm.owner_id);
+      else if (editingPortfolioId != null) payload.owner_id = null; // full-replace update: explicit clear
+
+      if (editingPortfolioId != null) await p3mApi.portfolios.update(editingPortfolioId, payload);
+      else await p3mApi.portfolios.create(payload);
+      newPortfolioOpen = false;
+      editingPortfolioId = null;
+      onChanged();
+    } catch (e) {
+      portfolioError = e?.message || t('p3m.createFailed');
+    } finally {
+      savingPortfolio = false;
+    }
+  }
+
+  async function deletePortfolio(pf) {
+    if (!(await confirm({ title: t('p3m.delete'), message: t('p3m.confirmDeletePortfolio') }))) return;
+    try {
+      await p3mApi.portfolios.delete(pf.id);
+      onChanged();
+    } catch (e) {
+      portfolioError = e?.message || t('p3m.deleteFailed');
+    }
+  }
+
+  function openProgrammeForm(pfId) {
+    programmeFormFor = pfId;
+    projectFormCtx = null;
+    editingProgramme = null;
+    programmeForm = emptyProgrammeForm();
+    programmeError = '';
+    if (!users.length) getUsers().then((u) => (users = u || [])).catch(() => {});
+  }
+
+  function openProgrammeEdit(pg, pfId) {
+    programmeFormFor = pfId;
+    projectFormCtx = null;
+    editingProgramme = pg;
+    programmeForm = {
+      title: pg.title ?? '',
+      description: pg.description ?? '',
+      manager_id: pg.manager_id != null ? String(pg.manager_id) : '',
+      budget_allocated: String(pg.budget_allocated ?? ''),
+      target_start_date: toDateInputValue(pg.target_start_date),
+      target_end_date: toDateInputValue(pg.target_end_date),
+      rag_status: pg.rag_status || 'green',
+    };
+    programmeError = '';
+    if (!users.length) getUsers().then((u) => (users = u || [])).catch(() => {});
+  }
+
+  async function submitProgramme() {
+    if (savingProgramme) return;
+    programmeError = '';
+    if (!programmeForm.title.trim()) {
+      programmeError = t('p3m.titleRequired');
+      return;
+    }
+    savingProgramme = true;
+    try {
+      const payload = {
+        portfolio_id: Number(programmeFormFor),
+        title: programmeForm.title.trim(),
+        description: programmeForm.description,
+        budget_allocated: Number(programmeForm.budget_allocated) || 0,
+        rag_status: programmeForm.rag_status,
+      };
+      if (programmeForm.manager_id) payload.manager_id = Number(programmeForm.manager_id);
+      else if (editingProgramme != null) payload.manager_id = null; // full-replace update: explicit clear
+      const start = toISODate(programmeForm.target_start_date);
+      if (start) payload.target_start_date = start;
+      const end = toISODate(programmeForm.target_end_date);
+      if (end) payload.target_end_date = end;
+
+      if (editingProgramme != null) await p3mApi.programmes.update(editingProgramme.id, payload);
+      else await p3mApi.programmes.create(payload);
+      programmeFormFor = null;
+      editingProgramme = null;
+      onChanged();
+    } catch (e) {
+      programmeError = e?.message || t('p3m.createFailed');
+    } finally {
+      savingProgramme = false;
+    }
+  }
+
+  async function deleteProgramme(pg) {
+    if (!(await confirm({ title: t('p3m.delete'), message: t('p3m.confirmDeleteProgramme') }))) return;
+    try {
+      await p3mApi.programmes.delete(pg.id);
+      onChanged();
+    } catch (e) {
+      programmeError = e?.message || t('p3m.deleteFailed');
+    }
+  }
+
+  /** Error surface for tree-level actions (project delete). */
+  let treeError = $state('');
+
+  async function deleteProject(pr) {
+    if (!(await confirm({ title: t('p3m.delete'), message: t('p3m.confirmDeleteProject') }))) return;
+    try {
+      await p3mApi.projects.delete(pr.id);
+      onChanged();
+    } catch (e) {
+      treeError = e?.message || t('p3m.deleteFailed');
+    }
+  }
+
+  function openProjectForm(pfId, pgId = null) {
+    projectFormCtx = { portfolioId: pfId, programmeId: pgId };
+    programmeFormFor = null;
+    editingProject = null;
+  }
+
+  function closeProjectForm() {
+    projectFormCtx = null;
+  }
+
+  function openProjectEdit(pr) {
+    editingProject = pr;
+    projectFormCtx = null;
+    programmeFormFor = null;
+  }
+
+  function closeProjectEdit() {
+    editingProject = null;
+  }
+
+  const totals = $derived.by(() => {
+    let budgetAllocated = 0;
+    let budgetApproved = 0;
+    let budgetActual = 0;
+    const ragCounts = { red: 0, amber: 0, green: 0 };
+    for (const pf of portfolios) {
+      budgetAllocated += pf.budget_allocated || 0;
+      if (pf.rollup) {
+        budgetApproved += pf.rollup.budget_approved || 0;
+        budgetActual += pf.rollup.budget_actual || 0;
+      }
+      for (const pg of pf.programmes ?? []) {
+        for (const pr of pg.projects ?? []) countProject(pr);
+      }
+      for (const pr of pf.standalone_projects ?? []) countProject(pr);
+    }
+    function countProject(pr) {
+      const rag = pr.rag_status || 'green';
+      if (ragCounts[rag] !== undefined) ragCounts[rag] += 1;
+    }
+    return { budgetAllocated, budgetApproved, budgetActual, ragCounts };
+  });
+
+  function progressColor(percent) {
+    if (percent >= 80) return '#10b981';
+    if (percent >= 40) return '#f59e0b';
+    return '#ef4444';
+  }
+
+  // --- Search & filter -----------------------------------------------------
+  let filterText = $state('');
+  /** all | red | amber | green — applied to project rows. */
+  let filterRag = $state('all');
+  /** any configured stage key (or the legacy four) — applied to project rows. */
+  let filterStage = $state('all');
+
+  // Stage filter options come from the configured lifecycle; when config is
+  // unavailable they fall back to the legacy four-stage set.
+  const LEGACY_STAGES = ['initiation', 'planning', 'execution', 'closure'];
+  const stageFilterOptions = $derived.by(() => {
+    const configured = enabledStages(stages);
+    if (configured.length) return configured.map((s) => ({ value: s.stage_key, label: s.name }));
+    return LEGACY_STAGES.map((s) => ({ value: s, label: stageLabel(s) }));
+  });
+
+  const filtersActive = $derived(
+    filterText.trim() !== '' || filterRag !== 'all' || filterStage !== 'all'
+  );
+
+  /**
+   * Visibility maps for the active filters. A project row is visible when it
+   * passes RAG/stage and its own title or an ancestor's matches the text; a
+   * programme/portfolio stays visible while any descendant is visible (or its
+   * own title matches). With no filter active everything is visible, including
+   * empty tiers.
+   */
+  const visibility = $derived.by(() => {
+    const pfVisible = new Map();
+    const pgVisible = new Map();
+    const prVisible = new Map();
+
+    if (!filtersActive) {
+      for (const pf of portfolios) {
+        pfVisible.set(pf.id, true);
+        for (const pg of pf.programmes ?? []) {
+          pgVisible.set(pg.id, true);
+          for (const pr of pg.projects ?? []) prVisible.set(pr.id, true);
+        }
+        for (const pr of pf.standalone_projects ?? []) prVisible.set(pr.id, true);
+      }
+      return { pfVisible, pgVisible, prVisible };
+    }
+
+    const q = filterText.trim().toLowerCase();
+    const matches = (title) => q === '' || String(title ?? '').toLowerCase().includes(q);
+    const projectPasses = (pr) =>
+      (filterRag === 'all' || (pr.rag_status || 'green') === filterRag) &&
+      (filterStage === 'all' || pr.current_stage === filterStage);
+
+    for (const pf of portfolios) {
+      let anyDescendant = false;
+      const pfTitleMatch = matches(pf.title);
+
+      for (const pg of pf.programmes ?? []) {
+        const pgTextOk = q === '' || matches(pg.title) || pfTitleMatch;
+        let anyProject = false;
+        for (const pr of pg.projects ?? []) {
+          const vis = (q === '' || matches(pr.title) || pgTextOk) && projectPasses(pr);
+          prVisible.set(pr.id, vis);
+          if (vis) anyProject = true;
+        }
+        // A parent with no visible children is only kept when its own title
+        // matched the search text.
+        pgVisible.set(pg.id, (q !== '' && (matches(pg.title) || pfTitleMatch)) || anyProject);
+        if (pgVisible.get(pg.id)) anyDescendant = true;
+      }
+
+      for (const pr of pf.standalone_projects ?? []) {
+        const vis = (q === '' || matches(pr.title) || pfTitleMatch) && projectPasses(pr);
+        prVisible.set(pr.id, vis);
+        if (vis) anyDescendant = true;
+      }
+
+      pfVisible.set(pf.id, (q !== '' && pfTitleMatch) || anyDescendant);
+    }
+    return { pfVisible, pgVisible, prVisible };
+  });
+
+  const visibleCount = $derived(visibility.pfVisible.size ? [...visibility.pfVisible.values()].filter(Boolean).length : 0);
+
+  // --- Register export (CSV) ----------------------------------------------
+  let exportScope = $state('projects');
+  function downloadExport(scope = exportScope) {
+    window.open(p3mApi.exportUrl(scope), '_blank', 'noopener');
+  }
+</script>
+
+<div class="p3m-overview">
+  <!-- Executive summary cards -->
+  <div class="grid grid-cols-2 gap-3 px-6 pt-4 md:grid-cols-5">
+    <div class="rounded-lg border border-[var(--color-ds-border,#e5e7eb)] p-3">
+      <div class="text-xs text-[var(--color-ds-text-muted,#6b7280)]">{t('p3m.totalPortfolios')}</div>
+      <div class="mt-1 text-xl font-semibold">{portfolios.length}</div>
+    </div>
+    <div class="rounded-lg border border-[var(--color-ds-border,#e5e7eb)] p-3">
+      <div class="text-xs text-[var(--color-ds-text-muted,#6b7280)]">{t('p3m.totalProgrammes')}</div>
+      <div class="mt-1 text-xl font-semibold">
+        {portfolios.reduce((n, pf) => n + (pf.programmes?.length ?? 0), 0)}
+      </div>
+    </div>
+    <div class="rounded-lg border border-[var(--color-ds-border,#e5e7eb)] p-3">
+      <div class="text-xs text-[var(--color-ds-text-muted,#6b7280)]">{t('p3m.totalProjects')}</div>
+      <div class="mt-1 text-xl font-semibold">
+        {portfolios.reduce(
+          (n, pf) =>
+            n +
+            (pf.standalone_projects?.length ?? 0) +
+            (pf.programmes?.reduce((m, pg) => m + (pg.projects?.length ?? 0), 0) ?? 0),
+          0
+        )}
+      </div>
+    </div>
+    <div class="rounded-lg border border-[var(--color-ds-border,#e5e7eb)] p-3">
+      <div class="text-xs text-[var(--color-ds-text-muted,#6b7280)]">{t('p3m.budgetHealth')}</div>
+      <div class="mt-1 text-sm leading-6">
+        <span>{formatMoney(totals.budgetApproved)}</span>
+        <span class="text-[var(--color-ds-text-muted,#6b7280)]"> / {formatMoney(totals.budgetAllocated)}</span>
+      </div>
+    </div>
+    <div class="rounded-lg border border-[var(--color-ds-border,#e5e7eb)] p-3">
+      <div class="text-xs text-[var(--color-ds-text-muted,#6b7280)]">{t('p3m.ragStatus')}</div>
+      <div class="mt-1 flex items-center gap-2 text-sm">
+        {#each ['red', 'amber', 'green'] as rag (rag)}
+          <span class="flex items-center gap-1" title={ragLabel(rag)}>
+            <span class="inline-block h-2.5 w-2.5 rounded-full" style="background: {ragColor(rag)}"></span>
+            {totals.ragCounts[rag]}
+          </span>
+        {/each}
+      </div>
+    </div>
+  </div>
+
+  <!-- Executive summary (server rollup: per-portfolio RAG, budget, gates, top risks) -->
+  {#if summary?.portfolios?.length}
+    <div class="px-6 pt-4">
+      <h3 class="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-ds-text-muted,#6b7280)]">{t('p3m.executiveSummary')}</h3>
+      <div class="grid grid-cols-1 gap-2 lg:grid-cols-2">
+        {#each summary.portfolios as ps (ps.portfolio_id)}
+          <div class="rounded-lg border border-[var(--color-ds-border,#e5e7eb)] p-3 text-xs">
+            <div class="flex items-center gap-2">
+              <span class="inline-block h-2.5 w-2.5 shrink-0 rounded-full" style="background: {ragColor(ps.rag_status)}"></span>
+              <span class="font-medium">{ps.title}</span>
+              <span class="p3m-meta ml-auto">
+                {formatMoney(ps.budget_actual)} / {formatMoney(ps.budget_approved)}
+              </span>
+            </div>
+            <div class="mt-1.5 flex items-center gap-2 text-[var(--color-ds-text-muted,#6b7280)]">
+              <span>{(ps.upcoming_gates?.length ?? 0)} {t('p3m.gatesDue')}</span>
+              {#if ps.top_risks?.length}
+                <span class="ml-auto flex min-w-0 items-center gap-1 overflow-hidden">
+                  <span class="shrink-0">{t('p3m.topRisks')}:</span>
+                  {#each ps.top_risks.slice(0, 2) as risk (risk.id)}
+                    <span class="truncate rounded bg-red-50 px-1.5 py-0.5 text-[11px] text-red-700" title={risk.title}>
+                      {risk.title} ({risk.impact_score * risk.probability_score})
+                    </span>
+                  {/each}
+                </span>
+              {/if}
+            </div>
+          </div>
+        {/each}
+      </div>
+    </div>
+  {/if}
+
+  <!-- New portfolio -->
+  <div class="px-6 pt-4">
+    <button type="button" class="p3m-action p3m-action-primary" onclick={toggleNewPortfolio}>
+      <IconPlus size={14} /> {t('p3m.newPortfolio')}
+    </button>
+
+    {#if newPortfolioOpen}
+      <div class="mt-2 rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-surface-card p-3 text-xs">
+        <div class="grid grid-cols-1 gap-x-6 gap-y-2 md:grid-cols-2">
+          <label class="block">
+            <span>{t('p3m.titleLabel')} *</span>
+            <input
+              class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+              value={portfolioForm.title}
+              disabled={savingPortfolio}
+              oninput={(e) => (portfolioForm = { ...portfolioForm, title: e.target.value })}
+            />
+          </label>
+
+          <label class="block">
+            <span>{t('p3m.ragStatus')}</span>
+            <select
+              class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+              value={portfolioForm.rag_status}
+              disabled={savingPortfolio}
+              onchange={(e) => (portfolioForm = { ...portfolioForm, rag_status: e.target.value })}
+            >
+              {#each RAGS as r (r)}
+                <option value={r}>{ragLabel(r)}</option>
+              {/each}
+            </select>
+          </label>
+
+          <label class="block">
+            <span>{t('p3m.budgetAllocated')}</span>
+            <input
+              type="number" step="any" min="0"
+              class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+              value={portfolioForm.budget_allocated}
+              disabled={savingPortfolio}
+              oninput={(e) => (portfolioForm = { ...portfolioForm, budget_allocated: e.target.value })}
+            />
+          </label>
+
+          <label class="block">
+            <span>{t('p3m.strategicObjective')}</span>
+            <input
+              class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+              value={portfolioForm.strategic_objective}
+              disabled={savingPortfolio}
+              oninput={(e) => (portfolioForm = { ...portfolioForm, strategic_objective: e.target.value })}
+            />
+          </label>
+
+          <label class="block">
+            <span>{t('p3m.owner')}</span>
+            <select
+              class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+              value={portfolioForm.owner_id}
+              disabled={savingPortfolio}
+              onchange={(e) => (portfolioForm = { ...portfolioForm, owner_id: e.target.value })}
+            >
+              <option value="">{t('p3m.noSelection')}</option>
+              {#each users as u (u.id)}
+                <option value={u.id}>{u.display_name || u.username}</option>
+              {/each}
+            </select>
+          </label>
+
+          <label class="block md:col-span-2">
+            <span>{t('p3m.description')}</span>
+            <textarea
+              rows="2"
+              class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+              value={portfolioForm.description}
+              disabled={savingPortfolio}
+              oninput={(e) => (portfolioForm = { ...portfolioForm, description: e.target.value })}
+            ></textarea>
+          </label>
+        </div>
+
+        {#if portfolioError}
+          <div class="mt-2 rounded-md border border-red-200 bg-red-50 p-2 text-red-700">{portfolioError}</div>
+        {/if}
+
+        <div class="mt-3 flex items-center gap-2">
+          <button type="button" class="p3m-submit" disabled={savingPortfolio} onclick={submitPortfolio}>
+            {editingPortfolioId != null ? t('p3m.save') : t('p3m.create')}
+          </button>
+          <button type="button" class="p3m-cancel" onclick={toggleNewPortfolio}>{t('p3m.cancel')}</button>
+        </div>
+      </div>
+    {/if}
+  </div>
+
+  <!-- Hierarchy tree -->
+  <div class="px-6 py-4">
+    {#if treeError}
+      <div class="mb-2 rounded-md border border-red-200 bg-red-50 p-2 text-xs text-red-700">{treeError}</div>
+    {/if}
+    {#if portfolios.length === 0}
+      <div class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] p-4 text-xs text-[var(--color-ds-text-muted,#6b7280)]">
+        {t('p3m.emptyTitle')} — {t('p3m.emptyDescription')}
+      </div>
+    {:else}
+      <!-- Toolbar: search, RAG/stage filters, register export -->
+      <div class="mb-3 flex flex-wrap items-center gap-2 text-xs">
+        <input
+          type="search"
+          placeholder={t('p3m.searchPlaceholder')}
+          value={filterText}
+          oninput={(e) => (filterText = e.target.value)}
+          class="w-56 rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+        />
+        <select
+          value={filterRag}
+          onchange={(e) => (filterRag = e.target.value)}
+          class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+        >
+          <option value="all">{t('p3m.allRag')}</option>
+          {#each RAGS as r (r)}
+            <option value={r}>{ragLabel(r)}</option>
+          {/each}
+        </select>
+        <select
+          value={filterStage}
+          onchange={(e) => (filterStage = e.target.value)}
+          class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+        >
+          <option value="all">{t('p3m.allStages')}</option>
+          {#each stageFilterOptions as opt (opt.value)}
+            <option value={opt.value}>{opt.label}</option>
+          {/each}
+        </select>
+        {#if filtersActive}
+          <button type="button" class="p3m-action" onclick={() => { filterText = ''; filterRag = 'all'; filterStage = 'all'; }}>
+            <IconX size={12} /> {t('p3m.clearFilters')}
+          </button>
+        {/if}
+        <div class="ml-auto flex items-center gap-2">
+          <select
+            value={exportScope}
+            onchange={(e) => (exportScope = e.target.value)}
+            class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+          >
+            <option value="portfolios">{t('p3m.exportScopePortfolios')}</option>
+            <option value="programmes">{t('p3m.exportScopeProgrammes')}</option>
+            <option value="projects">{t('p3m.exportScopeProjects')}</option>
+          </select>
+          <button type="button" class="p3m-action" onclick={() => downloadExport()}>
+            <IconDownload size={14} /> {t('p3m.exportCsv')}
+          </button>
+        </div>
+      </div>
+
+      {#if filtersActive && visibleCount === 0}
+        <div class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] p-4 text-xs text-[var(--color-ds-text-muted,#6b7280)]">
+          {t('p3m.noResults')}
+        </div>
+      {:else}
+    {#each portfolios as pf (pf.id)}
+      {@const open = expanded[pf.id] !== false}
+      {#if visibility.pfVisible.get(pf.id)}
+      <div class="mb-2 overflow-hidden rounded-lg border border-[var(--color-ds-border,#e5e7eb)]">
+        <div class="flex items-center">
+          <button type="button" class="p3m-node-row p3m-pf min-w-0 flex-1" onclick={() => toggle(pf.id)}>
+            <IconChevronRight class={open ? 'rotated' : ''} size={16} />
+            <span class="inline-block h-2.5 w-2.5 shrink-0 rounded-full" style="background: {ragColor(pf.rollup?.rag_status ?? pf.rag_status)}"></span>
+            <span class="font-medium">{pf.title}</span>
+            <span class="p3m-meta">
+              {pf.programmes?.length ?? 0} {t('p3m.programmes')} · {(pf.standalone_projects?.length ?? 0) + (pf.programmes?.reduce((n, pg) => n + (pg.projects?.length ?? 0), 0) ?? 0)} {t('p3m.projects')}
+            </span>
+            <span class="p3m-meta ml-auto">{formatMoney(pf.budget_allocated)}</span>
+          </button>
+          {#if plansFor('portfolio', pf.id).length > 0}
+            <div class="flex shrink-0 items-center gap-1 pr-2">
+              {#each plansFor('portfolio', pf.id) as plan (plan.plan_id)}
+                <span
+                  class="p3m-plan-chip"
+                  style="border-color: {plan.plan_color || 'var(--color-ds-border,#e5e7eb)'}"
+                  onclick={() => navigate(`/plans/${plan.plan_id}?tab=p3m`)}
+                  title={t('p3m.openPlan')}
+                >
+                  {plan.plan_name}
+                </span>
+              {/each}
+            </div>
+          {/if}
+          <div class="flex shrink-0 items-center gap-1 pr-2">
+            <button type="button" class="p3m-row-action" title={t('p3m.edit')} onclick={() => openPortfolioEdit(pf)}>
+              <IconPencil size={14} />
+            </button>
+            <button type="button" class="p3m-row-action p3m-row-action-danger" title={t('p3m.delete')} onclick={() => deletePortfolio(pf)}>
+              <IconX size={14} />
+            </button>
+          </div>
+        </div>
+
+        {#if open}
+          <div class="border-t border-[var(--color-ds-border,#e5e7eb)] bg-ds-surface-hovered">
+            {#if pf.strategic_objective}
+              <div class="px-10 py-2 text-xs italic text-[var(--color-ds-text-muted,#6b7280)]">{pf.strategic_objective}</div>
+            {/if}
+
+            <!-- Create actions -->
+            <div class="flex items-center gap-2 px-10 py-2">
+              <button type="button" class="p3m-action" onclick={() => openProgrammeForm(pf.id)}>
+                <IconPlus size={14} /> {t('p3m.addProgramme')}
+              </button>
+              <button type="button" class="p3m-action" onclick={() => openProjectForm(pf.id, null)}>
+                <IconPlus size={14} /> {t('p3m.addProject')}
+              </button>
+            </div>
+
+            <!-- Portfolio RAID roll-up across all child projects (RAID-006) -->
+            <div class="px-10 py-2">
+              <h3 class="mb-1 text-xs font-semibold">{t('p3m.raidRollupTitle')}</h3>
+              <P3MRaidRollup entityType="portfolio" id={pf.id} />
+            </div>
+
+            {#if programmeFormFor === pf.id}
+              <div class="mx-10 mb-2 rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-surface-card p-3 text-xs">
+                <div class="grid grid-cols-1 gap-x-6 gap-y-2 md:grid-cols-2">
+                  <label class="block">
+                    <span>{t('p3m.titleLabel')} *</span>
+                    <input
+                      class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+                      value={programmeForm.title}
+                      disabled={savingProgramme}
+                      oninput={(e) => (programmeForm = { ...programmeForm, title: e.target.value })}
+                    />
+                  </label>
+
+                  <label class="block">
+                    <span>{t('p3m.manager')}</span>
+                    <select
+                      class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+                      value={programmeForm.manager_id}
+                      disabled={savingProgramme}
+                      onchange={(e) => (programmeForm = { ...programmeForm, manager_id: e.target.value })}
+                    >
+                      <option value="">{t('p3m.noSelection')}</option>
+                      {#each users as u (u.id)}
+                        <option value={u.id}>{u.display_name || u.username}</option>
+                      {/each}
+                    </select>
+                  </label>
+
+                  <label class="block">
+                    <span>{t('p3m.budgetAllocated')}</span>
+                    <input
+                      type="number" step="any" min="0"
+                      class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+                      value={programmeForm.budget_allocated}
+                      disabled={savingProgramme}
+                      oninput={(e) => (programmeForm = { ...programmeForm, budget_allocated: e.target.value })}
+                    />
+                  </label>
+
+                  <label class="block">
+                    <span>{t('p3m.ragStatus')}</span>
+                    <select
+                      class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+                      value={programmeForm.rag_status}
+                      disabled={savingProgramme}
+                      onchange={(e) => (programmeForm = { ...programmeForm, rag_status: e.target.value })}
+                    >
+                      {#each RAGS as r (r)}
+                        <option value={r}>{ragLabel(r)}</option>
+                      {/each}
+                    </select>
+                  </label>
+
+                  <div class="grid grid-cols-2 gap-x-4">
+                    <label class="block">
+                      <span>{t('p3m.startDate')}</span>
+                      <input
+                        type="date"
+                        class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+                        value={programmeForm.target_start_date}
+                        disabled={savingProgramme}
+                        oninput={(e) => (programmeForm = { ...programmeForm, target_start_date: e.target.value })}
+                      />
+                    </label>
+                    <label class="block">
+                      <span>{t('p3m.targetCompletionDate')}</span>
+                      <input
+                        type="date"
+                        class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+                        value={programmeForm.target_end_date}
+                        disabled={savingProgramme}
+                        oninput={(e) => (programmeForm = { ...programmeForm, target_end_date: e.target.value })}
+                      />
+                    </label>
+                  </div>
+
+                  <label class="block md:col-span-2">
+                    <span>{t('p3m.description')}</span>
+                    <textarea
+                      rows="2"
+                      class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+                      value={programmeForm.description}
+                      disabled={savingProgramme}
+                      oninput={(e) => (programmeForm = { ...programmeForm, description: e.target.value })}
+                    ></textarea>
+                  </label>
+                </div>
+
+                {#if programmeError}
+                  <div class="mt-2 rounded-md border border-red-200 bg-red-50 p-2 text-red-700">{programmeError}</div>
+                {/if}
+
+                <div class="mt-3 flex items-center gap-2">
+                  <button type="button" class="p3m-submit" disabled={savingProgramme} onclick={submitProgramme}>
+                    {t('p3m.create')}
+                  </button>
+                  <button type="button" class="p3m-cancel" onclick={() => (programmeFormFor = null)}>{t('p3m.cancel')}</button>
+                </div>
+              </div>
+            {/if}
+
+            {#if projectFormCtx && projectFormCtx.portfolioId === pf.id && projectFormCtx.programmeId === null}
+              <div class="mx-10 mb-2">
+                <P3MProjectForm
+                  portfolios={portfolios}
+                  stages={stages}
+                  defaultPortfolioId={pf.id}
+                  onCreated={() => { closeProjectForm(); onChanged(); }}
+                  onCancel={closeProjectForm}
+                />
+              </div>
+            {/if}
+
+            {#each pf.programmes ?? [] as pg (pg.id)}
+              {@const pgOpen = expanded[pg.id] !== false}
+              {#if visibility.pgVisible.get(pg.id)}
+              <div class="flex items-center">
+                <button type="button" class="p3m-node-row p3m-pg min-w-0 flex-1" onclick={() => toggle(pg.id)}>
+                  <IconChevronRight class={pgOpen ? 'rotated' : ''} size={14} />
+                  <span class="inline-block h-2 w-2 shrink-0 rounded-full" style="background: {ragColor(pg.rollup?.rag_status ?? pg.rag_status)}"></span>
+                  <span>{pg.title}</span>
+                  <span class="p3m-meta">{pg.projects?.length ?? 0} {t('p3m.projects')}</span>
+                  <span class="p3m-meta ml-auto">{formatMoney(pg.budget_allocated)}</span>
+                </button>
+                {#if plansFor('programme', pg.id).length > 0}
+                  <div class="flex shrink-0 items-center gap-1 pr-2">
+                    {#each plansFor('programme', pg.id) as plan (plan.plan_id)}
+                      <span
+                        class="p3m-plan-chip"
+                        style="border-color: {plan.plan_color || 'var(--color-ds-border,#e5e7eb)'}"
+                        onclick={() => navigate(`/plans/${plan.plan_id}?tab=p3m`)}
+                        title={t('p3m.openPlan')}
+                      >
+                        {plan.plan_name}
+                      </span>
+                    {/each}
+                  </div>
+                {/if}
+                <div class="flex shrink-0 items-center gap-1 pr-2">
+                  <button type="button" class="p3m-row-action" title={t('p3m.edit')} onclick={() => openProgrammeEdit(pg, pf.id)}>
+                    <IconPencil size={14} />
+                  </button>
+                  <button type="button" class="p3m-row-action p3m-row-action-danger" title={t('p3m.delete')} onclick={() => deleteProgramme(pg)}>
+                    <IconX size={14} />
+                  </button>
+                </div>
+              </div>
+
+              {#if pgOpen}
+                <div class="border-l-2 border-[var(--color-ds-border,#e5e7eb)] ml-10">
+                  <div class="flex items-center gap-2 px-4 py-1.5">
+                    <button type="button" class="p3m-action" onclick={() => openProjectForm(pf.id, pg.id)}>
+                      <IconPlus size={14} /> {t('p3m.addProject')}
+                    </button>
+                  </div>
+
+                  <!-- Programme critical path: CPM over every project's workspaces -->
+                  <div class="px-4 py-1.5">
+                    <h3 class="mb-1 text-xs font-semibold">{t('p3m.criticalPath')}</h3>
+                    <P3MCriticalPath entityType="programme" id={pg.id} />
+                  </div>
+
+                  <!-- Programme RAID roll-up across its projects (RAID-006) -->
+                  <div class="px-4 py-1.5">
+                    <h3 class="mb-1 text-xs font-semibold">{t('p3m.raidRollupTitle')}</h3>
+                    <P3MRaidRollup entityType="programme" id={pg.id} />
+                  </div>
+
+                  {#if projectFormCtx && projectFormCtx.portfolioId === pf.id && projectFormCtx.programmeId === pg.id}
+                    <div class="px-4 pb-2">
+                      <P3MProjectForm
+                        portfolios={portfolios}
+                        stages={stages}
+                        defaultPortfolioId={pf.id}
+                        defaultProgrammeId={pg.id}
+                        onCreated={() => { closeProjectForm(); onChanged(); }}
+                        onCancel={closeProjectForm}
+                      />
+                    </div>
+                  {/if}
+
+                  {#each pg.projects ?? [] as pr (pr.id)}
+                    {@const prOpen = expanded[pr.id] === true}
+                    {#if visibility.prVisible.get(pr.id)}
+                    <div class="flex items-center">
+                      <button type="button" class="p3m-node-row p3m-pr min-w-0 flex-1" onclick={() => toggle(pr.id)}>
+                        <IconChevronRight class={prOpen ? 'rotated' : ''} size={14} />
+                        <span class="inline-block h-2 w-2 shrink-0 rounded-full" style="background: {ragColor(pr.rag_status)}"></span>
+                        <span
+                          class="cursor-pointer hover:text-[var(--color-ds-accent-blue,#2563eb)] hover:underline"
+                          title={t('p3m.openProjectDetail')}
+                          onclick={(e) => { e.stopPropagation(); navigate(`/p3m/projects/${pr.id}`); }}
+                        >{pr.title}</span>
+                        <span class="p3m-meta">{stageLabel(pr.current_stage)}</span>
+                        <span class="p3m-progress">
+                          <span class="p3m-progress-fill" style="width: {pr.progress_percent}%; background: {progressColor(pr.progress_percent)}"></span>
+                        </span>
+                        <span class="p3m-meta">{pr.progress_percent}%</span>
+                      </button>
+                      {#if plansFor('project', pr.id).length > 0}
+                        <div class="flex shrink-0 items-center gap-1 pr-2">
+                          {#each plansFor('project', pr.id) as plan (plan.plan_id)}
+                            <span
+                              class="p3m-plan-chip"
+                              style="border-color: {plan.plan_color || 'var(--color-ds-border,#e5e7eb)'}"
+                              onclick={() => navigate(`/plans/${plan.plan_id}?tab=p3m`)}
+                              title={t('p3m.openPlan')}
+                            >
+                              {plan.plan_name}
+                            </span>
+                          {/each}
+                        </div>
+                      {/if}
+                      <div class="flex shrink-0 items-center gap-1 pr-2">
+                        <button type="button" class="p3m-row-action" title={t('p3m.edit')} onclick={() => openProjectEdit(pr)}>
+                          <IconPencil size={14} />
+                        </button>
+                        <button type="button" class="p3m-row-action p3m-row-action-danger" title={t('p3m.delete')} onclick={() => deleteProject(pr)}>
+                          <IconX size={14} />
+                        </button>
+                      </div>
+                    </div>
+
+                    {#if editingProject && editingProject.id === pr.id}
+                      <div class="px-4 pb-2">
+                        <P3MProjectForm
+                          portfolios={portfolios}
+                          stages={stages}
+                          project={pr}
+                          onCreated={() => { closeProjectEdit(); onChanged(); }}
+                          onCancel={closeProjectEdit}
+                        />
+                      </div>
+                    {/if}
+
+                    {#if prOpen}
+                      <P3MProjectDetail project={pr} stages={stages} onChanged={onChanged} onClose={() => toggle(pr.id)} />
+                    {/if}
+                    {/if}
+                  {/each}
+                </div>
+              {/if}
+              {/if}
+            {/each}
+
+            {#each pf.standalone_projects ?? [] as pr (pr.id)}
+              {@const prOpen = expanded[pr.id] === true}
+              {#if visibility.prVisible.get(pr.id)}
+              <div class="flex items-center ml-6">
+                <button type="button" class="p3m-node-row p3m-pr min-w-0 flex-1" onclick={() => toggle(pr.id)}>
+                  <IconChevronRight class={prOpen ? 'rotated' : ''} size={14} />
+                  <span class="inline-block h-2 w-2 shrink-0 rounded-full" style="background: {ragColor(pr.rag_status)}"></span>
+                  <span
+                    class="cursor-pointer hover:text-[var(--color-ds-accent-blue,#2563eb)] hover:underline"
+                    title={t('p3m.openProjectDetail')}
+                    onclick={(e) => { e.stopPropagation(); navigate(`/p3m/projects/${pr.id}`); }}
+                  >{pr.title}</span>
+                  <span class="p3m-meta">{stageLabel(pr.current_stage)}</span>
+                  <span class="p3m-progress">
+                    <span class="p3m-progress-fill" style="width: {pr.progress_percent}%; background: {progressColor(pr.progress_percent)}"></span>
+                  </span>
+                  <span class="p3m-meta">{pr.progress_percent}%</span>
+                </button>
+                <div class="flex shrink-0 items-center gap-1 pr-2">
+                  <button type="button" class="p3m-row-action" title={t('p3m.edit')} onclick={() => openProjectEdit(pr)}>
+                    <IconPencil size={14} />
+                  </button>
+                  <button type="button" class="p3m-row-action p3m-row-action-danger" title={t('p3m.delete')} onclick={() => deleteProject(pr)}>
+                    <IconX size={14} />
+                  </button>
+                </div>
+              </div>
+
+              {#if editingProject && editingProject.id === pr.id}
+                <div class="ml-6 pb-2">
+                  <P3MProjectForm
+                    portfolios={portfolios}
+                    stages={stages}
+                    project={pr}
+                    onCreated={() => { closeProjectEdit(); onChanged(); }}
+                    onCancel={closeProjectEdit}
+                  />
+                </div>
+              {/if}
+
+              {#if prOpen}
+                <P3MProjectDetail project={pr} stages={stages} onChanged={onChanged} onClose={() => toggle(pr.id)} />
+              {/if}
+              {/if}
+            {/each}
+
+            {#if (pf.programmes?.length ?? 0) === 0 && (pf.standalone_projects?.length ?? 0) === 0}
+              <div class="px-10 py-3 text-xs text-[var(--color-ds-text-muted,#6b7280)]">{t('p3m.noData')}</div>
+            {/if}
+          </div>
+        {/if}
+      </div>
+      {/if}
+    {/each}
+      {/if}
+    {/if}
+  </div>
+</div>
+
+<style>
+  .p3m-node-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8125rem;
+    text-align: left;
+    background: none;
+    border: none;
+    cursor: pointer;
+  }
+
+  .p3m-node-row:hover {
+    background: var(--ds-surface-hovered);
+  }
+
+  .p3m-pf {
+    font-size: 0.875rem;
+  }
+
+  .p3m-pg {
+    padding-left: 1.5rem;
+  }
+
+  .p3m-pr {
+    padding-left: 2.5rem;
+  }
+
+  .rotated {
+    transform: rotate(90deg);
+  }
+
+  .p3m-meta {
+    font-size: 0.75rem;
+    color: var(--color-ds-text-muted, #6b7280);
+    white-space: nowrap;
+  }
+
+  .p3m-progress {
+    position: relative;
+    display: inline-block;
+    width: 64px;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--color-ds-border, #e5e7eb);
+    overflow: hidden;
+  }
+
+  .p3m-progress-fill {
+    position: absolute;
+    inset: 0 auto 0 0;
+    border-radius: 3px;
+  }
+
+  .p3m-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.125rem 0.5rem;
+    font-size: 0.75rem;
+    color: var(--color-ds-text-muted, #6b7280);
+    background: none;
+    border: 1px solid var(--color-ds-border, #e5e7eb);
+    border-radius: 0.375rem;
+    cursor: pointer;
+  }
+
+  .p3m-action:hover {
+    color: var(--color-ds-text, #111827);
+  }
+
+  .p3m-action-primary {
+    color: var(--color-ds-accent-blue, #2563eb);
+    border-color: var(--color-ds-accent-blue, #2563eb);
+  }
+
+  .p3m-submit {
+    padding: 0.25rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: white;
+    background: var(--color-ds-accent-blue, #2563eb);
+    border: none;
+    border-radius: 0.375rem;
+    cursor: pointer;
+  }
+
+  .p3m-submit:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+
+  .p3m-cancel {
+    padding: 0.25rem 0.75rem;
+    font-size: 0.75rem;
+    color: var(--color-ds-text-muted, #6b7280);
+    background: none;
+    border: 1px solid var(--color-ds-border, #e5e7eb);
+    border-radius: 0.375rem;
+    cursor: pointer;
+  }
+
+  .p3m-cancel:hover {
+    color: var(--color-ds-text, #111827);
+  }
+
+  .p3m-plan-chip {
+    max-width: 11rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding: 0.0625rem 0.5rem;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    color: var(--color-ds-text-secondary, #4b5563);
+    background: var(--ds-surface-card, #fff);
+    border: 1px solid var(--color-ds-border, #e5e7eb);
+    border-radius: 9999px;
+    cursor: pointer;
+  }
+
+  .p3m-plan-chip:hover {
+    background: var(--ds-surface-hovered);
+    color: var(--color-ds-text, #111827);
+  }
+
+  .p3m-row-action {
+    display: flex;
+    padding: 0.125rem;
+    color: var(--color-ds-text-muted, #6b7280);
+    background: none;
+    border: none;
+    cursor: pointer;
+  }
+
+  .p3m-row-action:hover {
+    color: var(--color-ds-text, #111827);
+  }
+
+  .p3m-row-action-danger:hover {
+    color: #ef4444;
+  }
+</style>

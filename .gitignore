@@ -195,6 +195,9 @@ scripts/*
 !scripts/openapi-convert/**
 !scripts/openapi-v2-check/
 !scripts/openapi-v2-check/**
+!scripts/demo/
+scripts/demo/*
+!scripts/demo/seed-p3m-suite.js
 .golangci-report.json
 blog/
 .fallow/
@@ -205,3 +208,15 @@ blog/
 /cmd/ws/ws
 /playground
 /CONTEXT.md
+
+# Windshift test-environment seed data - contains real customer project data,
+# must never be pushed. The structural schema (windshift-seed.schema.json)
+# stays committable.
+/windshift-seed.json
+/windshift-seed.v1.bak.json
+/windshift-seed.schema.md
+/scripts/windshift-seed.json
+/nul
+/explore_sources.js
+/data-test/
+.demo-session-secret

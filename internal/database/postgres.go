@@ -151,6 +151,18 @@ var slaImportSchemaPostgres string
 //go:embed schema/incidents_postgres.sql
 var incidentsSchemaPostgres string
 
+//go:embed schema/p3m_postgres.sql
+var p3mSchemaPostgres string
+
+//go:embed schema/srm_postgres.sql
+var srmSchemaPostgres string
+
+//go:embed schema/sms_postgres.sql
+var smsSchemaPostgres string
+
+//go:embed schema/plans_postgres.sql
+var plansSchemaPostgres string
+
 //go:embed schema/condition_sets_postgres.sql
 var conditionSetsSchemaPostgres string
 
@@ -621,6 +633,12 @@ func (p *PostgresDB) getPostgresSchemaFiles() []schemaFile {
 		{"sla_warning_thresholds_postgres.sql", slaWarningThresholdsSchemaPostgres},
 		{"sla_import_postgres.sql", slaImportSchemaPostgres},
 		{"incidents_postgres.sql", incidentsSchemaPostgres},
+		// sms must precede p3m/srm: their stakeholder tables carry FK links to
+		// the SMS register (system of record).
+		{"sms_postgres.sql", smsSchemaPostgres},
+		{"p3m_postgres.sql", p3mSchemaPostgres},
+		{"srm_postgres.sql", srmSchemaPostgres},
+		{"plans_postgres.sql", plansSchemaPostgres},
 		{"condition_sets_postgres.sql", conditionSetsSchemaPostgres},
 		{"approvals_postgres.sql", approvalsSchemaPostgres},
 		{"integrations_postgres.sql", integrationsSchemaPostgres},

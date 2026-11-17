@@ -4,6 +4,13 @@
  */
 export default {
   "pages": {
+    "subtitle": "Wissensseiten aus allen zugänglichen Arbeitsbereichen",
+    "searchPlaceholder": "Seitentitel durchsuchen…",
+    "noPages": "Keine sichtbaren Seiten gefunden.",
+    "noPagesHint": "Öffnen Sie unten einen Arbeitsbereich, um Seiten hinzuzufügen:",
+    "newPageButton": "Neue Seite",
+    "newPageTitle": "Neue Seite erstellen",
+    "newPageSubtitle": "Wählen Sie den Arbeitsbereich, der die neue Seite enthalten soll.",
     "backWorkspace": "Arbeitsbereich",
     "treeHeading": "Seiten",
     "addPageAria": "Seite hinzufügen",

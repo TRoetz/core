@@ -1,10 +1,15 @@
+import GanttChartIcon from '@lucide/svelte/icons/gantt-chart';
 import IconCalendar from '@tabler/icons-svelte-runes/icons/calendar';
 import IconClock from '@tabler/icons-svelte-runes/icons/clock';
 import IconFlag from '@tabler/icons-svelte-runes/icons/flag';
 import IconFolderSearch from '@tabler/icons-svelte-runes/icons/folder-search';
+import IconHeartHandshake from '@tabler/icons-svelte-runes/icons/heart-handshake';
+import IconMap from '@tabler/icons-svelte-runes/icons/map';
+import IconNotebook from '@tabler/icons-svelte-runes/icons/notebook';
 import IconPackage from '@tabler/icons-svelte-runes/icons/package';
 import IconPhoneCheck from '@tabler/icons-svelte-runes/icons/phone-check';
 import IconSettings from '@tabler/icons-svelte-runes/icons/settings';
+import IconTarget from '@tabler/icons-svelte-runes/icons/target';
 import IconUsers from '@tabler/icons-svelte-runes/icons/users';
 import IconWorldSearch from '@tabler/icons-svelte-runes/icons/world-search';
 
@@ -42,11 +47,57 @@ export const mainNavItems = [
     activeViews: ['milestones', 'milestone-detail'],
   },
   {
+    id: 'gantt',
+    icon: GanttChartIcon,
+    labelKey: 'nav.bigGantt',
+    href: '/gantt',
+    activeViews: ['big-gantt'],
+  },
+  {
+    id: 'plans',
+    icon: IconMap,
+    labelKey: 'nav.plans',
+    href: '/plans',
+    activeViews: ['plans', 'plan-detail'],
+    permission: 'canAccessPlans',
+  },
+  {
+    id: 'p3m',
+    icon: IconTarget,
+    labelKey: 'nav.p3m',
+    href: '/p3m',
+    activeViews: ['p3m'],
+    permission: 'canAccessP3M',
+  },
+  {
+    id: 'srm',
+    icon: IconHeartHandshake,
+    labelKey: 'nav.srm',
+    href: '/srm',
+    activeViews: ['srm'],
+    permission: 'canAccessSRM',
+  },
+  {
+    id: 'sms',
+    icon: IconUsers,
+    labelKey: 'nav.sms',
+    href: '/sms',
+    activeViews: ['sms'],
+    permission: 'canAccessSMS',
+  },
+  {
     id: 'iterations',
     icon: IconCalendar,
     labelKey: 'nav.iterations',
     href: '/iterations',
     activeViews: ['iterations', 'iteration-detail'],
+  },
+  {
+    id: 'pages',
+    icon: IconNotebook,
+    labelKey: 'nav.pages',
+    href: '/pages',
+    activeViews: ['org-pages'],
   },
   {
     id: 'assets',

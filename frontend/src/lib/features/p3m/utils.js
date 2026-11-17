@@ -1,0 +1,119 @@
+import { t } from '../../stores/i18n.svelte.js';
+
+/** Format a budget amount as a compact number (no currency symbol: amounts are unitless). */
+export function formatMoney(value) {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) return '—';
+  const n = Number(value);
+  if (Math.abs(n) >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`;
+  if (Math.abs(n) >= 10_000) return `${(n / 1_000).toFixed(1)}k`;
+  return n.toLocaleString(undefined, { maximumFractionDigits: 2 });
+}
+
+/** Format an ISO timestamp to a short date string; empty for null. */
+export function formatDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+/** CSS color for a RAG status value. */
+export function ragColor(status) {
+  switch (status) {
+    case 'red':
+      return '#ef4444';
+    case 'amber':
+      return '#f59e0b';
+    default:
+      return '#10b981';
+  }
+}
+
+/** Localized RAG label. */
+export function ragLabel(status) {
+  switch (status) {
+    case 'red':
+      return t('p3m.ragRed');
+    case 'amber':
+      return t('p3m.ragAmber');
+    default:
+      return t('p3m.ragGreen');
+  }
+}
+
+/** Localized project stage label. A configured lifecycle stage with the same
+ * key wins (its display name is admin data, not i18n); otherwise falls back to
+ * the legacy four-stage labels. */
+export function stageLabel(stage, stages = []) {
+  const configured = stages.find((s) => s.stage_key === stage);
+  if (configured?.name) return configured.name;
+  switch (stage) {
+    case 'initiation':
+      return t('p3m.stageInitiation');
+    case 'planning':
+      return t('p3m.stagePlanning');
+    case 'execution':
+      return t('p3m.stageExecution');
+    case 'closure':
+      return t('p3m.stageClosure');
+    default:
+      return stage || '';
+  }
+}
+
+/** Enabled lifecycle stages in path order; empty when config is unavailable. */
+export function enabledStages(stages = []) {
+  return [...stages].filter((s) => s.enabled).sort((a, b) => a.sort_order - b.sort_order);
+}
+
+/** The configured entry stage key (first enabled stage), or the legacy default. */
+export function entryStageKey(stages = []) {
+  const list = enabledStages(stages);
+  return list.length ? list[0].stage_key : 'initiation';
+}
+
+/** Localized RAID status label. */
+export function raidStatusLabel(status) {
+  switch (status) {
+    case 'open':
+      return t('p3m.statusOpen');
+    case 'mitigating':
+      return t('p3m.statusMitigating');
+    case 'closed':
+      return t('p3m.statusClosed');
+    case 'escalated':
+      return t('p3m.statusEscalated');
+    default:
+      return status || '';
+  }
+}
+
+/** Localized stakeholder quadrant label. */
+export function quadrantLabel(quadrant) {
+  switch (quadrant) {
+    case 'manage_closely':
+      return t('p3m.quadrantManageClosely');
+    case 'keep_satisfied':
+      return t('p3m.quadrantKeepSatisfied');
+    case 'monitor':
+      return t('p3m.quadrantMonitor');
+    case 'keep_informed':
+      return t('p3m.quadrantKeepInformed');
+    default:
+      return quadrant || '';
+  }
+}
+
+/** Convert an <input type="date"> value to an RFC3339 timestamp; undefined when empty. */
+export function toISODate(value) {
+  if (!value) return undefined;
+  const d = new Date(`${value}T00:00:00Z`);
+  return Number.isNaN(d.getTime()) ? undefined : d.toISOString();
+}
+
+/** Convert an ISO timestamp (or null) to the YYYY-MM-DD value a date input expects. */
+export function toDateInputValue(iso) {
+  if (!iso) return '';
+  const s = String(iso).slice(0, 10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : '';
+}

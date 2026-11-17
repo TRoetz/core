@@ -743,7 +743,6 @@ export default {
       defaults: {
         initiative: 'Iniciativa',
         epic: 'Épica',
-        story: 'Historia',
         task: 'Tarea',
         bug: 'Error',
         subtask: 'Subtarea',
@@ -781,19 +780,11 @@ export default {
         },
         epic: {
           name: 'Épica',
-          description: 'Elemento de trabajo grande que puede dividirse en historias',
-        },
-        story: {
-          name: 'Historia',
-          description: 'Historia de usuario o función que aporta valor',
+          description: 'Elemento de trabajo grande que puede dividirse en tareas',
         },
         task: {
           name: 'Tarea',
           description: 'Elemento de trabajo individual o tarea técnica',
-        },
-        activity: {
-          name: 'Actividad',
-          description: 'Actividad concreta dentro de una tarea',
         },
       },
     },
