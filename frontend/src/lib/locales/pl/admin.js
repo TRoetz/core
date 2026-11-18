@@ -851,7 +851,6 @@ export default {
       defaults: {
         initiative: 'Inicjatywa',
         epic: 'Epik',
-        story: 'Historyjka',
         task: 'Zadanie',
         bug: 'Błąd',
         subtask: 'Podzadanie',
@@ -892,17 +891,9 @@ export default {
           name: 'Epik',
           description: 'Duży element pracy, który można podzielić na historyjki',
         },
-        story: {
-          name: 'Historyjka',
-          description: 'Historyjka użytkownika lub funkcja dostarczająca wartość',
-        },
         task: {
           name: 'Zadanie',
           description: 'Pojedynczy element pracy lub zadanie techniczne',
-        },
-        activity: {
-          name: 'Czynność',
-          description: 'Wydzielona czynność w ramach zadania',
         },
       },
     },

@@ -1,4 +1,4 @@
-// Package handlers: P3M investment cases — the per-project prioritisation
+// Package handlers: P3M investment cases — the per-project prioritization
 // pipeline. An investment case carries a project's business case and
 // risk/benefit/return scores through proposed -> under_review -> approved |
 // rejected | deferred, so portfolios can be balanced on timing, strategic

@@ -161,17 +161,19 @@ func ImportFinanceSyncData(ctx context.Context, db database.Database, opts Finan
 	}
 	finalizeFinanceSyncRun(db, runID, status, &cfg, &hash, total, matched, unmatched, failed, rowErrs)
 
-	logger.LogAudit(db, logger.AuditEvent{
+	if err := logger.LogAudit(db, logger.AuditEvent{
 		UserID:       0,
 		Username:     "system",
 		Source:       logger.AuditSourceSystem,
-		ActionType:   "p3m.finance_sync.run",
-		ResourceType: "p3m_finance_sync_config",
+		ActionType:   logger.ActionP3MFinanceSyncRun,
+		ResourceType: logger.ResourceP3MFinanceSyncConfig,
 		ResourceID:   &cfg.ID,
 		ResourceName: cfg.Name,
 		Details:      map[string]any{"run_id": runID, "status": status, "rows_total": total, "rows_matched": matched, "rows_unmatched": unmatched, "rows_failed": failed, "file_hash": hash},
 		Success:      status == "success",
-	})
+	}); err != nil {
+		slog.ErrorContext(ctx, "p3m finance sync: audit log write failed", slog.Any("error", err))
+	}
 
 	if (status == "failed" || status == "partial") && opts.SMTPSender != nil {
 		sendFinanceSyncAlert(ctx, opts, cfg, runID, status, total, matched, unmatched, failed)

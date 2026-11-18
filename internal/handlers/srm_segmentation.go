@@ -6,6 +6,7 @@ package handlers
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
@@ -54,8 +55,8 @@ func srmBoxNumber(rankCriticality, rankValue string) int {
 
 // srmBoxLabel is the official box name for a nine-box number.
 func srmBoxLabel(rankCriticality, rankValue string) string {
-	cap := func(s string) string { return strings.ToUpper(s[:1]) + s[1:] }
-	return cap(rankCriticality) + cap(rankValue)
+	capitalize := func(s string) string { return strings.ToUpper(s[:1]) + s[1:] }
+	return capitalize(rankCriticality) + capitalize(rankValue)
 }
 
 // srmTierForBox maps a nine-box number to the system treatment tier (§1.5).
@@ -85,7 +86,7 @@ const (
 // to the official four-box classification (FR-4.2.2c). A Tactical box with
 // material spend (≥ $8m) stays operational tier_3; plain Tactical is tier_4
 // (§1.5).
-func srmCategoryBox(critScore, spend float64) (box string, rankCrit, rankSpend string, tier string) {
+func srmCategoryBox(critScore, spend float64) (box, rankCrit, rankSpend, tier string) {
 	critHigh := critScore >= srmCatCritHighEdge
 	spendHigh := spend >= srmCatSpendHighEdge
 	switch {
@@ -559,8 +560,10 @@ func (h *SRMHandler) UpsertSegmentationAnswer(w http.ResponseWriter, r *http.Req
 		if err == nil {
 			old := *oldScore
 			newScore := in.Score
-			h.db.ExecContext(ctx, `INSERT INTO srm_scoring_adjustments (request_id, run_id, entity_ref, question_code, old_score, new_score, changed_by, reason) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-				reqID, id, in.EntityRef, in.QuestionCode, &old, &newScore, user.ID, justification)
+			if _, aerr := h.db.ExecContext(ctx, `INSERT INTO srm_scoring_adjustments (request_id, run_id, entity_ref, question_code, old_score, new_score, changed_by, reason) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+				reqID, id, in.EntityRef, in.QuestionCode, &old, &newScore, user.ID, justification); aerr != nil {
+				slog.ErrorContext(ctx, "srm: failed to record scoring adjustment", slog.Int("run_id", id), slog.Any("error", aerr))
+			}
 		}
 	} else {
 		res, err := h.db.ExecContext(ctx, `INSERT INTO srm_segmentation_answers (run_id, entity_ref, question_code, score, anchor_label, weight, weighted_score, justification, scored_by, scored_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -965,7 +968,11 @@ func (h *SRMHandler) DecideValidationRequest(w http.ResponseWriter, r *http.Requ
 				respondInternalError(w, r, err)
 				return
 			}
-			h.db.ExecContext(ctx, `UPDATE srm_suppliers SET tier = ?, updated_at = ? WHERE id = ?`, tier, now, ref)
+			if _, err := h.db.ExecContext(ctx, `UPDATE srm_suppliers SET tier = ?, updated_at = ? WHERE id = ?`, tier, now, ref); err != nil {
+				rows.Close()
+				respondInternalError(w, r, err)
+				return
+			}
 		}
 		rows.Close()
 		if err := rows.Err(); err != nil {

@@ -513,7 +513,7 @@ func (h *SMSHandler) AddNodeKindRole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sortOrder := intOr(in.SortOrder, 0).(int)
+	sortOrder, _ := intOr(in.SortOrder, 0).(int)
 	res, err := h.db.ExecContext(ctx, `INSERT INTO sms_node_kind_roles (kind_id, role_key, label, sort_order) VALUES (?, ?, ?, ?)`,
 		id, in.RoleKey, in.Label, sortOrder)
 	if err != nil {
@@ -562,7 +562,7 @@ func (h *SMSHandler) UpdateNodeKindRole(w http.ResponseWriter, r *http.Request) 
 	if in.Label != nil {
 		label = *in.Label
 	}
-	sortOrder := intOr(in.SortOrder, existing.SortOrder).(int)
+	sortOrder, _ := intOr(in.SortOrder, existing.SortOrder).(int)
 	if _, err := h.db.ExecContext(ctx, `UPDATE sms_node_kind_roles SET label = ?, sort_order = ? WHERE id = ?`, label, sortOrder, id); err != nil {
 		respondInternalError(w, r, err)
 		return

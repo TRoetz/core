@@ -130,9 +130,9 @@ func allEmpty(record []string) bool {
 
 // smsImportDedupeIndex maps existing stakeholders for duplicate detection: by
 // lower-cased email and by lower-cased name+organization.
-func (h *SMSHandler) smsImportDedupeIndex(ctx context.Context) (map[string]int, map[string]int, error) {
-	byEmail := make(map[string]int)
-	byNameOrg := make(map[string]int)
+func (h *SMSHandler) smsImportDedupeIndex(ctx context.Context) (byEmail, byNameOrg map[string]int, err error) {
+	byEmail = make(map[string]int)
+	byNameOrg = make(map[string]int)
 	rows, err := h.db.QueryContext(ctx, `SELECT id, lower(name), lower(organization), lower(email) FROM sms_stakeholders`)
 	if err != nil {
 		return nil, nil, err
@@ -494,9 +494,9 @@ func smsParseSitesCSV(csvText string) ([]smsSiteImportRow, []smsImportError, err
 
 // smsSiteImportIndex maps existing nodes for duplicate detection: by
 // external_id and by lower-cased name+location_text.
-func (h *SMSHandler) smsSiteImportIndex(ctx context.Context) (map[string]int, map[string]int, error) {
-	byExternal := make(map[string]int)
-	byNameLoc := make(map[string]int)
+func (h *SMSHandler) smsSiteImportIndex(ctx context.Context) (byExternal, byNameLoc map[string]int, err error) {
+	byExternal = make(map[string]int)
+	byNameLoc = make(map[string]int)
 	rows, err := h.db.QueryContext(ctx, `SELECT id, COALESCE(external_id, ''), lower(name), lower(location_text) FROM sms_nodes`)
 	if err != nil {
 		return nil, nil, err

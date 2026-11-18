@@ -119,6 +119,10 @@ func (h *SRMHandler) ListValuePropositions(w http.ResponseWriter, r *http.Reques
 		}
 		out = append(out, v)
 	}
+	if err := rows.Err(); err != nil {
+		respondInternalError(w, r, err)
+		return
+	}
 	respondJSONOK(w, out)
 }
 
@@ -270,8 +274,8 @@ func (h *SRMHandler) UpdateValueProposition(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	var signedBy any = nullInt(existing.SignedOffBy)
-	var signedAt any = nullTimePtr(existing.SignedOffAt)
+	var signedBy = nullInt(existing.SignedOffBy)
+	var signedAt = nullTimePtr(existing.SignedOffAt)
 	if in.SignOff != nil {
 		if *in.SignOff {
 			signedBy = user.ID
@@ -344,15 +348,6 @@ func (h *SRMHandler) DeleteValueProposition(w http.ResponseWriter, r *http.Reque
 
 const srmStakeholderColumns = `id, full_name, email, organization, job_title, business_area, is_external, supplier_id, created_at`
 
-func scanSRMStakeholder(row interface{ Scan(dest ...any) error }) (*models.SRMStakeholder, error) {
-	var s models.SRMStakeholder
-	err := row.Scan(&s.ID, &s.FullName, &s.Email, &s.Organization, &s.JobTitle, &s.BusinessArea, &s.IsExternal, &s.SupplierID, &s.CreatedAt)
-	if err != nil {
-		return nil, err
-	}
-	return &s, nil
-}
-
 // ListStakeholders returns the stakeholder directory, optionally filtered by
 // supplier.
 func (h *SRMHandler) ListStakeholders(w http.ResponseWriter, r *http.Request) {
@@ -389,6 +384,10 @@ func (h *SRMHandler) ListStakeholders(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		out = append(out, s)
+	}
+	if err := rows.Err(); err != nil {
+		respondInternalError(w, r, err)
+		return
 	}
 	respondJSONOK(w, out)
 }
@@ -545,16 +544,6 @@ func (h *SRMHandler) DeleteStakeholder(w http.ResponseWriter, r *http.Request) {
 
 const srmEntityStakeholderColumns = `id, stakeholder_id, entity_type, entity_id, role_description, power_score, interest_score, support_band, sentiment_score, legitimacy_score, urgency_score, current_engagement, target_engagement, created_at, updated_at`
 
-func scanSRMEntityStakeholder(row interface{ Scan(dest ...any) error }) (*models.SRMEntityStakeholder, error) {
-	var e models.SRMEntityStakeholder
-	err := row.Scan(&e.ID, &e.StakeholderID, &e.EntityType, &e.EntityID, &e.RoleDescription, &e.PowerScore, &e.InterestScore, &e.SupportBand, &e.SentimentScore, &e.LegitimacyScore, &e.UrgencyScore, &e.CurrentEngagement, &e.TargetEngagement, &e.CreatedAt, &e.UpdatedAt)
-	if err != nil {
-		return nil, err
-	}
-	srmApplyStakeholderDerived(&e)
-	return &e, nil
-}
-
 // srmApplyStakeholderDerived fills the spec §5.2.3a generated columns from
 // the stored scores. NULL legitimacy/urgency count as absent (0), matching
 // the Postgres generated-column semantics where NULL comparisons are false.
@@ -681,6 +670,10 @@ func (h *SRMHandler) ListEntityStakeholders(w http.ResponseWriter, r *http.Reque
 		}
 		srmApplyStakeholderDerived(&e)
 		out = append(out, e)
+	}
+	if err := rows.Err(); err != nil {
+		respondInternalError(w, r, err)
+		return
 	}
 	respondJSONOK(w, out)
 }
@@ -894,15 +887,6 @@ func (h *SRMHandler) DeleteEntityStakeholder(w http.ResponseWriter, r *http.Requ
 
 const srmCommsPlanColumns = `id, supplier_id, scope, is_complete, created_at, updated_at`
 
-func scanSRMCommsPlan(row interface{ Scan(dest ...any) error }) (*models.SRMCommunicationsPlan, error) {
-	var p models.SRMCommunicationsPlan
-	err := row.Scan(&p.ID, &p.SupplierID, &p.Scope, &p.IsComplete, &p.CreatedAt, &p.UpdatedAt)
-	if err != nil {
-		return nil, err
-	}
-	return &p, nil
-}
-
 // GetCommsPlan returns the supplier's communications plan with its messages;
 // 404 when no plan exists yet (UpsertCommsPlan creates it).
 func (h *SRMHandler) GetCommsPlan(w http.ResponseWriter, r *http.Request) {
@@ -945,6 +929,10 @@ func (h *SRMHandler) GetCommsPlan(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		msgs = append(msgs, m)
+	}
+	if err := rows.Err(); err != nil {
+		respondInternalError(w, r, err)
+		return
 	}
 	p.Messages = msgs
 	respondJSONOK(w, p)
@@ -1054,6 +1042,10 @@ func (h *SRMHandler) ListCommsMessages(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		out = append(out, m)
+	}
+	if err := rows.Err(); err != nil {
+		respondInternalError(w, r, err)
+		return
 	}
 	respondJSONOK(w, out)
 }
@@ -1209,15 +1201,6 @@ func (h *SRMHandler) DeleteCommsMessage(w http.ResponseWriter, r *http.Request) 
 // ---------------------------------------------------------------------------
 
 const srmRaciColumns = `id, supplier_id, version, status, created_by, agreed_at, last_reviewed_at, created_at`
-
-func scanSRMRaci(row interface{ Scan(dest ...any) error }) (*models.SRMRaci, error) {
-	var m models.SRMRaci
-	err := row.Scan(&m.ID, &m.SupplierID, &m.Version, &m.Status, &m.CreatedBy, &m.AgreedAt, &m.LastReviewedAt, &m.CreatedAt)
-	if err != nil {
-		return nil, err
-	}
-	return &m, nil
-}
 
 func srmValidRaciValue(v string) bool {
 	switch v {
@@ -1425,8 +1408,8 @@ func (h *SRMHandler) UpdateRaciStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var agreedAt any = nullTimePtr(existing.AgreedAt)
-	var reviewedAt any = nullTimePtr(existing.LastReviewedAt)
+	var agreedAt = nullTimePtr(existing.AgreedAt)
+	var reviewedAt = nullTimePtr(existing.LastReviewedAt)
 	if in.Status == models.SRMRaciStatusAgreed {
 		now := time.Now().UTC()
 		agreedAt = now
@@ -1700,6 +1683,10 @@ func (h *SRMHandler) ListMeetings(w http.ResponseWriter, r *http.Request) {
 		}
 		out = append(out, m)
 		ids = append(ids, m.ID)
+	}
+	if err := rows.Err(); err != nil {
+		respondInternalError(w, r, err)
+		return
 	}
 
 	attendees, err := h.srmMeetingAttendees(ctx, ids)
@@ -2195,19 +2182,6 @@ func orPtrTime(in, existing *time.Time) *time.Time {
 
 const srmJbpColumns = `id, contract_id, supplier_id, version, status, purpose, vision, scope, governance_model, review_cycle_months, relationship_charter, contract_summary, spend_summary, performance_notes, risk_action_plan, relationship_development, value_opportunities, agency_rep_name, agency_rep_role, agency_signed_at, supplier_rep_name, supplier_rep_role, supplier_signed_at, created_at, updated_at`
 
-func scanSRMJbp(row interface{ Scan(dest ...any) error }) (*models.SRMJBP, error) {
-	var j models.SRMJBP
-	var charterJSON, opportunitiesJSON string
-	err := row.Scan(&j.ID, &j.ContractID, &j.SupplierID, &j.Version, &j.Status, &j.Purpose, &j.Vision, &j.Scope, &j.GovernanceModel, &j.ReviewCycleMonths, &charterJSON, &j.ContractSummary, &j.SpendSummary, &j.PerformanceNotes, &j.RiskActionPlan, &j.RelationshipDevelopment, &opportunitiesJSON, &j.AgencyRepName, &j.AgencyRepRole, &j.AgencySignedAt, &j.SupplierRepName, &j.SupplierRepRole, &j.SupplierSignedAt, &j.CreatedAt, &j.UpdatedAt)
-	if err != nil {
-		return nil, err
-	}
-	if err := srmDecodeJbpJSON(&j, charterJSON, opportunitiesJSON); err != nil {
-		return nil, err
-	}
-	return &j, nil
-}
-
 // srmDecodeJbpJSON fills RelationshipCharter/ValueOpportunities from the raw
 // JSON columns.
 func srmDecodeJbpJSON(j *models.SRMJBP, charterJSON, opportunitiesJSON string) error {
@@ -2302,7 +2276,6 @@ func (h *SRMHandler) ListJbps(w http.ResponseWriter, r *http.Request) {
 			q += ` WHERE j.contract_id = ?`
 		}
 		args = append(args, id)
-		where = true
 	}
 	q += ` ORDER BY j.id DESC`
 
@@ -2328,6 +2301,10 @@ func (h *SRMHandler) ListJbps(w http.ResponseWriter, r *http.Request) {
 		}
 		out = append(out, j)
 		ids = append(ids, j.ID)
+	}
+	if err := rows.Err(); err != nil {
+		respondInternalError(w, r, err)
+		return
 	}
 
 	initiatives, err := h.srmJbpInitiatives(ctx, ids)

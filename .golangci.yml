@@ -77,6 +77,36 @@ linters:
         linters:
           - nilerr
 
+      # AI tool implementations intentionally return error details as JSON strings with nil error
+      - path: ^internal/aitools/
+        linters:
+          - nilerr
+
+      # P3M domain terms locked in by DB identifiers (p3m_programmes table, programme_id column) and API field names — cannot rename
+      - linters:
+          - misspell
+        text: "[Pp]rogramme"
+
+      # SRM support-band enum value stored in srm_stakeholders.support_band — cannot rename
+      - linters:
+          - misspell
+        text: "sceptic"
+
+      # SRM state-machine value 'jbp_formalised' is stored data — cannot rename
+      - linters:
+          - misspell
+        text: "formalised"
+
+      # P3M lifecycle stage key 'benefits_realisation' and p3m_benefits.status value 'realised' are stored data; realised_* API fields match them — cannot rename
+      - linters:
+          - misspell
+        text: "(realisation|realised)"
+
+      # SMS status enum value 'cancelled' is locked in by CHECK constraints — cannot rename
+      - linters:
+          - misspell
+        text: "cancelled"
+
       # DB table is named customer_organisations — cannot rename
       - linters:
           - misspell

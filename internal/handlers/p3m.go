@@ -49,17 +49,6 @@ func NewP3MHandler(db database.Database, permissionService *services.PermissionS
 // Shared RAG / earned-value helpers (used by the delegated P3M handler files).
 // ---------------------------------------------------------------------------
 
-func p3mRagRank(status string) int {
-	switch status {
-	case models.P3MRagRed:
-		return 0
-	case models.P3MRagAmber:
-		return 1
-	default:
-		return 2
-	}
-}
-
 func p3mRankToRag(rank int) string {
 	switch rank {
 	case 0:
@@ -69,17 +58,6 @@ func p3mRankToRag(rank int) string {
 	default:
 		return models.P3MRagGreen
 	}
-}
-
-// p3mWorstRag returns the most severe status among its arguments.
-func p3mWorstRag(rags ...string) string {
-	worst := 2
-	for _, r := range rags {
-		if rank := p3mRagRank(r); rank < worst {
-			worst = rank
-		}
-	}
-	return p3mRankToRag(worst)
 }
 
 // p3mComputeEVM derives earned-value metrics for a project. PV is time-based:
@@ -390,6 +368,10 @@ func (h *P3MHandler) portfolioRollups(ctx context.Context) (map[int]*models.P3MP
 		}
 		out[id] = &models.P3MPortfolioRollup{RagStatus: rag}
 	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return nil, err
+	}
 	rows.Close()
 
 	rows, err = h.db.QueryContext(ctx, `SELECT portfolio_id, COUNT(*) FROM p3m_programmes GROUP BY portfolio_id`)
@@ -409,6 +391,10 @@ func (h *P3MHandler) portfolioRollups(ctx context.Context) (map[int]*models.P3MP
 			out[fid] = r
 		}
 		r.ProgrammeCount += count
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return nil, err
 	}
 	rows.Close()
 
@@ -1624,7 +1610,7 @@ func (h *P3MHandler) GetProjectActivity(w http.ResponseWriter, r *http.Request) 
 // write and returns the normalized (portfolio_id, programme_id) pointers. When
 // only a programme is given its portfolio is implied; when both are given they
 // must agree. It writes the error response itself on failure.
-func (h *P3MHandler) resolveProjectParents(ctx context.Context, w http.ResponseWriter, r *http.Request, fid, pid *int) (*int, *int, bool) {
+func (h *P3MHandler) resolveProjectParents(ctx context.Context, w http.ResponseWriter, r *http.Request, fid, pid *int) (portfolioID, programmeID *int, ok bool) {
 	if pid != nil {
 		var pfID int
 		err := h.db.QueryRowContext(ctx, `SELECT portfolio_id FROM p3m_programmes WHERE id = ?`, *pid).Scan(&pfID)
@@ -1685,6 +1671,11 @@ func (h *P3MHandler) GetHierarchy(w http.ResponseWriter, r *http.Request) {
 		}
 		portfolios = append(portfolios, pf)
 	}
+	if err := pfRows.Err(); err != nil {
+		pfRows.Close()
+		respondInternalError(w, r, err)
+		return
+	}
 	pfRows.Close()
 
 	pgRows, err := h.db.QueryContext(ctx, `SELECT `+p3mProgrammeColumns+` FROM p3m_programmes ORDER BY title`)
@@ -1700,6 +1691,11 @@ func (h *P3MHandler) GetHierarchy(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		programmesByPortfolio[pg.PortfolioID] = append(programmesByPortfolio[pg.PortfolioID], pg)
+	}
+	if err := pgRows.Err(); err != nil {
+		pgRows.Close()
+		respondInternalError(w, r, err)
+		return
 	}
 	pgRows.Close()
 
@@ -1726,6 +1722,11 @@ func (h *P3MHandler) GetHierarchy(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		}
+	}
+	if err := prRows.Err(); err != nil {
+		prRows.Close()
+		respondInternalError(w, r, err)
+		return
 	}
 	prRows.Close()
 
@@ -1780,6 +1781,11 @@ func (h *P3MHandler) GetExecutiveSummary(w http.ResponseWriter, r *http.Request)
 		}
 		refs = append(refs, ref)
 	}
+	if err := pfRows.Err(); err != nil {
+		pfRows.Close()
+		respondInternalError(w, r, err)
+		return
+	}
 	pfRows.Close()
 
 	rollups, err := h.portfolioRollups(ctx)
@@ -1807,6 +1813,11 @@ func (h *P3MHandler) GetExecutiveSummary(w http.ResponseWriter, r *http.Request)
 		}
 		fidInt := int(fid.Int64)
 		treeProjects[fidInt] = append(treeProjects[fidInt], pid)
+	}
+	if err := prRows.Err(); err != nil {
+		prRows.Close()
+		respondInternalError(w, r, err)
+		return
 	}
 	prRows.Close()
 

@@ -174,15 +174,14 @@ func aiSRMStateIndex(state string) int {
 	return -1
 }
 
-func aiSRMGateStatus(ctx context.Context, db database.Database, supplierID int, current string) (string, map[string]bool, []string) {
-	artifacts := map[string]bool{}
+func aiSRMGateStatus(ctx context.Context, db database.Database, supplierID int, current string) (nextState string, artifacts map[string]bool, missing []string) {
+	artifacts = map[string]bool{}
 	idx := aiSRMStateIndex(current)
 	if idx < 0 || idx == len(aiSRMStateOrder)-1 {
 		return "", artifacts, nil
 	}
-	nextState := aiSRMStateOrder[idx+1]
+	nextState = aiSRMStateOrder[idx+1]
 	checks := aiSRMArtifactChecks()
-	var missing []string
 	for _, name := range aiSRMGateArtifacts[nextState] {
 		check, ok := checks[name]
 		if !ok {
@@ -462,11 +461,12 @@ func init() {
 			businessID := existing.BusinessID
 			if args.BusinessID != nil {
 				b := strings.TrimSpace(*args.BusinessID)
-				if b == "" {
+				switch {
+				case b == "":
 					businessID = nil
-				} else if len(b) > 64 {
+				case len(b) > 64:
 					return map[string]string{"error": "business_id must be at most 64 characters"}, nil
-				} else {
+				default:
 					businessID = &b
 				}
 			}

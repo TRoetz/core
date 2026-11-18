@@ -33,7 +33,7 @@ var planStatuses = map[string]bool{
 // the WHERE fragment selecting every item that belongs to a plan (items in
 // linked workspaces OR matching any of the plan's named CQL filters). The
 // returned SQL references only aliases from repository.ItemListFilterFromClause().
-func aiPlanSourceCondition(ctx context.Context, db database.Database, planID int) (string, []any, error) {
+func aiPlanSourceCondition(ctx context.Context, db database.Database, planID int) (fragment string, args []any, err error) {
 	var wsIDs []int
 	rows, err := db.QueryContext(ctx, `SELECT workspace_id FROM plan_workspaces WHERE plan_id = ?`, planID)
 	if err != nil {
@@ -91,7 +91,6 @@ func aiPlanSourceCondition(ctx context.Context, db database.Database, planID int
 	}
 
 	var parts []string
-	var args []any
 	if len(wsIDs) > 0 {
 		ph := make([]string, len(wsIDs))
 		for i, id := range wsIDs {

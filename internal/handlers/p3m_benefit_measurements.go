@@ -40,7 +40,7 @@ func scanP3MBenefitMeasurement(row interface{ Scan(...any) error }) (models.P3MB
 // p3mBenefitScopeClause builds the WHERE fragment selecting benefits in scope
 // for a rollup: an explicit project, a programme (own + child projects), or a
 // portfolio (all programmes and projects beneath it). Empty filters select all.
-func p3mBenefitScopeClause(q map[string]string) (string, []any, bool) {
+func p3mBenefitScopeClause(q map[string]string) (clause string, clauseArgs []any) {
 	var clauses []string
 	args := []any{}
 	if v := q["project_id"]; v != "" {
@@ -56,7 +56,7 @@ func p3mBenefitScopeClause(q map[string]string) (string, []any, bool) {
 		args = append(args, v, v)
 	}
 	if len(clauses) == 0 {
-		return "", nil, true
+		return "", nil
 	}
 	where := ""
 	for i, c := range clauses {
@@ -65,7 +65,7 @@ func p3mBenefitScopeClause(q map[string]string) (string, []any, bool) {
 		}
 		where += c
 	}
-	return where, args, true
+	return where, args
 }
 
 // ListBenefitMeasurements handles GET /api/p3m/benefits/{id}/measurements. It
@@ -295,7 +295,7 @@ func (h *P3MHandler) GetBenefitsRollup(w http.ResponseWriter, r *http.Request) {
 		"programme_id": r.URL.Query().Get("programme_id"),
 		"portfolio_id": r.URL.Query().Get("portfolio_id"),
 	}
-	where, args, _ := p3mBenefitScopeClause(filters)
+	where, args := p3mBenefitScopeClause(filters)
 
 	countQuery := `SELECT COUNT(*), COALESCE(SUM(CASE WHEN benefit_type = 'financial' AND status != 'retired' THEN target_value ELSE 0 END), 0) FROM p3m_benefits b`
 	statusQuery := `SELECT status, COUNT(*) FROM p3m_benefits b`

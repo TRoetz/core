@@ -883,7 +883,6 @@ export default {
       "defaults": {
         "initiative": "ابتکار عمل",
         "epic": "حماسه",
-        "story": "داستان",
         "task": "وظیفه",
         "bug": "اشکال",
         "subtask": "وظیفه فرعی"
@@ -921,17 +920,9 @@ export default {
           "name": "حماسه",
           "description": "مورد کاری بزرگ که می توان آن را به داستان ها تقسیم کرد"
         },
-        "story": {
-          "name": "داستان",
-          "description": "داستان یا ویژگی کاربر که ارزش ارائه می کند"
-        },
         "task": {
           "name": "وظیفه",
           "description": "مورد کاری فردی یا کار فنی"
-        },
-        "activity": {
-          "name": "فعالیت",
-          "description": "فعالیت گسسته در یک کار"
         }
       }
     },

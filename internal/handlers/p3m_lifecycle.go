@@ -258,7 +258,7 @@ func (h *P3MHandler) UpdateLifecycleStage(w http.ResponseWriter, r *http.Request
 		}
 	}
 	// Invariant: after this update at least one enabled entry stage must remain.
-	if !(enabled && in.IsEntry) {
+	if !enabled || !in.IsEntry {
 		var others int
 		if err := h.db.QueryRowContext(r.Context(), `SELECT COUNT(*) FROM p3m_lifecycle_stages WHERE id != ? AND enabled = 1 AND is_entry = 1`, cur.ID).Scan(&others); err != nil {
 			respondInternalError(w, r, err)

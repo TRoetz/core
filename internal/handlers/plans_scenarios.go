@@ -371,7 +371,8 @@ func (h *PlanHandler) computeScenarioImpact(ctx context.Context, planID int, ove
 			newStart := dst.start.Add(delta)
 			dst.start = &newStart
 			if dst.end != nil {
-				dst.end = new((*dst.end).Add(delta))
+				newEnd := dst.end.Add(delta)
+				dst.end = &newEnd
 			}
 			changed = true
 		}

@@ -832,7 +832,8 @@ func (h *SRMHandler) UpsertScorecardDimension(w http.ResponseWriter, r *http.Req
 	}
 	var dimID int
 	err = h.db.QueryRowContext(ctx, `SELECT id FROM srm_scorecard_dimensions WHERE scorecard_id = ? AND dimension = ?`, id, in.Dimension).Scan(&dimID)
-	if isNotFound(err) {
+	switch {
+	case isNotFound(err):
 		res, err := h.db.ExecContext(ctx, `INSERT INTO srm_scorecard_dimensions (scorecard_id, dimension, main_highlights, key_concerns, rag, next_steps, supplier_rag, joint_resolution_note) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
 			id, in.Dimension, in.MainHighlights, in.KeyConcerns, in.Rag, in.NextSteps, nullString(supplierRag), in.JointResolutionNote)
 		if err != nil {
@@ -841,10 +842,10 @@ func (h *SRMHandler) UpsertScorecardDimension(w http.ResponseWriter, r *http.Req
 		}
 		dimID64, _ := res.LastInsertId()
 		dimID = int(dimID64)
-	} else if err != nil {
+	case err != nil:
 		respondInternalError(w, r, err)
 		return
-	} else {
+	default:
 		if _, err := h.db.ExecContext(ctx, `UPDATE srm_scorecard_dimensions SET main_highlights = ?, key_concerns = ?, rag = ?, next_steps = ?, supplier_rag = ?, joint_resolution_note = ? WHERE id = ?`,
 			in.MainHighlights, in.KeyConcerns, in.Rag, in.NextSteps, nullString(supplierRag), in.JointResolutionNote, dimID); err != nil {
 			respondInternalError(w, r, err)
@@ -1429,7 +1430,8 @@ func (h *SRMHandler) UpsertInnovationFactor(w http.ResponseWriter, r *http.Reque
 	}
 	var factorID int
 	err = h.db.QueryRowContext(ctx, `SELECT id FROM srm_innovation_factors WHERE innovation_id = ? AND factor_name = ?`, id, in.FactorName).Scan(&factorID)
-	if isNotFound(err) {
+	switch {
+	case isNotFound(err):
 		res, err := h.db.ExecContext(ctx, `INSERT INTO srm_innovation_factors (innovation_id, evaluator_name, factor_name, is_custom, rating) VALUES (?, ?, ?, ?, ?)`,
 			id, in.EvaluatorName, in.FactorName, in.IsCustom, in.Rating)
 		if err != nil {
@@ -1438,10 +1440,10 @@ func (h *SRMHandler) UpsertInnovationFactor(w http.ResponseWriter, r *http.Reque
 		}
 		factorID64, _ := res.LastInsertId()
 		factorID = int(factorID64)
-	} else if err != nil {
+	case err != nil:
 		respondInternalError(w, r, err)
 		return
-	} else {
+	default:
 		if _, err := h.db.ExecContext(ctx, `UPDATE srm_innovation_factors SET evaluator_name = ?, is_custom = ?, rating = ? WHERE id = ?`,
 			in.EvaluatorName, in.IsCustom, in.Rating, factorID); err != nil {
 			respondInternalError(w, r, err)
@@ -1527,7 +1529,8 @@ func (h *SRMHandler) CreateInnovationRecommendation(w http.ResponseWriter, r *ht
 	}
 	var recID int
 	err = h.db.QueryRowContext(ctx, `SELECT id FROM srm_innovation_recommendations WHERE innovation_id = ?`, id).Scan(&recID)
-	if isNotFound(err) {
+	switch {
+	case isNotFound(err):
 		res, err := h.db.ExecContext(ctx, `INSERT INTO srm_innovation_recommendations (innovation_id, decision, justification, priority, timing, agency_champion_id, supplier_champion_name, decided_at) VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
 			id, in.Decision, in.Justification, nullStringPtr(in.Priority), in.Timing, nullInt(in.AgencyChampionID), in.SupplierChampionName)
 		if err != nil {
@@ -1536,10 +1539,10 @@ func (h *SRMHandler) CreateInnovationRecommendation(w http.ResponseWriter, r *ht
 		}
 		recID64, _ := res.LastInsertId()
 		recID = int(recID64)
-	} else if err != nil {
+	case err != nil:
 		respondInternalError(w, r, err)
 		return
-	} else {
+	default:
 		if _, err := h.db.ExecContext(ctx, `UPDATE srm_innovation_recommendations SET decision = ?, justification = ?, priority = ?, timing = ?, agency_champion_id = ?, supplier_champion_name = ?, decided_at = CURRENT_TIMESTAMP WHERE id = ?`,
 			in.Decision, in.Justification, nullStringPtr(in.Priority), in.Timing, nullInt(in.AgencyChampionID), in.SupplierChampionName, recID); err != nil {
 			respondInternalError(w, r, err)
@@ -2501,7 +2504,8 @@ func (h *SRMHandler) UpsertRemedyPlan(w http.ResponseWriter, r *http.Request) {
 	}
 	var planID int
 	err = h.db.QueryRowContext(ctx, `SELECT id FROM srm_remedy_plans WHERE dispute_id = ?`, id).Scan(&planID)
-	if isNotFound(err) {
+	switch {
+	case isNotFound(err):
 		res, err := h.db.ExecContext(ctx, `INSERT INTO srm_remedy_plans (dispute_id, contract_id, non_performance_issue, root_cause, corrective_action_required, timetable_json, target_resolution_date, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
 			id, existing.ContractID, in.NonPerformanceIssue, in.RootCause, in.CorrectiveActionRequired, string(timetableJSON), in.TargetResolutionDate, in.Status)
 		if err != nil {
@@ -2510,10 +2514,10 @@ func (h *SRMHandler) UpsertRemedyPlan(w http.ResponseWriter, r *http.Request) {
 		}
 		planID64, _ := res.LastInsertId()
 		planID = int(planID64)
-	} else if err != nil {
+	case err != nil:
 		respondInternalError(w, r, err)
 		return
-	} else {
+	default:
 		if _, err := h.db.ExecContext(ctx, `UPDATE srm_remedy_plans SET non_performance_issue = ?, root_cause = ?, corrective_action_required = ?, timetable_json = ?, target_resolution_date = ?, status = ? WHERE id = ?`,
 			in.NonPerformanceIssue, in.RootCause, in.CorrectiveActionRequired, string(timetableJSON), in.TargetResolutionDate, in.Status, planID); err != nil {
 			respondInternalError(w, r, err)

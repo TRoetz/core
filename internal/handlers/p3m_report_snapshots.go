@@ -215,9 +215,10 @@ func (h *P3MHandler) p3mEntityCategoryRags(ctx context.Context, entityType strin
 		scope = "portfolio"
 	}
 	tol := p3mDefaultTolerance()
-	if entityType == "portfolio" {
+	switch entityType {
+	case "portfolio":
 		tol = h.p3mToleranceFor(ctx, scope, entityID)
-	} else if entityType == "programme" {
+	case "programme":
 		var portfolioID sql.NullInt64
 		if err := h.db.QueryRowContext(ctx, `SELECT portfolio_id FROM p3m_programmes WHERE id = ?`, entityID).Scan(&portfolioID); err == nil && portfolioID.Valid {
 			tol = h.p3mToleranceFor(ctx, scope, int(portfolioID.Int64))
@@ -314,6 +315,9 @@ func (h *P3MHandler) p3mSnapshotMetrics(ctx context.Context, entityType string, 
 			red = n
 		}
 	}
+	// Best-effort helper: iteration errors leave the counts partial, matching
+	// this function's silent handling of every other DB error.
+	_ = rows.Err()
 	out["projects_green"] = green
 	out["projects_amber"] = amber
 	out["projects_red"] = red

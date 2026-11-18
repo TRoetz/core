@@ -185,6 +185,7 @@
 {:else if templates.length === 0}
   <EmptyState icon={ClipboardCheck} title={t('settings.p3mGateTemplates.noTemplates')} description={t('settings.p3mGateTemplates.getStarted')}>
     {#snippet action()}
+      <!-- shortcut-guard-exempt: empty-state add button opens a create modal; P3M gate-template manager does not register app-wide shortcuts. -->
       <Button variant="primary" icon={Plus} onclick={openCreateModal}>{t('settings.p3mGateTemplates.addTemplate')}</Button>
     {/snippet}
   </EmptyState>

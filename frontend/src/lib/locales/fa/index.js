@@ -25,6 +25,7 @@ import dashboard from './dashboard.js';
 import zammad from './zammad.js';
 import mobile from './mobile.js';
 import email from './email.js';
+import forkV094 from './fork-v094.js';
 
 export default createLocale({
   common,
@@ -48,4 +49,5 @@ export default createLocale({
   zammad,
   mobile,
   email,
+  forkV094,
 });

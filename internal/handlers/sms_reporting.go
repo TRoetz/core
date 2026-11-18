@@ -394,11 +394,12 @@ func (h *SMSHandler) GetPilotMetrics(w http.ResponseWriter, r *http.Request) {
 			if baseline != nil {
 				m["delta"] = current - *baseline
 			}
-			if target == nil {
+			switch {
+			case target == nil:
 				m["status"] = "no_target"
-			} else if current >= *target {
+			case current >= *target:
 				m["status"] = "on_track"
-			} else {
+			default:
 				m["status"] = "behind"
 			}
 		} else {

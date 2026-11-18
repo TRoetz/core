@@ -94,6 +94,9 @@ func (t *p3mGovernanceTick) sweep(ctx context.Context) {
 				ids = append(ids, id)
 			}
 		}
+		if err := rows.Err(); err != nil {
+			slog.Warn("p3m governance tick: project list iteration failed", "error", err)
+		}
 		rows.Close()
 		var raised int
 		for _, id := range ids {

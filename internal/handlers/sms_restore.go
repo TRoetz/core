@@ -55,10 +55,10 @@ func smsRestoreSpecs() []smsRestoreTableSpec {
 	}
 }
 
-// smsRestoreValue normalises one decoded JSON value for insertion into the
-// given column. Whole-number floats become int64 (JSON has no integer type);
-// timestamp columns accept RFC3339 strings and empty/missing values as NULL.
-func smsRestoreValue(col string, v any, isTime bool) (any, error) {
+// smsRestoreValue normalises one decoded JSON value for insertion. Whole-number
+// floats become int64 (JSON has no integer type); timestamp columns accept
+// RFC3339 strings and empty/missing values as NULL.
+func smsRestoreValue(v any, isTime bool) (any, error) {
 	switch val := v.(type) {
 	case nil:
 		return nil, nil
@@ -100,7 +100,7 @@ func smsRestoreTable(ctx context.Context, tx database.Tx, spec smsRestoreTableSp
 			if !ok || v == nil {
 				continue // NULL
 			}
-			nv, err := smsRestoreValue(col, v, spec.timeCols != nil && spec.timeCols[col])
+			nv, err := smsRestoreValue(v, spec.timeCols != nil && spec.timeCols[col])
 			if err != nil {
 				return n, fmt.Errorf("%s.%s: %w", spec.table, col, err)
 			}

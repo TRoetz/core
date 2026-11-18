@@ -267,7 +267,57 @@ full build gate (§4.6).
 
 **Formatting**: `gofmt -w` applied to 40 tracked files that were not gofmt-clean on the fork (no semantic change); required for the lint gate.
 
-### 4.6 Verification results
+### 4.6 Post-integration gate-compliance fixes (working tree)
+
+The merged tree compiled, but several repo gates (`make lint`, `ci-frontend`,
+schema pairing, i18n parity) failed on fork content. Fixes applied after the
+cherry-pick:
+
+**SQL boolean literals** (`scripts/check-sql-boolean-literals`): migration
+bodies and schema files normalized to `TRUE`/`FALSE`. Three migrations whose
+bodies changed therefore carry new `Superseded` lists with their
+pre-normalization hashes (sqlite + postgres each):
+`20261109_p3m_configurable_lifecycle`, `20261126_sms_node_taxonomy`,
+`20261128_sms_raci_work_packages`.
+
+**Schema/migration pairing** (`scripts/check-schema-migration-pairing.sh`):
+the `p3m_module` and `sms_module` entries gained unrecorded historical states
+in their `Superseded` lists (7 new hashes total, incl. observed dev-build
+stamps); `scripts/.layering-baseline` extended by 10 lines for the fork's new
+layer edges.
+
+**Audit literals**: four new constants in `internal/logger/audit.go` —
+`ActionP3MFinanceSyncRun`, `ResourceP3MFinanceSyncConfig` (scheduler-driven
+finance-sync run records) and `ActionSMSGrievanceIntake`, `ResourceSMSGrievance`
+(anonymous public grievance form).
+
+**Handler DB-access allowlist**: new `scripts/.handler-db-access-allowlist`
+(+49 lines) covering fork handlers that query the database directly.
+
+**golangci-lint** (`.golangci.yml`): `nilerr` exempted for `internal/aitools/`
+(AI tools intentionally return error details as JSON strings with nil error);
+`misspell` exemptions for British spellings locked in by stored data —
+`programme` (p3m_programmes table), `sceptic` / `formalised` (SRM enum and
+state-machine values), `realisation|realised` (P3M lifecycle stage key and
+benefit status), `cancelled` (SMS CHECK constraint). `rows.Err()` checks added
+in `internal/services/sms_reminder_sweeper.go`.
+
+**Frontend**: biome auto-fixes on 4 files; shortcut exemptions in 4 Svelte
+files; unused `createCrudClient` import removed from `frontend/src/lib/api/plans.js`.
+
+**i18n parity** (`frontend/scripts/check-i18n.js`): the fork shipped ~1500 new
+English keys with only partial translations. Fixes:
+- 10 missing English keys added to `en/` (p3mFinanceSync.assign/assignTo,
+  p3mLifecycleSettings.*, sms.scope).
+- Stale `story` / `activity` default-level keys removed from it/fa/pl
+  `admin.js`: the fork intentionally reduced default hierarchy levels from five
+  (initiative/epic/story/task/activity) to three; de/fr/ru/zh-CN were already
+  aligned. Placeholder example text left as-is, matching the fork author's own
+  treatment of those locales.
+- All remaining missing keys translated into ru, de, fr, zh-CN, fa, pl (the six
+  locales the gate requires at full coverage).
+
+### 4.7 Verification results
 
 _Filled in after steps 6–8: DB backup location, dbcheck assertions, build/test/lint gate, live smoke, manual UI checklist._
 

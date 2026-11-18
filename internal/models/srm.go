@@ -216,7 +216,7 @@ type SRMSupplier struct {
 }
 
 // SRMGateStatus is the computed phase-gate position of a supplier relationship.
-// Artifacts maps each artefact required for the next gate to its current
+// Artifacts maps each artifact required for the next gate to its current
 // satisfaction; Missing lists the unsatisfied ones (FR-GATE-1 tooltips).
 type SRMGateStatus struct {
 	Current   string          `json:"current"`
@@ -851,7 +851,7 @@ type SRMServiceImprovementPlan struct {
 	ContractID          int       `json:"contract_id"`
 	SupplierID          int       `json:"supplier_id"`
 	Title               string    `json:"title"`
-	SipOwnerID          int       `json:"sip_owner_id"`
+	SIPOwnerID          int       `json:"sip_owner_id"`
 	ProblemStatement    string    `json:"problem_statement"`
 	Subtype             string    `json:"subtype"` // breach_driven|continuous_improvement
 	SuccessMeasureSmart string    `json:"success_measure_smart"`
@@ -867,7 +867,7 @@ type SRMServiceImprovementPlan struct {
 
 type SRMSIPDeliverable struct {
 	ID                  int        `json:"id"`
-	SipID               int        `json:"sip_id"`
+	SIPID               int        `json:"sip_id"`
 	Seq                 int        `json:"seq"`
 	KeyDeliverable      string     `json:"key_deliverable"`
 	CompletionDate      *time.Time `json:"completion_date,omitempty"`
@@ -907,7 +907,7 @@ type SRMDisputeEscalation struct {
 type SRMRemedyPlan struct {
 	ID                       int                 `json:"id"`
 	DisputeID                *int                `json:"dispute_id,omitempty"`
-	SipID                    *int                `json:"sip_id,omitempty"`
+	SIPID                    *int                `json:"sip_id,omitempty"`
 	ContractID               int                 `json:"contract_id"`
 	NonPerformanceIssue      string              `json:"non_performance_issue"`
 	RootCause                string              `json:"root_cause"`

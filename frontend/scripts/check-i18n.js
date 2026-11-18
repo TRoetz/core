@@ -45,8 +45,11 @@ const INTENTIONAL_CARRYOVERS = new Set([
   'jiraImport.form.urlDatacenter',
   'jiraImport.title.cloud',
   'jiraImport.title.datacenter',
+  'plans.filterQueryPlaceholder',
   'portal.qlQueryFormPlaceholder',
   'portal.qlQueryPlaceholder',
+  // CSV column identifiers; not translatable text.
+  'sms.importHint',
   'settings.sso.title',
   // Placeholder-only format string; there is no translatable text.
   'zammad.overview.statusWithConnection',

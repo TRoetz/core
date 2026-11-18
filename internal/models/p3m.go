@@ -400,7 +400,7 @@ const (
 	P3MICStatusDeferred    = "deferred"
 )
 
-// P3MInvestmentCase is a project's investment case: the prioritisation decision
+// P3MInvestmentCase is a project's investment case: the prioritization decision
 // pipeline plus risk/benefit/return scores used to balance portfolios on timing,
 // strategic coverage, benefit, risk and return. One per project; it travels with
 // the project through its lifecycle.
@@ -805,7 +805,7 @@ type P3MToleranceProfile struct {
 	UpdatedAt    time.Time `json:"updated_at"`
 }
 
-// P3MScoringCriterion is one portfolio prioritisation criterion (PO-003).
+// P3MScoringCriterion is one portfolio prioritization criterion (PO-003).
 type P3MScoringCriterion struct {
 	ID          int       `json:"id"`
 	Name        string    `json:"name"`

@@ -3358,6 +3358,10 @@ var Catalog = []Migration{
 			"32809ae921038f2589c17c233988525d870d9fa3ea68e17624a0bbb70e97399e", // Postgres, pre p3m_investment_cases
 			"367e1e277143099390b731befaf4094d6cf7d2c512d52889ab4739425ec9bf3f", // SQLite, as of 05e28159
 			"e7578ef2a4baeb2c34c913d422890feb83c20eee05a4cc99ce6467d1bbd25887", // Postgres, as of 05e28159
+			// Uncommitted dev build stamped the smoke DB with a body that never
+			// shipped in any commit; accept and restamp forward.
+			"3c3d399f609212271bebf417722e6cf86ad5b52c4574c4125ec6dbb70efca5b9", // SQLite, uncommitted dev state
+			"1e1e99a4a2e3a18a1980f666f09c4da343e5693ba2f3c01ef3a7973193de4831", // Postgres, as of 31d0c5f1
 		},
 		// Reuses the embedded fresh-install DDL (idempotent CREATE ... IF NOT
 		// EXISTS) plus the p3m.view permission seed for pre-existing databases.
@@ -3435,6 +3439,13 @@ var Catalog = []Migration{
 			// Body as of 1501ec45..0328dbf4 (before feff9dce1's stakeholder
 			// updates); schema objects unchanged, so restamp forward.
 			"c42d1f22a859adadd118dc38dc40df7502e2429856c04d61bef4d08982229e6f", // SQLite, pre feff9dce1 stakeholder updates
+			// Unrecorded intermediate states from fork commits; schema objects
+			// come from their own migrations, so restamp forward.
+			"3774519ec8de5cf81478573174f5536a583574be3fe1d469577bb50ebce68559", // Postgres, as of 2c39ad65
+			"af7896c7b62533b6a1e0d688d63cddfaadffdcbffa65e7a166bb7c515cce6dea", // Postgres, as of ba687232
+			"d3d401d28202ef51a6dbecd5c51958dc9beaa0fc2409c05d4efe3003418191d7", // Postgres, as of 076af60b
+			"1c3796350ea4282ab8908f5cf3253702f8e361973b7592a7364970ab10d14f84", // SQLite, as of ba687232
+			"1a41e2a2512fe25165c3e3df05a632c60d933c3e7e2ebab6a18a0429cefc4700", // SQLite, as of 60cd7fb5
 		},
 		// The embedded DDL gained node-taxonomy/campaign/RACI tables and a
 		// widened channel enum after this body shipped (migrations
@@ -5034,6 +5045,24 @@ var Catalog = []Migration{
 			);
 		`,
 	},
+		// Superseded advances installs stamped by pre-normalization builds;
+		// the body now uses TRUE/FALSE instead of numeric boolean literals.
+		Superseded: []string{
+			"8155abf018be35033234d6bd2fa45a79af10e753f718181f8c4d714d96d0392e", // sqlite
+			"d800f34e3a94db457109759ef84b2b27e4722cd7bd30fc6078251e62f0d4fbd0", // postgres
+		},
+		// Superseded advances installs stamped by pre-normalization builds;
+		// the body now uses TRUE/FALSE instead of numeric boolean literals.
+		Superseded: []string{
+			"6297ccdd41bbb1250a9a72fd8d5929b1d12266c7c8a9a8e9596390a52e295e05", // sqlite
+			"68e99028e9d9335d62c82eba331a939e970f8fa855a5b064e88326b22a57ca8e", // postgres
+		},
+		// Superseded advances installs stamped by pre-normalization builds;
+		// the body now uses TRUE/FALSE instead of numeric boolean literals.
+		Superseded: []string{
+			"ab442a8e05a243fd376f105f94fb086901ed5ad81c5e1243d751128f5bac6ecc", // sqlite
+			"3e82203795c87ae8ff65dafa40b6c116316e5a8ea526f42859a5de00651004a2", // postgres
+		},
 }
 
 // checkP3MDecisionARBSQLite reports whether the P3M decision/ARB migration's

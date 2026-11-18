@@ -59,6 +59,10 @@ export default {
         name: 'Jalons à venir',
         description: 'Jalons dont la date cible approche',
       },
+      p3mPortfolioPulse: {
+        name: 'Portfolio Pulse',
+        description: 'Statut RAG, consommation budgétaire et portes/risques ouverts de vos portefeuilles P3M',
+      },
       recentWorkspaces: {
         name: 'Espaces de travail récents',
         description: 'Espaces de travail que vous avez récemment visités',

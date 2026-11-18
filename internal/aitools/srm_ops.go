@@ -231,7 +231,10 @@ func init() {
 						rows.Close()
 						return nil, err
 					}
-					env.DB.ExecContext(ctx, `UPDATE srm_suppliers SET tier = ?, updated_at = ? WHERE id = ?`, tier, now, ref)
+					if _, err := env.DB.ExecContext(ctx, `UPDATE srm_suppliers SET tier = ?, updated_at = ? WHERE id = ?`, tier, now, ref); err != nil {
+						rows.Close()
+						return nil, err
+					}
 				}
 				rows.Close()
 				if err := rows.Err(); err != nil {

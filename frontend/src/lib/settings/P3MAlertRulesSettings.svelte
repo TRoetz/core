@@ -236,6 +236,7 @@
   {#if rules.length === 0}
     <EmptyState icon={BellRing} title={t('settings.p3mAlertRules.noRules')} description={t('settings.p3mAlertRules.getStarted')}>
       {#snippet action()}
+        <!-- shortcut-guard-exempt: empty-state add button opens a create modal; P3M alert-rules settings do not register app-wide shortcuts. -->
         <Button variant="primary" icon={Plus} onclick={openCreateModal}>{t('settings.p3mAlertRules.addRule')}</Button>
       {/snippet}
     </EmptyState>

@@ -147,9 +147,9 @@ func smsHealthScore(relationship, engagement string, openCritical, escalatedOpen
 
 // smsIssuePressure returns per-stakeholder counts of open critical issues and
 // escalated open issues. "Open" means status IN ('open','in_progress','escalated').
-func (h *SMSHandler) smsIssuePressure(ctx context.Context) (map[int]int, map[int]int, error) {
-	critical := make(map[int]int)
-	escalated := make(map[int]int)
+func (h *SMSHandler) smsIssuePressure(ctx context.Context) (critical, escalated map[int]int, err error) {
+	critical = make(map[int]int)
+	escalated = make(map[int]int)
 	rows, err := h.db.QueryContext(ctx, `SELECT stakeholder_id, priority, status FROM sms_issues WHERE status IN ('open','in_progress','escalated')`)
 	if err != nil {
 		return nil, nil, err
@@ -911,7 +911,7 @@ func (h *SMSHandler) UpdateStakeholder(w http.ResponseWriter, r *http.Request) {
 		respondBadRequest(w, r, "location_lon must be between -180 and 180")
 		return
 	}
-	customFields := orKeep(in.CustomFields, existing.CustomFields).(string)
+	customFields, _ := orKeep(in.CustomFields, existing.CustomFields).(string)
 	if !jsonIsObject(customFields) {
 		respondBadRequest(w, r, "custom_fields must be a JSON object")
 		return

@@ -122,7 +122,7 @@ type p3mFinanceSyncConfigInput struct {
 
 // p3mFinanceSyncValidateConfig checks the shared config invariants and applies
 // defaults. It writes a 400 on failure and returns false.
-func (h *P3MHandler) p3mFinanceSyncValidateConfig(w http.ResponseWriter, r *http.Request, in *p3mFinanceSyncConfigInput, isCreate bool) bool {
+func (h *P3MHandler) p3mFinanceSyncValidateConfig(w http.ResponseWriter, r *http.Request, in *p3mFinanceSyncConfigInput) bool {
 	in.Name = strings.TrimSpace(in.Name)
 	if in.Name == "" {
 		respondValidationError(w, r, "name is required")
@@ -183,7 +183,7 @@ func (h *P3MHandler) CreateFinanceSyncConfig(w http.ResponseWriter, r *http.Requ
 		respondBadRequest(w, r, "Invalid request body")
 		return
 	}
-	if !h.p3mFinanceSyncValidateConfig(w, r, &in, true) {
+	if !h.p3mFinanceSyncValidateConfig(w, r, &in) {
 		return
 	}
 	ctx := r.Context()
@@ -274,7 +274,7 @@ func (h *P3MHandler) UpdateFinanceSyncConfig(w http.ResponseWriter, r *http.Requ
 		ScheduleMinutes: scheduleMinutes, PeriodFormat: current.PeriodFormat,
 		DefaultCurrency: current.DefaultCurrency, MatchMode: matchMode,
 	}
-	if !h.p3mFinanceSyncValidateConfig(w, r, &merged, false) {
+	if !h.p3mFinanceSyncValidateConfig(w, r, &merged) {
 		return
 	}
 
@@ -366,6 +366,7 @@ func (h *P3MHandler) RunFinanceSyncNow(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.p3mAudit(r, user, "p3m.finance_sync.run_manual", "p3m_finance_sync_config", &cfgRow.ID, cfgRow.Name, map[string]any{"run_id": int(runID64)})
+	//nolint:gosec // manual run intentionally outlives the request; clients poll GET /runs/{id}
 	go func() {
 		runCtx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
 		defer cancel()

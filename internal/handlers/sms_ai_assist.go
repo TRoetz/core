@@ -80,6 +80,11 @@ func (h *SMSHandler) AIAssist(w http.ResponseWriter, r *http.Request) {
 			commLines = append(commLines, line)
 		}
 	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		respondInternalError(w, r, err)
+		return
+	}
 	rows.Close()
 
 	var openIssues, openCommitments int

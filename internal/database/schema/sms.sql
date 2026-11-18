@@ -186,7 +186,7 @@ CREATE TABLE IF NOT EXISTS sms_commitments (
 	owner_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
 	due_date DATETIME,
 	status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open','in_progress','at_risk','completed','cancelled')),
-	escalated BOOLEAN NOT NULL DEFAULT 0,
+	escalated BOOLEAN NOT NULL DEFAULT FALSE,
 	escalation_level INTEGER NOT NULL DEFAULT 0,
 	source_communication_id INTEGER REFERENCES sms_communications(id) ON DELETE SET NULL,
 	linked_issue_id INTEGER REFERENCES sms_issues(id) ON DELETE SET NULL,
@@ -206,7 +206,7 @@ CREATE TABLE IF NOT EXISTS sms_grievances (
 	category TEXT NOT NULL DEFAULT '',
 	severity TEXT NOT NULL DEFAULT 'medium' CHECK (severity IN ('low','medium','high','critical')),
 	status TEXT NOT NULL DEFAULT 'received' CHECK (status IN ('received','acknowledged','investigating','responded','closed')),
-	escalated BOOLEAN NOT NULL DEFAULT 0,
+	escalated BOOLEAN NOT NULL DEFAULT FALSE,
 	escalation_level INTEGER NOT NULL DEFAULT 0,
 	acknowledged_at DATETIME,
 	response_due_at DATETIME,
@@ -271,9 +271,9 @@ CREATE TABLE IF NOT EXISTS sms_ownership_transfers (
 	from_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
 	to_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
 	reason TEXT NOT NULL DEFAULT '',
-	history_reviewed BOOLEAN NOT NULL DEFAULT 0,
-	risks_reviewed BOOLEAN NOT NULL DEFAULT 0,
-	commitments_reviewed BOOLEAN NOT NULL DEFAULT 0,
+	history_reviewed BOOLEAN NOT NULL DEFAULT FALSE,
+	risks_reviewed BOOLEAN NOT NULL DEFAULT FALSE,
+	commitments_reviewed BOOLEAN NOT NULL DEFAULT FALSE,
 	notes TEXT NOT NULL DEFAULT '',
 	completed_at DATETIME,
 	created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
@@ -300,9 +300,9 @@ CREATE TABLE IF NOT EXISTS sms_node_kinds (
 	key TEXT NOT NULL UNIQUE,                 -- 'building', 'road_segment', 'area'…
 	label TEXT NOT NULL,                      -- "Building"
 	description TEXT NOT NULL DEFAULT '',
-	allows_children BOOLEAN NOT NULL DEFAULT 1,
+	allows_children BOOLEAN NOT NULL DEFAULT TRUE,
 	child_kinds TEXT NOT NULL DEFAULT '',     -- comma list of allowed child kind keys; '' = any
-	is_system BOOLEAN NOT NULL DEFAULT 0,     -- seeded kinds can't be deleted (only edited)
+	is_system BOOLEAN NOT NULL DEFAULT FALSE,     -- seeded kinds can't be deleted (only edited)
 	created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -385,7 +385,7 @@ CREATE TABLE IF NOT EXISTS sms_campaign_targets (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
 	campaign_id INTEGER NOT NULL REFERENCES sms_notification_campaigns(id) ON DELETE CASCADE,
 	node_id INTEGER NOT NULL REFERENCES sms_nodes(id) ON DELETE CASCADE,
-	include_descendants BOOLEAN NOT NULL DEFAULT 0,
+	include_descendants BOOLEAN NOT NULL DEFAULT FALSE,
 	UNIQUE (campaign_id, node_id)
 );
 

@@ -127,8 +127,8 @@ func smsTplCell(v any) string {
 }
 
 // smsTplRows runs a query and returns rows as string cells in column order.
-func (h *SMSHandler) smsTplRows(ctx context.Context, query string, args ...any) ([][]string, error) {
-	rows, err := h.db.QueryContext(ctx, query, args...)
+func (h *SMSHandler) smsTplRows(ctx context.Context, query string) ([][]string, error) {
+	rows, err := h.db.QueryContext(ctx, query)
 	if err != nil {
 		return nil, err
 	}
@@ -137,10 +137,9 @@ func (h *SMSHandler) smsTplRows(ctx context.Context, query string, args ...any) 
 	if err != nil {
 		return nil, err
 	}
-	out := [][]string{make([]string, len(cols))}
-	for i, c := range cols {
-		out[0][i] = c
-	}
+	header := make([]string, len(cols))
+	copy(header, cols)
+	out := [][]string{header}
 	for rows.Next() {
 		vals := make([]any, len(cols))
 		ptrs := make([]any, len(cols))
@@ -167,7 +166,7 @@ func mustInt(s string) int {
 
 // --- generators -------------------------------------------------------------
 
-func smsTplStakeholderRegister(h *SMSHandler, ctx context.Context) (string, []byte, error) {
+func smsTplStakeholderRegister(h *SMSHandler, ctx context.Context) (filename string, data []byte, err error) {
 	rows, err := h.smsTplRows(ctx, `SELECT `+smsStakeholderColumns+` FROM sms_stakeholders ORDER BY name COLLATE NOCASE`)
 	if err != nil {
 		return "", nil, err
@@ -175,7 +174,7 @@ func smsTplStakeholderRegister(h *SMSHandler, ctx context.Context) (string, []by
 	return "stakeholder_register.csv", smsTemplateCSV(rows), nil
 }
 
-func smsTplEngagementPlan(h *SMSHandler, ctx context.Context) (string, []byte, error) {
+func smsTplEngagementPlan(h *SMSHandler, ctx context.Context) (filename string, data []byte, err error) {
 	rows, err := h.smsTplRows(ctx, `SELECT p.id AS plan_id, s.name AS stakeholder, p.strategy, p.objective, p.approach, p.status, p.start_date, p.end_date FROM sms_engagement_plans p LEFT JOIN sms_engagement_plan_stakeholders ps ON ps.plan_id = p.id LEFT JOIN sms_stakeholders s ON s.id = ps.stakeholder_id ORDER BY p.id, s.name`)
 	if err != nil {
 		return "", nil, err
@@ -188,7 +187,7 @@ func smsTplEngagementPlan(h *SMSHandler, ctx context.Context) (string, []byte, e
 	return "engagement_plan.csv", smsTemplateCSV(rows), nil
 }
 
-func smsTplCommunicationPlan(h *SMSHandler, ctx context.Context) (string, []byte, error) {
+func smsTplCommunicationPlan(h *SMSHandler, ctx context.Context) (filename string, data []byte, err error) {
 	rows, err := h.smsTplRows(ctx, `SELECT p.id AS plan_id, s.name AS stakeholder, p.channel, p.frequency, p.key_messages, p.success_measures FROM sms_engagement_plans p LEFT JOIN sms_engagement_plan_stakeholders ps ON ps.plan_id = p.id LEFT JOIN sms_stakeholders s ON s.id = ps.stakeholder_id ORDER BY p.id, s.name`)
 	if err != nil {
 		return "", nil, err
@@ -196,7 +195,7 @@ func smsTplCommunicationPlan(h *SMSHandler, ctx context.Context) (string, []byte
 	return "communication_plan.csv", smsTemplateCSV(rows), nil
 }
 
-func smsTplRiskAssessment(h *SMSHandler, ctx context.Context) (string, []byte, error) {
+func smsTplRiskAssessment(h *SMSHandler, ctx context.Context) (filename string, data []byte, err error) {
 	rows, err := h.smsTplRows(ctx, `SELECT i.id, s.name AS stakeholder, i.category, i.title, i.priority, i.impact, i.likelihood, i.status, i.escalation_level, i.mitigation, i.resolution_notes, i.resolved_at FROM sms_issues i LEFT JOIN sms_stakeholders s ON s.id = i.stakeholder_id ORDER BY CASE WHEN i.status = 'open' THEN 0 ELSE 1 END, i.priority DESC, i.id`)
 	if err != nil {
 		return "", nil, err
@@ -204,7 +203,7 @@ func smsTplRiskAssessment(h *SMSHandler, ctx context.Context) (string, []byte, e
 	return "risk_assessment.csv", smsTemplateCSV(rows), nil
 }
 
-func smsTplCommitmentRegister(h *SMSHandler, ctx context.Context) (string, []byte, error) {
+func smsTplCommitmentRegister(h *SMSHandler, ctx context.Context) (filename string, data []byte, err error) {
 	rows, err := h.smsTplRows(ctx, `SELECT c.id, s.name AS stakeholder, c.direction, c.title, c.owner_user_id, c.due_date, c.status, c.escalated, c.notes FROM sms_commitments c LEFT JOIN sms_stakeholders s ON s.id = c.stakeholder_id ORDER BY CASE WHEN c.status = 'open' THEN 0 ELSE 1 END, c.due_date, c.id`)
 	if err != nil {
 		return "", nil, err
@@ -212,7 +211,7 @@ func smsTplCommitmentRegister(h *SMSHandler, ctx context.Context) (string, []byt
 	return "commitment_register.csv", smsTemplateCSV(rows), nil
 }
 
-func smsTplHealthAssessment(h *SMSHandler, ctx context.Context) (string, []byte, error) {
+func smsTplHealthAssessment(h *SMSHandler, ctx context.Context) (filename string, data []byte, err error) {
 	rows, err := h.smsTplRows(ctx, `SELECT s.id, s.name, s.tier, s.relationship_status, COALESCE(s.trust_level, '') AS trust_level, s.engagement_status, (SELECT COUNT(*) FROM sms_issues i WHERE i.stakeholder_id = s.id AND i.status = 'open' AND i.priority = 'critical') AS open_critical, (SELECT COUNT(*) FROM sms_issues i WHERE i.stakeholder_id = s.id AND i.status = 'open' AND i.escalation_level > 0) AS escalated_open FROM sms_stakeholders s ORDER BY name COLLATE NOCASE`)
 	if err != nil {
 		return "", nil, err
@@ -225,7 +224,7 @@ func smsTplHealthAssessment(h *SMSHandler, ctx context.Context) (string, []byte,
 	return "health_assessment.csv", smsTemplateCSV(out), nil
 }
 
-func smsTplExecutiveBriefing(h *SMSHandler, ctx context.Context) (string, []byte, error) {
+func smsTplExecutiveBriefing(h *SMSHandler, ctx context.Context) (filename string, data []byte, err error) {
 	rollup, err := h.smsRollup(ctx, "", nil)
 	if err != nil {
 		return "", nil, err
@@ -241,7 +240,7 @@ func smsTplExecutiveBriefing(h *SMSHandler, ctx context.Context) (string, []byte
 	return "executive_briefing.json", body, nil
 }
 
-func smsTplHandover(h *SMSHandler, ctx context.Context) (string, []byte, error) {
+func smsTplHandover(h *SMSHandler, ctx context.Context) (filename string, data []byte, err error) {
 	rows, err := h.smsTplRows(ctx, `SELECT t.id, s.name AS stakeholder, t.from_user_id, t.to_user_id, t.reason, t.history_reviewed, t.risks_reviewed, t.commitments_reviewed, t.notes, t.completed_at FROM sms_ownership_transfers t LEFT JOIN sms_stakeholders s ON s.id = t.stakeholder_id ORDER BY t.created_at DESC, t.id`)
 	if err != nil {
 		return "", nil, err
@@ -249,7 +248,7 @@ func smsTplHandover(h *SMSHandler, ctx context.Context) (string, []byte, error) 
 	return "handover.csv", smsTemplateCSV(rows), nil
 }
 
-func smsTplMappingCanvas(h *SMSHandler, ctx context.Context) (string, []byte, error) {
+func smsTplMappingCanvas(h *SMSHandler, ctx context.Context) (filename string, data []byte, err error) {
 	rows, err := h.smsTplRows(ctx, `SELECT l.id, s1.name AS source, l.source_id, l.relation_type, l.target_id, s2.name AS target, l.notes FROM sms_stakeholder_links l LEFT JOIN sms_stakeholders s1 ON s1.id = l.source_id LEFT JOIN sms_stakeholders s2 ON s2.id = l.target_id ORDER BY l.id`)
 	if err != nil {
 		return "", nil, err
@@ -257,9 +256,8 @@ func smsTplMappingCanvas(h *SMSHandler, ctx context.Context) (string, []byte, er
 	return "mapping_canvas.csv", smsTemplateCSV(rows), nil
 }
 
-func smsTplDataDictionary(h *SMSHandler, ctx context.Context) (string, []byte, error) {
+func smsTplDataDictionary(h *SMSHandler, ctx context.Context) (filename string, data []byte, err error) {
 	var rows [][]string
-	var err error
 	if database.IsPostgresDriver(h.db.GetDriverName()) {
 		rows, err = h.smsTplRows(ctx, `SELECT table_name, column_name, data_type, is_nullable, COALESCE(column_default, '') FROM information_schema.columns WHERE table_name LIKE 'sms\_%' ORDER BY table_name, ordinal_position`)
 	} else {
@@ -311,7 +309,7 @@ func smsTplDataDictionary(h *SMSHandler, ctx context.Context) (string, []byte, e
 	return "data_dictionary.csv", smsTemplateCSV(rows), nil
 }
 
-func smsTplImportTemplate(h *SMSHandler, ctx context.Context) (string, []byte, error) {
+func smsTplImportTemplate(h *SMSHandler, ctx context.Context) (filename string, data []byte, err error) {
 	rows := [][]string{
 		{"name", "title", "organization", "email", "phone", "tier", "relationship_status", "engagement_status", "interests", "notes"},
 		{"Jane Example", "Community Lead", "Example Org", "jane@example.org", "+64 21 000 0000", "tier_1", "advocate", "active", "funding, governance", "sample row - replace with real data"},
@@ -320,7 +318,7 @@ func smsTplImportTemplate(h *SMSHandler, ctx context.Context) (string, []byte, e
 	return "sms_import_template.csv", smsTemplateCSV(rows), nil
 }
 
-func smsTplPilotBaselines(h *SMSHandler, ctx context.Context) (string, []byte, error) {
+func smsTplPilotBaselines(h *SMSHandler, ctx context.Context) (filename string, data []byte, err error) {
 	rows, err := h.smsTplRows(ctx, `SELECT metric_key, baseline_value, target_value, set_at FROM sms_pilot_baselines ORDER BY metric_key`)
 	if err != nil {
 		return "", nil, err

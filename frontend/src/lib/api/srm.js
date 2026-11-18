@@ -1,5 +1,5 @@
-import { createCrudClient } from './createCrudClient.js';
 import { fetchAPI } from './core.js';
+import { createCrudClient } from './createCrudClient.js';
 
 /**
  * SRM (Supplier Relationship Management) API client.
@@ -18,13 +18,15 @@ export const srm = {
 
   getSupplierGates: (supplierId) => fetchAPI(`/srm/suppliers/${supplierId}/gates`),
   advanceGate: (supplierId, data = {}) => post(`/srm/suppliers/${supplierId}/gate-advance`, data),
-  downgradeGate: (supplierId, data = {}) => post(`/srm/suppliers/${supplierId}/gate-downgrade`, data),
+  downgradeGate: (supplierId, data = {}) =>
+    post(`/srm/suppliers/${supplierId}/gate-downgrade`, data),
   closeSupplier: (supplierId, data = {}) => post(`/srm/suppliers/${supplierId}/close`, data),
 
   // Contract register.
   contracts: createCrudClient('/srm/contracts'),
   assignContractRole: (contractId, data) => post(`/srm/contracts/${contractId}/assignments`, data),
-  removeContractAssignment: (contractId, assignmentId) => del(`/srm/contracts/${contractId}/assignments/${assignmentId}`),
+  removeContractAssignment: (contractId, assignmentId) =>
+    del(`/srm/contracts/${contractId}/assignments/${assignmentId}`),
 
   // Contract documents & clause extraction review.
   getContractDocuments: (contractId) => fetchAPI(`/srm/contracts/${contractId}/documents`),
@@ -33,7 +35,8 @@ export const srm = {
   getExtractions: (documentId) => fetchAPI(`/srm/documents/${documentId}/extractions`),
   reviewClauseExtraction: (id, data) => put(`/srm/extractions/${id}`, data),
 
-  createManagementPlan: (contractId, data) => post(`/srm/contracts/${contractId}/management-plans`, data),
+  createManagementPlan: (contractId, data) =>
+    post(`/srm/contracts/${contractId}/management-plans`, data),
 
   // Cross-module P3M view: projects with contract aggregates and the entity
   // option list for linking contracts to portfolios/programmes/projects.
@@ -46,7 +49,8 @@ export const srm = {
   createSegmentationRun: (data) => post('/srm/segmentation/runs', data),
   getSegmentationRun: (id) => fetchAPI(`/srm/segmentation/runs/${id}`),
   upsertSegmentationAnswer: (runId, data) => put(`/srm/segmentation/runs/${runId}/answers`, data),
-  completeSegmentationRun: (runId, data = {}) => post(`/srm/segmentation/runs/${runId}/complete`, data),
+  completeSegmentationRun: (runId, data = {}) =>
+    post(`/srm/segmentation/runs/${runId}/complete`, data),
 
   getValidationRequests: (filters = {}) => fetchAPI(`/srm/validation${qs(filters)}`),
   createValidationRequest: (data) => post('/srm/validation', data),
@@ -115,7 +119,9 @@ export const srm = {
 };
 
 function qs(params = {}) {
-  const entries = Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== '');
+  const entries = Object.entries(params).filter(
+    ([, v]) => v !== undefined && v !== null && v !== ''
+  );
   if (!entries.length) return '';
   return `?${new URLSearchParams(entries.map(([k, v]) => [k, String(v)])).toString()}`;
 }

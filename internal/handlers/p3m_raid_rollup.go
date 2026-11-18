@@ -213,7 +213,7 @@ func (h *P3MHandler) GetCpmPreview(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		var cpe *models.P3MCPMCycleError
 		if errors.As(err, &cpe) {
-			respondCPMCycleError(w, r, err)
+			respondCPMCycleError(w, err)
 			return
 		}
 		respondInternalError(w, r, err)
@@ -265,7 +265,7 @@ func (h *P3MHandler) GetCpmPreview(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		var cpe *models.P3MCPMCycleError
 		if errors.As(err, &cpe) {
-			respondCPMCycleError(w, r, err)
+			respondCPMCycleError(w, err)
 			return
 		}
 		respondInternalError(w, r, err)

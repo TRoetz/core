@@ -391,7 +391,7 @@ func (h *SMSHandler) ExportCSV(w http.ResponseWriter, r *http.Request) {
 		}
 
 		w.Header().Set("Content-Type", "text/csv; charset=utf-8")
-		w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
+		w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename=%q`, filename))
 		cw := csv.NewWriter(w)
 		if err := cw.Write([]string{"id", "name", "title", "organization", "email", "phone", "role_classification", "influence_level", "interest_level", "interests", "engagement_status", "lifecycle_stage", "relationship_status", "communication_preferences", "custom_fields", "notes", "health_score", "created_at", "updated_at"}); err != nil {
 			return
@@ -429,6 +429,9 @@ func (h *SMSHandler) ExportCSV(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
+		if err := rows.Err(); err != nil {
+			return
+		}
 		cw.Flush()
 
 	case "communications":
@@ -442,7 +445,7 @@ func (h *SMSHandler) ExportCSV(w http.ResponseWriter, r *http.Request) {
 		defer rows.Close()
 
 		w.Header().Set("Content-Type", "text/csv; charset=utf-8")
-		w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
+		w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename=%q`, filename))
 		cw := csv.NewWriter(w)
 		if err := cw.Write([]string{"id", "stakeholder_name", "channel", "direction", "subject", "body", "sentiment", "created_at"}); err != nil {
 			return
@@ -471,6 +474,9 @@ func (h *SMSHandler) ExportCSV(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
+		if err := rows.Err(); err != nil {
+			return
+		}
 		cw.Flush()
 
 	case "nodes":
@@ -483,7 +489,7 @@ func (h *SMSHandler) ExportCSV(w http.ResponseWriter, r *http.Request) {
 		defer rows.Close()
 
 		w.Header().Set("Content-Type", "text/csv; charset=utf-8")
-		w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
+		w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename=%q`, filename))
 		cw := csv.NewWriter(w)
 		if err := cw.Write([]string{"id", "external_id", "kind_key", "kind_label", "parent_name", "name", "description", "location_lat", "location_lon", "location_text", "custom_fields", "entity_type", "entity_id", "occupant_count"}); err != nil {
 			return
@@ -512,6 +518,9 @@ func (h *SMSHandler) ExportCSV(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
+		if err := rows.Err(); err != nil {
+			return
+		}
 		cw.Flush()
 
 	case "occupants":
@@ -524,7 +533,7 @@ func (h *SMSHandler) ExportCSV(w http.ResponseWriter, r *http.Request) {
 		defer rows.Close()
 
 		w.Header().Set("Content-Type", "text/csv; charset=utf-8")
-		w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
+		w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename=%q`, filename))
 		cw := csv.NewWriter(w)
 		if err := cw.Write([]string{"id", "node_name", "stakeholder_name", "organization", "email", "role", "start_date", "end_date", "notes"}); err != nil {
 			return
@@ -549,6 +558,9 @@ func (h *SMSHandler) ExportCSV(w http.ResponseWriter, r *http.Request) {
 			if err := cw.Write(record); err != nil {
 				return
 			}
+		}
+		if err := rows.Err(); err != nil {
+			return
 		}
 		cw.Flush()
 

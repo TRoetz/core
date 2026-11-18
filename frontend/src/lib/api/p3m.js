@@ -118,8 +118,7 @@ export const p3m = {
   createLifecycleStage: (data) => post('/p3m/config/lifecycle/stages', data),
   updateLifecycleStage: (key, data) =>
     put(`/p3m/config/lifecycle/stages/${encodeURIComponent(key)}`, data),
-  deleteLifecycleStage: (key) =>
-    del(`/p3m/config/lifecycle/stages/${encodeURIComponent(key)}`),
+  deleteLifecycleStage: (key) => del(`/p3m/config/lifecycle/stages/${encodeURIComponent(key)}`),
   gateTemplates: {
     create: (data) => post('/p3m/config/lifecycle/gate-templates', data),
     update: (id, data) => put(`/p3m/config/lifecycle/gate-templates/${id}`, data),
@@ -154,8 +153,10 @@ export const p3m = {
   getFinanceSyncRuns: (filters = {}) => fetchAPI(`/p3m/finance-sync/runs${qs(filters)}`),
   getFinanceSyncRun: (id) => fetchAPI(`/p3m/finance-sync/runs/${id}`),
   getUnmatchedFinanceRows: (filters = {}) => fetchAPI(`/p3m/finance-sync/unmatched${qs(filters)}`),
-  assignUnmatchedFinanceRow: (factId, data) => post(`/p3m/finance-sync/unmatched/${factId}/assign`, data),
-  rejectUnmatchedFinanceRow: (factId, data = {}) => post(`/p3m/finance-sync/unmatched/${factId}/reject`, data),
+  assignUnmatchedFinanceRow: (factId, data) =>
+    post(`/p3m/finance-sync/unmatched/${factId}/assign`, data),
+  rejectUnmatchedFinanceRow: (factId, data = {}) =>
+    post(`/p3m/finance-sync/unmatched/${factId}/reject`, data),
   getFinanceSyncSummary: () => fetchAPI('/p3m/finance-sync/summary'),
 
   // Phase-2 gap closure: change calendar (CHG-008/009).
@@ -164,15 +165,19 @@ export const p3m = {
 
   // Change impact + readiness assessments (CHG-002/006).
   getChangeAssessments: (projectId) => fetchAPI(`/p3m/projects/${projectId}/change-assessments`),
-  createChangeAssessment: (projectId, data) => post(`/p3m/projects/${projectId}/change-assessments`, data),
+  createChangeAssessment: (projectId, data) =>
+    post(`/p3m/projects/${projectId}/change-assessments`, data),
   updateChangeAssessment: (id, data) => put(`/p3m/change-assessments/${id}`, data),
-  getReadinessAssessments: (projectId) => fetchAPI(`/p3m/projects/${projectId}/readiness-assessments`),
-  createReadinessAssessment: (projectId, data) => post(`/p3m/projects/${projectId}/readiness-assessments`, data),
+  getReadinessAssessments: (projectId) =>
+    fetchAPI(`/p3m/projects/${projectId}/readiness-assessments`),
+  createReadinessAssessment: (projectId, data) =>
+    post(`/p3m/projects/${projectId}/readiness-assessments`, data),
   updateReadinessAssessment: (id, data) => put(`/p3m/readiness-assessments/${id}`, data),
 
   // Benefit measurements + portfolio rollup (BEN-007/009).
   getBenefitMeasurements: (benefitId) => fetchAPI(`/p3m/benefits/${benefitId}/measurements`),
-  createBenefitMeasurement: (benefitId, data) => post(`/p3m/benefits/${benefitId}/measurements`, data),
+  createBenefitMeasurement: (benefitId, data) =>
+    post(`/p3m/benefits/${benefitId}/measurements`, data),
   updateBenefitMeasurement: (id, data) => put(`/p3m/benefit-measurements/${id}`, data),
   getBenefitsRollup: (filters = {}) => fetchAPI(`/p3m/benefits/rollup${qs(filters)}`),
 
@@ -197,13 +202,15 @@ export const p3m = {
   upsertInvestmentCaseScore: (id, data) => put(`/p3m/investment-cases/${id}/scores`, data),
   // PO-008: score change timeline reconstructed from audit events.
   getInvestmentCaseScoreHistory: (id) => fetchAPI(`/p3m/investment-cases/${id}/score-history`),
-  getRankedInvestmentCases: (filters = {}) => fetchAPI(`/p3m/investment-cases/ranked${qs(filters)}`),
+  getRankedInvestmentCases: (filters = {}) =>
+    fetchAPI(`/p3m/investment-cases/ranked${qs(filters)}`),
   getPortfolioRoadmap: (portfolioId) => fetchAPI(`/p3m/portfolios/${portfolioId}/roadmap`),
 
   // Financial exception alerts (FIN-009).
   financeAlertRules: createCrudClient('/p3m/finance-alert-rules'),
   evaluateAllFinanceAlerts: () => post('/p3m/evaluate-finance-alerts'),
-  evaluateProjectFinanceAlerts: (projectId) => post(`/p3m/projects/${projectId}/evaluate-finance-alerts`),
+  evaluateProjectFinanceAlerts: (projectId) =>
+    post(`/p3m/projects/${projectId}/evaluate-finance-alerts`),
 
   // Closure & handover record (CLS-001).
   getClosureRecord: (projectId) => fetchAPI(`/p3m/projects/${projectId}/closure-record`),

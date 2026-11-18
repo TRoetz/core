@@ -260,7 +260,7 @@ func (h *SMSHandler) EscalateCommitment(w http.ResponseWriter, r *http.Request) 
 }
 
 // intPtrOr resolves a nullable integer update: explicit value wins; nil keeps the stored value.
-func intPtrOr(v *int, fallback *int) any {
+func intPtrOr(v, fallback *int) any {
 	if v != nil {
 		return *v
 	}
@@ -268,7 +268,7 @@ func intPtrOr(v *int, fallback *int) any {
 }
 
 // timePtrOr resolves a nullable timestamp update: explicit value wins; nil keeps the stored value (which may itself be NULL).
-func timePtrOr(v *time.Time, fallback *time.Time) any {
+func timePtrOr(v, fallback *time.Time) any {
 	if v != nil {
 		return *v
 	}

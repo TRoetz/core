@@ -166,8 +166,8 @@ func RegisterSRMRoutes(deps *Deps) {
 	api.HandleH("POST /srm/sips", auth(srmView(http.HandlerFunc(deps.SRM.CreateServiceImprovementPlan))))
 	api.HandleH("GET /srm/sips/{id}", auth(srmView(http.HandlerFunc(deps.SRM.GetServiceImprovementPlan))))
 	api.HandleH("PUT /srm/sips/{id}", auth(srmView(http.HandlerFunc(deps.SRM.UpdateServiceImprovementPlan))))
-	api.HandleH("POST /srm/sips/{id}/deliverables", auth(srmView(http.HandlerFunc(deps.SRM.AddSipDeliverable))))
-	api.HandleH("PUT /srm/sip-deliverables/{id}", auth(srmView(http.HandlerFunc(deps.SRM.UpdateSipDeliverable))))
+	api.HandleH("POST /srm/sips/{id}/deliverables", auth(srmView(http.HandlerFunc(deps.SRM.AddSIPDeliverable))))
+	api.HandleH("PUT /srm/sip-deliverables/{id}", auth(srmView(http.HandlerFunc(deps.SRM.UpdateSIPDeliverable))))
 
 	api.HandleH("GET /srm/disputes", auth(srmView(http.HandlerFunc(deps.SRM.ListDisputes))))
 	api.HandleH("POST /srm/disputes", auth(srmView(http.HandlerFunc(deps.SRM.CreateDispute))))

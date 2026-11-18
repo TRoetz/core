@@ -13,7 +13,7 @@ import (
 
 const p3mChangeCalendarColumns = `id, entity_type, entity_id, activity, business_unit, start_week, end_week, impact_level, source, notes, created_by, created_at, updated_at`
 
-var isoWeekPattern = regexp.MustCompile(`^(\d{4})-W([0-9]{2})$`)
+var isoWeekPattern = regexp.MustCompile(`^(\d{4})-W(\d{2})$`)
 
 func scanP3MChangeCalendarEntry(row interface{ Scan(...any) error }) (models.P3MChangeCalendarEntry, error) {
 	var e models.P3MChangeCalendarEntry

@@ -23,7 +23,7 @@ import (
 // belongs to a plan: items in linked workspaces OR matching any of the plan's
 // named CQL filters. The returned SQL references only aliases from
 // repository.ItemListFilterFromClause().
-func (h *PlanHandler) planSourceCondition(ctx context.Context, planID int) (string, []any, error) {
+func (h *PlanHandler) planSourceCondition(ctx context.Context, planID int) (where string, clauseArgs []any, err error) {
 	var wsIDs []int
 	rows, err := h.db.QueryContext(ctx, `SELECT workspace_id FROM plan_workspaces WHERE plan_id = ?`, planID)
 	if err != nil {

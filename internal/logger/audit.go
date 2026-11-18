@@ -1130,6 +1130,12 @@ const (
 	// Audit log access (reads and SIEM streaming are security-relevant)
 	ActionAuditLogRead   = "audit_log.read"
 	ActionAuditLogStream = "audit_log.stream"
+
+	// P3M finance sync (scheduler-driven run records)
+	ActionP3MFinanceSyncRun = "p3m.finance_sync.run"
+
+	// SMS grievance intake (anonymous public form)
+	ActionSMSGrievanceIntake = "sms_grievance_intake"
 )
 
 // Resource type constants
@@ -1264,4 +1270,10 @@ const (
 
 	// Audit log read surface
 	ResourceAuditLog = "audit_log"
+
+	// P3M finance sync configuration
+	ResourceP3MFinanceSyncConfig = "p3m_finance_sync_config"
+
+	// SMS grievance records
+	ResourceSMSGrievance = "sms_grievance"
 )

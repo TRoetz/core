@@ -563,6 +563,15 @@ export default {
         configCreated: 'Sync config created',
         configUpdated: 'Sync config updated',
         configDeleted: 'Sync config deleted',
+        getStarted: 'Add a config pointing at your finance export to start reconciling actuals.',
+        name: 'Name',
+        status: 'Status',
+        config: 'Config',
+        enabled: 'Enabled',
+        disabled: 'Disabled',
+        assign: 'Assign',
+        matchRefOnly: 'Source reference only',
+        matchRefThenTitle: 'Reference, then title',
       },
 
       // P3M Financial Alert Rules (FIN-009)

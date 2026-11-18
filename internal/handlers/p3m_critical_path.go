@@ -427,7 +427,7 @@ func (h *P3MHandler) applyCPMRegisterCounts(ctx context.Context, tasks []models.
 
 // respondCPMCycleError writes the 422 dependency-cycle response: a flat JSON
 // body carrying the cycle's item ids so clients can surface them verbatim.
-func respondCPMCycleError(w http.ResponseWriter, r *http.Request, err error) {
+func respondCPMCycleError(w http.ResponseWriter, err error) {
 	var cyc *models.P3MCPMCycleError
 	if !errors.As(err, &cyc) {
 		cyc = &models.P3MCPMCycleError{}
@@ -467,7 +467,7 @@ func (h *P3MHandler) GetProjectCriticalPath(w http.ResponseWriter, r *http.Reque
 	if err != nil {
 		var cyc *models.P3MCPMCycleError
 		if errors.As(err, &cyc) {
-			respondCPMCycleError(w, r, err)
+			respondCPMCycleError(w, err)
 			return
 		}
 		respondInternalError(w, r, err)
@@ -546,7 +546,7 @@ func (h *P3MHandler) GetProgrammeCriticalPath(w http.ResponseWriter, r *http.Req
 	if err != nil {
 		var cyc *models.P3MCPMCycleError
 		if errors.As(err, &cyc) {
-			respondCPMCycleError(w, r, err)
+			respondCPMCycleError(w, err)
 			return
 		}
 		respondInternalError(w, r, err)

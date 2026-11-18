@@ -74,6 +74,9 @@ func (h *P3MHandler) p3mIntakeMissingRequiredFields(i models.P3MIntake) []string
 			missing = append(missing, key)
 		}
 	}
+	if err := rows.Err(); err != nil {
+		return nil
+	}
 	return missing
 }
 
@@ -305,7 +308,7 @@ func (h *P3MHandler) UpdateIntake(w http.ResponseWriter, r *http.Request) {
 		case !p3mIntakeStatuses[*in.Status] || *in.Status == "decided":
 			respondValidationError(w, r, "status must be captured or assessing; use the decision endpoint to decide")
 			return
-		case old.Status == "decided" && !(old.Decision != nil && *old.Decision == "return_info"):
+		case old.Status == "decided" && (old.Decision == nil || *old.Decision != "return_info"):
 			respondConflict(w, r, "a decided intake can only reopen to assessing when its decision was return_info")
 			return
 		default:

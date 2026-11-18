@@ -425,6 +425,10 @@ func init() {
 				}
 				portfolios = append(portfolios, pf)
 			}
+			if err := pfRows.Err(); err != nil {
+				pfRows.Close()
+				return nil, err
+			}
 			pfRows.Close()
 
 			pgRows, err := env.DB.Query(`SELECT ` + p3mProgrammeColumns + ` FROM p3m_programmes ORDER BY title`)
@@ -439,6 +443,10 @@ func init() {
 					return nil, err
 				}
 				programmesByPortfolio[pg.PortfolioID] = append(programmesByPortfolio[pg.PortfolioID], pg)
+			}
+			if err := pgRows.Err(); err != nil {
+				pgRows.Close()
+				return nil, err
 			}
 			pgRows.Close()
 
@@ -461,6 +469,10 @@ func init() {
 				case p.PortfolioID != nil:
 					standaloneByPortfolio[*p.PortfolioID] = append(standaloneByPortfolio[*p.PortfolioID], p)
 				}
+			}
+			if err := prRows.Err(); err != nil {
+				prRows.Close()
+				return nil, err
 			}
 			prRows.Close()
 
@@ -958,8 +970,10 @@ func init() {
 				status, env.UserID, args.Notes, now, args.ApprovalID); err != nil {
 				return nil, err
 			}
-			env.DB.QueryRowContext(ctx, `SELECT `+p3mBudgetApprovalColumns+` FROM p3m_budget_approvals WHERE id = ?`, args.ApprovalID).
-				Scan(&a.ID, &a.ProjectID, &a.CurrentBudget, &a.RequestAmount, &a.RoutedToLevel, &a.Status, &a.RequestedBy, &a.DecidedBy, &a.DecisionNotes, &a.CreatedAt, &a.UpdatedAt)
+			if err := env.DB.QueryRowContext(ctx, `SELECT `+p3mBudgetApprovalColumns+` FROM p3m_budget_approvals WHERE id = ?`, args.ApprovalID).
+				Scan(&a.ID, &a.ProjectID, &a.CurrentBudget, &a.RequestAmount, &a.RoutedToLevel, &a.Status, &a.RequestedBy, &a.DecidedBy, &a.DecisionNotes, &a.CreatedAt, &a.UpdatedAt); err != nil {
+				return nil, err
+			}
 			env.AuditWrite("p3m_budget_approval", args.ApprovalID, "decide_p3m_budget_approval", status)
 			return a, nil
 		},

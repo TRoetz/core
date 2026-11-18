@@ -143,7 +143,7 @@ func RegisterP3MRoutes(deps *Deps) {
 	api.HandleH("GET /p3m/projects/{id}/finance-reconciliation", auth(p3mView(http.HandlerFunc(deps.P3M.GetProjectFinanceReconciliation))))
 	api.HandleH("GET /p3m/finance-sync/summary", auth(p3mView(http.HandlerFunc(deps.P3M.GetFinanceSyncSummary))))
 
-	// Investment cases: per-project prioritisation pipeline and scores.
+	// Investment cases: per-project prioritization pipeline and scores.
 	api.HandleH("GET /p3m/investment-cases", auth(p3mView(http.HandlerFunc(deps.P3M.ListInvestmentCases))))
 	api.HandleH("POST /p3m/investment-cases", auth(p3mView(http.HandlerFunc(deps.P3M.CreateInvestmentCase))))
 	api.HandleH("PUT /p3m/investment-cases/{id}", auth(p3mView(http.HandlerFunc(deps.P3M.UpdateInvestmentCase))))
@@ -215,10 +215,10 @@ func RegisterP3MRoutes(deps *Deps) {
 	api.HandleH("GET /p3m/portfolios/{id}/raid-rollup", auth(p3mView(http.HandlerFunc(deps.P3M.GetPortfolioRaidRollup))))
 	api.HandleH("POST /p3m/projects/{id}/cpm-preview", auth(p3mView(http.HandlerFunc(deps.P3M.GetCpmPreview))))
 
-	// Phase-2 gap closure: resource scenario modelling (RES-004/006).
+	// Phase-2 gap closure: resource scenario modeling (RES-004/006).
 	api.HandleH("POST /p3m/resource-scenarios", auth(p3mView(http.HandlerFunc(deps.P3M.RunResourceScenario))))
 
-	// Phase-2 gap closure: prioritisation scoring + roadmap (PO-003..005, 008).
+	// Phase-2 gap closure: prioritization scoring + roadmap (PO-003..005, 008).
 	api.HandleH("GET /p3m/scoring-criteria", auth(p3mView(http.HandlerFunc(deps.P3M.ListScoringCriteria))))
 	api.HandleH("POST /p3m/scoring-criteria", auth(p3mView(http.HandlerFunc(deps.P3M.CreateScoringCriterion))))
 	api.HandleH("PUT /p3m/scoring-criteria/{id}", auth(p3mView(http.HandlerFunc(deps.P3M.UpdateScoringCriterion))))

@@ -78,8 +78,8 @@ func (h *SMSHandler) IntakeGrievance(w http.ResponseWriter, r *http.Request) {
 		Username:     "anonymous",
 		IPAddress:    utils.GetClientIP(r),
 		UserAgent:    r.UserAgent(),
-		ActionType:   "sms_grievance_intake",
-		ResourceType: "sms_grievance",
+		ActionType:   logger.ActionSMSGrievanceIntake,
+		ResourceType: logger.ResourceSMSGrievance,
 		ResourceID:   &gid,
 		ResourceName: title,
 		Success:      true,
@@ -103,7 +103,7 @@ func (h *SMSHandler) IntakeGrievance(w http.ResponseWriter, r *http.Request) {
 // email first, then name+organization. Unknown submitters get a minimal
 // register row (tier_3 defaults) so every grievance attaches to an identity in
 // the system of record; operators can enrich or merge it afterwards.
-func (h *SMSHandler) smsIntakeResolveStakeholder(ctx context.Context, in smsIntakeRequest) (int, bool, error) {
+func (h *SMSHandler) smsIntakeResolveStakeholder(ctx context.Context, in smsIntakeRequest) (stakeholderID int, existing bool, err error) {
 	if in.Email != "" {
 		var id int
 		err := h.db.QueryRowContext(ctx, `SELECT id FROM sms_stakeholders WHERE lower(email) = ? ORDER BY id LIMIT 1`, in.Email).Scan(&id)

@@ -278,7 +278,7 @@ func p3mCompare(value float64, comparator string, threshold float64) bool {
 // returns the triggered alerts. It is read-only: callers decide on auditing,
 // notifications or RAID drafts.
 func (h *P3MHandler) p3mEvaluateEnabledRules(ctx context.Context, where string, args ...any) ([]models.P3MFinanceAlertRule, []map[string]any, error) {
-	rows, err := h.db.QueryContext(ctx, `SELECT `+p3mFinanceAlertRuleColumns+` FROM p3m_finance_alert_rules WHERE enabled = 1 AND (`+where+`) ORDER BY id`, args...)
+	rows, err := h.db.QueryContext(ctx, `SELECT `+p3mFinanceAlertRuleColumns+` FROM p3m_finance_alert_rules WHERE enabled = TRUE AND (`+where+`) ORDER BY id`, args...)
 	if err != nil {
 		return nil, nil, err
 	}

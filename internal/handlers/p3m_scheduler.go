@@ -20,7 +20,7 @@ import (
 // new alerts raised this pass; projects without a manager cannot receive a
 // RAID owner, so no alert is raised for them.
 func (h *P3MHandler) RaiseProjectFinanceAlerts(ctx context.Context, projectID int) (int, error) {
-	rows, err := h.db.QueryContext(ctx, `SELECT id, name, metric, comparator, threshold FROM p3m_finance_alert_rules WHERE scope = 'project' AND project_id = ? AND enabled = 1`, projectID)
+	rows, err := h.db.QueryContext(ctx, `SELECT id, name, metric, comparator, threshold FROM p3m_finance_alert_rules WHERE scope = 'project' AND project_id = ? AND enabled = TRUE`, projectID)
 	if err != nil {
 		return 0, err
 	}

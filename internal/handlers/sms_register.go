@@ -175,6 +175,11 @@ func (h *SMSHandler) MergeStakeholder(w http.ResponseWriter, r *http.Request) {
 		}
 		dupPlans = append(dupPlans, pid)
 	}
+	if err := dups.Err(); err != nil {
+		dups.Close()
+		respondInternalError(w, r, err)
+		return
+	}
 	dups.Close()
 	for _, pid := range dupPlans {
 		if _, err := tx.ExecContext(ctx, `DELETE FROM sms_engagement_plan_stakeholders WHERE plan_id = ? AND id NOT IN (SELECT MIN(id) FROM sms_engagement_plan_stakeholders WHERE plan_id = ?)`, pid, pid); err != nil {
@@ -198,6 +203,11 @@ func (h *SMSHandler) MergeStakeholder(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		dupGroups = append(dupGroups, gid)
+	}
+	if err := dupsG.Err(); err != nil {
+		dupsG.Close()
+		respondInternalError(w, r, err)
+		return
 	}
 	dupsG.Close()
 	for _, gid := range dupGroups {

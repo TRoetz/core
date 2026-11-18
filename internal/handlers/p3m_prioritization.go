@@ -12,7 +12,7 @@ import (
 )
 
 // ---------------------------------------------------------------------------
-// Portfolio prioritisation scoring criteria + investment case scores
+// Portfolio prioritization scoring criteria + investment case scores
 // (PO-003/004/008). Score changes are audit-emitted so the score history is
 // reconstructable from the audit log.
 // ---------------------------------------------------------------------------
@@ -416,7 +416,7 @@ func (h *P3MHandler) GetInvestmentCaseScoreHistory(w http.ResponseWriter, r *htt
 // p3mCompositeScore computes the weighted composite for one investment case:
 // sum(weight * effective score) / sum(weight) over its enabled criteria that
 // have a recorded score. lower_better criteria are inverted on the 1-5 scale.
-func (h *P3MHandler) p3mCompositeScore(ctx context.Context, icID int) (*float64, int, error) {
+func (h *P3MHandler) p3mCompositeScore(ctx context.Context, icID int) (score *float64, criterionCount int, err error) {
 	rows, err := h.db.QueryContext(ctx, `
 		SELECT s.score, c.weight, c.direction
 		FROM p3m_investment_case_scores s

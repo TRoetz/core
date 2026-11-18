@@ -167,6 +167,10 @@ func (s *SMSReminderSweeper) sweepCommitments(ctx context.Context, now time.Time
 			inserted++
 		}
 	}
+	if err := rows.Err(); err != nil {
+		s.errors++
+		slog.Warn("sms reminder sweep: row iteration failed", slog.String("error", err.Error()))
+	}
 	return inserted
 }
 
@@ -199,6 +203,10 @@ func (s *SMSReminderSweeper) sweepEngagements(ctx context.Context, now time.Time
 		if s.insertReminder(ctx, userID, "Stakeholder engagement due", msg, key, id, id) {
 			inserted++
 		}
+	}
+	if err := rows.Err(); err != nil {
+		s.errors++
+		slog.Warn("sms reminder sweep: row iteration failed", slog.String("error", err.Error()))
 	}
 	return inserted
 }
@@ -234,6 +242,10 @@ func (s *SMSReminderSweeper) sweepReviews(ctx context.Context, now time.Time) in
 		if s.insertReminder(ctx, userID, "Stakeholder review overdue", msg, key, id, id) {
 			inserted++
 		}
+	}
+	if err := rows.Err(); err != nil {
+		s.errors++
+		slog.Warn("sms reminder sweep: row iteration failed", slog.String("error", err.Error()))
 	}
 	return inserted
 }

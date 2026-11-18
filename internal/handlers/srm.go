@@ -170,11 +170,11 @@ func srmStateIndex(state string) int {
 // srmGateStatus evaluates every artefact required to enter the next state and
 // reports which are missing. For a supplier in "closed" or an unknown state it
 // returns no next state and all checks empty.
-func (h *SRMHandler) srmGateStatus(ctx context.Context, supplierID int, current string) (nextState string, artifacts map[string]bool, missing []string, err error) {
+func (h *SRMHandler) srmGateStatus(ctx context.Context, supplierID int, current string) (nextState string, artifacts map[string]bool, missing []string) {
 	artifacts = map[string]bool{}
 	idx := srmStateIndex(current)
 	if idx < 0 || idx == len(srmStateOrder)-1 {
-		return "", artifacts, nil, nil
+		return "", artifacts, nil
 	}
 	nextState = srmStateOrder[idx+1]
 	for _, name := range srmGateArtifacts[nextState] {
@@ -188,7 +188,7 @@ func (h *SRMHandler) srmGateStatus(ctx context.Context, supplierID int, current 
 			missing = append(missing, name)
 		}
 	}
-	return nextState, artifacts, missing, nil
+	return nextState, artifacts, missing
 }
 
 // srmLogGateTransition records an SRM lifecycle event in the shared audit log
@@ -200,14 +200,6 @@ func (h *SRMHandler) srmLogGateTransition(r *http.Request, user *models.User, su
 	}
 	id := supplierID
 	logAuditWithDetails(h.db, r, user, action, "srm_supplier", &id, fmt.Sprintf("%d", id), d)
-}
-
-// srmSupplierIsClosed reports whether the supplier is in the terminal closed
-// state (read-only archive per §3.1).
-func (h *SRMHandler) srmSupplierIsClosed(ctx context.Context, supplierID int) bool {
-	var state string
-	err := h.db.QueryRowContext(ctx, `SELECT relationship_state FROM srm_suppliers WHERE id = ?`, supplierID).Scan(&state)
-	return err == nil && state == models.SRMStateClosed
 }
 
 // ---------------------------------------------------------------------------
@@ -315,8 +307,8 @@ func (h *SRMHandler) srmSupplierCounts(ctx context.Context) (map[int]map[string]
 			m = map[string]int{}
 			out[id] = m
 		}
-		switch {
-		case kind == "dispute":
+		switch kind {
+		case "dispute":
 			m["disputes"]++
 		default:
 			m["contracts"]++
@@ -446,18 +438,14 @@ func (h *SRMHandler) GetSupplier(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	contacts := map[int][]models.SRMSupplierContact{}
-	if contacts, err = h.srmSupplierContacts(r.Context()); err != nil {
+	contacts, err := h.srmSupplierContacts(r.Context())
+	if err != nil {
 		respondInternalError(w, r, err)
 		return
 	}
 	supplier.Contacts = contacts[id]
 
-	nextState, artifacts, missing, err := h.srmGateStatus(r.Context(), id, supplier.RelationshipState)
-	if err != nil {
-		respondInternalError(w, r, err)
-		return
-	}
+	nextState, artifacts, missing := h.srmGateStatus(r.Context(), id, supplier.RelationshipState)
 	supplier.Gate = &models.SRMGateStatus{Current: supplier.RelationshipState, Next: nextState, Artifacts: artifacts, Missing: missing}
 
 	respondJSONOK(w, supplier)
@@ -1010,8 +998,8 @@ func (h *SRMHandler) GetContract(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	assignments := map[int][]models.SRMContractAssignment{}
-	if assignments, err = h.srmContractAssignments(r.Context()); err != nil {
+	assignments, err := h.srmContractAssignments(r.Context())
+	if err != nil {
 		respondInternalError(w, r, err)
 		return
 	}
@@ -1824,11 +1812,7 @@ func (h *SRMHandler) GetSupplierGates(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	nextState, artifacts, missing, err := h.srmGateStatus(r.Context(), id, supplier.RelationshipState)
-	if err != nil {
-		respondInternalError(w, r, err)
-		return
-	}
+	nextState, artifacts, missing := h.srmGateStatus(r.Context(), id, supplier.RelationshipState)
 	respondJSONOK(w, models.SRMGateStatus{Current: supplier.RelationshipState, Next: nextState, Artifacts: artifacts, Missing: missing})
 }
 
@@ -1861,11 +1845,7 @@ func (h *SRMHandler) AdvanceGate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	nextState, artifacts, missing, err := h.srmGateStatus(ctx, id, supplier.RelationshipState)
-	if err != nil {
-		respondInternalError(w, r, err)
-		return
-	}
+	nextState, artifacts, missing := h.srmGateStatus(ctx, id, supplier.RelationshipState)
 	if nextState == "" { // monitoring_active: closed is only reachable via explicit close
 		respondConflict(w, r, "no further gates; close the supplier explicitly")
 		return
@@ -1888,7 +1868,7 @@ func (h *SRMHandler) AdvanceGate(w http.ResponseWriter, r *http.Request) {
 	h.srmLogGateTransition(r, user, id, "srm_gate_advance", supplier.RelationshipState, nextState, "")
 
 	supplier.RelationshipState = nextState
-	gNext, gArtifacts, gMissing, _ := h.srmGateStatus(ctx, id, nextState)
+	gNext, gArtifacts, gMissing := h.srmGateStatus(ctx, id, nextState)
 	supplier.Gate = &models.SRMGateStatus{Current: nextState, Next: gNext, Artifacts: gArtifacts, Missing: gMissing}
 	respondJSONOK(w, supplier)
 }
@@ -2021,6 +2001,8 @@ func (h *SRMHandler) GetSummary(w http.ResponseWriter, r *http.Request) {
 				out[key] = n
 			}
 		}
+		// Best-effort aggregate: iteration errors leave the map partial.
+		_ = rows.Err()
 		return out
 	}
 
@@ -2069,6 +2051,10 @@ func (h *SRMHandler) GetSummary(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		reviews = append(reviews, rv)
+	}
+	if err := reviewRows.Err(); err != nil {
+		respondInternalError(w, r, err)
+		return
 	}
 
 	supplierTotal := 0

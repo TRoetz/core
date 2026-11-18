@@ -29,7 +29,9 @@ internal/handlers/jira_import_xray.go|windshift/internal/database
 internal/handlers/ldap.go|windshift/internal/database
 internal/handlers/notification.go|windshift/internal/database
 internal/handlers/oauth.go|windshift/internal/database
+internal/handlers/p3m.go|windshift/internal/database
 internal/handlers/personal_labels.go|windshift/internal/database
+internal/handlers/plans.go|windshift/internal/database
 internal/handlers/portal_customers.go|windshift/internal/database
 internal/handlers/portal.go|windshift/internal/database
 internal/handlers/priorities.go|windshift/internal/database
@@ -41,6 +43,14 @@ internal/handlers/scm_providers.go|windshift/internal/database
 internal/handlers/screens.go|windshift/internal/database
 internal/handlers/setup.go|windshift/internal/database
 internal/handlers/sla.go|windshift/internal/database
+internal/handlers/sms.go|windshift/internal/database
+internal/handlers/sms_datamove.go|windshift/internal/database
+internal/handlers/sms_governance.go|windshift/internal/database
+internal/handlers/sms_relationship.go|windshift/internal/database
+internal/handlers/sms_restore.go|windshift/internal/database
+internal/handlers/sms_templates.go|windshift/internal/database
+internal/handlers/srm.go|windshift/internal/database
+internal/handlers/srm_monitoring.go|windshift/internal/database
 internal/handlers/sso.go|windshift/internal/database
 internal/handlers/time_projects.go|windshift/internal/database
 internal/handlers/time_worklogs.go|windshift/internal/database

@@ -196,7 +196,7 @@ func aiSMSRiskRatingOr(v, fallback *string) any {
 
 // aiSMSUserIntOr applies PATCH semantics to a nullable user reference: an
 // explicit 0 clears the reference, omission keeps the stored one.
-func aiSMSUserIntOr(v *int, fallback *int) any {
+func aiSMSUserIntOr(v, fallback *int) any {
 	if v == nil {
 		return fallback
 	}
@@ -208,7 +208,7 @@ func aiSMSUserIntOr(v *int, fallback *int) any {
 
 // aiSMSTimeOr resolves a nullable timestamp update: an explicit value wins;
 // nil keeps the stored value (which may itself be NULL).
-func aiSMSTimeOr(v *time.Time, fallback *time.Time) any {
+func aiSMSTimeOr(v, fallback *time.Time) any {
 	if v != nil {
 		return *v
 	}
@@ -216,7 +216,7 @@ func aiSMSTimeOr(v *time.Time, fallback *time.Time) any {
 }
 
 // aiSMSFloatOr applies PATCH semantics to a nullable float metric value.
-func aiSMSFloatOr(v *float64, fallback *float64) any {
+func aiSMSFloatOr(v, fallback *float64) any {
 	if v == nil {
 		return fallback
 	}
@@ -261,27 +261,6 @@ func aiSMSUserIDExists(ctx context.Context, db database.Database, id int) bool {
 // ---------------------------------------------------------------------------
 // Scan helpers.
 // ---------------------------------------------------------------------------
-
-func aiScanSMSStakeholder(row interface{ Scan(...any) error }) (models.SMSStakeholder, error) {
-	var s models.SMSStakeholder
-	err := row.Scan(&s.ID, &s.ExternalID, &s.Name, &s.Title, &s.Organization, &s.Email, &s.Phone,
-		&s.StakeholderType, &s.Category, &s.Tier, &s.BusinessUnit, &s.RoleClassification,
-		&s.InfluenceLevel, &s.InterestLevel, &s.Interests, &s.EngagementStatus,
-		&s.LifecycleStage, &s.RelationshipStatus, &s.TrustLevel, &s.RiskRating,
-		&s.CommunicationPreferences, &s.OwnerUserID, &s.BackupOwnerUserID,
-		&s.ExecutiveSponsorUserID, &s.LastEngagementAt, &s.NextEngagementAt,
-		&s.InfoClassification, &s.ConsentStatus, &s.RetentionCategory, &s.LastReviewedAt,
-		&s.ReviewCadence, &s.LocationLat, &s.LocationLon, &s.LocationText,
-		&s.CustomFields, &s.Notes, &s.CreatedAt, &s.UpdatedAt)
-	return s, err
-}
-
-func aiScanSMSCommunication(row interface{ Scan(...any) error }) (models.SMSCommunication, error) {
-	var c models.SMSCommunication
-	err := row.Scan(&c.ID, &c.StakeholderID, &c.Channel, &c.Direction, &c.Subject, &c.Body,
-		&c.Sentiment, &c.CreatedBy, &c.CreatedAt)
-	return c, err
-}
 
 func aiScanSMSPlan(row interface{ Scan(...any) error }) (models.SMSEngagementPlan, error) {
 	var p models.SMSEngagementPlan
@@ -436,7 +415,7 @@ func aiSMSFillCompleteness(s *models.SMSStakeholder) {
 // aiSMSIssuePressure returns per-stakeholder counts of open critical issues
 // and escalated open issues. "Open" means status IN ('open','in_progress',
 // 'escalated').
-func aiSMSIssuePressure(ctx context.Context, db database.Database) (map[int]int, map[int]int, error) {
+func aiSMSIssuePressure(ctx context.Context, db database.Database) (criticalCounts, escalatedCounts map[int]int, err error) {
 	critical := make(map[int]int)
 	escalated := make(map[int]int)
 	rows, err := db.QueryContext(ctx, `SELECT stakeholder_id, priority, status FROM sms_issues WHERE status IN ('open','in_progress','escalated')`)
@@ -590,14 +569,13 @@ func aiSMSGetStakeholder(ctx context.Context, db database.Database, id int) (mod
 }
 
 // aiSMSApplySensitivity masks restricted-classification fields for callers
-// without sms.sensitive.view (WI-3.2). It reports whether masking was applied.
-func aiSMSApplySensitivity(s *models.SMSStakeholder) bool {
+// without sms.sensitive.view (WI-3.2).
+func aiSMSApplySensitivity(s *models.SMSStakeholder) {
 	if s.InfoClassification != models.SMSInfoRestricted {
-		return false
+		return
 	}
 	s.Notes = ""
 	s.CustomFields = "{}"
-	return true
 }
 
 // ---------------------------------------------------------------------------
@@ -1071,7 +1049,11 @@ func init() {
 				if idx > 3 {
 					idx = 3
 				}
-				buckets[idx]["count"] = buckets[idx]["count"].(int) + 1
+				if c, ok := buckets[idx]["count"].(int); ok {
+					buckets[idx]["count"] = c + 1
+				} else {
+					buckets[idx]["count"] = 1
+				}
 				matrix = append(matrix, map[string]any{"stakeholder_id": id, "name": name, "influence_level": influence, "interest_level": interest, "health_score": score})
 			}
 			if err := mrows.Err(); err != nil {

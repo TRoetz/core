@@ -29,12 +29,6 @@ func scanSMSRaci(row interface{ Scan(dest ...any) error }) (*models.SMSCRACI, er
 // column names (id) are ambiguous.
 const smsWorkPackageColumns = `wp.id, wp.title, wp.description, wp.entity_type, wp.entity_id, wp.contractor_stakeholder_id, wp.status, wp.planned_start, wp.planned_end, wp.actual_start, wp.completed_at, wp.notes, wp.created_at, wp.updated_at`
 
-func scanSMSWorkPackage(row interface{ Scan(dest ...any) error }) (*models.SMSWorkPackage, error) {
-	wp := &models.SMSWorkPackage{}
-	err := row.Scan(&wp.ID, &wp.Title, &wp.Description, &wp.EntityType, &wp.EntityID, &wp.ContractorStakeholderID, &wp.Status, &wp.PlannedStart, &wp.PlannedEnd, &wp.ActualStart, &wp.CompletedAt, &wp.Notes, &wp.CreatedAt, &wp.UpdatedAt)
-	return wp, err
-}
-
 // smsRACIEntityTitle resolves the P3M entity title for RACI / work-package rows.
 func (h *SMSHandler) smsRACIEntityTitle(ctx context.Context, entityType string, entityID int) (string, error) {
 	table, ok := smsP3MEntityTables[entityType]
@@ -915,12 +909,13 @@ func (h *SMSHandler) AddWorkPackageNode(w http.ResponseWriter, r *http.Request) 
 
 	var dup int
 	err = h.db.QueryRowContext(ctx, `SELECT 1 FROM sms_work_package_nodes WHERE work_package_id = ? AND node_id = ?`, id, in.NodeID).Scan(&dup)
-	if isNotFound(err) {
+	switch {
+	case isNotFound(err):
 		// not linked yet — proceed
-	} else if err != nil {
+	case err != nil:
 		respondInternalError(w, r, err)
 		return
-	} else {
+	default:
 		respondConflict(w, r, "Node is already linked to this work package")
 		return
 	}

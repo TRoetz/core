@@ -74,9 +74,9 @@ type smsTxn interface {
 // resolved to the stored value when the client omitted it), applying channel/
 // notes overrides and the sent/acknowledged side effects. It reports whether
 // the row was updated or that it was missing.
-func smsApplyNotificationUpdate(ctx context.Context, db smsTxn, user *models.User, id int, desiredStatus string, inChannel, inNotes *string) (bool, bool, error) {
+func smsApplyNotificationUpdate(ctx context.Context, db smsTxn, user *models.User, id int, desiredStatus string, inChannel, inNotes *string) (applied, notFound bool, err error) {
 	n := &models.SMSNotification{}
-	err := db.QueryRowContext(ctx, `SELECT `+smsNotificationColumns+` FROM sms_notifications n WHERE n.id = ?`, id).Scan(&n.ID, &n.CampaignID, &n.StakeholderID, &n.NodeID, &n.RequiredBy, &n.Status, &n.Channel, &n.SentAt, &n.AcknowledgedAt, &n.CommunicationID, &n.Notes, &n.CreatedAt, &n.UpdatedAt)
+	err = db.QueryRowContext(ctx, `SELECT `+smsNotificationColumns+` FROM sms_notifications n WHERE n.id = ?`, id).Scan(&n.ID, &n.CampaignID, &n.StakeholderID, &n.NodeID, &n.RequiredBy, &n.Status, &n.Channel, &n.SentAt, &n.AcknowledgedAt, &n.CommunicationID, &n.Notes, &n.CreatedAt, &n.UpdatedAt)
 	if isNotFound(err) {
 		return false, true, nil
 	} else if err != nil {
@@ -921,16 +921,15 @@ func (h *SMSHandler) BulkUpdateNotifications(w http.ResponseWriter, r *http.Requ
 	defer func() { _ = tx.Rollback() }()
 	updated := 0
 	for _, nid := range in.IDs {
-		okRow, notFound, err := smsApplyNotificationUpdate(ctx, tx, user, nid, in.Status, nil, nil)
+		okRow, _, err := smsApplyNotificationUpdate(ctx, tx, user, nid, in.Status, nil, nil)
 		if err != nil {
 			respondInternalError(w, r, err)
 			return
 		}
 		if okRow {
 			updated++
-		} else if notFound {
-			// Missing rows are skipped silently.
 		}
+		// Missing rows are skipped silently.
 	}
 	if err := tx.Commit(); err != nil {
 		respondInternalError(w, r, err)

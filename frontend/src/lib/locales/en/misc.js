@@ -1015,6 +1015,7 @@ export default {
     sentNegative: 'Negative',
     engagementPlans: 'Engagement plans',
     strategy: 'Strategy',
+    scope: 'Scope',
     frequency: 'Frequency',
     freqDaily: 'Daily',
     freqWeekly: 'Weekly',

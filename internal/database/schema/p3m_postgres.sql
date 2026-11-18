@@ -397,12 +397,12 @@ CREATE INDEX IF NOT EXISTS idx_p3m_gate_templates_to ON p3m_stage_gate_templates
 -- is guarded by NOT EXISTS on its identifying columns. Admins may then extend
 -- or disable rows freely.
 INSERT INTO p3m_lifecycle_stages (stage_key, name, description, sort_order, is_entry, is_exit, gate_required, skippable, enabled) VALUES
-	('front_door', 'Idea / Front Door', 'Intake and initial assessment of the idea or request.', 0, 1, 0, 0, 0, 1),
-	('proposal', 'Proposal', 'Business proposal with indicative cost and strategic alignment.', 1, 0, 0, 1, 1, 1),
-	('define_planning', 'Define / Planning', 'Detailed definition, planning and baseline approval.', 2, 0, 0, 1, 0, 1),
-	('implement_deliver', 'Implement / Deliver & Monitor', 'Delivery execution with monitoring against the baseline.', 3, 0, 0, 1, 0, 1),
-	('close', 'Close', 'Delivery acceptance and financial close-out.', 4, 0, 0, 1, 0, 1),
-	('benefits_realisation', 'Benefits Realisation', 'Post-implementation review and benefit tracking to target.', 5, 0, 1, 1, 1, 1)
+	('front_door', 'Idea / Front Door', 'Intake and initial assessment of the idea or request.', 0, 1, 0, 0, 0, TRUE),
+	('proposal', 'Proposal', 'Business proposal with indicative cost and strategic alignment.', 1, 0, 0, 1, 1, TRUE),
+	('define_planning', 'Define / Planning', 'Detailed definition, planning and baseline approval.', 2, 0, 0, 1, 0, TRUE),
+	('implement_deliver', 'Implement / Deliver & Monitor', 'Delivery execution with monitoring against the baseline.', 3, 0, 0, 1, 0, TRUE),
+	('close', 'Close', 'Delivery acceptance and financial close-out.', 4, 0, 0, 1, 0, TRUE),
+	('benefits_realisation', 'Benefits Realisation', 'Post-implementation review and benefit tracking to target.', 5, 0, 1, 1, 1, TRUE)
 ON CONFLICT (stage_key) DO NOTHING;
 
 INSERT INTO p3m_stage_gate_templates (name, from_stage_key, to_stage_key, mandatory, work_type, required_artifacts, description)

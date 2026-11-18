@@ -47,7 +47,7 @@ type dqCompleteness struct {
 	MissingFieldCounts map[string]int `json:"missing_field_counts"`
 }
 
-// dqDuplicates summarises the WI-1.3 duplicate-candidate matcher output.
+// dqDuplicates summarizes the WI-1.3 duplicate-candidate matcher output.
 type dqDuplicates struct {
 	Groups  int `json:"groups"`
 	Records int `json:"records_in_groups"`
@@ -60,7 +60,7 @@ type dqEngagementCompliance struct {
 	Percent        float64 `json:"percent"`
 }
 
-// dqCrossStore summarises the WI-0.2 cross-store duplicate report.
+// dqCrossStore summarizes the WI-0.2 cross-store duplicate report.
 type dqCrossStore struct {
 	Matches    int `json:"matches"`
 	Actionable int `json:"actionable"`

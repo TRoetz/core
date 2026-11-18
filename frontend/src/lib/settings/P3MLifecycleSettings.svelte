@@ -204,6 +204,7 @@
   {#if stages.length === 0}
     <EmptyState icon={GitBranch} title={t('settings.p3mLifecycle.noStages')} description={t('settings.p3mLifecycle.getStarted')}>
       {#snippet action()}
+        <!-- shortcut-guard-exempt: empty-state add button opens a create modal; P3M lifecycle settings do not register app-wide shortcuts. -->
         <Button variant="primary" icon={Plus} onclick={openCreateModal}>{t('settings.p3mLifecycle.addStage')}</Button>
       {/snippet}
     </EmptyState>

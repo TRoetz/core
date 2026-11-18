@@ -280,7 +280,7 @@ func (h *P3MHandler) GetProjectLeaveImpact(w http.ResponseWriter, r *http.Reques
 	if err != nil {
 		var cyc *models.P3MCPMCycleError
 		if errors.As(err, &cyc) {
-			respondCPMCycleError(w, r, err)
+			respondCPMCycleError(w, err)
 			return
 		}
 		respondInternalError(w, r, err)
@@ -338,7 +338,7 @@ func (h *P3MHandler) GetProgrammeLeaveImpact(w http.ResponseWriter, r *http.Requ
 	if err != nil {
 		var cyc *models.P3MCPMCycleError
 		if errors.As(err, &cyc) {
-			respondCPMCycleError(w, r, err)
+			respondCPMCycleError(w, err)
 			return
 		}
 		respondInternalError(w, r, err)

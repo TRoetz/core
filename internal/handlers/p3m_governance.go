@@ -602,7 +602,11 @@ func (h *P3MHandler) UpdateAuthorizationThreshold(w http.ResponseWriter, r *http
 
 	now := time.Now().UTC()
 	var oldAmount float64
-	h.db.QueryRowContext(r.Context(), `SELECT threshold_amount FROM p3m_authorization_thresholds WHERE level = ?`, in.Level).Scan(&oldAmount)
+	row := h.db.QueryRowContext(r.Context(), `SELECT threshold_amount FROM p3m_authorization_thresholds WHERE level = ?`, in.Level)
+	if err := row.Scan(&oldAmount); err != nil {
+		respondInternalError(w, r, err)
+		return
+	}
 	if _, err := h.db.ExecContext(r.Context(), `
 		INSERT INTO p3m_authorization_thresholds (level, threshold_amount, updated_at)
 		VALUES (?, ?, ?)
