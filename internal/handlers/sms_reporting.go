@@ -134,7 +134,7 @@ func (h *SMSHandler) smsRollup(ctx context.Context, scopeCond string, args []any
 	if err != nil {
 		return nil, err
 	}
-	if err := h.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM sms_grievances WHERE escalated = 1 AND status <> 'closed'`+scopedIn, args...).Scan(&grievancesEscalated); err != nil {
+	if err := h.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM sms_grievances WHERE escalated = TRUE AND status <> 'closed'`+scopedIn, args...).Scan(&grievancesEscalated); err != nil {
 		return nil, err
 	}
 

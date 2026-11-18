@@ -5,7 +5,7 @@
 // for attribution fields. It implements the NZ Government Procurement SRM
 // Strategy Wheel across four phases (preparation, planning, implementation,
 // monitoring) with a phase-gate state machine on each supplier relationship:
-// advancement is blocked until the gate's artefacts exist in their required
+// advancement is blocked until the gate's artifacts exist in their required
 // status (FR-GATE-1), every transition is audit-logged (FR-GATE-2), and a
 // one-gate downgrade always requires a reason note (FR-GATE-3).
 package handlers
@@ -80,7 +80,7 @@ var srmStateOrder = []string{
 	models.SRMStateMonitoringActive,
 }
 
-// srmGateArtifacts maps each non-initial state to the artefacts that must be
+// srmGateArtifacts maps each non-initial state to the artifacts that must be
 // true before a supplier may enter it. The human-readable names are surfaced
 // verbatim in gate responses so the UI can render FR-GATE-1 tooltips.
 var srmGateArtifacts = map[string][]string{
@@ -92,7 +92,7 @@ var srmGateArtifacts = map[string][]string{
 	models.SRMStateMonitoringActive:    {"completed collaborative scorecard"},
 }
 
-// srmArtifactChecks evaluates one named artefact for a supplier. The map key
+// srmArtifactChecks evaluates one named artifact for a supplier. The map key
 // must match the names in srmGateArtifacts exactly.
 var srmArtifactChecks = map[string]func(ctx context.Context, db database.Database, supplierID int) bool{
 	"segmentation run complete": func(ctx context.Context, db database.Database, id int) bool {
@@ -167,7 +167,7 @@ func srmStateIndex(state string) int {
 	return -1
 }
 
-// srmGateStatus evaluates every artefact required to enter the next state and
+// srmGateStatus evaluates every artifact required to enter the next state and
 // reports which are missing. For a supplier in "closed" or an unknown state it
 // returns no next state and all checks empty.
 func (h *SRMHandler) srmGateStatus(ctx context.Context, supplierID int, current string) (nextState string, artifacts map[string]bool, missing []string) {
@@ -899,7 +899,7 @@ func (h *SRMHandler) srmContractAssignments(ctx context.Context) (map[int][]mode
 }
 
 // CreateContract registers a Rule-34 contract. New contracts start as drafts;
-// the supplier's gate state is unaffected until segmentation artefacts exist.
+// the supplier's gate state is unaffected until segmentation artifacts exist.
 func (h *SRMHandler) CreateContract(w http.ResponseWriter, r *http.Request) {
 	user, ok := RequireAuth(w, r)
 	if !ok {
@@ -1791,7 +1791,7 @@ func (h *SRMHandler) CreateManagementPlan(w http.ResponseWriter, r *http.Request
 // Phase-gate transitions (§3.1, FR-GATE-1/2/3) and module summary
 // ---------------------------------------------------------------------------
 
-// GetSupplierGates returns the phase-gate position and the artefacts required
+// GetSupplierGates returns the phase-gate position and the artifacts required
 // for the next gate (FR-GATE-1).
 func (h *SRMHandler) GetSupplierGates(w http.ResponseWriter, r *http.Request) {
 	if _, ok := RequireAuth(w, r); !ok {
@@ -1817,7 +1817,7 @@ func (h *SRMHandler) GetSupplierGates(w http.ResponseWriter, r *http.Request) {
 }
 
 // AdvanceGate moves a supplier one gate forward after verifying every entry
-// artefact exists. Transitions are audit-logged (FR-GATE-2).
+// artifact exists. Transitions are audit-logged (FR-GATE-2).
 func (h *SRMHandler) AdvanceGate(w http.ResponseWriter, r *http.Request) {
 	user, ok := RequireAuth(w, r)
 	if !ok {
@@ -1852,7 +1852,7 @@ func (h *SRMHandler) AdvanceGate(w http.ResponseWriter, r *http.Request) {
 	}
 	if len(missing) > 0 {
 		respondJSON(w, http.StatusConflict, map[string]any{
-			"error":     "gate artefacts missing",
+			"error":     "gate artifacts missing",
 			"current":   supplier.RelationshipState,
 			"next":      nextState,
 			"artifacts": artifacts,

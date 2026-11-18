@@ -32,7 +32,7 @@ const srmSurveyColumns = `id, supplier_id, direction, template_version, sent_at,
 
 const srmInnovationColumns = `id, idea_code, contract_id, supplier_id, name, description, idea_date, supplier_team, agency_team, source, status, potential_financial_value, realised_financial_value, created_at, updated_at`
 
-const srmSipColumns = `id, contract_id, supplier_id, title, sip_owner_id, problem_statement, subtype, success_measure_smart, exit_criteria, status, source_ref, created_at, updated_at`
+const srmSIPColumns = `id, contract_id, supplier_id, title, sip_owner_id, problem_statement, subtype, success_measure_smart, exit_criteria, status, source_ref, created_at, updated_at`
 
 const srmDisputeColumns = `id, contract_id, supplier_id, description, stage, opened_at, resolved_at, outcome_note`
 
@@ -146,7 +146,7 @@ func srmValidTaskStatus(s string) bool {
 	}
 }
 
-func srmValidSipSubtype(s string) bool {
+func srmValidSIPSubtype(s string) bool {
 	switch s {
 	case "breach_driven", "continuous_improvement":
 		return true
@@ -155,7 +155,7 @@ func srmValidSipSubtype(s string) bool {
 	}
 }
 
-func srmValidSipStatus(s string) bool {
+func srmValidSIPStatus(s string) bool {
 	switch s {
 	case "draft", "active", "on_track_review", "resolved", "closed_unresolved":
 		return true
@@ -1800,7 +1800,7 @@ func (h *SRMHandler) UpdateInnovationTask(w http.ResponseWriter, r *http.Request
 // Service improvement plans (Phase 4 / Step 4.3)
 // ---------------------------------------------------------------------------
 
-func (h *SRMHandler) srmSipDeliverables(ctx context.Context, sipIDs []int) (map[int][]models.SRMSIPDeliverable, error) {
+func (h *SRMHandler) srmSIPDeliverables(ctx context.Context, sipIDs []int) (map[int][]models.SRMSIPDeliverable, error) {
 	out := map[int][]models.SRMSIPDeliverable{}
 	if len(sipIDs) == 0 {
 		return out, nil
@@ -1816,22 +1816,22 @@ func (h *SRMHandler) srmSipDeliverables(ctx context.Context, sipIDs []int) (map[
 	defer rows.Close()
 	for rows.Next() {
 		var d models.SRMSIPDeliverable
-		if err := rows.Scan(&d.ID, &d.SipID, &d.Seq, &d.KeyDeliverable, &d.CompletionDate, &d.Rag, &d.OwnerName, &d.CommentsRisksIssues); err != nil {
+		if err := rows.Scan(&d.ID, &d.SIPID, &d.Seq, &d.KeyDeliverable, &d.CompletionDate, &d.Rag, &d.OwnerName, &d.CommentsRisksIssues); err != nil {
 			return nil, err
 		}
-		out[d.SipID] = append(out[d.SipID], d)
+		out[d.SIPID] = append(out[d.SIPID], d)
 	}
 	return out, rows.Err()
 }
 
 func (h *SRMHandler) getSRMSip(ctx context.Context, id int) (*models.SRMServiceImprovementPlan, error) {
 	var s models.SRMServiceImprovementPlan
-	err := h.db.QueryRowContext(ctx, "SELECT "+qualifyColumns("p", srmSipColumns)+`, sup.company_name AS supplier_name FROM srm_service_improvement_plans p JOIN srm_suppliers sup ON sup.id = p.supplier_id WHERE p.id = ?`, id).Scan(
-		&s.ID, &s.ContractID, &s.SupplierID, &s.Title, &s.SipOwnerID, &s.ProblemStatement, &s.Subtype, &s.SuccessMeasureSmart, &s.ExitCriteria, &s.Status, &s.SourceRef, &s.CreatedAt, &s.UpdatedAt, &s.SupplierName)
+	err := h.db.QueryRowContext(ctx, "SELECT "+qualifyColumns("p", srmSIPColumns)+`, sup.company_name AS supplier_name FROM srm_service_improvement_plans p JOIN srm_suppliers sup ON sup.id = p.supplier_id WHERE p.id = ?`, id).Scan(
+		&s.ID, &s.ContractID, &s.SupplierID, &s.Title, &s.SIPOwnerID, &s.ProblemStatement, &s.Subtype, &s.SuccessMeasureSmart, &s.ExitCriteria, &s.Status, &s.SourceRef, &s.CreatedAt, &s.UpdatedAt, &s.SupplierName)
 	if err != nil {
 		return nil, err
 	}
-	deliverables, err := h.srmSipDeliverables(ctx, []int{id})
+	deliverables, err := h.srmSIPDeliverables(ctx, []int{id})
 	if err != nil {
 		return nil, err
 	}
@@ -1844,7 +1844,7 @@ func (h *SRMHandler) ListServiceImprovementPlans(w http.ResponseWriter, r *http.
 		return
 	}
 	ctx := r.Context()
-	query := "SELECT " + qualifyColumns("p", srmSipColumns) + ", sup.company_name AS supplier_name FROM srm_service_improvement_plans p JOIN srm_suppliers sup ON sup.id = p.supplier_id WHERE 1=1"
+	query := "SELECT " + qualifyColumns("p", srmSIPColumns) + ", sup.company_name AS supplier_name FROM srm_service_improvement_plans p JOIN srm_suppliers sup ON sup.id = p.supplier_id WHERE 1=1"
 	args := []any{}
 	if v, ok := parseQueryInt(r.URL.Query().Get("contract_id")); ok {
 		query += ` AND p.contract_id = ?`
@@ -1864,7 +1864,7 @@ func (h *SRMHandler) ListServiceImprovementPlans(w http.ResponseWriter, r *http.
 	out := []models.SRMServiceImprovementPlan{}
 	for rows.Next() {
 		var s models.SRMServiceImprovementPlan
-		if err := rows.Scan(&s.ID, &s.ContractID, &s.SupplierID, &s.Title, &s.SipOwnerID, &s.ProblemStatement, &s.Subtype, &s.SuccessMeasureSmart, &s.ExitCriteria, &s.Status, &s.SourceRef, &s.CreatedAt, &s.UpdatedAt, &s.SupplierName); err != nil {
+		if err := rows.Scan(&s.ID, &s.ContractID, &s.SupplierID, &s.Title, &s.SIPOwnerID, &s.ProblemStatement, &s.Subtype, &s.SuccessMeasureSmart, &s.ExitCriteria, &s.Status, &s.SourceRef, &s.CreatedAt, &s.UpdatedAt, &s.SupplierName); err != nil {
 			respondInternalError(w, r, err)
 			return
 		}
@@ -1887,7 +1887,7 @@ func (h *SRMHandler) CreateServiceImprovementPlan(w http.ResponseWriter, r *http
 		ContractID          int    `json:"contract_id"`
 		SupplierID          int    `json:"supplier_id"`
 		Title               string `json:"title"`
-		SipOwnerID          int    `json:"sip_owner_id"`
+		SIPOwnerID          int    `json:"sip_owner_id"`
 		ProblemStatement    string `json:"problem_statement"`
 		Subtype             string `json:"subtype"`
 		SuccessMeasureSmart string `json:"success_measure_smart"`
@@ -1917,17 +1917,17 @@ func (h *SRMHandler) CreateServiceImprovementPlan(w http.ResponseWriter, r *http
 	}
 	if in.Subtype == "" {
 		in.Subtype = "breach_driven"
-	} else if !srmValidSipSubtype(in.Subtype) {
+	} else if !srmValidSIPSubtype(in.Subtype) {
 		respondBadRequest(w, r, `subtype must be one of: breach_driven, continuous_improvement`)
 		return
 	}
 	if in.Status == "" {
 		in.Status = "draft"
-	} else if !srmValidSipStatus(in.Status) {
+	} else if !srmValidSIPStatus(in.Status) {
 		respondBadRequest(w, r, `status must be one of: draft, active, on_track_review, resolved, closed_unresolved`)
 		return
 	}
-	if !srmUserExists(ctx, h.db, in.SipOwnerID) {
+	if !srmUserExists(ctx, h.db, in.SIPOwnerID) {
 		respondBadRequest(w, r, "sip_owner_id does not match a known user")
 		return
 	}
@@ -1944,7 +1944,7 @@ func (h *SRMHandler) CreateServiceImprovementPlan(w http.ResponseWriter, r *http
 		return
 	}
 	res, err := h.db.ExecContext(ctx, `INSERT INTO srm_service_improvement_plans (contract_id, supplier_id, title, sip_owner_id, problem_statement, subtype, success_measure_smart, exit_criteria, status, source_ref) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		in.ContractID, in.SupplierID, in.Title, in.SipOwnerID, in.ProblemStatement, in.Subtype, in.SuccessMeasureSmart, in.ExitCriteria, in.Status, in.SourceRef)
+		in.ContractID, in.SupplierID, in.Title, in.SIPOwnerID, in.ProblemStatement, in.Subtype, in.SuccessMeasureSmart, in.ExitCriteria, in.Status, in.SourceRef)
 	if err != nil {
 		respondInternalError(w, r, err)
 		return
@@ -1992,7 +1992,7 @@ func (h *SRMHandler) UpdateServiceImprovementPlan(w http.ResponseWriter, r *http
 	}
 	var in struct {
 		Title               *string `json:"title,omitempty"`
-		SipOwnerID          *int    `json:"sip_owner_id,omitempty"`
+		SIPOwnerID          *int    `json:"sip_owner_id,omitempty"`
 		ProblemStatement    *string `json:"problem_statement,omitempty"`
 		Subtype             *string `json:"subtype,omitempty"`
 		SuccessMeasureSmart *string `json:"success_measure_smart,omitempty"`
@@ -2012,11 +2012,11 @@ func (h *SRMHandler) UpdateServiceImprovementPlan(w http.ResponseWriter, r *http
 		respondInternalError(w, r, err)
 		return
 	}
-	if in.Subtype != nil && !srmValidSipSubtype(*in.Subtype) {
+	if in.Subtype != nil && !srmValidSIPSubtype(*in.Subtype) {
 		respondBadRequest(w, r, `subtype must be one of: breach_driven, continuous_improvement`)
 		return
 	}
-	if in.Status != nil && !srmValidSipStatus(*in.Status) {
+	if in.Status != nil && !srmValidSIPStatus(*in.Status) {
 		respondBadRequest(w, r, `status must be one of: draft, active, on_track_review, resolved, closed_unresolved`)
 		return
 	}
@@ -2024,13 +2024,13 @@ func (h *SRMHandler) UpdateServiceImprovementPlan(w http.ResponseWriter, r *http
 		respondBadRequest(w, r, "success_measure_smart must be SMART: include a number and a date (e.g. 30/6/2026)")
 		return
 	}
-	if in.SipOwnerID != nil && !srmUserExists(ctx, h.db, *in.SipOwnerID) {
+	if in.SIPOwnerID != nil && !srmUserExists(ctx, h.db, *in.SIPOwnerID) {
 		respondBadRequest(w, r, "sip_owner_id does not match a known user")
 		return
 	}
-	sipOwner := existing.SipOwnerID
-	if in.SipOwnerID != nil {
-		sipOwner = *in.SipOwnerID
+	sipOwner := existing.SIPOwnerID
+	if in.SIPOwnerID != nil {
+		sipOwner = *in.SIPOwnerID
 	}
 	newStatus := orKeep(in.Status, existing.Status)
 	if _, err := h.db.ExecContext(ctx, `UPDATE srm_service_improvement_plans SET title = ?, sip_owner_id = ?, problem_statement = ?, subtype = ?, success_measure_smart = ?, exit_criteria = ?, status = ?, source_ref = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
@@ -2049,7 +2049,7 @@ func (h *SRMHandler) UpdateServiceImprovementPlan(w http.ResponseWriter, r *http
 	respondJSONOK(w, s)
 }
 
-func (h *SRMHandler) AddSipDeliverable(w http.ResponseWriter, r *http.Request) {
+func (h *SRMHandler) AddSIPDeliverable(w http.ResponseWriter, r *http.Request) {
 	if _, ok := RequireAuth(w, r); !ok {
 		return
 	}
@@ -2102,7 +2102,7 @@ func (h *SRMHandler) AddSipDeliverable(w http.ResponseWriter, r *http.Request) {
 	delivID64, _ := res.LastInsertId()
 	var out models.SRMSIPDeliverable
 	err = h.db.QueryRowContext(ctx, `SELECT id, sip_id, seq, key_deliverable, completion_date, rag, owner_name, comments_risks_issues FROM srm_sip_deliverables WHERE id = ?`, delivID64).Scan(
-		&out.ID, &out.SipID, &out.Seq, &out.KeyDeliverable, &out.CompletionDate, &out.Rag, &out.OwnerName, &out.CommentsRisksIssues)
+		&out.ID, &out.SIPID, &out.Seq, &out.KeyDeliverable, &out.CompletionDate, &out.Rag, &out.OwnerName, &out.CommentsRisksIssues)
 	if err != nil {
 		respondInternalError(w, r, err)
 		return
@@ -2110,7 +2110,7 @@ func (h *SRMHandler) AddSipDeliverable(w http.ResponseWriter, r *http.Request) {
 	respondJSONCreated(w, out)
 }
 
-func (h *SRMHandler) UpdateSipDeliverable(w http.ResponseWriter, r *http.Request) {
+func (h *SRMHandler) UpdateSIPDeliverable(w http.ResponseWriter, r *http.Request) {
 	if _, ok := RequireAuth(w, r); !ok {
 		return
 	}
@@ -2132,7 +2132,7 @@ func (h *SRMHandler) UpdateSipDeliverable(w http.ResponseWriter, r *http.Request
 	}
 	var existing models.SRMSIPDeliverable
 	err := h.db.QueryRowContext(ctx, `SELECT id, sip_id, seq, key_deliverable, completion_date, rag, owner_name, comments_risks_issues FROM srm_sip_deliverables WHERE id = ?`, id).Scan(
-		&existing.ID, &existing.SipID, &existing.Seq, &existing.KeyDeliverable, &existing.CompletionDate, &existing.Rag, &existing.OwnerName, &existing.CommentsRisksIssues)
+		&existing.ID, &existing.SIPID, &existing.Seq, &existing.KeyDeliverable, &existing.CompletionDate, &existing.Rag, &existing.OwnerName, &existing.CommentsRisksIssues)
 	if isNotFound(err) {
 		respondNotFound(w, r, "deliverable not found")
 		return
@@ -2152,7 +2152,7 @@ func (h *SRMHandler) UpdateSipDeliverable(w http.ResponseWriter, r *http.Request
 	}
 	var out models.SRMSIPDeliverable
 	err = h.db.QueryRowContext(ctx, `SELECT id, sip_id, seq, key_deliverable, completion_date, rag, owner_name, comments_risks_issues FROM srm_sip_deliverables WHERE id = ?`, id).Scan(
-		&out.ID, &out.SipID, &out.Seq, &out.KeyDeliverable, &out.CompletionDate, &out.Rag, &out.OwnerName, &out.CommentsRisksIssues)
+		&out.ID, &out.SIPID, &out.Seq, &out.KeyDeliverable, &out.CompletionDate, &out.Rag, &out.OwnerName, &out.CommentsRisksIssues)
 	if err != nil {
 		respondInternalError(w, r, err)
 		return
@@ -2204,7 +2204,7 @@ func (h *SRMHandler) getSRMDispute(ctx context.Context, id int) (*models.SRMDisp
 	var rp models.SRMRemedyPlan
 	var timetableJSON string
 	err = h.db.QueryRowContext(ctx, `SELECT id, dispute_id, sip_id, contract_id, non_performance_issue, root_cause, corrective_action_required, timetable_json, target_resolution_date, status, created_at FROM srm_remedy_plans WHERE dispute_id = ? ORDER BY created_at DESC LIMIT 1`, id).Scan(
-		&rp.ID, &rp.DisputeID, &rp.SipID, &rp.ContractID, &rp.NonPerformanceIssue, &rp.RootCause, &rp.CorrectiveActionRequired, &timetableJSON, &rp.TargetResolutionDate, &rp.Status, &rp.CreatedAt)
+		&rp.ID, &rp.DisputeID, &rp.SIPID, &rp.ContractID, &rp.NonPerformanceIssue, &rp.RootCause, &rp.CorrectiveActionRequired, &timetableJSON, &rp.TargetResolutionDate, &rp.Status, &rp.CreatedAt)
 	if err == nil {
 		rp.SupplierName = d.SupplierName
 		rp.Timetable = []models.SRMTimetableEntry{}
@@ -2528,7 +2528,7 @@ func (h *SRMHandler) UpsertRemedyPlan(w http.ResponseWriter, r *http.Request) {
 	var out models.SRMRemedyPlan
 	var storedTimetable string
 	err = h.db.QueryRowContext(ctx, `SELECT rp.id, rp.dispute_id, rp.sip_id, rp.contract_id, rp.non_performance_issue, rp.root_cause, rp.corrective_action_required, rp.timetable_json, rp.target_resolution_date, rp.status, rp.created_at FROM srm_remedy_plans rp WHERE rp.id = ?`, planID).Scan(
-		&out.ID, &out.DisputeID, &out.SipID, &out.ContractID, &out.NonPerformanceIssue, &out.RootCause, &out.CorrectiveActionRequired, &storedTimetable, &out.TargetResolutionDate, &out.Status, &out.CreatedAt)
+		&out.ID, &out.DisputeID, &out.SIPID, &out.ContractID, &out.NonPerformanceIssue, &out.RootCause, &out.CorrectiveActionRequired, &storedTimetable, &out.TargetResolutionDate, &out.Status, &out.CreatedAt)
 	if err != nil {
 		respondInternalError(w, r, err)
 		return

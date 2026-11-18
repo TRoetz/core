@@ -687,7 +687,7 @@ func (s *FinanceSyncScheduler) reclaimStaleRuns() {
 }
 
 func (s *FinanceSyncScheduler) listEnabledConfigs(ctx context.Context) ([]models.P3MFinanceSyncConfig, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT id, name, enabled, source_type, source_ref, schedule_minutes, period_format, default_currency, match_mode, last_run_at, last_run_status, last_file_hash, created_by, updated_by, created_at, updated_at FROM p3m_finance_sync_configs WHERE enabled = 1 ORDER BY id`)
+	rows, err := s.db.QueryContext(ctx, `SELECT id, name, enabled, source_type, source_ref, schedule_minutes, period_format, default_currency, match_mode, last_run_at, last_run_status, last_file_hash, created_by, updated_by, created_at, updated_at FROM p3m_finance_sync_configs WHERE enabled = TRUE ORDER BY id`)
 	if err != nil {
 		return nil, err
 	}

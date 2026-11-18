@@ -421,7 +421,7 @@ func (h *P3MHandler) p3mCompositeScore(ctx context.Context, icID int) (score *fl
 		SELECT s.score, c.weight, c.direction
 		FROM p3m_investment_case_scores s
 		JOIN p3m_scoring_criteria c ON c.id = s.criterion_id
-		WHERE s.ic_id = ? AND c.enabled = 1`, icID)
+		WHERE s.ic_id = ? AND c.enabled = TRUE`, icID)
 	if err != nil {
 		return nil, 0, err
 	}

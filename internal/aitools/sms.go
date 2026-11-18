@@ -670,7 +670,7 @@ type getSMSP3MOptionsArgs struct{}
 type createSMSStakeholderArgs struct {
 	Name                     string     `json:"name" jsonschema:"Stakeholder display name (required)." `
 	Title                    string     `json:"title,omitempty" jsonschema:"Job title."`
-	Organization             string     `json:"organization,omitempty" jsonschema:"Organisation."`
+	Organization             string     `json:"organization,omitempty" jsonschema:"Organization."`
 	Email                    string     `json:"email,omitempty" jsonschema:"Email address."`
 	Phone                    string     `json:"phone,omitempty" jsonschema:"Phone number."`
 	ExternalID               *string    `json:"external_id,omitempty" jsonschema:"Stable external identifier for integrations."`
@@ -708,7 +708,7 @@ type createSMSStakeholderArgs struct {
 type updateSMSStakeholderArgs struct {
 	StakeholderID          int        `json:"stakeholder_id" jsonschema:"Stakeholder ID (required)." `
 	Title                  *string    `json:"title,omitempty" jsonschema:"Job title."`
-	Organization           *string    `json:"organization,omitempty" jsonschema:"Organisation."`
+	Organization           *string    `json:"organization,omitempty" jsonschema:"Organization."`
 	Email                  *string    `json:"email,omitempty" jsonschema:"Email address."`
 	Phone                  *string    `json:"phone,omitempty" jsonschema:"Phone number."`
 	Tier                   *string    `json:"tier,omitempty" jsonschema:"Materiality tier: tier_1..tier_4." `
@@ -2924,7 +2924,7 @@ func init() {
 			if args.CommitmentID <= 0 {
 				return map[string]string{"error": "commitment_id is required"}, nil
 			}
-			res, err := env.DB.ExecContext(ctx, `UPDATE sms_commitments SET escalated = 1, escalation_level = escalation_level + 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, args.CommitmentID)
+			res, err := env.DB.ExecContext(ctx, `UPDATE sms_commitments SET escalated = TRUE, escalation_level = escalation_level + 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, args.CommitmentID)
 			if err != nil {
 				return nil, err
 			}
@@ -3082,7 +3082,7 @@ func init() {
 			if args.GrievanceID <= 0 {
 				return map[string]string{"error": "grievance_id is required"}, nil
 			}
-			res, err := env.DB.ExecContext(ctx, `UPDATE sms_grievances SET escalated = 1, escalation_level = escalation_level + 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, args.GrievanceID)
+			res, err := env.DB.ExecContext(ctx, `UPDATE sms_grievances SET escalated = TRUE, escalation_level = escalation_level + 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, args.GrievanceID)
 			if err != nil {
 				return nil, err
 			}

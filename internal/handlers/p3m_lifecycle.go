@@ -111,7 +111,7 @@ func (h *P3MHandler) ListLifecycleConfig(w http.ResponseWriter, r *http.Request)
 // p3mMandatoryTemplatesForAll returns every enabled mandatory template that
 // applies to workType (nil = the default path).
 func (h *P3MHandler) p3mMandatoryTemplatesForAll(ctx context.Context, workType *string) ([]models.P3MStageGateTemplate, error) {
-	query := `SELECT ` + p3mStageGateTemplateColumns + ` FROM p3m_stage_gate_templates WHERE enabled = 1 AND mandatory = 1`
+	query := `SELECT ` + p3mStageGateTemplateColumns + ` FROM p3m_stage_gate_templates WHERE enabled = TRUE AND mandatory = 1`
 	args := []any{}
 	if workType != nil {
 		query += ` AND (work_type IS NULL OR work_type = ?)`
@@ -182,7 +182,7 @@ func (h *P3MHandler) CreateLifecycleStage(w http.ResponseWriter, r *http.Request
 	// Invariant: after this insert at least one enabled entry stage must exist.
 	if !in.IsEntry || !enabled {
 		var entries int
-		if err := h.db.QueryRowContext(r.Context(), `SELECT COUNT(*) FROM p3m_lifecycle_stages WHERE enabled = 1 AND is_entry = 1`).Scan(&entries); err != nil {
+		if err := h.db.QueryRowContext(r.Context(), `SELECT COUNT(*) FROM p3m_lifecycle_stages WHERE enabled = TRUE AND is_entry = 1`).Scan(&entries); err != nil {
 			respondInternalError(w, r, err)
 			return
 		}
@@ -260,7 +260,7 @@ func (h *P3MHandler) UpdateLifecycleStage(w http.ResponseWriter, r *http.Request
 	// Invariant: after this update at least one enabled entry stage must remain.
 	if !enabled || !in.IsEntry {
 		var others int
-		if err := h.db.QueryRowContext(r.Context(), `SELECT COUNT(*) FROM p3m_lifecycle_stages WHERE id != ? AND enabled = 1 AND is_entry = 1`, cur.ID).Scan(&others); err != nil {
+		if err := h.db.QueryRowContext(r.Context(), `SELECT COUNT(*) FROM p3m_lifecycle_stages WHERE id != ? AND enabled = TRUE AND is_entry = 1`, cur.ID).Scan(&others); err != nil {
 			respondInternalError(w, r, err)
 			return
 		}
@@ -311,7 +311,7 @@ func (h *P3MHandler) DeleteLifecycleStage(w http.ResponseWriter, r *http.Request
 		return
 	}
 	var referenced int
-	if err := h.db.QueryRowContext(r.Context(), `SELECT COUNT(*) FROM p3m_stage_gate_templates WHERE enabled = 1 AND (from_stage_key = ? OR to_stage_key = ?)`, key, key).Scan(&referenced); err != nil {
+	if err := h.db.QueryRowContext(r.Context(), `SELECT COUNT(*) FROM p3m_stage_gate_templates WHERE enabled = TRUE AND (from_stage_key = ? OR to_stage_key = ?)`, key, key).Scan(&referenced); err != nil {
 		respondInternalError(w, r, err)
 		return
 	}
@@ -526,7 +526,7 @@ func (h *P3MHandler) GetProjectGates(w http.ResponseWriter, r *http.Request) {
 		respondInternalError(w, r, err)
 		return
 	}
-	rows, err := h.db.QueryContext(ctx, `SELECT `+p3mStageGateTemplateColumns+` FROM p3m_stage_gate_templates WHERE enabled = 1 ORDER BY id`)
+	rows, err := h.db.QueryContext(ctx, `SELECT `+p3mStageGateTemplateColumns+` FROM p3m_stage_gate_templates WHERE enabled = TRUE ORDER BY id`)
 	if err != nil {
 		respondInternalError(w, r, err)
 		return
@@ -552,7 +552,7 @@ func (h *P3MHandler) GetProjectGates(w http.ResponseWriter, r *http.Request) {
 		respondInternalError(w, r, err)
 		return
 	}
-	passedRows, err := h.db.QueryContext(ctx, `SELECT from_stage, to_stage FROM p3m_stage_gate_reviews WHERE project_id = ? AND passed = 1`, id)
+	passedRows, err := h.db.QueryContext(ctx, `SELECT from_stage, to_stage FROM p3m_stage_gate_reviews WHERE project_id = ? AND passed = TRUE`, id)
 	if err != nil {
 		respondInternalError(w, r, err)
 		return
@@ -572,7 +572,7 @@ func (h *P3MHandler) GetProjectGates(w http.ResponseWriter, r *http.Request) {
 		respondInternalError(w, r, err)
 		return
 	}
-	openRows, err := h.db.QueryContext(ctx, `SELECT to_stage FROM p3m_stage_gate_reviews WHERE project_id = ? AND passed = 0`, id)
+	openRows, err := h.db.QueryContext(ctx, `SELECT to_stage FROM p3m_stage_gate_reviews WHERE project_id = ? AND passed = FALSE`, id)
 	if err != nil {
 		respondInternalError(w, r, err)
 		return

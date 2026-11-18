@@ -405,7 +405,7 @@ func (h *PlanHandler) GetPlanSummary(w http.ResponseWriter, r *http.Request) {
 	upArgs := append(append([]any{}, sourceArgs...), now, horizon)
 	uRows, err := h.db.QueryContext(ctx, "SELECT "+planItemSelect+" "+planItemFromClause+` WHERE `+where+`
 		AND i.due_date IS NOT NULL AND i.due_date >= ? AND i.due_date <= ?
-		AND (sc.is_completed IS NULL OR sc.is_completed = 0)
+		AND (sc.is_completed IS NULL OR sc.is_completed = FALSE)
 		ORDER BY i.due_date LIMIT 25`, upArgs...)
 	if err != nil {
 		respondInternalError(w, r, fmt.Errorf("summarize upcoming: %w", err))
@@ -1008,7 +1008,7 @@ func (h *PlanHandler) GetPlanTeams(w http.ResponseWriter, r *http.Request) {
 				ph[i] = "?"
 				wArgs = append(wArgs, uid)
 			}
-			workloadSQL := "SELECT COUNT(*), COALESCE(SUM(CASE WHEN sc.is_completed IS NULL OR sc.is_completed = 0 THEN 1 ELSE 0 END), 0), COALESCE(SUM(CASE WHEN sc.is_completed IS NULL OR sc.is_completed = 0 THEN i.estimate_minutes ELSE 0 END), 0), COALESCE(SUM(CASE WHEN sc.is_completed IS NULL OR sc.is_completed = 0 THEN i.story_points ELSE 0 END), 0) " + planItemFromClause + " WHERE " + where + " AND (i.team_id = ?"
+			workloadSQL := "SELECT COUNT(*), COALESCE(SUM(CASE WHEN sc.is_completed IS NULL OR sc.is_completed = FALSE THEN 1 ELSE 0 END), 0), COALESCE(SUM(CASE WHEN sc.is_completed IS NULL OR sc.is_completed = FALSE THEN i.estimate_minutes ELSE 0 END), 0), COALESCE(SUM(CASE WHEN sc.is_completed IS NULL OR sc.is_completed = FALSE THEN i.story_points ELSE 0 END), 0) " + planItemFromClause + " WHERE " + where + " AND (i.team_id = ?"
 			if len(ph) > 0 {
 				workloadSQL += " OR i.assignee_id IN (" + strings.Join(ph, ",") + ")"
 			}
@@ -1022,7 +1022,7 @@ func (h *PlanHandler) GetPlanTeams(w http.ResponseWriter, r *http.Request) {
 			stat.TotalEstimateMinutes = int64(openEstimate)
 		} else {
 			var openEstimate float64
-			err := h.db.QueryRowContext(ctx, "SELECT COUNT(*), COALESCE(SUM(CASE WHEN sc.is_completed IS NULL OR sc.is_completed = 0 THEN 1 ELSE 0 END), 0), COALESCE(SUM(CASE WHEN sc.is_completed IS NULL OR sc.is_completed = 0 THEN i.estimate_minutes ELSE 0 END), 0), COALESCE(SUM(CASE WHEN sc.is_completed IS NULL OR sc.is_completed = 0 THEN i.story_points ELSE 0 END), 0) "+planItemFromClause+" WHERE "+where+" AND i.team_id = ?", append(append([]any{}, sourceArgs...), tb.id)...).Scan(&stat.ItemCount, &stat.OpenItemCount, &openEstimate, &stat.TotalStoryPoints)
+			err := h.db.QueryRowContext(ctx, "SELECT COUNT(*), COALESCE(SUM(CASE WHEN sc.is_completed IS NULL OR sc.is_completed = FALSE THEN 1 ELSE 0 END), 0), COALESCE(SUM(CASE WHEN sc.is_completed IS NULL OR sc.is_completed = FALSE THEN i.estimate_minutes ELSE 0 END), 0), COALESCE(SUM(CASE WHEN sc.is_completed IS NULL OR sc.is_completed = FALSE THEN i.story_points ELSE 0 END), 0) "+planItemFromClause+" WHERE "+where+" AND i.team_id = ?", append(append([]any{}, sourceArgs...), tb.id)...).Scan(&stat.ItemCount, &stat.OpenItemCount, &openEstimate, &stat.TotalStoryPoints)
 			if err != nil {
 				respondInternalError(w, r, fmt.Errorf("compute team workload: %w", err))
 				return
@@ -1039,7 +1039,7 @@ func (h *PlanHandler) GetPlanTeams(w http.ResponseWriter, r *http.Request) {
 				respondInternalError(w, r, fmt.Errorf("load team member: %w", err))
 				return
 			}
-			err = h.db.QueryRowContext(ctx, "SELECT COUNT(*) "+planItemFromClause+" WHERE "+where+" AND i.assignee_id = ? AND (sc.is_completed IS NULL OR sc.is_completed = 0)", append(append([]any{}, sourceArgs...), uid)...).Scan(&m.ItemCount)
+			err = h.db.QueryRowContext(ctx, "SELECT COUNT(*) "+planItemFromClause+" WHERE "+where+" AND i.assignee_id = ? AND (sc.is_completed IS NULL OR sc.is_completed = FALSE)", append(append([]any{}, sourceArgs...), uid)...).Scan(&m.ItemCount)
 			if err != nil {
 				respondInternalError(w, r, fmt.Errorf("count member items: %w", err))
 				return

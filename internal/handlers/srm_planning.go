@@ -127,7 +127,7 @@ func (h *SRMHandler) ListValuePropositions(w http.ResponseWriter, r *http.Reques
 }
 
 // CreateValueProposition records one value proposition for a supplier. The
-// optional sign_off flag stamps the current user and time (gate artefact).
+// optional sign_off flag stamps the current user and time (gate artifact).
 func (h *SRMHandler) CreateValueProposition(w http.ResponseWriter, r *http.Request) {
 	user, ok := RequireAuth(w, r)
 	if !ok {
@@ -1372,7 +1372,7 @@ func (h *SRMHandler) CreateRaciVersion(w http.ResponseWriter, r *http.Request) {
 }
 
 // UpdateRaciStatus moves a matrix through its lifecycle. Entering "agreed"
-// stamps agreed_at and last_reviewed_at (gate artefact for implementation).
+// stamps agreed_at and last_reviewed_at (gate artifact for implementation).
 func (h *SRMHandler) UpdateRaciStatus(w http.ResponseWriter, r *http.Request) {
 	if _, ok := RequireAuth(w, r); !ok {
 		return

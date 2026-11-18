@@ -239,7 +239,7 @@ func (h *SMSHandler) EscalateCommitment(w http.ResponseWriter, r *http.Request) 
 	}
 	ctx := r.Context()
 
-	res, err := h.db.ExecContext(ctx, `UPDATE sms_commitments SET escalated = 1, escalation_level = escalation_level + 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, id)
+	res, err := h.db.ExecContext(ctx, `UPDATE sms_commitments SET escalated = TRUE, escalation_level = escalation_level + 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, id)
 	if err != nil {
 		respondInternalError(w, r, err)
 		return
@@ -526,7 +526,7 @@ func (h *SMSHandler) EscalateGrievance(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx := r.Context()
 
-	res, err := h.db.ExecContext(ctx, `UPDATE sms_grievances SET escalated = 1, escalation_level = escalation_level + 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, id)
+	res, err := h.db.ExecContext(ctx, `UPDATE sms_grievances SET escalated = TRUE, escalation_level = escalation_level + 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, id)
 	if err != nil {
 		respondInternalError(w, r, err)
 		return
@@ -1261,7 +1261,7 @@ func (h *SMSHandler) CreateTransfer(w http.ResponseWriter, r *http.Request) {
 }
 
 // UpdateTransfer toggles the review checklist; completing all three flags
-// finalises the handover and moves ownership.
+// finalizes the handover and moves ownership.
 func (h *SMSHandler) UpdateTransfer(w http.ResponseWriter, r *http.Request) {
 	user, ok := RequireAuth(w, r)
 	if !ok {

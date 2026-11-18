@@ -851,7 +851,7 @@ func init() {
 			upArgs := append(append([]any{}, sourceArgs...), now, horizon)
 			uRows, err := env.DB.QueryContext(ctx, "SELECT "+aiPlanItemSelect+" "+aiPlanItemFromClause+` WHERE `+where+`
 				AND i.due_date IS NOT NULL AND i.due_date >= ? AND i.due_date <= ?
-				AND (sc.is_completed IS NULL OR sc.is_completed = 0)
+				AND (sc.is_completed IS NULL OR sc.is_completed = FALSE)
 				ORDER BY i.due_date LIMIT 25`, upArgs...)
 			if err != nil {
 				return nil, err

@@ -429,6 +429,10 @@ func (h *P3MHandler) portfolioRollups(ctx context.Context) (map[int]*models.P3MP
 		r.BudgetActual += bAct
 		r.RagStatus = p3mRankToRag(worstRank)
 	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return nil, err
+	}
 	rows.Close()
 
 	rows, err = h.db.QueryContext(ctx, `
@@ -458,6 +462,10 @@ func (h *P3MHandler) portfolioRollups(ctx context.Context) (map[int]*models.P3MP
 			r.FundingSources = make(map[string]float64)
 		}
 		r.FundingSources[fs] += sum
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return nil, err
 	}
 	rows.Close()
 
@@ -743,6 +751,10 @@ func (h *P3MHandler) programmeRollups(ctx context.Context) (map[int]*models.P3MP
 		}
 		out[id] = &models.P3MProgrammeRollup{RagStatus: rag}
 	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return nil, err
+	}
 	rows.Close()
 
 	rows, err = h.db.QueryContext(ctx, `
@@ -773,6 +785,10 @@ func (h *P3MHandler) programmeRollups(ctx context.Context) (map[int]*models.P3MP
 		r.BudgetApproved += bAppr
 		r.BudgetActual += bAct
 		r.RagStatus = p3mRankToRag(worstRank)
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return nil, err
 	}
 	rows.Close()
 

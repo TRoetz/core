@@ -43,7 +43,7 @@ func scanP3MIntake(row interface{ Scan(...any) error }) (models.P3MIntake, error
 // p3mIntakeMissingRequiredFields returns the screen-configured required fields
 // (for the intake's complexity) that are not yet completed on the record.
 func (h *P3MHandler) p3mIntakeMissingRequiredFields(i models.P3MIntake) []string {
-	rows, err := h.db.Query(`SELECT field_key FROM p3m_front_door_screens WHERE complexity = ? AND required = 1 ORDER BY id`, i.Complexity)
+	rows, err := h.db.Query(`SELECT field_key FROM p3m_front_door_screens WHERE complexity = ? AND required = TRUE ORDER BY id`, i.Complexity)
 	if err != nil {
 		return nil
 	}
@@ -484,7 +484,7 @@ func (h *P3MHandler) p3mIntakeCreateProject(r *http.Request, w http.ResponseWrit
 		var templateID *int
 		if err := h.db.QueryRowContext(ctx, `
 			SELECT id FROM p3m_stage_gate_templates
-			WHERE from_stage_key = ? AND to_stage_key = ? AND enabled = 1
+			WHERE from_stage_key = ? AND to_stage_key = ? AND enabled = TRUE
 			  AND (work_type IS NULL OR work_type = ?)
 			ORDER BY mandatory DESC, id LIMIT 1`,
 			stages[entryPos].StageKey, toStage.StageKey, nullStringPtr(intake.WorkType)).Scan(&templateID); err == nil {
@@ -494,7 +494,7 @@ func (h *P3MHandler) p3mIntakeCreateProject(r *http.Request, w http.ResponseWrit
 		}
 		if _, err := h.db.ExecContext(ctx, `
 			INSERT INTO p3m_stage_gate_reviews (project_id, from_stage, to_stage, template_id, passed, reviewer_id, review_date, comments, created_at)
-			VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?)`,
+			VALUES (?, ?, ?, ?, TRUE, ?, ?, ?, ?)`,
 			projectID, stages[entryPos].StageKey, toStage.StageKey, nullInt(templateID), user.ID, now, comments, now); err != nil {
 			respondInternalError(w, r, err)
 			return 0

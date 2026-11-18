@@ -33,7 +33,7 @@ func (h *P3MHandler) p3mActiveLeavePeriods(ctx context.Context, userID int) ([]m
 		SELECT l.start_date, l.end_date, u.first_name || ' ' || u.last_name
 		FROM user_leave_periods l
 		LEFT JOIN users u ON u.id = l.substitute_user_id
-		WHERE l.user_id = ? AND l.is_active = 1`, userID)
+		WHERE l.user_id = ? AND l.is_active = TRUE`, userID)
 	if err != nil {
 		return nil, err
 	}

@@ -155,7 +155,7 @@ func aiP3MApplyComputedRaid(item *models.P3MRaidItem) {
 // valid set is admin-configurable, so it is always read from the database.
 func aiP3MValidStage(db database.Database, s string) bool {
 	var count int
-	err := db.QueryRow(`SELECT COUNT(*) FROM p3m_lifecycle_stages WHERE stage_key = ? AND enabled = 1`, s).Scan(&count)
+	err := db.QueryRow(`SELECT COUNT(*) FROM p3m_lifecycle_stages WHERE stage_key = ? AND enabled = TRUE`, s).Scan(&count)
 	return err == nil && count > 0
 }
 
