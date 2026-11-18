@@ -3904,7 +3904,7 @@ var Catalog = []Migration{
 	},
 	{
 		Version:       "20261107_p3m_investment_cases",
-		Name:          "Add P3M investment cases (prioritisation pipeline and scores)",
+		Name:          "Add P3M investment cases (prioritization pipeline and scores)",
 		CheckSQLite:   sqliteTableCheck("p3m_investment_cases"),
 		CheckPostgres: pgTableCheck("p3m_investment_cases"),
 		SQLite: `
@@ -3943,8 +3943,14 @@ var Catalog = []Migration{
 		`,
 	},
 	{
-		Version:       "20261109_p3m_configurable_lifecycle",
-		Name:          "Replace hard-coded P3M stages with admin-configurable lifecycle, gate templates and proportional skips",
+		Version: "20261109_p3m_configurable_lifecycle",
+		Name:    "Replace hard-coded P3M stages with admin-configurable lifecycle, gate templates and proportional skips",
+		// Superseded advances installs stamped by pre-normalization builds;
+		// the body now uses TRUE/FALSE instead of numeric boolean literals.
+		Superseded: []string{
+			"8155abf018be35033234d6bd2fa45a79af10e753f718181f8c4d714d96d0392e", // sqlite
+			"d800f34e3a94db457109759ef84b2b27e4722cd7bd30fc6078251e62f0d4fbd0", // postgres
+		},
 		CheckSQLite:   `SELECT (SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='p3m_lifecycle_stages') * (SELECT COUNT(*) FROM pragma_table_info('p3m_projects') WHERE name='work_type')`,
 		CheckPostgres: `SELECT (SELECT COUNT(*) FROM information_schema.tables WHERE table_name='p3m_lifecycle_stages') * (SELECT COUNT(*) FROM information_schema.columns WHERE table_name='p3m_projects' AND column_name='work_type')`,
 		// SQLite cannot drop the legacy stage CHECK constraints without full
@@ -4006,12 +4012,12 @@ var Catalog = []Migration{
 			);
 			CREATE INDEX IF NOT EXISTS idx_p3m_stage_skips_project ON p3m_project_stage_skips(project_id);
 			INSERT INTO p3m_lifecycle_stages (stage_key, name, description, sort_order, is_entry, is_exit, gate_required, skippable, enabled) VALUES
-				('front_door', 'Idea / Front Door', 'Intake and initial assessment of the idea or request.', 0, 1, 0, 0, 0, 1),
-				('proposal', 'Proposal', 'Business proposal with indicative cost and strategic alignment.', 1, 0, 0, 1, 1, 1),
-				('define_planning', 'Define / Planning', 'Detailed definition, planning and baseline approval.', 2, 0, 0, 1, 0, 1),
-				('implement_deliver', 'Implement / Deliver & Monitor', 'Delivery execution with monitoring against the baseline.', 3, 0, 0, 1, 0, 1),
-				('close', 'Close', 'Delivery acceptance and financial close-out.', 4, 0, 0, 1, 0, 1),
-				('benefits_realisation', 'Benefits Realisation', 'Post-implementation review and benefit tracking to target.', 5, 0, 1, 1, 1, 1)
+				('front_door', 'Idea / Front Door', 'Intake and initial assessment of the idea or request.', 0, 1, 0, 0, 0, TRUE),
+				('proposal', 'Proposal', 'Business proposal with indicative cost and strategic alignment.', 1, 0, 0, 1, 1, TRUE),
+				('define_planning', 'Define / Planning', 'Detailed definition, planning and baseline approval.', 2, 0, 0, 1, 0, TRUE),
+				('implement_deliver', 'Implement / Deliver & Monitor', 'Delivery execution with monitoring against the baseline.', 3, 0, 0, 1, 0, TRUE),
+				('close', 'Close', 'Delivery acceptance and financial close-out.', 4, 0, 0, 1, 0, TRUE),
+				('benefits_realisation', 'Benefits Realisation', 'Post-implementation review and benefit tracking to target.', 5, 0, 1, 1, 1, TRUE)
 			ON CONFLICT (stage_key) DO NOTHING;
 			INSERT INTO p3m_stage_gate_templates (name, from_stage_key, to_stage_key, mandatory, work_type, required_artifacts, description)
 			SELECT 'Front Door assessment', 'front_door', 'proposal', 1, NULL, '[{"name":"Classification","required":true},{"name":"Initial assessment","required":true}]', 'Mandatory intake gate: classify the idea and record the initial assessment.'
@@ -4580,7 +4586,7 @@ var Catalog = []Migration{
 	},
 	{
 		Version:       "20261119_p3m_prioritization",
-		Name:          "Add P3M portfolio prioritisation scoring (PO-003/004/008)",
+		Name:          "Add P3M portfolio prioritization scoring (PO-003/004/008)",
 		CheckSQLite:   `SELECT (SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='p3m_scoring_criteria') * (SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='p3m_investment_case_scores')`,
 		CheckPostgres: `SELECT (SELECT COUNT(*) FROM information_schema.tables WHERE table_name='p3m_scoring_criteria') * (SELECT COUNT(*) FROM information_schema.tables WHERE table_name='p3m_investment_case_scores')`,
 		SQLite: `
@@ -4730,6 +4736,12 @@ var Catalog = []Migration{
 	{
 		Version: "20261126_sms_node_taxonomy",
 		Name:    "Add SMS node taxonomy (kinds, nodes, role-based stakeholder membership)",
+		// Superseded advances installs stamped by pre-normalization builds;
+		// the body now uses TRUE/FALSE instead of numeric boolean literals.
+		Superseded: []string{
+			"6297ccdd41bbb1250a9a72fd8d5929b1d12266c7c8a9a8e9596390a52e295e05", // sqlite
+			"68e99028e9d9335d62c82eba331a939e970f8fa855a5b064e88326b22a57ca8e", // postgres
+		},
 		CheckSQLite: `
 			SELECT CASE WHEN COUNT(*) = 4 THEN 1 ELSE 0 END
 			FROM sqlite_master
@@ -4756,9 +4768,9 @@ var Catalog = []Migration{
 				key TEXT NOT NULL UNIQUE,
 				label TEXT NOT NULL,
 				description TEXT NOT NULL DEFAULT '',
-				allows_children BOOLEAN NOT NULL DEFAULT 1,
+				allows_children BOOLEAN NOT NULL DEFAULT TRUE,
 				child_kinds TEXT NOT NULL DEFAULT '',
-				is_system BOOLEAN NOT NULL DEFAULT 0,
+				is_system BOOLEAN NOT NULL DEFAULT FALSE,
 				created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 				updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 			);
@@ -4942,6 +4954,12 @@ var Catalog = []Migration{
 	{
 		Version: "20261128_sms_raci_work_packages",
 		Name:    "Add SMS RACI matrices and work packages (contractor/site impact register)",
+		// Superseded advances installs stamped by pre-normalization builds;
+		// the body now uses TRUE/FALSE instead of numeric boolean literals.
+		Superseded: []string{
+			"ab442a8e05a243fd376f105f94fb086901ed5ad81c5e1243d751128f5bac6ecc", // sqlite
+			"3e82203795c87ae8ff65dafa40b6c116316e5a8ea526f42859a5de00651004a2", // postgres
+		},
 		CheckSQLite: `
 			SELECT CASE WHEN COUNT(*) = 4 THEN 1 ELSE 0 END
 			FROM sqlite_master
@@ -5045,24 +5063,6 @@ var Catalog = []Migration{
 			);
 		`,
 	},
-		// Superseded advances installs stamped by pre-normalization builds;
-		// the body now uses TRUE/FALSE instead of numeric boolean literals.
-		Superseded: []string{
-			"8155abf018be35033234d6bd2fa45a79af10e753f718181f8c4d714d96d0392e", // sqlite
-			"d800f34e3a94db457109759ef84b2b27e4722cd7bd30fc6078251e62f0d4fbd0", // postgres
-		},
-		// Superseded advances installs stamped by pre-normalization builds;
-		// the body now uses TRUE/FALSE instead of numeric boolean literals.
-		Superseded: []string{
-			"6297ccdd41bbb1250a9a72fd8d5929b1d12266c7c8a9a8e9596390a52e295e05", // sqlite
-			"68e99028e9d9335d62c82eba331a939e970f8fa855a5b064e88326b22a57ca8e", // postgres
-		},
-		// Superseded advances installs stamped by pre-normalization builds;
-		// the body now uses TRUE/FALSE instead of numeric boolean literals.
-		Superseded: []string{
-			"ab442a8e05a243fd376f105f94fb086901ed5ad81c5e1243d751128f5bac6ecc", // sqlite
-			"3e82203795c87ae8ff65dafa40b6c116316e5a8ea526f42859a5de00651004a2", // postgres
-		},
 }
 
 // checkP3MDecisionARBSQLite reports whether the P3M decision/ARB migration's
@@ -6301,7 +6301,7 @@ func applySQLiteSMSCampaignChannelWiden(db Database) (retErr error) {
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			campaign_id INTEGER NOT NULL REFERENCES sms_notification_campaigns(id) ON DELETE CASCADE,
 			node_id INTEGER NOT NULL REFERENCES sms_nodes(id) ON DELETE CASCADE,
-			include_descendants BOOLEAN NOT NULL DEFAULT 0,
+			include_descendants BOOLEAN NOT NULL DEFAULT FALSE,
 			UNIQUE (campaign_id, node_id)
 		)`,
 		`CREATE TABLE IF NOT EXISTS sms_notifications (
