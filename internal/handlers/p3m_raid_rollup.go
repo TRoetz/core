@@ -67,7 +67,7 @@ func (h *P3MHandler) p3mRaidRollup(w http.ResponseWriter, r *http.Request, entit
 	query := `SELECT ` + p3mRaidColumns + ` FROM p3m_raid_items WHERE status IN ('open', 'mitigating', 'escalated') AND (entity_type = ? AND entity_id = ?`
 	args := []any{entityType, id}
 	if len(projectIDs) > 0 {
-		query += ` OR (entity_type = 'project' AND entity_id IN (` + joinPlaceholders(make([]string, len(projectIDs))) + `))`
+		query += ` OR (entity_type = 'project' AND entity_id IN (` + questionPlaceholders(len(projectIDs)) + `)))`
 		for _, pid := range projectIDs {
 			args = append(args, pid)
 		}

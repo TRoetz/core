@@ -81,16 +81,25 @@ func (h *P3MHandler) p3mIntakeMissingRequiredFields(i models.P3MIntake) []string
 }
 
 // ListIntakes handles GET /api/p3m/front-door (pipeline board), optionally
-// filtered by ?status=.
+// filtered by ?status= and/or ?decision= (the decided list is the permanent
+// record of front-door decisions).
 func (h *P3MHandler) ListIntakes(w http.ResponseWriter, r *http.Request) {
 	if _, ok := RequireAuth(w, r); !ok {
 		return
 	}
 	query := `SELECT ` + p3mIntakeColumns + ` FROM p3m_intakes`
+	var conds []string
 	var args []any
 	if status := r.URL.Query().Get("status"); status != "" {
-		query += ` WHERE status = ?`
+		conds = append(conds, "status = ?")
 		args = append(args, status)
+	}
+	if decision := r.URL.Query().Get("decision"); decision != "" {
+		conds = append(conds, "decision = ?")
+		args = append(args, decision)
+	}
+	if len(conds) > 0 {
+		query += ` WHERE ` + strings.Join(conds, " AND ")
 	}
 	query += ` ORDER BY created_at DESC, id DESC`
 
