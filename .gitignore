@@ -24,6 +24,10 @@ cx
 !/internal/scm/gitlab_test.go
 !/internal/services/planning_milestones_release_test.go
 !/internal/utils/repository_path_test.go
+
+# The e2e suite ships with this repository: it is one interdependent package
+# (shared harness + per-area tests) and must compile from a fresh clone.
+!/internal/e2e/*_test.go
 *_test.sh
 *.test.js
 *.test.ts
