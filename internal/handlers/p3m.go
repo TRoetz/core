@@ -33,12 +33,22 @@ type P3MHandler struct {
 	// read-only endpoints still serve stored data.
 	financeStore *blobstore.Store
 	financeOpts  scheduler.FinanceSyncOptions
+
+	// Authorization cache invalidator for workspace-creating flows (project
+	// promotion). Nil in tests; the flow degrades to periodic refresh.
+	cacheInvalidator *services.AuthorizationCacheInvalidator
 }
 
 // SetFinanceSync wires the optional FIN-007 sync engine into the handler.
 func (h *P3MHandler) SetFinanceSync(store *blobstore.Store, opts scheduler.FinanceSyncOptions) {
 	h.financeStore = store
 	h.financeOpts = opts
+}
+
+// SetAuthorizationCacheInvalidator wires the shared authorization-cache
+// invalidator so workspace-creating flows reset permission snapshots.
+func (h *P3MHandler) SetAuthorizationCacheInvalidator(invalidator *services.AuthorizationCacheInvalidator) {
+	h.cacheInvalidator = invalidator
 }
 
 func NewP3MHandler(db database.Database, permissionService *services.PermissionService) *P3MHandler {

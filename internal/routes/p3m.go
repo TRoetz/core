@@ -46,6 +46,8 @@ func RegisterP3MRoutes(deps *Deps) {
 	api.HandleH("DELETE /p3m/projects/{id}", auth(p3mView(http.HandlerFunc(deps.P3M.DeleteProject))))
 	api.HandleH("GET /p3m/projects/{id}/workspaces", auth(p3mView(http.HandlerFunc(deps.P3M.ListProjectWorkspaces))))
 	api.HandleH("PUT /p3m/projects/{id}/workspaces", auth(p3mView(http.HandlerFunc(deps.P3M.SetProjectWorkspaces))))
+	// Promotion: a project becomes a workspace; the bridge link keeps it tracked.
+	api.HandleH("POST /p3m/projects/{id}/promote-to-workspace", auth(p3mView(http.HandlerFunc(deps.P3M.PromoteProjectToWorkspace))))
 	api.HandleH("GET /p3m/projects/{id}/rollup", auth(p3mView(http.HandlerFunc(deps.P3M.GetProjectRollup))))
 	// Financial close-out (FIN-010): one record per project, validated by the
 	// finance reviewer at the close stage.

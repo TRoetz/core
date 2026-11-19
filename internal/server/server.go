@@ -1672,6 +1672,7 @@ func (s *Server) initialize() error {
 	// Build route dependencies
 	slaHandler := handlers.NewSLAHandler(s.db, s.slaEngine, permService)
 	p3mHandler := handlers.NewP3MHandler(s.db, permService)
+	p3mHandler.SetAuthorizationCacheInvalidator(authorizationCacheInvalidator)
 	if cfg.FinanceSync.Enabled {
 		finOpts := scheduler.FinanceSyncOptions{PathPrefix: cfg.FinanceSync.PathPrefix, NotifyEmails: cfg.FinanceSync.NotifyEmails, SMTPSender: smtpSender}
 		p3mHandler.SetFinanceSync(attachmentStorage, finOpts)
