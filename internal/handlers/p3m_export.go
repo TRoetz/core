@@ -309,7 +309,7 @@ func (h *P3MHandler) p3mExportStakeholders(ctx context.Context, w http.ResponseW
 }
 
 func (h *P3MHandler) p3mExportResources(ctx context.Context, w http.ResponseWriter) (string, error) {
-	rows, err := h.db.QueryContext(ctx, `SELECT r.id, r.name, COALESCE(u.username, ''), r.skills, r.cost_rate, r.capacity_hours_per_week, COALESCE(al.allocated, 0), r.created_at, r.updated_at FROM p3m_resources r LEFT JOIN users u ON u.id = r.user_id LEFT JOIN (SELECT resource_id, SUM(hours_per_week) AS allocated FROM p3m_resource_allocations GROUP BY resource_id) al ON al.resource_id = r.id ORDER BY r.name COLLATE NOCASE`)
+	rows, err := h.db.QueryContext(ctx, `SELECT r.id, r.name, COALESCE(u.first_name || ' ' || u.last_name, ''), r.skills, r.cost_rate, r.capacity_hours_per_week, COALESCE(al.allocated, 0), r.created_at, r.updated_at FROM p3m_resources r LEFT JOIN users u ON u.id = r.user_id LEFT JOIN (SELECT resource_id, SUM(hours_per_week) AS allocated FROM p3m_resource_allocations GROUP BY resource_id) al ON al.resource_id = r.id ORDER BY r.name COLLATE NOCASE`)
 	if err != nil {
 		return "", err
 	}

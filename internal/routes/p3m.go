@@ -22,6 +22,11 @@ func RegisterP3MRoutes(deps *Deps) {
 	// Register exports (CSV).
 	api.HandleH("GET /p3m/export", auth(p3mView(http.HandlerFunc(deps.P3M.ExportCSV))))
 
+	// Bulk CSV import (workbook round-trip): preview validates without writing,
+	// execute writes in dependency order inside one transaction.
+	api.HandleH("POST /p3m/import/preview", auth(p3mView(http.HandlerFunc(deps.P3M.ImportPreview))))
+	api.HandleH("POST /p3m/import/execute", auth(p3mView(http.HandlerFunc(deps.P3M.ImportExecute))))
+
 	// Portfolios.
 	api.HandleH("GET /p3m/portfolios", auth(p3mView(http.HandlerFunc(deps.P3M.ListPortfolios))))
 	api.HandleH("POST /p3m/portfolios", auth(p3mView(http.HandlerFunc(deps.P3M.CreatePortfolio))))

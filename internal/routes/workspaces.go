@@ -20,6 +20,13 @@ func RegisterWorkspaceRoutes(deps *Deps) {
 	api.HandleH("GET /workspaces/{id}/homepage/layout", auth(http.HandlerFunc(deps.Workspaces.Workspace.GetHomepageLayout)))
 	api.HandleH("PUT /workspaces/{id}/homepage/layout", auth(http.HandlerFunc(deps.Workspaces.Workspace.UpdateHomepageLayout)))
 
+	// Bulk CSV import (workbook round-trip): preview validates without writing,
+	// execute creates workspaces and item hierarchies. Requires global
+	// workspace.create, checked in-handler because these routes are not
+	// workspace-scoped.
+	api.HandleH("POST /workspaces/import/preview", auth(http.HandlerFunc(deps.Workspaces.Workspace.ImportPreview)))
+	api.HandleH("POST /workspaces/import/execute", auth(http.HandlerFunc(deps.Workspaces.Workspace.ImportExecute)))
+
 	// Screen endpoints
 	api.HandleH("GET /screens", auth(http.HandlerFunc(deps.Workspaces.Screen.GetAll)))
 	api.HandleH("POST /screens", admin(http.HandlerFunc(deps.Workspaces.Screen.Create)))

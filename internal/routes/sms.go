@@ -160,6 +160,10 @@ func RegisterSMSRoutes(deps *Deps) {
 	api.HandleH("POST /sms/import/sites/execute", auth(smsManage(http.HandlerFunc(deps.SMS.ImportSitesExecute))))
 	// Full-register restore: round-trips GET /sms/export/full with IDs intact.
 	api.HandleH("POST /sms/import/full", auth(smsManage(http.HandlerFunc(deps.SMS.ImportFull))))
+	// Workbook import (data-collection template round-trip): all 13 SMS sheets
+	// in one payload; preview validates, execute writes in dependency order.
+	api.HandleH("POST /sms/workbook/preview", auth(smsManage(http.HandlerFunc(deps.SMS.WorkbookPreview))))
+	api.HandleH("POST /sms/workbook/execute", auth(smsManage(http.HandlerFunc(deps.SMS.WorkbookExecute))))
 	api.HandleH("GET /sms/export/full", auth(smsView(http.HandlerFunc(deps.SMS.ExportFullJSON))))
 	api.HandleH("GET /sms/export/manifest", auth(smsView(http.HandlerFunc(deps.SMS.ExportManifest))))
 	api.HandleH("GET /sms/export/geojson", auth(smsView(http.HandlerFunc(deps.SMS.ExportGeoJSON))))

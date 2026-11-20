@@ -17,4 +17,10 @@ func RegisterAssetRoutes(deps *Deps) {
 	api.HandleH("POST /asset-sets/{setId}/actions/{id}/execute", auth(http.HandlerFunc(deps.Assets.Action.ExecuteAction)))
 	api.HandleH("GET /asset-sets/{setId}/actions/{id}/logs", auth(http.HandlerFunc(deps.Assets.Action.GetActionLogs)))
 	api.HandleH("GET /asset-sets/{setId}/action-logs", auth(http.HandlerFunc(deps.Assets.Action.GetSetLogs)))
+
+	// Workbook import (preview + execute); the global permission gate
+	// (system.admin or asset.manage) is enforced in-handler, mirroring the
+	// P3M/SMS/workspace importers.
+	api.HandleH("POST /assets/import/preview", auth(http.HandlerFunc(deps.Assets.Asset.ImportWorkbookPreview)))
+	api.HandleH("POST /assets/import/execute", auth(http.HandlerFunc(deps.Assets.Asset.ImportWorkbookExecute)))
 }

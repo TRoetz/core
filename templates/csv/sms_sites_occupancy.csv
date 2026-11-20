@@ -1,0 +1,5 @@
+name,external_id,kind,parent_external_id,description,location_lat,location_lon,location_text,custom_fields,entity_type,entity_id,stakeholder_email,occupancy_role,tenancy_start,tenancy_end,member_notes
+Central City,AREA-CENTRAL,area,,Core central city area affected by roadworks.,-36.8508,174.7645,Central City,{},,,,,,,
+Main St kerbside works,SEG-MAINST,road_segment,AREA-CENTRAL,"Kerbside and drainage works, Queen St to Victoria St.",-36.8512,174.764,"Main St, Queen-Victoria","{""traffic_impact"":""high""}",,,,,,,
+42 Main St,BLD-42MAIN,building,SEG-MAINST,Corner shop with two residential units above.,-36.851,174.7642,42 Main St,"{""access"":""rear only during works""}",,,sam.okafor@okaforprop.example,owner,2020-01-01,,Owner; rear access maintained.
+42 Main St,BLD-42MAIN,building,SEG-MAINST,,,,,,,,dana@mainstbiz.example,tenant,2018-06-01,,Association president runs the corner shop.
