@@ -78,13 +78,14 @@ func p3mWorseRag(a, b string) string {
 	return a
 }
 
-// p3mProjectCategoryRags computes the six tolerance-based category RAGs for a
-// single project (RPT-007). Every category starts green and only escalates on
-// concrete evidence: schedule slip vs baseline, budget overrun vs tolerance,
-// open risk scores, latest change assessment rating, overdue benefit
-// measurements, and high-impact changes active this week.
+// p3mProjectCategoryRags computes the seven tolerance-based category RAGs for
+// a single project (RPT-007). Every category starts green and only escalates
+// on concrete evidence: schedule slip vs baseline, budget overrun vs
+// tolerance, open risk scores, latest change assessment rating, overdue
+// benefit measurements, high-impact changes active this week, and resource
+// demand vs capacity this month.
 func (h *P3MHandler) p3mProjectCategoryRags(ctx context.Context, projectID int, tol models.P3MToleranceProfile) (map[string]string, error) {
-	rags := map[string]string{"schedule": "green", "budget": "green", "scope": "green", "risk": "green", "benefits": "green", "change": "green"}
+	rags := map[string]string{"schedule": "green", "budget": "green", "scope": "green", "risk": "green", "benefits": "green", "change": "green", "resources": "green"}
 
 	// schedule: slip of the current target completion date against the latest
 	// baseline's captured date.
@@ -194,6 +195,33 @@ func (h *P3MHandler) p3mProjectCategoryRags(ctx context.Context, projectID int, 
 		}
 	}
 
+	// resources: weekly demand from allocations overlapping the current month
+	// vs the capacity of the allocated resources. Fixed thresholds: above
+	// 100% of capacity is amber, above 120% is red; no allocations is green.
+	now := time.Now().UTC()
+	monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
+	monthEnd := monthStart.AddDate(0, 1, 0)
+	var demand float64
+	if err := h.db.QueryRowContext(ctx, `
+		SELECT COALESCE(SUM(hours_per_week), 0)
+		FROM p3m_resource_allocations
+		WHERE project_id = ? AND start_date < ? AND end_date >= ?`, projectID, monthEnd, monthStart).Scan(&demand); err == nil && demand > 0 {
+		var capacity float64
+		if err := h.db.QueryRowContext(ctx, `
+			SELECT COALESCE(SUM(capacity_hours_per_week), 0)
+			FROM p3m_resources
+			WHERE id IN (SELECT DISTINCT resource_id FROM p3m_resource_allocations WHERE project_id = ? AND start_date < ? AND end_date >= ?)`, projectID, monthEnd, monthStart).Scan(&capacity); err == nil {
+			if capacity > 0 {
+				ratio := demand / capacity
+				if ratio > 1.2 {
+					rags["resources"] = "red"
+				} else if ratio > 1.0 {
+					rags["resources"] = "amber"
+				}
+			}
+		}
+	}
+
 	return rags, nil
 }
 
@@ -247,7 +275,7 @@ func (h *P3MHandler) p3mEntityCategoryRags(ctx context.Context, entityType strin
 		return nil, tol, err
 	}
 
-	rags := map[string]string{"schedule": "green", "budget": "green", "scope": "green", "risk": "green", "benefits": "green", "change": "green"}
+	rags := map[string]string{"schedule": "green", "budget": "green", "scope": "green", "risk": "green", "benefits": "green", "change": "green", "resources": "green"}
 	for _, pid := range projectIDs {
 		child, err := h.p3mProjectCategoryRags(ctx, pid, tol)
 		if err != nil {

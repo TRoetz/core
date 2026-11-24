@@ -65,8 +65,11 @@
   }
 
   function emptyProgrammeForm() {
-    return { title: '', description: '', manager_id: '', budget_allocated: '', target_start_date: '', target_end_date: '', rag_status: 'green' };
+    return { title: '', description: '', manager_id: '', budget_allocated: '', target_start_date: '', target_end_date: '', rag_status: 'green', business_owner_group: '', responsible_group: '' };
   }
+
+  /** Curated business-group reference values for the report-field datalists. */
+  let refBusinessGroups = $state([]);
 
   function toggleNewPortfolio() {
     newPortfolioOpen = !newPortfolioOpen;
@@ -134,12 +137,21 @@
     }
   }
 
+  function ensureRefBusinessGroups() {
+    if (refBusinessGroups.length) return;
+    p3mApi
+      .getReferenceValues({ category: 'business_group' })
+      .then((rows) => (refBusinessGroups = (Array.isArray(rows) ? rows : []).map((r) => r.value)))
+      .catch(() => {});
+  }
+
   function openProgrammeForm(pfId) {
     programmeFormFor = pfId;
     projectFormCtx = null;
     editingProgramme = null;
     programmeForm = emptyProgrammeForm();
     programmeError = '';
+    ensureRefBusinessGroups();
     if (!users.length) getUsers().then((u) => (users = u || [])).catch(() => {});
   }
 
@@ -155,8 +167,11 @@
       target_start_date: toDateInputValue(pg.target_start_date),
       target_end_date: toDateInputValue(pg.target_end_date),
       rag_status: pg.rag_status || 'green',
+      business_owner_group: pg.business_owner_group ?? '',
+      responsible_group: pg.responsible_group ?? '',
     };
     programmeError = '';
+    ensureRefBusinessGroups();
     if (!users.length) getUsers().then((u) => (users = u || [])).catch(() => {});
   }
 
@@ -178,6 +193,10 @@
       };
       if (programmeForm.manager_id) payload.manager_id = Number(programmeForm.manager_id);
       else if (editingProgramme != null) payload.manager_id = null; // full-replace update: explicit clear
+      if (programmeForm.business_owner_group.trim()) payload.business_owner_group = programmeForm.business_owner_group.trim();
+      else if (editingProgramme != null) payload.business_owner_group = null;
+      if (programmeForm.responsible_group.trim()) payload.responsible_group = programmeForm.responsible_group.trim();
+      else if (editingProgramme != null) payload.responsible_group = null;
       const start = toISODate(programmeForm.target_start_date);
       if (start) payload.target_start_date = start;
       const end = toISODate(programmeForm.target_end_date);
@@ -729,6 +748,27 @@
                     </label>
                   </div>
 
+                  <label class="block">
+                    <span>{t('p3m.report.businessGroup')}</span>
+                    <input
+                      list="ohpf-ref-business-group"
+                      class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+                      value={programmeForm.business_owner_group}
+                      disabled={savingProgramme}
+                      oninput={(e) => (programmeForm = { ...programmeForm, business_owner_group: e.target.value })}
+                    />
+                  </label>
+                  <label class="block">
+                    <span>{t('p3m.report.responsibleGroup')}</span>
+                    <input
+                      list="ohpf-ref-business-group"
+                      class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+                      value={programmeForm.responsible_group}
+                      disabled={savingProgramme}
+                      oninput={(e) => (programmeForm = { ...programmeForm, responsible_group: e.target.value })}
+                    />
+                  </label>
+
                   <label class="block md:col-span-2">
                     <span>{t('p3m.description')}</span>
                     <textarea
@@ -740,6 +780,12 @@
                     ></textarea>
                   </label>
                 </div>
+
+                <datalist id="ohpf-ref-business-group">
+                  {#each refBusinessGroups as v (v)}
+                    <option value={v} />
+                  {/each}
+                </datalist>
 
                 {#if programmeError}
                   <div class="mt-2 rounded-md border border-red-200 bg-red-50 p-2 text-red-700">{programmeError}</div>

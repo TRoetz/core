@@ -131,6 +131,7 @@ const routes = {
   '/gantt': 'big-gantt',
   '/p3m': 'p3m',
   '/p3m/projects/:id': 'p3m',
+  '/p3m/portfolios/:id/report/print': 'p3m-report-print',
   '/srm': 'srm',
   // Public grievance intake webform (WI-5.3) - no authentication required.
   '/sms/grievances': 'public-sms-grievance',

@@ -29,7 +29,7 @@
     return {
       title: '', source: 'standard', description: '', problem_opportunity: '', strategic_alignment: '',
       intended_outcomes: '', indicative_cost: '', resource_requirements: '', risk_notes: '',
-      change_impact_notes: '', business_group: '', work_type: '', complexity: 'low', lifecycle_position: '',
+      change_impact_notes: '', business_group: '', responsible_group: '', work_type: '', complexity: 'low', lifecycle_position: '',
     };
   }
 
@@ -39,11 +39,22 @@
   let form = $state(emptyForm());
   let savingForm = $state(false);
   let formError = $state('');
+  /** Curated business-group reference values for the form datalists. */
+  let refBusinessGroups = $state([]);
+
+  function ensureRefBusinessGroups() {
+    if (refBusinessGroups.length) return;
+    p3mApi
+      .getReferenceValues({ category: 'business_group' })
+      .then((rows) => (refBusinessGroups = (Array.isArray(rows) ? rows : []).map((r) => r.value)))
+      .catch(() => {});
+  }
 
   function openCreate() {
     editingIntake = null;
     form = emptyForm();
     formError = '';
+    ensureRefBusinessGroups();
     formOpen = true;
   }
 
@@ -55,9 +66,11 @@
       intended_outcomes: i.intended_outcomes ?? '', indicative_cost: i.indicative_cost != null ? String(i.indicative_cost) : '',
       resource_requirements: i.resource_requirements ?? '', risk_notes: i.risk_notes ?? '',
       change_impact_notes: i.change_impact_notes ?? '', business_group: i.business_group ?? '',
+      responsible_group: i.responsible_group ?? '',
       work_type: i.work_type ?? '', complexity: i.complexity || 'low', lifecycle_position: i.lifecycle_position ?? '',
     };
     formError = '';
+    ensureRefBusinessGroups();
     formOpen = true;
   }
 
@@ -265,8 +278,17 @@
           </label>
           <label class="block">
             <span>{t('p3m.businessGroup')}</span>
-            <input class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1" value={form.business_group} disabled={savingForm} oninput={(e) => (form = { ...form, business_group: e.target.value })} />
+            <input list="ohpf-ref-business-group" class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1" value={form.business_group} disabled={savingForm} oninput={(e) => (form = { ...form, business_group: e.target.value })} />
           </label>
+          <label class="block">
+            <span>{t('p3m.report.responsibleGroup')}</span>
+            <input list="ohpf-ref-business-group" class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1" value={form.responsible_group} disabled={savingForm} oninput={(e) => (form = { ...form, responsible_group: e.target.value })} />
+          </label>
+          <datalist id="ohpf-ref-business-group">
+            {#each refBusinessGroups as v (v)}
+              <option value={v} />
+            {/each}
+          </datalist>
           <label class="block">
             <span>{t('p3m.indicativeCost')}</span>
             <input type="number" min="0" step="any" class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1" value={form.indicative_cost} disabled={savingForm} oninput={(e) => (form = { ...form, indicative_cost: e.target.value })} />

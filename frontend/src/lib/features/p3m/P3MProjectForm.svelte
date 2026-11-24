@@ -25,6 +25,12 @@
     { value: 'operational', labelKey: 'p3m.workTypeOperational' },
   ];
 
+  // OHP portfolio report dimensions (RPT-001): enums validated server-side.
+  const LEVELS = ['low', 'med', 'high'];
+  const INVESTMENT_TYPES = ['mandatory', 'maintenance', 'tactical', 'strategic', 'innovation'];
+  /** @type {{business_group: string[], theme: string[]}} curated reference values for datalists */
+  let refValues = $state({ business_group: [], theme: [] });
+
   // Stage options come from the configured lifecycle (enabled stages in path
   // order); when config is unavailable they fall back to the legacy four.
   const stageOptions = $derived.by(() => {
@@ -50,6 +56,15 @@
         progress_percent: project.progress_percent ?? 0,
         start_date: toDateInputValue(project.start_date),
         target_completion_date: toDateInputValue(project.target_completion_date),
+        business_owner_group: project.business_owner_group ?? '',
+        responsible_group: project.responsible_group ?? '',
+        delivery_complexity: project.delivery_complexity ?? '',
+        investment_type: project.investment_type ?? '',
+        portfolio_value: project.portfolio_value ?? '',
+        priority: project.priority ?? '',
+        is_ce_kpi: !!project.is_ce_kpi,
+        on_hold: !!project.on_hold,
+        on_hold_reason: project.on_hold_reason ?? '',
       };
     }
     return {
@@ -67,6 +82,15 @@
       progress_percent: 0,
       start_date: '',
       target_completion_date: '',
+      business_owner_group: '',
+      responsible_group: '',
+      delivery_complexity: '',
+      investment_type: '',
+      portfolio_value: '',
+      priority: '',
+      is_ce_kpi: false,
+      on_hold: false,
+      on_hold_reason: '',
     };
   }
 
@@ -87,9 +111,15 @@
   });
 
   onMount(async () => {
-    [users, timeProjects] = await Promise.all([
+    [users, timeProjects, refValues] = await Promise.all([
       getUsers().catch(() => []),
       time.projects.getAll().then((r) => (Array.isArray(r) ? r : [])).catch(() => []),
+      Promise.all(
+        ['business_group', 'theme'].map(async (cat) => [
+          cat,
+          (await p3mApi.getReferenceValues({ category: cat }).catch(() => [])).map((r) => r.value),
+        ])
+      ).then((pairs) => Object.fromEntries(pairs)),
     ]);
   });
 
@@ -128,6 +158,24 @@
       if (start) payload.start_date = start;
       const target = toISODate(form.target_completion_date);
       if (target) payload.target_completion_date = target;
+      // OHP portfolio report fields: free text (reference-value datalists) or
+      // small enums; null clears on full-replace updates.
+      if (form.business_owner_group.trim()) payload.business_owner_group = form.business_owner_group.trim();
+      else if (project) payload.business_owner_group = null;
+      if (form.responsible_group.trim()) payload.responsible_group = form.responsible_group.trim();
+      else if (project) payload.responsible_group = null;
+      if (form.delivery_complexity) payload.delivery_complexity = form.delivery_complexity;
+      else if (project) payload.delivery_complexity = null;
+      if (form.investment_type) payload.investment_type = form.investment_type;
+      else if (project) payload.investment_type = null;
+      if (form.portfolio_value.trim()) payload.portfolio_value = form.portfolio_value.trim();
+      else if (project) payload.portfolio_value = null;
+      if (form.priority) payload.priority = form.priority;
+      else if (project) payload.priority = null;
+      payload.is_ce_kpi = form.is_ce_kpi;
+      payload.on_hold = form.on_hold;
+      if (form.on_hold_reason.trim()) payload.on_hold_reason = form.on_hold_reason.trim();
+      else if (project) payload.on_hold_reason = null;
 
       if (project) await p3mApi.projects.update(project.id, payload);
       else await p3mApi.projects.create(payload);
@@ -309,6 +357,117 @@
       </label>
     </div>
 
+    <!-- OHP portfolio report dimensions -->
+    <label class="block">
+      <span>{t('p3m.report.businessGroup')}</span>
+      <input
+        list="ohpf-ref-business-group"
+        class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+        value={form.business_owner_group}
+        disabled={saving}
+        oninput={(e) => (form = { ...form, business_owner_group: e.target.value })}
+      />
+    </label>
+
+    <label class="block">
+      <span>{t('p3m.report.responsibleGroup')}</span>
+      <input
+        list="ohpf-ref-business-group"
+        class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+        value={form.responsible_group}
+        disabled={saving}
+        oninput={(e) => (form = { ...form, responsible_group: e.target.value })}
+      />
+    </label>
+
+    <label class="block">
+      <span>{t('p3m.report.deliveryComplexity')}</span>
+      <select
+        class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+        value={form.delivery_complexity}
+        disabled={saving}
+        onchange={(e) => (form = { ...form, delivery_complexity: e.target.value })}
+      >
+        <option value="">{t('p3m.noSelection')}</option>
+        {#each LEVELS as lvl (lvl)}
+          <option value={lvl}>{t(`p3m.report.level_${lvl}`)}</option>
+        {/each}
+      </select>
+    </label>
+
+    <label class="block">
+      <span>{t('p3m.report.investmentType')}</span>
+      <select
+        class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+        value={form.investment_type}
+        disabled={saving}
+        onchange={(e) => (form = { ...form, investment_type: e.target.value })}
+      >
+        <option value="">{t('p3m.noSelection')}</option>
+        {#each INVESTMENT_TYPES as it (it)}
+          <option value={it}>{t(`p3m.report.invest_${it}`)}</option>
+        {/each}
+      </select>
+    </label>
+
+    <label class="block">
+      <span>{t('p3m.report.portfolioValue')}</span>
+      <input
+        list="ohpf-ref-theme"
+        class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+        value={form.portfolio_value}
+        disabled={saving}
+        oninput={(e) => (form = { ...form, portfolio_value: e.target.value })}
+      />
+    </label>
+
+    <label class="block">
+      <span>{t('p3m.report.priority')}</span>
+      <select
+        class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+        value={form.priority}
+        disabled={saving}
+        onchange={(e) => (form = { ...form, priority: e.target.value })}
+      >
+        <option value="">{t('p3m.noSelection')}</option>
+        {#each LEVELS as lvl (lvl)}
+          <option value={lvl}>{t(`p3m.report.level_${lvl}`)}</option>
+        {/each}
+      </select>
+    </label>
+
+    <label class="flex items-center gap-2">
+      <input
+        type="checkbox"
+        checked={form.is_ce_kpi}
+        disabled={saving}
+        onchange={(e) => (form = { ...form, is_ce_kpi: e.target.checked })}
+      />
+      <span>{t('p3m.report.ceKpi')}</span>
+    </label>
+
+    <label class="flex items-center gap-2">
+      <input
+        type="checkbox"
+        checked={form.on_hold}
+        disabled={saving}
+        onchange={(e) => (form = { ...form, on_hold: e.target.checked })}
+      />
+      <span>{t('p3m.report.onHold')}</span>
+    </label>
+
+    {#if form.on_hold}
+      <label class="block md:col-span-2">
+        <span>{t('p3m.report.onHoldReason')}</span>
+        <input
+          class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+          value={form.on_hold_reason}
+          disabled={saving}
+          oninput={(e) => (form = { ...form, on_hold_reason: e.target.value })}
+        />
+      </label>
+    {/if}
+
     <label class="block md:col-span-2">
       <span>{t('p3m.description')}</span>
       <textarea
@@ -320,6 +479,17 @@
       ></textarea>
     </label>
   </div>
+
+  <datalist id="ohpf-ref-business-group">
+    {#each refValues.business_group as v (v)}
+      <option value={v} />
+    {/each}
+  </datalist>
+  <datalist id="ohpf-ref-theme">
+    {#each refValues.theme as v (v)}
+      <option value={v} />
+    {/each}
+  </datalist>
 
   {#if error}
     <div class="mt-2 rounded-md border border-red-200 bg-red-50 p-2 text-red-700">{error}</div>

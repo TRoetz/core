@@ -248,4 +248,33 @@ func RegisterP3MRoutes(deps *Deps) {
 	api.HandleH("GET /p3m/projects/{id}/closure-record", auth(p3mView(http.HandlerFunc(deps.P3M.GetClosureRecord))))
 	api.HandleH("POST /p3m/projects/{id}/closure-record", auth(p3mView(http.HandlerFunc(deps.P3M.CreateClosureRecord))))
 	api.HandleH("PUT /p3m/closure-records/{id}", auth(p3mView(http.HandlerFunc(deps.P3M.UpdateClosureRecord))))
+
+	// OHP portfolio report (RPT-001..015): RAG history, status reports, ELT
+	// decision coversheets, change capacity and reference values.
+	api.HandleH("GET /p3m/projects/{id}/rag-history", auth(p3mView(http.HandlerFunc(deps.P3M.GetProjectRagHistory))))
+	api.HandleH("GET /p3m/projects/{id}/status-reports", auth(p3mView(http.HandlerFunc(deps.P3M.ListProjectStatusReports))))
+	api.HandleH("POST /p3m/projects/{id}/status-reports", auth(p3mView(http.HandlerFunc(deps.P3M.CreateProjectStatusReport))))
+	api.HandleH("GET /p3m/status-reports/{id}", auth(p3mView(http.HandlerFunc(deps.P3M.GetStatusReport))))
+	api.HandleH("PUT /p3m/status-reports/{id}", auth(p3mView(http.HandlerFunc(deps.P3M.UpdateStatusReport))))
+	api.HandleH("DELETE /p3m/status-reports/{id}", auth(p3mView(http.HandlerFunc(deps.P3M.DeleteStatusReport))))
+	api.HandleH("GET /p3m/elt-decisions", auth(p3mView(http.HandlerFunc(deps.P3M.ListELTDecisions))))
+	api.HandleH("POST /p3m/elt-decisions", auth(p3mView(http.HandlerFunc(deps.P3M.CreateELTDecision))))
+	api.HandleH("GET /p3m/elt-decisions/{id}", auth(p3mView(http.HandlerFunc(deps.P3M.GetELTDecision))))
+	api.HandleH("PUT /p3m/elt-decisions/{id}", auth(p3mView(http.HandlerFunc(deps.P3M.UpdateELTDecision))))
+	api.HandleH("DELETE /p3m/elt-decisions/{id}", auth(p3mView(http.HandlerFunc(deps.P3M.DeleteELTDecision))))
+	api.HandleH("POST /p3m/elt-decisions/{id}/decision", auth(p3mView(http.HandlerFunc(deps.P3M.DecideELTDecision))))
+	api.HandleH("GET /p3m/change-capacity", auth(p3mView(http.HandlerFunc(deps.P3M.ListChangeCapacity))))
+	api.HandleH("PUT /p3m/change-capacity", auth(p3mView(http.HandlerFunc(deps.P3M.UpsertChangeCapacity))))
+	api.HandleH("DELETE /p3m/change-capacity", auth(p3mView(http.HandlerFunc(deps.P3M.DeleteChangeCapacity))))
+	// Reference values register: curated free-text values for report
+	// dimensions; full-replace PUT is admin-only.
+	api.HandleH("GET /p3m/reference-values", auth(p3mView(http.HandlerFunc(deps.P3M.ListReferenceValues))))
+	api.HandleH("PUT /p3m/reference-values", admin(http.HandlerFunc(deps.P3M.ReplaceReferenceValues)))
+	api.HandleH("GET /p3m/portfolios/{id}/portfolio-report/curated", auth(p3mView(http.HandlerFunc(deps.P3M.GetCuratedPortfolioReport))))
+	api.HandleH("PUT /p3m/portfolios/{id}/portfolio-report/curated", auth(p3mView(http.HandlerFunc(deps.P3M.UpsertCuratedPortfolioReport))))
+
+	// OHP portfolio report assembly (RPT-014/015): the full 14-section
+	// document as JSON and as Markdown.
+	api.HandleH("GET /p3m/portfolios/{id}/portfolio-report", auth(p3mView(http.HandlerFunc(deps.P3M.GetPortfolioReport))))
+	api.HandleH("GET /p3m/portfolios/{id}/portfolio-report/markdown", auth(p3mView(http.HandlerFunc(deps.P3M.GetPortfolioReportMarkdown))))
 }

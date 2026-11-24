@@ -17,6 +17,7 @@
   import P3MResources from './P3MResources.svelte';
   import P3MChangeCalendar from './P3MChangeCalendar.svelte';
   import P3MReporting from './P3MReporting.svelte';
+  import P3MPortfolioReport from './P3MPortfolioReport.svelte';
   import P3MPortfolioPulse from './P3MPortfolioPulse.svelte';
 
   const TABS = [
@@ -29,6 +30,7 @@
     { id: 'resources', labelKey: 'p3m.resourcesTab' },
     { id: 'change', labelKey: 'p3m.changeTab' },
     { id: 'reporting', labelKey: 'p3m.reportingTab' },
+    { id: 'report', labelKey: 'p3m.reportTab' },
   ];
 
   let activeTab = $state('overview');
@@ -196,6 +198,8 @@
     <P3MChangeCalendar portfolios={hierarchy.portfolios} />
   {:else if activeTab === 'reporting'}
     <P3MReporting portfolios={hierarchy.portfolios} />
+  {:else if activeTab === 'report'}
+    <P3MPortfolioReport portfolios={hierarchy.portfolios} />
   {:else}
     <P3MResources portfolios={hierarchy.portfolios} />
   {/if}

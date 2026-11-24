@@ -244,6 +244,7 @@ func (h *P3MHandler) CreatePortfolio(w http.ResponseWriter, r *http.Request) {
 		respondInternalError(w, r, err)
 		return
 	}
+	h.p3mRecordRagHistory(r.Context(), "portfolio", pf.ID, pf.RagStatus, user)
 	h.p3mAudit(r, user, "p3m.portfolio.create", "p3m_portfolio", &pf.ID, pf.Title, map[string]any{
 		"budget_allocated":    in.BudgetAllocated,
 		"rag_status":          in.RagStatus,
@@ -317,6 +318,7 @@ func (h *P3MHandler) UpdatePortfolio(w http.ResponseWriter, r *http.Request) {
 		[3]any{"rag_status", oldPf.RagStatus, in.RagStatus},
 		[3]any{"owner_id", nullInt(oldPf.OwnerID), nullInt(in.OwnerID)},
 	))
+	h.p3mRecordRagHistory(r.Context(), "portfolio", pf.ID, pf.RagStatus, user)
 	rollups, _ := h.portfolioRollups(r.Context())
 	pf.Rollup = rollups[pf.ID]
 	respondJSONOK(w, pf)
@@ -486,12 +488,13 @@ func (h *P3MHandler) portfolioRollups(ctx context.Context) (map[int]*models.P3MP
 // Programmes
 // ---------------------------------------------------------------------------
 
-const p3mProgrammeColumns = `id, portfolio_id, title, description, manager_id, budget_allocated, target_start_date, target_end_date, rag_status, created_at, updated_at`
+const p3mProgrammeColumns = `id, portfolio_id, title, description, manager_id, budget_allocated, target_start_date, target_end_date, rag_status, business_owner_group, responsible_group, created_at, updated_at`
 
 func scanP3MProgramme(row interface{ Scan(...any) error }) (models.P3MProgramme, error) {
 	var pg models.P3MProgramme
 	err := row.Scan(&pg.ID, &pg.PortfolioID, &pg.Title, &pg.Description, &pg.ManagerID,
-		&pg.BudgetAllocated, &pg.TargetStartDate, &pg.TargetEndDate, &pg.RagStatus, &pg.CreatedAt, &pg.UpdatedAt)
+		&pg.BudgetAllocated, &pg.TargetStartDate, &pg.TargetEndDate, &pg.RagStatus,
+		&pg.BusinessOwnerGroup, &pg.ResponsibleGroup, &pg.CreatedAt, &pg.UpdatedAt)
 	return pg, err
 }
 
@@ -576,14 +579,16 @@ func (h *P3MHandler) CreateProgramme(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var in struct {
-		PortfolioID     int       `json:"portfolio_id"`
-		Title           string    `json:"title"`
-		Description     string    `json:"description"`
-		ManagerID       *int      `json:"manager_id,omitempty"`
-		BudgetAllocated float64   `json:"budget_allocated"`
-		TargetStartDate time.Time `json:"target_start_date,omitempty"`
-		TargetEndDate   time.Time `json:"target_end_date,omitempty"`
-		RagStatus       string    `json:"rag_status"`
+		PortfolioID        int       `json:"portfolio_id"`
+		Title              string    `json:"title"`
+		Description        string    `json:"description"`
+		ManagerID          *int      `json:"manager_id,omitempty"`
+		BudgetAllocated    float64   `json:"budget_allocated"`
+		TargetStartDate    time.Time `json:"target_start_date,omitempty"`
+		TargetEndDate      time.Time `json:"target_end_date,omitempty"`
+		RagStatus          string    `json:"rag_status"`
+		BusinessOwnerGroup *string   `json:"business_owner_group"`
+		ResponsibleGroup   *string   `json:"responsible_group"`
 	}
 	if err := newJSONDecoder(w, r).Decode(&in); err != nil {
 		respondBadRequest(w, r, "Invalid request body")
@@ -606,10 +611,11 @@ func (h *P3MHandler) CreateProgramme(w http.ResponseWriter, r *http.Request) {
 	}
 	now := time.Now().UTC()
 	res, err := h.db.ExecContext(r.Context(), `
-		INSERT INTO p3m_programmes (portfolio_id, title, description, manager_id, budget_allocated, target_start_date, target_end_date, rag_status, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		INSERT INTO p3m_programmes (portfolio_id, title, description, manager_id, budget_allocated, target_start_date, target_end_date, rag_status, business_owner_group, responsible_group, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		in.PortfolioID, in.Title, in.Description, nullInt(in.ManagerID), in.BudgetAllocated,
-		nullTime(in.TargetStartDate), nullTime(in.TargetEndDate), in.RagStatus, now, now)
+		nullTime(in.TargetStartDate), nullTime(in.TargetEndDate), in.RagStatus,
+		nullStringPtr(in.BusinessOwnerGroup), nullStringPtr(in.ResponsibleGroup), now, now)
 	if err != nil {
 		respondInternalError(w, r, err)
 		return
@@ -620,10 +626,13 @@ func (h *P3MHandler) CreateProgramme(w http.ResponseWriter, r *http.Request) {
 		respondInternalError(w, r, err)
 		return
 	}
+	h.p3mRecordRagHistory(r.Context(), "programme", pg.ID, pg.RagStatus, user)
 	h.p3mAudit(r, user, "p3m.programme.create", "p3m_programme", &pg.ID, pg.Title, map[string]any{
 		"portfolio_id":     in.PortfolioID,
 		"budget_allocated": in.BudgetAllocated,
 		"rag_status":       in.RagStatus,
+		"business_owner_group": nullStringPtr(in.BusinessOwnerGroup),
+		"responsible_group":    nullStringPtr(in.ResponsibleGroup),
 	})
 	respondJSONCreated(w, pg)
 }
@@ -648,14 +657,16 @@ func (h *P3MHandler) UpdateProgramme(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var in struct {
-		PortfolioID     int       `json:"portfolio_id"`
-		Title           string    `json:"title"`
-		Description     string    `json:"description"`
-		ManagerID       *int      `json:"manager_id,omitempty"`
-		BudgetAllocated float64   `json:"budget_allocated"`
-		TargetStartDate time.Time `json:"target_start_date,omitempty"`
-		TargetEndDate   time.Time `json:"target_end_date,omitempty"`
-		RagStatus       string    `json:"rag_status"`
+		PortfolioID        int       `json:"portfolio_id"`
+		Title              string    `json:"title"`
+		Description        string    `json:"description"`
+		ManagerID          *int      `json:"manager_id,omitempty"`
+		BudgetAllocated    float64   `json:"budget_allocated"`
+		TargetStartDate    time.Time `json:"target_start_date,omitempty"`
+		TargetEndDate      time.Time `json:"target_end_date,omitempty"`
+		RagStatus          string    `json:"rag_status"`
+		BusinessOwnerGroup *string   `json:"business_owner_group"`
+		ResponsibleGroup   *string   `json:"responsible_group"`
 	}
 	if err := newJSONDecoder(w, r).Decode(&in); err != nil {
 		respondBadRequest(w, r, "Invalid request body")
@@ -675,9 +686,10 @@ func (h *P3MHandler) UpdateProgramme(w http.ResponseWriter, r *http.Request) {
 	}
 	now := time.Now().UTC()
 	res, err := h.db.ExecContext(r.Context(), `
-		UPDATE p3m_programmes SET portfolio_id = ?, title = ?, description = ?, manager_id = ?, budget_allocated = ?, target_start_date = ?, target_end_date = ?, rag_status = ?, updated_at = ? WHERE id = ?`,
+		UPDATE p3m_programmes SET portfolio_id = ?, title = ?, description = ?, manager_id = ?, budget_allocated = ?, target_start_date = ?, target_end_date = ?, rag_status = ?, business_owner_group = ?, responsible_group = ?, updated_at = ? WHERE id = ?`,
 		in.PortfolioID, in.Title, in.Description, nullInt(in.ManagerID), in.BudgetAllocated,
-		nullTime(in.TargetStartDate), nullTime(in.TargetEndDate), in.RagStatus, now, id)
+		nullTime(in.TargetStartDate), nullTime(in.TargetEndDate), in.RagStatus,
+		nullStringPtr(in.BusinessOwnerGroup), nullStringPtr(in.ResponsibleGroup), now, id)
 	if err != nil {
 		respondInternalError(w, r, err)
 		return
@@ -700,7 +712,10 @@ func (h *P3MHandler) UpdateProgramme(w http.ResponseWriter, r *http.Request) {
 		[3]any{"target_start_date", oldPg.TargetStartDate, nullTime(in.TargetStartDate)},
 		[3]any{"target_end_date", oldPg.TargetEndDate, nullTime(in.TargetEndDate)},
 		[3]any{"rag_status", oldPg.RagStatus, in.RagStatus},
+		[3]any{"business_owner_group", nullStringPtr(oldPg.BusinessOwnerGroup), nullStringPtr(in.BusinessOwnerGroup)},
+		[3]any{"responsible_group", nullStringPtr(oldPg.ResponsibleGroup), nullStringPtr(in.ResponsibleGroup)},
 	))
+	h.p3mRecordRagHistory(r.Context(), "programme", pg.ID, pg.RagStatus, user)
 	rollups, _ := h.programmeRollups(r.Context())
 	pg.Rollup = rollups[pg.ID]
 	respondJSONOK(w, pg)
@@ -809,14 +824,16 @@ func (h *P3MHandler) programmeRollups(ctx context.Context) (map[int]*models.P3MP
 // Projects (leaf tier; EVM + automatic RAG live here)
 // ---------------------------------------------------------------------------
 
-const p3mProjectColumns = `id, portfolio_id, programme_id, title, description, manager_id, time_project_id, work_type, external_ref, funding_source, contingency, current_stage, budget_approved, budget_actual, progress_percent, start_date, target_completion_date, rag_status, created_at, updated_at`
+const p3mProjectColumns = `id, portfolio_id, programme_id, title, description, manager_id, time_project_id, work_type, external_ref, funding_source, contingency, current_stage, budget_approved, budget_actual, progress_percent, start_date, target_completion_date, rag_status, business_owner_group, responsible_group, delivery_complexity, investment_type, portfolio_value, priority, is_ce_kpi, on_hold, on_hold_reason, created_at, updated_at`
 
 func scanP3MProject(row interface{ Scan(...any) error }) (models.P3MProject, error) {
 	var p models.P3MProject
 	err := row.Scan(&p.ID, &p.PortfolioID, &p.ProgrammeID, &p.Title, &p.Description, &p.ManagerID, &p.TimeProjectID,
 		&p.WorkType, &p.ExternalRef, &p.FundingSource, &p.Contingency,
 		&p.CurrentStage, &p.BudgetApproved, &p.BudgetActual, &p.ProgressPercent,
-		&p.StartDate, &p.TargetCompletionDate, &p.RagStatus, &p.CreatedAt, &p.UpdatedAt)
+		&p.StartDate, &p.TargetCompletionDate, &p.RagStatus,
+		&p.BusinessOwnerGroup, &p.ResponsibleGroup, &p.DeliveryComplexity, &p.InvestmentType, &p.PortfolioValue,
+		&p.Priority, &p.IsCEKPI, &p.OnHold, &p.OnHoldReason, &p.CreatedAt, &p.UpdatedAt)
 	return p, err
 }
 
@@ -931,6 +948,15 @@ func (h *P3MHandler) CreateProject(w http.ResponseWriter, r *http.Request) {
 		ProgressPercent      int       `json:"progress_percent"`
 		StartDate            time.Time `json:"start_date,omitempty"`
 		TargetCompletionDate time.Time `json:"target_completion_date,omitempty"`
+		BusinessOwnerGroup   *string   `json:"business_owner_group"`
+		ResponsibleGroup     *string   `json:"responsible_group"`
+		DeliveryComplexity   *string   `json:"delivery_complexity"`
+		InvestmentType       *string   `json:"investment_type"`
+		PortfolioValue       *string   `json:"portfolio_value"`
+		Priority             *string   `json:"priority"`
+		IsCEKPI              bool      `json:"is_ce_kpi"`
+		OnHold               bool      `json:"on_hold"`
+		OnHoldReason         *string   `json:"on_hold_reason"`
 	}
 	if err := newJSONDecoder(w, r).Decode(&in); err != nil {
 		respondBadRequest(w, r, "Invalid request body")
@@ -938,6 +964,10 @@ func (h *P3MHandler) CreateProject(w http.ResponseWriter, r *http.Request) {
 	}
 	if in.Title == "" {
 		respondValidationError(w, r, "title is required")
+		return
+	}
+	if err := p3mValidateProjectReportFields(in.DeliveryComplexity, in.InvestmentType, in.Priority); err != nil {
+		respondValidationError(w, r, err.Error())
 		return
 	}
 	fid, pid, ok := h.resolveProjectParents(r.Context(), w, r, in.PortfolioID, in.ProgrammeID)
@@ -964,17 +994,23 @@ func (h *P3MHandler) CreateProject(w http.ResponseWriter, r *http.Request) {
 		TimeProjectID: in.TimeProjectID, WorkType: in.WorkType, ExternalRef: in.ExternalRef, FundingSource: in.FundingSource, Contingency: in.Contingency, CurrentStage: in.CurrentStage,
 		BudgetApproved: in.BudgetApproved, BudgetActual: in.BudgetActual,
 		ProgressPercent: in.ProgressPercent, StartDate: nullTime(in.StartDate), TargetCompletionDate: nullTime(in.TargetCompletionDate),
+		BusinessOwnerGroup: in.BusinessOwnerGroup, ResponsibleGroup: in.ResponsibleGroup, DeliveryComplexity: in.DeliveryComplexity,
+		InvestmentType: in.InvestmentType, PortfolioValue: in.PortfolioValue, Priority: in.Priority,
+		IsCEKPI: in.IsCEKPI, OnHold: in.OnHold, OnHoldReason: in.OnHoldReason,
 	}
 	p3mApplyComputed(&p)
 
 	now := time.Now().UTC()
 	res, err := h.db.ExecContext(r.Context(), `
-		INSERT INTO p3m_projects (portfolio_id, programme_id, title, description, manager_id, time_project_id, work_type, external_ref, funding_source, contingency, current_stage, budget_approved, budget_actual, progress_percent, start_date, target_completion_date, rag_status, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		INSERT INTO p3m_projects (portfolio_id, programme_id, title, description, manager_id, time_project_id, work_type, external_ref, funding_source, contingency, current_stage, budget_approved, budget_actual, progress_percent, start_date, target_completion_date, rag_status, business_owner_group, responsible_group, delivery_complexity, investment_type, portfolio_value, priority, is_ce_kpi, on_hold, on_hold_reason, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		nullInt(p.PortfolioID), nullInt(p.ProgrammeID), p.Title, p.Description, nullInt(p.ManagerID), nullInt(p.TimeProjectID),
 		nullStringPtr(p.WorkType), nullStringPtr(p.ExternalRef), nullStringPtr(p.FundingSource), p.Contingency,
 		p.CurrentStage, p.BudgetApproved, p.BudgetActual, p.ProgressPercent,
-		nullTimePtr(p.StartDate), nullTimePtr(p.TargetCompletionDate), p.RagStatus, now, now)
+		nullTimePtr(p.StartDate), nullTimePtr(p.TargetCompletionDate), p.RagStatus,
+		nullStringPtr(p.BusinessOwnerGroup), nullStringPtr(p.ResponsibleGroup), nullStringPtr(p.DeliveryComplexity),
+		nullStringPtr(p.InvestmentType), nullStringPtr(p.PortfolioValue), nullStringPtr(p.Priority),
+		p.IsCEKPI, p.OnHold, nullStringPtr(p.OnHoldReason), now, now)
 	if err != nil {
 		respondInternalError(w, r, err)
 		return
@@ -982,6 +1018,7 @@ func (h *P3MHandler) CreateProject(w http.ResponseWriter, r *http.Request) {
 	id64, _ := res.LastInsertId()
 	p.ID = int(id64)
 	p.CreatedAt, p.UpdatedAt = now, now
+	h.p3mRecordRagHistory(r.Context(), "project", p.ID, p.RagStatus, user)
 	h.p3mAudit(r, user, "p3m.project.create", "p3m_project", &p.ID, p.Title, map[string]any{
 		"portfolio_id":    nullInt(p.PortfolioID),
 		"programme_id":    nullInt(p.ProgrammeID),
@@ -1036,6 +1073,15 @@ func (h *P3MHandler) UpdateProject(w http.ResponseWriter, r *http.Request) {
 		ProgressPercent      int       `json:"progress_percent"`
 		StartDate            time.Time `json:"start_date,omitempty"`
 		TargetCompletionDate time.Time `json:"target_completion_date,omitempty"`
+		BusinessOwnerGroup   *string   `json:"business_owner_group"`
+		ResponsibleGroup     *string   `json:"responsible_group"`
+		DeliveryComplexity   *string   `json:"delivery_complexity"`
+		InvestmentType       *string   `json:"investment_type"`
+		PortfolioValue       *string   `json:"portfolio_value"`
+		Priority             *string   `json:"priority"`
+		IsCEKPI              bool      `json:"is_ce_kpi"`
+		OnHold               bool      `json:"on_hold"`
+		OnHoldReason         *string   `json:"on_hold_reason"`
 	}
 	if err := newJSONDecoder(w, r).Decode(&in); err != nil {
 		respondBadRequest(w, r, "Invalid request body")
@@ -1043,6 +1089,10 @@ func (h *P3MHandler) UpdateProject(w http.ResponseWriter, r *http.Request) {
 	}
 	if in.Title == "" {
 		respondValidationError(w, r, "title is required")
+		return
+	}
+	if err := p3mValidateProjectReportFields(in.DeliveryComplexity, in.InvestmentType, in.Priority); err != nil {
+		respondValidationError(w, r, err.Error())
 		return
 	}
 	fid, pid, ok := h.resolveProjectParents(r.Context(), w, r, in.PortfolioID, in.ProgrammeID)
@@ -1075,16 +1125,22 @@ func (h *P3MHandler) UpdateProject(w http.ResponseWriter, r *http.Request) {
 		TimeProjectID: in.TimeProjectID, WorkType: in.WorkType, ExternalRef: in.ExternalRef, FundingSource: in.FundingSource, Contingency: in.Contingency, CurrentStage: in.CurrentStage,
 		BudgetApproved: in.BudgetApproved, BudgetActual: in.BudgetActual,
 		ProgressPercent: in.ProgressPercent, StartDate: nullTime(in.StartDate), TargetCompletionDate: nullTime(in.TargetCompletionDate),
+		BusinessOwnerGroup: in.BusinessOwnerGroup, ResponsibleGroup: in.ResponsibleGroup, DeliveryComplexity: in.DeliveryComplexity,
+		InvestmentType: in.InvestmentType, PortfolioValue: in.PortfolioValue, Priority: in.Priority,
+		IsCEKPI: in.IsCEKPI, OnHold: in.OnHold, OnHoldReason: in.OnHoldReason,
 	}
 	p3mApplyComputed(&p)
 
 	now := time.Now().UTC()
 	_, err = h.db.ExecContext(r.Context(), `
-		UPDATE p3m_projects SET portfolio_id = ?, programme_id = ?, title = ?, description = ?, manager_id = ?, time_project_id = ?, work_type = ?, external_ref = ?, funding_source = ?, contingency = ?, current_stage = ?, budget_approved = ?, budget_actual = ?, progress_percent = ?, start_date = ?, target_completion_date = ?, rag_status = ?, updated_at = ? WHERE id = ?`,
+		UPDATE p3m_projects SET portfolio_id = ?, programme_id = ?, title = ?, description = ?, manager_id = ?, time_project_id = ?, work_type = ?, external_ref = ?, funding_source = ?, contingency = ?, current_stage = ?, budget_approved = ?, budget_actual = ?, progress_percent = ?, start_date = ?, target_completion_date = ?, rag_status = ?, business_owner_group = ?, responsible_group = ?, delivery_complexity = ?, investment_type = ?, portfolio_value = ?, priority = ?, is_ce_kpi = ?, on_hold = ?, on_hold_reason = ?, updated_at = ? WHERE id = ?`,
 		nullInt(p.PortfolioID), nullInt(p.ProgrammeID), p.Title, p.Description, nullInt(p.ManagerID), nullInt(p.TimeProjectID),
 		nullStringPtr(p.WorkType), nullStringPtr(p.ExternalRef), nullStringPtr(p.FundingSource), p.Contingency,
 		p.CurrentStage, p.BudgetApproved, p.BudgetActual, p.ProgressPercent,
-		nullTimePtr(p.StartDate), nullTimePtr(p.TargetCompletionDate), p.RagStatus, now, id)
+		nullTimePtr(p.StartDate), nullTimePtr(p.TargetCompletionDate), p.RagStatus,
+		nullStringPtr(p.BusinessOwnerGroup), nullStringPtr(p.ResponsibleGroup), nullStringPtr(p.DeliveryComplexity),
+		nullStringPtr(p.InvestmentType), nullStringPtr(p.PortfolioValue), nullStringPtr(p.Priority),
+		p.IsCEKPI, p.OnHold, nullStringPtr(p.OnHoldReason), now, id)
 	if err != nil {
 		respondInternalError(w, r, err)
 		return
@@ -1103,7 +1159,17 @@ func (h *P3MHandler) UpdateProject(w http.ResponseWriter, r *http.Request) {
 		[3]any{"progress_percent", current.ProgressPercent, in.ProgressPercent},
 		[3]any{"start_date", current.StartDate, nullTime(in.StartDate)},
 		[3]any{"target_completion_date", current.TargetCompletionDate, nullTime(in.TargetCompletionDate)},
+		[3]any{"business_owner_group", nullStringPtr(current.BusinessOwnerGroup), nullStringPtr(in.BusinessOwnerGroup)},
+		[3]any{"responsible_group", nullStringPtr(current.ResponsibleGroup), nullStringPtr(in.ResponsibleGroup)},
+		[3]any{"delivery_complexity", nullStringPtr(current.DeliveryComplexity), nullStringPtr(in.DeliveryComplexity)},
+		[3]any{"investment_type", nullStringPtr(current.InvestmentType), nullStringPtr(in.InvestmentType)},
+		[3]any{"portfolio_value", nullStringPtr(current.PortfolioValue), nullStringPtr(in.PortfolioValue)},
+		[3]any{"priority", nullStringPtr(current.Priority), nullStringPtr(in.Priority)},
+		[3]any{"is_ce_kpi", current.IsCEKPI, in.IsCEKPI},
+		[3]any{"on_hold", current.OnHold, in.OnHold},
+		[3]any{"on_hold_reason", nullStringPtr(current.OnHoldReason), nullStringPtr(in.OnHoldReason)},
 	))
+	h.p3mRecordRagHistory(r.Context(), "project", p.ID, p.RagStatus, user)
 	respondJSONOK(w, p)
 }
 

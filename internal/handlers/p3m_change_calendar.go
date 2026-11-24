@@ -1,17 +1,19 @@
 package handlers
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"net/http"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	"windshift/internal/models"
 )
 
-const p3mChangeCalendarColumns = `id, entity_type, entity_id, activity, business_unit, start_week, end_week, impact_level, source, notes, created_by, created_at, updated_at`
+const p3mChangeCalendarColumns = `id, entity_type, entity_id, activity, business_unit, start_week, end_week, impact_level, source, category, notes, created_by, created_at, updated_at`
 
 var isoWeekPattern = regexp.MustCompile(`^(\d{4})-W(\d{2})$`)
 
@@ -19,10 +21,10 @@ func scanP3MChangeCalendarEntry(row interface{ Scan(...any) error }) (models.P3M
 	var e models.P3MChangeCalendarEntry
 	var entityType sql.NullString
 	var entityID sql.NullInt64
-	var businessUnit, notes sql.NullString
+	var businessUnit, startWeek, endWeek, category, notes sql.NullString
 	var createdBy sql.NullInt64
-	err := row.Scan(&e.ID, &entityType, &entityID, &e.Activity, &businessUnit, &e.StartWeek, &e.EndWeek,
-		&e.ImpactLevel, &e.Source, &notes, &createdBy, &e.CreatedAt, &e.UpdatedAt)
+	err := row.Scan(&e.ID, &entityType, &entityID, &e.Activity, &businessUnit, &startWeek, &endWeek,
+		&e.ImpactLevel, &e.Source, &category, &notes, &createdBy, &e.CreatedAt, &e.UpdatedAt)
 	if err != nil {
 		return e, err
 	}
@@ -36,6 +38,15 @@ func scanP3MChangeCalendarEntry(row interface{ Scan(...any) error }) (models.P3M
 	if businessUnit.Valid {
 		e.BusinessUnit = &businessUnit.String
 	}
+	if startWeek.Valid {
+		e.StartWeek = &startWeek.String
+	}
+	if endWeek.Valid {
+		e.EndWeek = &endWeek.String
+	}
+	if category.Valid {
+		e.Category = &category.String
+	}
 	if notes.Valid {
 		e.Notes = &notes.String
 	}
@@ -44,6 +55,43 @@ func scanP3MChangeCalendarEntry(row interface{ Scan(...any) error }) (models.P3M
 		e.CreatedBy = &v
 	}
 	return e, nil
+}
+
+// p3mChangeCalendarGroupImpactsFor loads the per-group impact rows for a set
+// of entries and attaches them to the entries.
+func (h *P3MHandler) p3mChangeCalendarGroupImpactsFor(ctx context.Context, entries *[]models.P3MChangeCalendarEntry) error {
+	if len(*entries) == 0 {
+		return nil
+	}
+	idSet := make(map[int]bool, len(*entries))
+	args := make([]any, 0, len(*entries))
+	for i := range *entries {
+		idSet[(*entries)[i].ID] = true
+		args = append(args, (*entries)[i].ID)
+	}
+	rows, err := h.db.QueryContext(ctx, `SELECT entry_id, business_group, impact_level FROM p3m_change_calendar_group_impacts WHERE entry_id IN (`+questionPlaceholders(len(args))+`) ORDER BY business_group`, args...)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	byEntry := make(map[int][]models.P3MChangeCalendarGroupImpact)
+	for rows.Next() {
+		var gi models.P3MChangeCalendarGroupImpact
+		var entryID int
+		if err := rows.Scan(&entryID, &gi.BusinessGroup, &gi.ImpactLevel); err != nil {
+			return err
+		}
+		byEntry[entryID] = append(byEntry[entryID], gi)
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	for i := range *entries {
+		if idSet[(*entries)[i].ID] {
+			(*entries)[i].GroupImpacts = byEntry[(*entries)[i].ID]
+		}
+	}
+	return nil
 }
 
 // isoWeekString renders a date as its ISO week label (e.g. "2026-W45").
@@ -73,16 +121,21 @@ func parseISOWeek(label string) (time.Time, bool) {
 }
 
 // p3mChangeCalendarInput is the create/update payload for a calendar entry.
+// Weeks may both be null (entries with approved timing to be determined);
+// when set they are ISO labels. group_impacts replaces the entry's
+// per-business-group rows wholesale.
 type p3mChangeCalendarInput struct {
-	Activity     string  `json:"activity"`
-	BusinessUnit *string `json:"business_unit"`
-	EntityType   *string `json:"entity_type"`
-	EntityID     *int    `json:"entity_id"`
-	StartWeek    string  `json:"start_week"`
-	EndWeek      string  `json:"end_week"`
-	ImpactLevel  int     `json:"impact_level"`
-	Source       string  `json:"source"`
-	Notes        *string `json:"notes"`
+	Activity     string   `json:"activity"`
+	BusinessUnit *string  `json:"business_unit"`
+	EntityType   *string  `json:"entity_type"`
+	EntityID     *int     `json:"entity_id"`
+	StartWeek    *string  `json:"start_week"`
+	EndWeek      *string  `json:"end_week"`
+	ImpactLevel  int      `json:"impact_level"`
+	Source       string   `json:"source"`
+	Category     *string  `json:"category"`
+	Notes        *string  `json:"notes"`
+	GroupImpacts []models.P3MChangeCalendarGroupImpact `json:"group_impacts"`
 }
 
 // validateP3MChangeCalendarInput checks the shared invariants of a calendar
@@ -93,21 +146,26 @@ func (h *P3MHandler) validateP3MChangeCalendarInput(w http.ResponseWriter, r *ht
 		respondValidationError(w, r, "activity is required")
 		return in, false
 	}
-	startMonday, okStart := parseISOWeek(in.StartWeek)
-	endMonday, okEnd := parseISOWeek(in.EndWeek)
-	if !okStart || !okEnd {
-		respondValidationError(w, r, "start_week and end_week must be ISO week labels like 2026-W45")
+	switch {
+	case in.StartWeek == nil && in.EndWeek == nil:
+		// undated entry (approved timing to be determined)
+	case in.StartWeek != nil && in.EndWeek != nil:
+		startMonday, okStart := parseISOWeek(*in.StartWeek)
+		endMonday, okEnd := parseISOWeek(*in.EndWeek)
+		if !okStart || !okEnd {
+			respondValidationError(w, r, "start_week and end_week must be ISO week labels like 2026-W45")
+			return in, false
+		}
+		if startMonday.After(endMonday) {
+			respondValidationError(w, r, "start_week must not be after end_week")
+			return in, false
+		}
+	default:
+		respondValidationError(w, r, "start_week and end_week must both be set or both omitted")
 		return in, false
 	}
-	if startMonday.After(endMonday) {
-		respondValidationError(w, r, "start_week must not be after end_week")
-		return in, false
-	}
-	if in.ImpactLevel == 0 {
-		in.ImpactLevel = 3
-	}
-	if in.ImpactLevel < 1 || in.ImpactLevel > 5 {
-		respondValidationError(w, r, "impact_level must be between 1 and 5")
+	if in.ImpactLevel < 0 || in.ImpactLevel > 5 {
+		respondValidationError(w, r, "impact_level must be between 0 and 5")
 		return in, false
 	}
 	if in.Source == "" {
@@ -118,6 +176,29 @@ func (h *P3MHandler) validateP3MChangeCalendarInput(w http.ResponseWriter, r *ht
 	default:
 		respondValidationError(w, r, "source must be corporate_project, corporate_activity, bau or local")
 		return in, false
+	}
+	if in.Category != nil {
+		if strings.TrimSpace(*in.Category) == "" {
+			respondValidationError(w, r, "category must be a non-empty string or null")
+			return in, false
+		}
+	}
+	seen := make(map[string]bool, len(in.GroupImpacts))
+	for i := range in.GroupImpacts {
+		g := &in.GroupImpacts[i]
+		if strings.TrimSpace(g.BusinessGroup) == "" {
+			respondValidationError(w, r, "group_impacts business_group must be a non-empty string")
+			return in, false
+		}
+		if g.ImpactLevel < 0 || g.ImpactLevel > 5 {
+			respondValidationError(w, r, "group_impacts impact_level must be between 0 and 5")
+			return in, false
+		}
+		if seen[g.BusinessGroup] {
+			respondValidationError(w, r, "duplicate group_impacts entry for business_group "+g.BusinessGroup)
+			return in, false
+		}
+		seen[g.BusinessGroup] = true
 	}
 	if (in.EntityType == nil) != (in.EntityID == nil) {
 		respondValidationError(w, r, "entity_type and entity_id must both be set or both omitted")
@@ -132,6 +213,37 @@ func (h *P3MHandler) validateP3MChangeCalendarInput(w http.ResponseWriter, r *ht
 		}
 	}
 	return in, true
+}
+
+// p3mChangeCalendarEntryWithImpacts scans one entry together with its
+// per-group impact rows.
+func (h *P3MHandler) p3mChangeCalendarEntryWithImpacts(ctx context.Context, id int) (models.P3MChangeCalendarEntry, error) {
+	e, err := scanP3MChangeCalendarEntry(h.db.QueryRowContext(ctx, `SELECT `+p3mChangeCalendarColumns+` FROM p3m_change_calendar_entries WHERE id = ?`, id))
+	if err != nil {
+		return e, err
+	}
+	one := []models.P3MChangeCalendarEntry{e}
+	if err := h.p3mChangeCalendarGroupImpactsFor(ctx, &one); err != nil {
+		return e, err
+	}
+	return one[0], nil
+}
+
+// p3mReplaceCalendarGroupImpacts writes the entry's per-group impact rows
+// inside the caller's transaction (full replace).
+func p3mReplaceCalendarGroupImpacts(tx interface {
+	Exec(query string, args ...any) (sql.Result, error)
+}, entryID int, impacts []models.P3MChangeCalendarGroupImpact) error {
+	if _, err := tx.Exec(`DELETE FROM p3m_change_calendar_group_impacts WHERE entry_id = ?`, entryID); err != nil {
+		return err
+	}
+	for _, g := range impacts {
+		if _, err := tx.Exec(`INSERT INTO p3m_change_calendar_group_impacts (entry_id, business_group, impact_level) VALUES (?, ?, ?)`,
+			entryID, g.BusinessGroup, g.ImpactLevel); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // GetChangeCalendarWeek handles GET /api/p3m/change-calendar/week. It returns
@@ -267,6 +379,10 @@ func (h *P3MHandler) ListChangeCalendarEntries(w http.ResponseWriter, r *http.Re
 		respondInternalError(w, r, err)
 		return
 	}
+	if err := h.p3mChangeCalendarGroupImpactsFor(r.Context(), &out); err != nil {
+		respondInternalError(w, r, err)
+		return
+	}
 	respondJSONOK(w, out)
 }
 
@@ -286,20 +402,33 @@ func (h *P3MHandler) CreateChangeCalendarEntry(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	res, err := h.db.ExecContext(r.Context(), `INSERT INTO p3m_change_calendar_entries (entity_type, entity_id, activity, business_unit, start_week, end_week, impact_level, source, notes, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		in.EntityType, in.EntityID, in.Activity, in.BusinessUnit, in.StartWeek, in.EndWeek, in.ImpactLevel, in.Source, in.Notes, user.ID)
+	tx, err := h.db.Begin()
+	if err != nil {
+		respondInternalError(w, r, err)
+		return
+	}
+	defer func() { _ = tx.Rollback() }()
+	res, err := tx.Exec(`INSERT INTO p3m_change_calendar_entries (entity_type, entity_id, activity, business_unit, start_week, end_week, impact_level, source, category, notes, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		in.EntityType, in.EntityID, in.Activity, in.BusinessUnit, in.StartWeek, in.EndWeek, in.ImpactLevel, in.Source, in.Category, in.Notes, user.ID)
 	if err != nil {
 		respondInternalError(w, r, err)
 		return
 	}
 	id, _ := res.LastInsertId()
-	e, err := scanP3MChangeCalendarEntry(h.db.QueryRowContext(r.Context(), `SELECT `+p3mChangeCalendarColumns+` FROM p3m_change_calendar_entries WHERE id = ?`, id))
+	if err := p3mReplaceCalendarGroupImpacts(tx, int(id), in.GroupImpacts); err != nil {
+		respondInternalError(w, r, err)
+		return
+	}
+	if err := tx.Commit(); err != nil {
+		respondInternalError(w, r, err)
+		return
+	}
+	e, err := h.p3mChangeCalendarEntryWithImpacts(r.Context(), int(id))
 	if err != nil {
 		respondInternalError(w, r, err)
 		return
 	}
-	newID := int(id)
-	logAudit(h.db, r, user, "p3m_change_calendar_created", "p3m_change_calendar_entry", &newID, in.Activity)
+	logAudit(h.db, r, user, "p3m_change_calendar_created", "p3m_change_calendar_entry", &e.ID, in.Activity)
 	respondJSONCreated(w, e)
 }
 
@@ -312,7 +441,7 @@ func (h *P3MHandler) GetChangeCalendarEntry(w http.ResponseWriter, r *http.Reque
 	if !ok {
 		return
 	}
-	e, err := scanP3MChangeCalendarEntry(h.db.QueryRowContext(r.Context(), `SELECT `+p3mChangeCalendarColumns+` FROM p3m_change_calendar_entries WHERE id = ?`, id))
+	e, err := h.p3mChangeCalendarEntryWithImpacts(r.Context(), id)
 	if err != nil {
 		if isNotFound(err) {
 			respondNotFound(w, r, "p3m_change_calendar_entry")
@@ -345,8 +474,14 @@ func (h *P3MHandler) UpdateChangeCalendarEntry(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	res, err := h.db.ExecContext(r.Context(), `UPDATE p3m_change_calendar_entries SET entity_type = ?, entity_id = ?, activity = ?, business_unit = ?, start_week = ?, end_week = ?, impact_level = ?, source = ?, notes = ? WHERE id = ?`,
-		in.EntityType, in.EntityID, in.Activity, in.BusinessUnit, in.StartWeek, in.EndWeek, in.ImpactLevel, in.Source, in.Notes, id)
+	tx, err := h.db.Begin()
+	if err != nil {
+		respondInternalError(w, r, err)
+		return
+	}
+	defer func() { _ = tx.Rollback() }()
+	res, err := tx.Exec(`UPDATE p3m_change_calendar_entries SET entity_type = ?, entity_id = ?, activity = ?, business_unit = ?, start_week = ?, end_week = ?, impact_level = ?, source = ?, category = ?, notes = ? WHERE id = ?`,
+		in.EntityType, in.EntityID, in.Activity, in.BusinessUnit, in.StartWeek, in.EndWeek, in.ImpactLevel, in.Source, in.Category, in.Notes, id)
 	if err != nil {
 		respondInternalError(w, r, err)
 		return
@@ -355,7 +490,15 @@ func (h *P3MHandler) UpdateChangeCalendarEntry(w http.ResponseWriter, r *http.Re
 		respondNotFound(w, r, "p3m_change_calendar_entry")
 		return
 	}
-	e, err := scanP3MChangeCalendarEntry(h.db.QueryRowContext(r.Context(), `SELECT `+p3mChangeCalendarColumns+` FROM p3m_change_calendar_entries WHERE id = ?`, id))
+	if err := p3mReplaceCalendarGroupImpacts(tx, id, in.GroupImpacts); err != nil {
+		respondInternalError(w, r, err)
+		return
+	}
+	if err := tx.Commit(); err != nil {
+		respondInternalError(w, r, err)
+		return
+	}
+	e, err := h.p3mChangeCalendarEntryWithImpacts(r.Context(), id)
 	if err != nil {
 		respondInternalError(w, r, err)
 		return

@@ -42,6 +42,84 @@
   let skipReason = $state('');
   let savingSkip = $state(false);
 
+  // --- OHP portfolio report: monthly status reports + RAG history ------------
+  /** @type {Array<any>} */
+  let statusReports = $state([]);
+  /** @type {Array<any>} */
+  let ragHistory = $state([]);
+  let reportFormOpen = $state(false);
+  let editingReport = $state(null);
+  let savingReport = $state(false);
+  let reportError = $state('');
+  const emptyStatusReportForm = () => ({
+    period: '',
+    issue: '',
+    impact: '',
+    next_steps: ''
+  });
+  let reportForm = $state(emptyStatusReportForm());
+
+  function openNewReport() {
+    editingReport = null;
+    reportForm = emptyStatusReportForm();
+    reportError = '';
+    reportFormOpen = true;
+  }
+
+  function openEditReport(r) {
+    editingReport = r;
+    reportForm = {
+      period: r.period ?? '',
+      issue: r.issue ?? '',
+      impact: r.impact ?? '',
+      next_steps: r.next_steps ?? ''
+    };
+    reportError = '';
+    reportFormOpen = true;
+  }
+
+  async function saveStatusReport() {
+    if (!project || savingReport || !reportForm.period) return;
+    savingReport = true;
+    reportError = '';
+    const payload = {
+      period: reportForm.period,
+      issue: reportForm.issue.trim(),
+      impact: reportForm.impact.trim(),
+      next_steps: reportForm.next_steps.trim()
+    };
+    try {
+      if (editingReport) {
+        await p3mApi.updateStatusReport(editingReport.id, payload);
+      } else {
+        await p3mApi.createProjectStatusReport(project.id, payload);
+      }
+      reportFormOpen = false;
+      editingReport = null;
+      reportForm = emptyStatusReportForm();
+      const rows = await p3mApi.getProjectStatusReports(project.id).catch(() => []);
+      statusReports = Array.isArray(rows) ? rows : [];
+    } catch (e) {
+      reportError = e?.message || 'error';
+    } finally {
+      savingReport = false;
+    }
+  }
+
+  async function removeStatusReport(id) {
+    if (savingReport) return;
+    savingReport = true;
+    reportError = '';
+    try {
+      await p3mApi.deleteStatusReport(id);
+      statusReports = statusReports.filter((r) => r.id !== id);
+    } catch (e) {
+      reportError = e?.message || 'error';
+    } finally {
+      savingReport = false;
+    }
+  }
+
   const skippableStageKeys = $derived(new Set(stages.filter((s) => s.skippable).map((s) => s.stage_key)));
 
   const gateStatusLabel = { not_started: () => t('p3m.gateNotStarted'), in_progress: () => t('p3m.gateInProgress'), passed: () => t('p3m.gatePassed'), skipped: () => t('p3m.gateSkipped') };
@@ -69,13 +147,15 @@
     checkedWorkspaceIds = new Set();
     linksSaved = false;
     try {
-      const [r, tps, wss, bls, act, gts] = await Promise.all([
+      const [r, tps, wss, bls, act, gts, srs, rags] = await Promise.all([
         p3mApi.getProjectRollup(project.id),
         time.projects.getAll().catch(() => []),
         wsApi.getAll().catch(() => []),
         p3mApi.getProjectBaselines(project.id).catch(() => []),
         p3mApi.getProjectActivity(project.id).catch(() => null),
         p3mApi.getProjectGates(project.id).catch(() => []),
+        p3mApi.getProjectStatusReports(project.id).catch(() => []),
+        p3mApi.getProjectRagHistory(project.id).catch(() => []),
       ]);
       rollup = r ?? null;
       timeProjects = Array.isArray(tps) ? tps : [];
@@ -84,6 +164,8 @@
       baselines = Array.isArray(bls) ? bls : [];
       activity = act && typeof act === 'object' ? act : null;
       projectGates = Array.isArray(gts) ? gts : [];
+      statusReports = Array.isArray(srs) ? srs : [];
+      ragHistory = Array.isArray(rags) ? rags : [];
     } catch (e) {
       error = e?.message || 'error';
     } finally {
@@ -498,6 +580,94 @@
 
     <!-- Closure & handover record gates the close stage (CLS-001) -->
     <P3MClosureRecord project={project} />
+
+    <!-- OHP portfolio report: RAG change history (RPT-014) -->
+    <h3 class="mb-1 mt-4 font-semibold">{t('p3m.report.ragHistoryTitle')}</h3>
+    {#if ragHistory.length === 0}
+      <div class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] p-3 text-[var(--color-ds-text-muted,#6b7280)]">{t('p3m.noData')}</div>
+    {:else}
+      <ul class="divide-y divide-[var(--color-ds-border,#e5e7eb)] rounded-md border border-[var(--color-ds-border,#e5e7eb)]">
+        {#each ragHistory as h (h.id)}
+          <li class="flex items-start gap-3 p-2 text-sm">
+            <span class="w-24 shrink-0 tabular-nums text-[var(--color-ds-text-muted,#6b7280)]">{formatDate(h.changed_at)}</span>
+            <span class="shrink-0 rounded px-1.5 py-0.5 font-semibold text-white" style="background-color:{ragColor(h.rag_status)}">{ragLabel(h.rag_status)}</span>
+            <span>{h.changed_by_username ? `${h.changed_by_username}` : ''}</span>
+          </li>
+        {/each}
+      </ul>
+    {/if}
+
+    <!-- OHP portfolio report: monthly status reports (RPT-001) -->
+    <div class="mt-4 flex items-center justify-between">
+      <h3 class="font-semibold">{t('p3m.report.statusReportsTitle')} ({statusReports.length})</h3>
+      <button type="button" class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] px-3 py-1.5 text-sm hover:bg-black/5" onclick={openNewReport}>
+        + {t('p3m.report.addStatusReport')}
+      </button>
+    </div>
+    {#if reportError}
+      <p class="mt-1 text-xs text-[#ef4444]">{reportError}</p>
+    {/if}
+
+    {#if reportFormOpen}
+      <div class="mt-2 grid grid-cols-1 gap-3 rounded-md border border-[var(--color-ds-border,#e5e7eb)] p-3 md:grid-cols-3">
+        <label class="block">
+          <span class="mb-1 block text-xs font-medium">{t('p3m.report.period')}</span>
+          <input type="month" bind:value={reportForm.period} class="w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] px-2 py-1.5 text-sm" />
+        </label>
+        <label class="block md:col-span-3">
+          <span class="mb-1 block text-xs font-medium">{t('p3m.report.issue')}</span>
+          <textarea bind:value={reportForm.issue} rows="2" class="w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] px-2 py-1.5 text-sm"></textarea>
+        </label>
+        <label class="block md:col-span-3">
+          <span class="mb-1 block text-xs font-medium">{t('p3m.report.impact')}</span>
+          <textarea bind:value={reportForm.impact} rows="2" class="w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] px-2 py-1.5 text-sm"></textarea>
+        </label>
+        <label class="block md:col-span-3">
+          <span class="mb-1 block text-xs font-medium">{t('p3m.report.nextSteps')}</span>
+          <textarea bind:value={reportForm.next_steps} rows="2" class="w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] px-2 py-1.5 text-sm"></textarea>
+        </label>
+        <div class="flex gap-2 md:col-span-3">
+          <button type="button" class="rounded-md bg-[var(--color-ds-accent-blue,#2563eb)] px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50" onclick={saveStatusReport} disabled={savingReport || !reportForm.period}>
+            {t('p3m.save')}
+          </button>
+          <button type="button" class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] px-3 py-1.5 text-sm hover:bg-black/5" onclick={() => (reportFormOpen = false)}>
+            {t('p3m.cancel')}
+          </button>
+        </div>
+      </div>
+    {/if}
+
+    {#if statusReports.length === 0}
+      <p class="mt-2 text-xs text-[var(--color-ds-text-muted,#6b7280)]">{t('p3m.noData')}</p>
+    {:else}
+      <div class="mt-2 space-y-2">
+        {#each statusReports as r (r.id)}
+          <div class="rounded-md border border-[var(--color-ds-border,#e5e7eb)] p-3">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="text-sm font-semibold">{r.period}</span>
+              <span class="text-xs text-[var(--color-ds-text-muted,#6b7280)]">{formatDate(r.reported_at)}</span>
+              <span class="ml-auto flex gap-1">
+                <button type="button" class="rounded border border-[var(--color-ds-border,#e5e7eb)] px-2 py-0.5 text-xs hover:bg-black/5" onclick={() => openEditReport(r)}>
+                  {t('p3m.edit')}
+                </button>
+                <button type="button" class="rounded border border-[var(--color-ds-border,#e5e7eb)] px-2 py-0.5 text-xs hover:bg-black/5" onclick={() => removeStatusReport(r.id)} disabled={savingReport}>
+                  {t('p3m.delete')}
+                </button>
+              </span>
+            </div>
+            {#if r.issue}
+              <p class="mt-1.5 text-sm"><span class="font-medium">{t('p3m.report.issue')}:</span> {r.issue}</p>
+            {/if}
+            {#if r.impact}
+              <p class="mt-1 text-xs text-[var(--color-ds-text-muted,#6b7280)]"><span class="font-medium">{t('p3m.report.impact')}:</span> {r.impact}</p>
+            {/if}
+            {#if r.next_steps}
+              <p class="mt-1 text-xs text-[var(--color-ds-text-muted,#6b7280)]"><span class="font-medium">{t('p3m.report.nextSteps')}:</span> {r.next_steps}</p>
+            {/if}
+          </div>
+        {/each}
+      </div>
+    {/if}
 
     <button type="button" class="mt-3 flex items-center gap-1 text-[var(--color-ds-text-muted,#6b7280)] hover:text-[var(--color-ds-text,#111827)]" onclick={onClose}>
       <IconX size={14} /> {t('p3m.close')}

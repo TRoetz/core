@@ -14,7 +14,7 @@ import (
 // "proceed" decision creates/links a project pre-filled from the record, so
 // downstream stages never re-enter the idea's details.
 
-const p3mIntakeColumns = `id, title, source, description, problem_opportunity, strategic_alignment, intended_outcomes, indicative_cost, resource_requirements, risk_notes, change_impact_notes, business_group, work_type, complexity, status, decision, decided_by, decision_date, conditions, rationale, target_project_id, lifecycle_position, created_by, created_at, updated_at`
+const p3mIntakeColumns = `id, title, source, description, problem_opportunity, strategic_alignment, intended_outcomes, indicative_cost, resource_requirements, risk_notes, change_impact_notes, business_group, responsible_group, work_type, complexity, status, decision, decided_by, decision_date, conditions, rationale, target_project_id, lifecycle_position, created_by, created_at, updated_at`
 
 var p3mIntakeComplexities = map[string]bool{"low": true, "med": true, "high": true}
 var p3mIntakeStatuses = map[string]bool{"captured": true, "assessing": true, "decided": true}
@@ -35,7 +35,7 @@ func scanP3MIntake(row interface{ Scan(...any) error }) (models.P3MIntake, error
 	var i models.P3MIntake
 	err := row.Scan(&i.ID, &i.Title, &i.Source, &i.Description, &i.ProblemOpportunity, &i.StrategicAlignment,
 		&i.IntendedOutcomes, &i.IndicativeCost, &i.ResourceRequirements, &i.RiskNotes, &i.ChangeImpactNotes,
-		&i.BusinessGroup, &i.WorkType, &i.Complexity, &i.Status, &i.Decision, &i.DecidedBy, &i.DecisionDate,
+		&i.BusinessGroup, &i.ResponsibleGroup, &i.WorkType, &i.Complexity, &i.Status, &i.Decision, &i.DecidedBy, &i.DecisionDate,
 		&i.Conditions, &i.Rationale, &i.TargetProjectID, &i.LifecyclePosition, &i.CreatedBy, &i.CreatedAt, &i.UpdatedAt)
 	return i, err
 }
@@ -168,6 +168,7 @@ func (h *P3MHandler) CreateIntake(w http.ResponseWriter, r *http.Request) {
 		RiskNotes            string   `json:"risk_notes"`
 		ChangeImpactNotes    string   `json:"change_impact_notes"`
 		BusinessGroup        string   `json:"business_group"`
+		ResponsibleGroup     *string  `json:"responsible_group"`
 		WorkType             *string  `json:"work_type,omitempty"`
 		Complexity           string   `json:"complexity"`
 		Status               string   `json:"status"`
@@ -201,11 +202,11 @@ func (h *P3MHandler) CreateIntake(w http.ResponseWriter, r *http.Request) {
 
 	now := time.Now().UTC()
 	res, err := h.db.ExecContext(r.Context(), `
-		INSERT INTO p3m_intakes (title, source, description, problem_opportunity, strategic_alignment, intended_outcomes, indicative_cost, resource_requirements, risk_notes, change_impact_notes, business_group, work_type, complexity, status, lifecycle_position, created_by, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		INSERT INTO p3m_intakes (title, source, description, problem_opportunity, strategic_alignment, intended_outcomes, indicative_cost, resource_requirements, risk_notes, change_impact_notes, business_group, responsible_group, work_type, complexity, status, lifecycle_position, created_by, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		in.Title, in.Source, in.Description, in.ProblemOpportunity, in.StrategicAlignment, in.IntendedOutcomes,
 		nullFloatPtr(in.IndicativeCost), in.ResourceRequirements, in.RiskNotes, in.ChangeImpactNotes,
-		in.BusinessGroup, nullStringPtr(in.WorkType), in.Complexity, in.Status, nullStringPtr(in.LifecyclePosition),
+		in.BusinessGroup, nullStringPtr(in.ResponsibleGroup), nullStringPtr(in.WorkType), in.Complexity, in.Status, nullStringPtr(in.LifecyclePosition),
 		user.ID, now, now)
 	if err != nil {
 		respondInternalError(w, r, err)
@@ -218,10 +219,11 @@ func (h *P3MHandler) CreateIntake(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.p3mAudit(r, user, "p3m.intake.create", "p3m_intake", &i.ID, i.Title, map[string]any{
-		"source":     in.Source,
-		"complexity": in.Complexity,
-		"status":     in.Status,
-		"work_type":  nullStringPtr(in.WorkType),
+		"source":            in.Source,
+		"complexity":        in.Complexity,
+		"status":            in.Status,
+		"work_type":         nullStringPtr(in.WorkType),
+		"responsible_group": nullStringPtr(in.ResponsibleGroup),
 	})
 	respondJSONCreated(w, i)
 }
@@ -261,6 +263,7 @@ func (h *P3MHandler) UpdateIntake(w http.ResponseWriter, r *http.Request) {
 		RiskNotes            *string  `json:"risk_notes,omitempty"`
 		ChangeImpactNotes    *string  `json:"change_impact_notes,omitempty"`
 		BusinessGroup        *string  `json:"business_group,omitempty"`
+		ResponsibleGroup     *string  `json:"responsible_group"`
 		WorkType             *string  `json:"work_type"`
 		Complexity           *string  `json:"complexity,omitempty"`
 		Status               *string  `json:"status,omitempty"`
@@ -292,6 +295,10 @@ func (h *P3MHandler) UpdateIntake(w http.ResponseWriter, r *http.Request) {
 	setStr("risk_notes", &next.RiskNotes, in.RiskNotes)
 	setStr("change_impact_notes", &next.ChangeImpactNotes, in.ChangeImpactNotes)
 	setStr("business_group", &next.BusinessGroup, in.BusinessGroup)
+	if in.ResponsibleGroup != nil && (old.ResponsibleGroup == nil || *old.ResponsibleGroup != *in.ResponsibleGroup) {
+		diff["responsible_group"] = map[string]any{"old": nullStringPtr(old.ResponsibleGroup), "new": *in.ResponsibleGroup}
+		next.ResponsibleGroup = in.ResponsibleGroup
+	}
 	if in.IndicativeCost != nil && (old.IndicativeCost == nil || *old.IndicativeCost != *in.IndicativeCost) {
 		diff["indicative_cost"] = map[string]any{"old": old.IndicativeCost, "new": *in.IndicativeCost}
 		next.IndicativeCost = in.IndicativeCost
@@ -328,10 +335,10 @@ func (h *P3MHandler) UpdateIntake(w http.ResponseWriter, r *http.Request) {
 
 	now := time.Now().UTC()
 	if _, err := h.db.ExecContext(r.Context(), `
-		UPDATE p3m_intakes SET title = ?, source = ?, description = ?, problem_opportunity = ?, strategic_alignment = ?, intended_outcomes = ?, indicative_cost = ?, resource_requirements = ?, risk_notes = ?, change_impact_notes = ?, business_group = ?, work_type = ?, complexity = ?, status = ?, lifecycle_position = ?, updated_at = ? WHERE id = ?`,
+		UPDATE p3m_intakes SET title = ?, source = ?, description = ?, problem_opportunity = ?, strategic_alignment = ?, intended_outcomes = ?, indicative_cost = ?, resource_requirements = ?, risk_notes = ?, change_impact_notes = ?, business_group = ?, responsible_group = ?, work_type = ?, complexity = ?, status = ?, lifecycle_position = ?, updated_at = ? WHERE id = ?`,
 		next.Title, next.Source, next.Description, next.ProblemOpportunity, next.StrategicAlignment, next.IntendedOutcomes,
 		nullFloatPtr(next.IndicativeCost), next.ResourceRequirements, next.RiskNotes, next.ChangeImpactNotes,
-		next.BusinessGroup, nullStringPtr(next.WorkType), next.Complexity, next.Status, nullStringPtr(next.LifecyclePosition), now, id); err != nil {
+		next.BusinessGroup, nullStringPtr(next.ResponsibleGroup), nullStringPtr(next.WorkType), next.Complexity, next.Status, nullStringPtr(next.LifecyclePosition), now, id); err != nil {
 		respondInternalError(w, r, err)
 		return
 	}
@@ -469,11 +476,22 @@ func (h *P3MHandler) p3mIntakeCreateProject(r *http.Request, w http.ResponseWrit
 
 	now := time.Now().UTC()
 	p := models.P3MProject{Title: intake.Title, Description: intake.Description, WorkType: intake.WorkType, CurrentStage: stages[entryPos].StageKey}
+	// OHP report dimensions carry over from the intake (RPT-001): the idea's
+	// business group becomes the project's business owner group, and the
+	// front-door complexity becomes the delivery complexity.
+	if strings.TrimSpace(intake.BusinessGroup) != "" {
+		p.BusinessOwnerGroup = &intake.BusinessGroup
+	}
+	p.ResponsibleGroup = intake.ResponsibleGroup
+	if intake.Complexity != "" {
+		p.DeliveryComplexity = &intake.Complexity
+	}
 	p3mApplyComputed(&p)
 	res, err := h.db.ExecContext(ctx, `
-		INSERT INTO p3m_projects (portfolio_id, programme_id, title, description, manager_id, work_type, current_stage, rag_status, created_at, updated_at)
-		VALUES (?, ?, ?, ?, NULL, ?, ?, ?, ?, ?)`,
-		nullInt(fid2), nullInt(pid2), p.Title, p.Description, nullStringPtr(p.WorkType), p.CurrentStage, p.RagStatus, now, now)
+		INSERT INTO p3m_projects (portfolio_id, programme_id, title, description, manager_id, work_type, current_stage, rag_status, business_owner_group, responsible_group, delivery_complexity, created_at, updated_at)
+		VALUES (?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		nullInt(fid2), nullInt(pid2), p.Title, p.Description, nullStringPtr(p.WorkType), p.CurrentStage, p.RagStatus,
+		nullStringPtr(p.BusinessOwnerGroup), nullStringPtr(p.ResponsibleGroup), nullStringPtr(p.DeliveryComplexity), now, now)
 	if err != nil {
 		respondInternalError(w, r, err)
 		return 0

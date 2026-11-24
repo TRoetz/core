@@ -79,8 +79,12 @@ type P3MProgramme struct {
 	TargetStartDate *time.Time `json:"target_start_date,omitempty"`
 	TargetEndDate   *time.Time `json:"target_end_date,omitempty"`
 	RagStatus       string     `json:"rag_status"`
-	CreatedAt       time.Time  `json:"created_at"`
-	UpdatedAt       time.Time  `json:"updated_at"`
+	// OHP portfolio report dimensions (RPT-017/018); free text drawn from the
+	// reference values register (category business_group).
+	BusinessOwnerGroup *string   `json:"business_owner_group,omitempty"`
+	ResponsibleGroup   *string   `json:"responsible_group,omitempty"`
+	CreatedAt          time.Time `json:"created_at"`
+	UpdatedAt          time.Time `json:"updated_at"`
 
 	Rollup *P3MProgrammeRollup `json:"rollup,omitempty" db:"-"`
 
@@ -116,8 +120,21 @@ type P3MProject struct {
 	StartDate            *time.Time `json:"start_date,omitempty"`
 	TargetCompletionDate *time.Time `json:"target_completion_date,omitempty"`
 	RagStatus            string     `json:"rag_status"`
-	CreatedAt            time.Time  `json:"created_at"`
-	UpdatedAt            time.Time  `json:"updated_at"`
+	// OHP portfolio report dimensions (RPT-017/018). The free-text fields are
+	// drawn from the reference values register; enum domains are validated in
+	// the handlers (delivery_complexity/priority: low|med|high;
+	// investment_type: mandatory|maintenance|tactical|strategic|innovation).
+	BusinessOwnerGroup *string   `json:"business_owner_group,omitempty"`
+	ResponsibleGroup   *string   `json:"responsible_group,omitempty"`
+	DeliveryComplexity *string   `json:"delivery_complexity,omitempty"`
+	InvestmentType     *string   `json:"investment_type,omitempty"`
+	PortfolioValue     *string   `json:"portfolio_value,omitempty"` // theme
+	Priority           *string   `json:"priority,omitempty"`
+	IsCEKPI            bool      `json:"is_ce_kpi"`
+	OnHold             bool      `json:"on_hold"`
+	OnHoldReason       *string   `json:"on_hold_reason,omitempty"`
+	CreatedAt          time.Time `json:"created_at"`
+	UpdatedAt          time.Time `json:"updated_at"`
 
 	// EVM is computed server-side on list/get (earned value management).
 	EVM *P3MEVM `json:"evm,omitempty" db:"-"`
@@ -139,7 +156,7 @@ type P3MBenefit struct {
 	ProjectID             *int      `json:"project_id,omitempty"`
 	ProgrammeID           *int      `json:"programme_id,omitempty"`
 	Title                 string    `json:"title"`
-	BenefitType           string    `json:"benefit_type"` // financial | non_financial | strategic | compliance
+	BenefitType           string    `json:"benefit_type"` // financial | non_financial | strategic | compliance | unspecified
 	TargetValue           float64   `json:"target_value"`
 	UnitOfMeasure         string    `json:"unit_of_measure"`
 	BaselineValue         float64   `json:"baseline_value"`
@@ -154,6 +171,13 @@ type P3MBenefit struct {
 	FinanceValidatorID   *int    `json:"finance_validator_id,omitempty"`
 	ValidationStatus     string  `json:"validation_status"` // not_required | pending | validated
 	CapabilityRef        *string `json:"capability_ref,omitempty"`
+
+	// OHP portfolio report dimensions (RPT-005/006); free text drawn from the
+	// reference values register (categories theme / benefit_category /
+	// business_group).
+	StrategicObjective *string `json:"strategic_objective,omitempty"`
+	BenefitCategory    *string `json:"benefit_category,omitempty"`
+	BusinessOwnerGroup *string `json:"business_owner_group,omitempty"`
 
 	CreatedAt time.Time `json:"created_at"`
 
@@ -601,10 +625,11 @@ type P3MIntake struct {
 	RiskNotes            string     `json:"risk_notes"`
 	ChangeImpactNotes    string     `json:"change_impact_notes"`
 	BusinessGroup        string     `json:"business_group"`
-	WorkType             *string    `json:"work_type,omitempty"` // programme | project | continuous_improvement | digital_product | operational
-	Complexity           string     `json:"complexity"`          // low | med | high (FD-005)
-	Status               string     `json:"status"`              // captured | assessing | decided
-	Decision             *string    `json:"decision,omitempty"`  // proceed | redirect | defer | decline | return_info (FD-008)
+	ResponsibleGroup     *string    `json:"responsible_group,omitempty"` // OHP portfolio report (RPT-001)
+	WorkType             *string    `json:"work_type,omitempty"`         // programme | project | continuous_improvement | digital_product | operational
+	Complexity           string     `json:"complexity"`                  // low | med | high (FD-005)
+	Status               string     `json:"status"`                      // captured | assessing | decided
+	Decision             *string    `json:"decision,omitempty"`          // proceed | redirect | defer | decline | return_info (FD-008)
 	DecidedBy            *int       `json:"decided_by,omitempty"`
 	DecisionDate         *time.Time `json:"decision_date,omitempty"`
 	Conditions           string     `json:"conditions"` // decision conditions; copied to the first gate on proceed
@@ -713,21 +738,27 @@ type P3MFinanceSyncRejection struct {
 // --- Phase 2 gap-closure models (BRD OHP F6-F15) ---------------------------
 
 // P3MChangeCalendarEntry is one row of the organisation-wide change calendar
-// (CHG-008/009). Weeks are ISO week strings such as "2026-W45".
+// (CHG-008/009). Weeks are ISO week strings such as "2026-W45"; both may be
+// nil for entries with approved timing to be determined.
 type P3MChangeCalendarEntry struct {
 	ID           int       `json:"id"`
 	EntityType   *string   `json:"entity_type,omitempty"` // project | programme | portfolio; nil = standalone entry
 	EntityID     *int      `json:"entity_id,omitempty"`
 	Activity     string    `json:"activity"`
 	BusinessUnit *string   `json:"business_unit,omitempty"`
-	StartWeek    string    `json:"start_week"`
-	EndWeek      string    `json:"end_week"`
-	ImpactLevel  int       `json:"impact_level"` // 1 (low) .. 5 (high)
-	Source       string    `json:"source"`       // corporate_project | corporate_activity | bau | local
+	StartWeek    *string   `json:"start_week,omitempty"`
+	EndWeek      *string   `json:"end_week,omitempty"`
+	ImpactLevel  int       `json:"impact_level"`       // 0 (unknown) .. 5 (severe)
+	Source       string    `json:"source"`             // corporate_project | corporate_activity | bau | local
+	Category     *string   `json:"category,omitempty"` // free-text bucket, e.g. corporate_project | approved_timing_tbd | approved_no_impact | to_be_assessed | improvement | corporate_activity | training
 	Notes        *string   `json:"notes,omitempty"`
 	CreatedBy    *int      `json:"created_by,omitempty"`
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`
+
+	// Per-business-group impact levels (multi-group entries); populated on
+	// list/get and accepted on create/update as a full replace.
+	GroupImpacts []P3MChangeCalendarGroupImpact `json:"group_impacts,omitempty" db:"-"`
 }
 
 // P3MChangeAssessment is the single active change impact assessment for an

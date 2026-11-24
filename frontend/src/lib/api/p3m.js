@@ -216,6 +216,51 @@ export const p3m = {
   getClosureRecord: (projectId) => fetchAPI(`/p3m/projects/${projectId}/closure-record`),
   createClosureRecord: (projectId, data) => post(`/p3m/projects/${projectId}/closure-record`, data),
   updateClosureRecord: (id, data) => put(`/p3m/closure-records/${id}`, data),
+
+  // OHP portfolio report (RPT-001..015): RAG history, status reports, ELT
+  // decision coversheets, change capacity, reference values and the assembled
+  // report document.
+  getProjectRagHistory: (projectId) =>
+    fetchAPI(`/p3m/projects/${projectId}/rag-history`),
+  getProjectStatusReports: (projectId) =>
+    fetchAPI(`/p3m/projects/${projectId}/status-reports`),
+  createProjectStatusReport: (projectId, data) =>
+    post(`/p3m/projects/${projectId}/status-reports`, data),
+  getStatusReport: (id) => fetchAPI(`/p3m/status-reports/${id}`),
+  updateStatusReport: (id, data) => put(`/p3m/status-reports/${id}`, data),
+  deleteStatusReport: (id) => del(`/p3m/status-reports/${id}`),
+  getEltDecisions: (filters = {}) => fetchAPI(`/p3m/elt-decisions${qs(filters)}`),
+  createEltDecision: (data) => post('/p3m/elt-decisions', data),
+  getEltDecision: (id) => fetchAPI(`/p3m/elt-decisions/${id}`),
+  updateEltDecision: (id, data) => put(`/p3m/elt-decisions/${id}`, data),
+  deleteEltDecision: (id) => del(`/p3m/elt-decisions/${id}`),
+  decideEltDecision: (id, data) => post(`/p3m/elt-decisions/${id}/decision`, data),
+  getChangeCapacity: (filters = {}) =>
+    fetchAPI(`/p3m/change-capacity${qs(filters)}`),
+  upsertChangeCapacity: (data) => put('/p3m/change-capacity', data),
+  deleteChangeCapacity: (params = {}) =>
+    fetchAPI(`/p3m/change-capacity${qs(params)}`, { method: 'DELETE' }),
+  getReferenceValues: (filters = {}) =>
+    fetchAPI(`/p3m/reference-values${qs(filters)}`),
+  replaceReferenceValues: (data) => put('/p3m/reference-values', data),
+  getCuratedPortfolioReport: (portfolioId, filters = {}) =>
+    fetchAPI(`/p3m/portfolios/${portfolioId}/portfolio-report/curated${qs(filters)}`),
+  upsertCuratedPortfolioReport: (portfolioId, data) =>
+    put(`/p3m/portfolios/${portfolioId}/portfolio-report/curated`, data),
+  getPortfolioReport: (portfolioId, filters = {}) =>
+    fetchAPI(`/p3m/portfolios/${portfolioId}/portfolio-report${qs(filters)}`),
+  // Markdown rendering for the print view; returns the raw text/markdown body.
+  fetchPortfolioReportMarkdown: async (portfolioId, filters = {}) => {
+    const res = await fetch(
+      `${API_BASE}/p3m/portfolios/${portfolioId}/portfolio-report/markdown${qs(filters)}`,
+      { credentials: 'include' }
+    );
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      throw new Error(text || 'Failed to load portfolio report');
+    }
+    return res.text();
+  },
 };
 
 function qs(params = {}) {

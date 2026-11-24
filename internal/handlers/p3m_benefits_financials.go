@@ -11,18 +11,19 @@ import (
 	"windshift/internal/models"
 )
 
-const p3mBenefitColumns = `id, project_id, programme_id, title, benefit_type, target_value, unit_of_measure, baseline_value, target_realization_date, owner_id, measurement_method, measurement_frequency, status, evidence, finance_validator_id, validation_status, capability_ref, created_at`
+const p3mBenefitColumns = `id, project_id, programme_id, title, benefit_type, target_value, unit_of_measure, baseline_value, target_realization_date, owner_id, measurement_method, measurement_frequency, status, evidence, finance_validator_id, validation_status, capability_ref, strategic_objective, benefit_category, business_owner_group, created_at`
 
 func scanP3MBenefit(row interface{ Scan(...any) error }) (models.P3MBenefit, error) {
 	var b models.P3MBenefit
-	err := row.Scan(&b.ID, &b.ProjectID, &b.ProgrammeID, &b.Title, &b.BenefitType, &b.TargetValue, &b.UnitOfMeasure, &b.BaselineValue, &b.TargetRealizationDate, &b.OwnerID, &b.MeasurementMethod, &b.MeasurementFrequency, &b.Status, &b.Evidence, &b.FinanceValidatorID, &b.ValidationStatus, &b.CapabilityRef, &b.CreatedAt)
+	err := row.Scan(&b.ID, &b.ProjectID, &b.ProgrammeID, &b.Title, &b.BenefitType, &b.TargetValue, &b.UnitOfMeasure, &b.BaselineValue, &b.TargetRealizationDate, &b.OwnerID, &b.MeasurementMethod, &b.MeasurementFrequency, &b.Status, &b.Evidence, &b.FinanceValidatorID, &b.ValidationStatus, &b.CapabilityRef, &b.StrategicObjective, &b.BenefitCategory, &b.BusinessOwnerGroup, &b.CreatedAt)
 	return b, err
 }
 
-// p3mValidBenefitType reports whether benefit_type is one of the four kinds.
+// p3mValidBenefitType reports whether benefit_type is one of the five kinds
+// (RPT-006 adds the unspecified bucket for legacy rows).
 func p3mValidBenefitType(t string) bool {
 	switch t {
-	case "financial", "non_financial", "strategic", "compliance":
+	case "financial", "non_financial", "strategic", "compliance", "unspecified":
 		return true
 	default:
 		return false
@@ -175,6 +176,9 @@ func (h *P3MHandler) CreateBenefit(w http.ResponseWriter, r *http.Request) {
 		FinanceValidatorID    *int      `json:"finance_validator_id,omitempty"`
 		ValidationStatus      string    `json:"validation_status,omitempty"`
 		CapabilityRef         *string   `json:"capability_ref,omitempty"`
+		StrategicObjective    *string   `json:"strategic_objective"`
+		BenefitCategory       *string   `json:"benefit_category"`
+		BusinessOwnerGroup    *string   `json:"business_owner_group"`
 	}
 	if err := newJSONDecoder(w, r).Decode(&in); err != nil {
 		respondBadRequest(w, r, "Invalid request body")
@@ -188,7 +192,7 @@ func (h *P3MHandler) CreateBenefit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !p3mValidBenefitType(in.BenefitType) {
-		respondValidationError(w, r, "benefit_type must be one of financial, non_financial, strategic or compliance")
+		respondValidationError(w, r, "benefit_type must be one of financial, non_financial, strategic, compliance or unspecified")
 		return
 	}
 	var ownerCount int
@@ -228,9 +232,9 @@ func (h *P3MHandler) CreateBenefit(w http.ResponseWriter, r *http.Request) {
 
 	now := time.Now().UTC()
 	res, err := h.db.ExecContext(r.Context(), `
-		INSERT INTO p3m_benefits (project_id, programme_id, title, benefit_type, target_value, unit_of_measure, baseline_value, target_realization_date, owner_id, measurement_method, measurement_frequency, status, evidence, finance_validator_id, validation_status, capability_ref, created_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		nullInt(in.ProjectID), nullInt(in.ProgrammeID), in.Title, in.BenefitType, in.TargetValue, in.UnitOfMeasure, in.BaselineValue, in.TargetRealizationDate, in.OwnerID, in.MeasurementMethod, in.MeasurementFrequency, in.Status, in.Evidence, in.FinanceValidatorID, in.ValidationStatus, in.CapabilityRef, now)
+		INSERT INTO p3m_benefits (project_id, programme_id, title, benefit_type, target_value, unit_of_measure, baseline_value, target_realization_date, owner_id, measurement_method, measurement_frequency, status, evidence, finance_validator_id, validation_status, capability_ref, strategic_objective, benefit_category, business_owner_group, created_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		nullInt(in.ProjectID), nullInt(in.ProgrammeID), in.Title, in.BenefitType, in.TargetValue, in.UnitOfMeasure, in.BaselineValue, in.TargetRealizationDate, in.OwnerID, in.MeasurementMethod, in.MeasurementFrequency, in.Status, in.Evidence, in.FinanceValidatorID, in.ValidationStatus, in.CapabilityRef, in.StrategicObjective, in.BenefitCategory, in.BusinessOwnerGroup, now)
 	if err != nil {
 		respondInternalError(w, r, err)
 		return
@@ -248,6 +252,9 @@ func (h *P3MHandler) CreateBenefit(w http.ResponseWriter, r *http.Request) {
 		"owner_id":          in.OwnerID,
 		"status":            in.Status,
 		"validation_status": in.ValidationStatus,
+		"strategic_objective": nullStringPtr(in.StrategicObjective),
+		"benefit_category":    nullStringPtr(in.BenefitCategory),
+		"business_owner_group": nullStringPtr(in.BusinessOwnerGroup),
 	})
 	respondJSONCreated(w, b)
 }
@@ -323,6 +330,9 @@ func (h *P3MHandler) UpdateBenefit(w http.ResponseWriter, r *http.Request) {
 		FinanceValidatorID    *int      `json:"finance_validator_id,omitempty"`
 		ValidationStatus      string    `json:"validation_status,omitempty"`
 		CapabilityRef         *string   `json:"capability_ref,omitempty"`
+		StrategicObjective    *string   `json:"strategic_objective"`
+		BenefitCategory       *string   `json:"benefit_category"`
+		BusinessOwnerGroup    *string   `json:"business_owner_group"`
 	}
 	if err := newJSONDecoder(w, r).Decode(&in); err != nil {
 		respondBadRequest(w, r, "Invalid request body")
@@ -336,7 +346,7 @@ func (h *P3MHandler) UpdateBenefit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !p3mValidBenefitType(in.BenefitType) {
-		respondValidationError(w, r, "benefit_type must be one of financial, non_financial, strategic or compliance")
+		respondValidationError(w, r, "benefit_type must be one of financial, non_financial, strategic, compliance or unspecified")
 		return
 	}
 	var ownerCount int
@@ -375,8 +385,8 @@ func (h *P3MHandler) UpdateBenefit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	res, err := h.db.ExecContext(r.Context(), `
-		UPDATE p3m_benefits SET project_id = ?, programme_id = ?, title = ?, benefit_type = ?, target_value = ?, unit_of_measure = ?, baseline_value = ?, target_realization_date = ?, owner_id = ?, measurement_method = ?, measurement_frequency = ?, status = ?, evidence = ?, finance_validator_id = ?, validation_status = ?, capability_ref = ? WHERE id = ?`,
-		nullInt(in.ProjectID), nullInt(in.ProgrammeID), in.Title, in.BenefitType, in.TargetValue, in.UnitOfMeasure, in.BaselineValue, in.TargetRealizationDate, in.OwnerID, in.MeasurementMethod, in.MeasurementFrequency, in.Status, in.Evidence, in.FinanceValidatorID, in.ValidationStatus, in.CapabilityRef, id)
+		UPDATE p3m_benefits SET project_id = ?, programme_id = ?, title = ?, benefit_type = ?, target_value = ?, unit_of_measure = ?, baseline_value = ?, target_realization_date = ?, owner_id = ?, measurement_method = ?, measurement_frequency = ?, status = ?, evidence = ?, finance_validator_id = ?, validation_status = ?, capability_ref = ?, strategic_objective = ?, benefit_category = ?, business_owner_group = ? WHERE id = ?`,
+		nullInt(in.ProjectID), nullInt(in.ProgrammeID), in.Title, in.BenefitType, in.TargetValue, in.UnitOfMeasure, in.BaselineValue, in.TargetRealizationDate, in.OwnerID, in.MeasurementMethod, in.MeasurementFrequency, in.Status, in.Evidence, in.FinanceValidatorID, in.ValidationStatus, in.CapabilityRef, in.StrategicObjective, in.BenefitCategory, in.BusinessOwnerGroup, id)
 	if err != nil {
 		respondInternalError(w, r, err)
 		return
@@ -407,6 +417,9 @@ func (h *P3MHandler) UpdateBenefit(w http.ResponseWriter, r *http.Request) {
 		[3]any{"finance_validator_id", nullInt(oldB.FinanceValidatorID), nullInt(in.FinanceValidatorID)},
 		[3]any{"validation_status", oldB.ValidationStatus, in.ValidationStatus},
 		[3]any{"capability_ref", p3mNullStr(oldB.CapabilityRef), p3mNullStr(in.CapabilityRef)},
+		[3]any{"strategic_objective", p3mNullStr(oldB.StrategicObjective), p3mNullStr(in.StrategicObjective)},
+		[3]any{"benefit_category", p3mNullStr(oldB.BenefitCategory), p3mNullStr(in.BenefitCategory)},
+		[3]any{"business_owner_group", p3mNullStr(oldB.BusinessOwnerGroup), p3mNullStr(in.BusinessOwnerGroup)},
 	))
 	respondJSONOK(w, b)
 }

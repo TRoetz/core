@@ -4734,6 +4734,125 @@ var Catalog = []Migration{
 		`,
 	},
 	{
+		Version: "20261124_p3m_portfolio_report",
+		Name:    "Add OHP portfolio report dimensions, registers and change-calendar rebuilds",
+		// CheckSQLite/CheckPostgres stamp retroactively when both the new
+		// registers and the report columns are present; SQLite bodies run
+		// through ApplySQLite (two table rebuilds need foreign_keys toggled
+		// outside a transaction), so the SQLite field is the checksum marker.
+		CheckSQLite:   `SELECT (SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='p3m_elt_decisions') * (SELECT COUNT(*) FROM pragma_table_info('p3m_projects') WHERE name='business_owner_group')`,
+		CheckPostgres: `SELECT (SELECT COUNT(*) FROM information_schema.tables WHERE table_name='p3m_elt_decisions') * (SELECT COUNT(*) FROM information_schema.columns WHERE table_name='p3m_projects' AND column_name='business_owner_group')`,
+		SQLite:        "p3m_portfolio_report_rebuilds:v1",
+		ApplySQLite:   applySQLiteP3MPortfolioReport,
+		Postgres: `
+			ALTER TABLE p3m_projects ADD COLUMN IF NOT EXISTS business_owner_group TEXT;
+			ALTER TABLE p3m_projects ADD COLUMN IF NOT EXISTS responsible_group TEXT;
+			ALTER TABLE p3m_projects ADD COLUMN IF NOT EXISTS delivery_complexity TEXT;
+			ALTER TABLE p3m_projects ADD COLUMN IF NOT EXISTS investment_type TEXT;
+			ALTER TABLE p3m_projects ADD COLUMN IF NOT EXISTS portfolio_value TEXT;
+			ALTER TABLE p3m_projects ADD COLUMN IF NOT EXISTS priority TEXT;
+			ALTER TABLE p3m_projects ADD COLUMN IF NOT EXISTS is_ce_kpi BOOLEAN NOT NULL DEFAULT FALSE;
+			ALTER TABLE p3m_projects ADD COLUMN IF NOT EXISTS on_hold BOOLEAN NOT NULL DEFAULT FALSE;
+			ALTER TABLE p3m_projects ADD COLUMN IF NOT EXISTS on_hold_reason TEXT;
+			ALTER TABLE p3m_programmes ADD COLUMN IF NOT EXISTS business_owner_group TEXT;
+			ALTER TABLE p3m_programmes ADD COLUMN IF NOT EXISTS responsible_group TEXT;
+			ALTER TABLE p3m_intakes ADD COLUMN IF NOT EXISTS responsible_group TEXT;
+			ALTER TABLE p3m_benefits ADD COLUMN IF NOT EXISTS strategic_objective TEXT;
+			ALTER TABLE p3m_benefits ADD COLUMN IF NOT EXISTS benefit_category TEXT;
+			ALTER TABLE p3m_benefits ADD COLUMN IF NOT EXISTS business_owner_group TEXT;
+			-- Widen the benefit type domain (unspecified) in place.
+			ALTER TABLE p3m_benefits DROP CONSTRAINT IF EXISTS p3m_benefits_benefit_type_check;
+			ALTER TABLE p3m_benefits ADD CONSTRAINT p3m_benefits_benefit_type_check CHECK (benefit_type IN ('financial', 'non_financial', 'strategic', 'compliance', 'unspecified'));
+			-- Change calendar: undated entries are legal (category buckets such
+			-- as 'approved_timing_tbd'); impact level gains 0 (unknown).
+			ALTER TABLE p3m_change_calendar_entries ALTER COLUMN start_week DROP NOT NULL;
+			ALTER TABLE p3m_change_calendar_entries ALTER COLUMN end_week DROP NOT NULL;
+			ALTER TABLE p3m_change_calendar_entries ADD COLUMN IF NOT EXISTS category TEXT;
+			ALTER TABLE p3m_change_calendar_entries DROP CONSTRAINT IF EXISTS p3m_change_calendar_entries_impact_level_check;
+			ALTER TABLE p3m_change_calendar_entries ADD CONSTRAINT p3m_change_calendar_entries_impact_level_check CHECK (impact_level BETWEEN 0 AND 5);
+
+			CREATE TABLE IF NOT EXISTS p3m_rag_history (
+				id SERIAL PRIMARY KEY,
+				entity_type TEXT NOT NULL CHECK (entity_type IN ('portfolio','programme','project')),
+				entity_id INTEGER NOT NULL,
+				rag_status TEXT NOT NULL CHECK (rag_status IN ('red','amber','green')),
+				changed_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+				changed_by INTEGER REFERENCES users(id) ON DELETE SET NULL
+			);
+			CREATE INDEX IF NOT EXISTS idx_p3m_rag_history_entity ON p3m_rag_history(entity_type, entity_id, changed_at);
+
+			CREATE TABLE IF NOT EXISTS p3m_project_status_reports (
+				id SERIAL PRIMARY KEY,
+				project_id INTEGER NOT NULL REFERENCES p3m_projects(id) ON DELETE CASCADE,
+				period TEXT NOT NULL,
+				issue TEXT NOT NULL DEFAULT '',
+				impact TEXT NOT NULL DEFAULT '',
+				next_steps TEXT NOT NULL DEFAULT '',
+				reported_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				reported_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+				UNIQUE (project_id, period)
+			);
+
+			CREATE TABLE IF NOT EXISTS p3m_change_calendar_group_impacts (
+				id SERIAL PRIMARY KEY,
+				entry_id INTEGER NOT NULL REFERENCES p3m_change_calendar_entries(id) ON DELETE CASCADE,
+				business_group TEXT NOT NULL,
+				impact_level INTEGER NOT NULL DEFAULT 3 CHECK (impact_level BETWEEN 0 AND 5),
+				UNIQUE (entry_id, business_group)
+			);
+			CREATE INDEX IF NOT EXISTS idx_p3m_cal_group_impacts_entry ON p3m_change_calendar_group_impacts(entry_id);
+
+			CREATE TABLE IF NOT EXISTS p3m_change_capacity (
+				id SERIAL PRIMARY KEY,
+				business_group TEXT NOT NULL,
+				month TEXT NOT NULL,
+				posture TEXT NOT NULL DEFAULT 'proceed' CHECK (posture IN ('proceed','caution','pause','reduce')),
+				notes TEXT,
+				UNIQUE (business_group, month)
+			);
+
+			CREATE TABLE IF NOT EXISTS p3m_elt_decisions (
+				id SERIAL PRIMARY KEY,
+				portfolio_id INTEGER NOT NULL REFERENCES p3m_portfolios(id) ON DELETE CASCADE,
+				project_id INTEGER REFERENCES p3m_projects(id) ON DELETE SET NULL,
+				title TEXT NOT NULL,
+				why TEXT NOT NULL DEFAULT '',
+				decision_requested TEXT NOT NULL DEFAULT '',
+				conditions_until_approved TEXT NOT NULL DEFAULT '',
+				status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','approved','rejected','withdrawn')),
+				decided_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				decided_at TIMESTAMPTZ,
+				created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+				updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE INDEX IF NOT EXISTS idx_p3m_elt_decisions_portfolio ON p3m_elt_decisions(portfolio_id, status);
+
+			CREATE TABLE IF NOT EXISTS p3m_portfolio_reports (
+				id SERIAL PRIMARY KEY,
+				portfolio_id INTEGER NOT NULL REFERENCES p3m_portfolios(id) ON DELETE CASCADE,
+				period TEXT NOT NULL,
+				executive_commentary TEXT NOT NULL DEFAULT '',
+				key_pressures TEXT,
+				delivery_confidence_pct REAL,
+				confidence_lenses TEXT,
+				programme_highlights TEXT,
+				change_key_messages TEXT NOT NULL DEFAULT '',
+				published_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+				published_at TIMESTAMPTZ,
+				created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+				updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+				UNIQUE (portfolio_id, period)
+			);
+
+			CREATE TABLE IF NOT EXISTS p3m_reference_values (
+				id SERIAL PRIMARY KEY,
+				category TEXT NOT NULL,
+				value TEXT NOT NULL,
+				UNIQUE (category, value)
+			);
+		`,
+	},
+	{
 		Version: "20261126_sms_node_taxonomy",
 		Name:    "Add SMS node taxonomy (kinds, nodes, role-based stakeholder membership)",
 		// Superseded advances installs stamped by pre-normalization builds;
@@ -6383,6 +6502,288 @@ func applySQLiteSMSCampaignChannelWiden(db Database) (retErr error) {
 
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("commit sms campaign channel widen: %w", err)
+	}
+	return nil
+}
+
+// applySQLiteP3MPortfolioReport applies the OHP portfolio report migration on
+// SQLite: the report columns and the seven new registers in one transaction,
+// then the two table rebuilds (benefit type widening, change-calendar
+// nullable weeks) which need foreign_keys toggled outside their transaction.
+func applySQLiteP3MPortfolioReport(db Database) error {
+	statements := []string{
+		`ALTER TABLE p3m_projects ADD COLUMN business_owner_group TEXT`,
+		`ALTER TABLE p3m_projects ADD COLUMN responsible_group TEXT`,
+		`ALTER TABLE p3m_projects ADD COLUMN delivery_complexity TEXT`,
+		`ALTER TABLE p3m_projects ADD COLUMN investment_type TEXT`,
+		`ALTER TABLE p3m_projects ADD COLUMN portfolio_value TEXT`,
+		`ALTER TABLE p3m_projects ADD COLUMN priority TEXT`,
+		`ALTER TABLE p3m_projects ADD COLUMN is_ce_kpi INTEGER NOT NULL DEFAULT 0`,
+		`ALTER TABLE p3m_projects ADD COLUMN on_hold INTEGER NOT NULL DEFAULT 0`,
+		`ALTER TABLE p3m_projects ADD COLUMN on_hold_reason TEXT`,
+		`ALTER TABLE p3m_programmes ADD COLUMN business_owner_group TEXT`,
+		`ALTER TABLE p3m_programmes ADD COLUMN responsible_group TEXT`,
+		`ALTER TABLE p3m_intakes ADD COLUMN responsible_group TEXT`,
+
+		`CREATE TABLE IF NOT EXISTS p3m_rag_history (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			entity_type TEXT NOT NULL CHECK (entity_type IN ('portfolio','programme','project')),
+			entity_id INTEGER NOT NULL,
+			rag_status TEXT NOT NULL CHECK (rag_status IN ('red','amber','green')),
+			changed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			changed_by INTEGER REFERENCES users(id) ON DELETE SET NULL
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_p3m_rag_history_entity ON p3m_rag_history(entity_type, entity_id, changed_at)`,
+
+		`CREATE TABLE IF NOT EXISTS p3m_project_status_reports (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			project_id INTEGER NOT NULL REFERENCES p3m_projects(id) ON DELETE CASCADE,
+			period TEXT NOT NULL,
+			issue TEXT NOT NULL DEFAULT '',
+			impact TEXT NOT NULL DEFAULT '',
+			next_steps TEXT NOT NULL DEFAULT '',
+			reported_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+			reported_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			UNIQUE (project_id, period)
+		)`,
+
+		`CREATE TABLE IF NOT EXISTS p3m_change_calendar_group_impacts (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			entry_id INTEGER NOT NULL REFERENCES p3m_change_calendar_entries(id) ON DELETE CASCADE,
+			business_group TEXT NOT NULL,
+			impact_level INTEGER NOT NULL DEFAULT 3 CHECK (impact_level BETWEEN 0 AND 5),
+			UNIQUE (entry_id, business_group)
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_p3m_cal_group_impacts_entry ON p3m_change_calendar_group_impacts(entry_id)`,
+
+		`CREATE TABLE IF NOT EXISTS p3m_change_capacity (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			business_group TEXT NOT NULL,
+			month TEXT NOT NULL,
+			posture TEXT NOT NULL DEFAULT 'proceed' CHECK (posture IN ('proceed','caution','pause','reduce')),
+			notes TEXT,
+			UNIQUE (business_group, month)
+		)`,
+
+		`CREATE TABLE IF NOT EXISTS p3m_elt_decisions (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			portfolio_id INTEGER NOT NULL REFERENCES p3m_portfolios(id) ON DELETE CASCADE,
+			project_id INTEGER REFERENCES p3m_projects(id) ON DELETE SET NULL,
+			title TEXT NOT NULL,
+			why TEXT NOT NULL DEFAULT '',
+			decision_requested TEXT NOT NULL DEFAULT '',
+			conditions_until_approved TEXT NOT NULL DEFAULT '',
+			status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','approved','rejected','withdrawn')),
+			decided_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+			decided_at DATETIME,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_p3m_elt_decisions_portfolio ON p3m_elt_decisions(portfolio_id, status)`,
+
+		`CREATE TABLE IF NOT EXISTS p3m_portfolio_reports (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			portfolio_id INTEGER NOT NULL REFERENCES p3m_portfolios(id) ON DELETE CASCADE,
+			period TEXT NOT NULL,
+			executive_commentary TEXT NOT NULL DEFAULT '',
+			key_pressures TEXT,
+			delivery_confidence_pct REAL,
+			confidence_lenses TEXT,
+			programme_highlights TEXT,
+			change_key_messages TEXT NOT NULL DEFAULT '',
+			published_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+			published_at DATETIME,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			UNIQUE (portfolio_id, period)
+		)`,
+
+		`CREATE TABLE IF NOT EXISTS p3m_reference_values (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			category TEXT NOT NULL,
+			value TEXT NOT NULL,
+			UNIQUE (category, value)
+		)`,
+	}
+	if err := WithTx(db, func(tx Tx) error {
+		for _, statement := range statements {
+			if _, err := tx.ExecContext(context.Background(), statement); err != nil {
+				return fmt.Errorf("p3m portfolio report columns/tables: %w", err)
+			}
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
+	if err := applySQLiteP3MPortfolioReportBenefitsRebuild(db); err != nil {
+		return err
+	}
+	return applySQLiteP3MPortfolioReportChangeCalendarRebuild(db)
+}
+
+// applySQLiteP3MPortfolioReportBenefitsRebuild rebuilds p3m_benefits with the
+// widened benefit_type CHECK (unspecified) and the three report-dimension
+// columns. SQLite cannot alter a column CHECK in place, so rows are copied
+// into a fresh table and swapped. Child tables keep their name-based FKs.
+func applySQLiteP3MPortfolioReportBenefitsRebuild(db Database) (retErr error) {
+	sqliteDB, ok := db.(*SQLiteDB)
+	if !ok {
+		return fmt.Errorf("expected SQLite database, got %T", db)
+	}
+
+	ctx := context.Background()
+	conn, err := sqliteDB.writeConn.Conn(ctx)
+	if err != nil {
+		return fmt.Errorf("acquire SQLite write connection: %w", err)
+	}
+	defer func() { _ = conn.Close() }()
+
+	var foreignKeysEnabled bool
+	if err := conn.QueryRowContext(ctx, "PRAGMA foreign_keys").Scan(&foreignKeysEnabled); err != nil {
+		return fmt.Errorf("read foreign_keys pragma: %w", err)
+	}
+	if foreignKeysEnabled {
+		if _, err := conn.ExecContext(ctx, "PRAGMA foreign_keys=OFF"); err != nil {
+			return fmt.Errorf("disable foreign keys: %w", err)
+		}
+		defer func() {
+			if _, err := conn.ExecContext(ctx, "PRAGMA foreign_keys=ON"); retErr == nil && err != nil {
+				retErr = fmt.Errorf("restore foreign keys: %w", err)
+			}
+		}()
+	}
+
+	tx, err := conn.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin p3m_benefits rebuild: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	statements := []string{
+		`CREATE TABLE p3m_benefits_migration (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			project_id INTEGER REFERENCES p3m_projects(id) ON DELETE CASCADE,
+			programme_id INTEGER REFERENCES p3m_programmes(id) ON DELETE CASCADE,
+			title TEXT NOT NULL,
+			benefit_type TEXT NOT NULL CHECK (benefit_type IN ('financial', 'non_financial', 'strategic', 'compliance', 'unspecified')),
+			target_value REAL NOT NULL DEFAULT 0,
+			unit_of_measure TEXT NOT NULL DEFAULT '',
+			baseline_value REAL NOT NULL DEFAULT 0,
+			target_realization_date DATE NOT NULL,
+			owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+			measurement_method TEXT,
+			measurement_frequency TEXT CHECK (measurement_frequency IN ('monthly', 'quarterly', 'annual', 'one_off')),
+			status TEXT NOT NULL DEFAULT 'planned' CHECK (status IN ('planned', 'measuring', 'realised', 'shortfall', 'retired')),
+			evidence TEXT,
+			finance_validator_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+			validation_status TEXT NOT NULL DEFAULT 'not_required' CHECK (validation_status IN ('not_required', 'pending', 'validated')),
+			capability_ref TEXT,
+			strategic_objective TEXT,
+			benefit_category TEXT,
+			business_owner_group TEXT,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			CHECK ((project_id IS NOT NULL AND programme_id IS NULL) OR (project_id IS NULL AND programme_id IS NOT NULL))
+		)`,
+		`INSERT INTO p3m_benefits_migration (
+			id, project_id, programme_id, title, benefit_type, target_value, unit_of_measure, baseline_value,
+			target_realization_date, owner_id, measurement_method, measurement_frequency, status, evidence,
+			finance_validator_id, validation_status, capability_ref, created_at
+		)
+		SELECT id, project_id, programme_id, title, benefit_type, target_value, unit_of_measure, baseline_value,
+			target_realization_date, owner_id, measurement_method, measurement_frequency, status, evidence,
+			finance_validator_id, validation_status, capability_ref, created_at
+		FROM p3m_benefits`,
+		`DROP TABLE p3m_benefits`,
+		`ALTER TABLE p3m_benefits_migration RENAME TO p3m_benefits`,
+		`CREATE INDEX idx_p3m_benefits_project ON p3m_benefits(project_id)`,
+		`CREATE INDEX idx_p3m_benefits_programme ON p3m_benefits(programme_id)`,
+	}
+	for _, statement := range statements {
+		if _, err := tx.ExecContext(ctx, statement); err != nil {
+			return fmt.Errorf("rebuild p3m_benefits: %w", err)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit p3m_benefits rebuild: %w", err)
+	}
+	return nil
+}
+
+// applySQLiteP3MPortfolioReportChangeCalendarRebuild rebuilds
+// p3m_change_calendar_entries with nullable start/end weeks (undated entries
+// are legal) and the widened 0..5 impact-level CHECK, adding the free-text
+// category column. SQLite cannot drop NOT NULL in place, so rows are copied
+// into a fresh table and swapped.
+func applySQLiteP3MPortfolioReportChangeCalendarRebuild(db Database) (retErr error) {
+	sqliteDB, ok := db.(*SQLiteDB)
+	if !ok {
+		return fmt.Errorf("expected SQLite database, got %T", db)
+	}
+
+	ctx := context.Background()
+	conn, err := sqliteDB.writeConn.Conn(ctx)
+	if err != nil {
+		return fmt.Errorf("acquire SQLite write connection: %w", err)
+	}
+	defer func() { _ = conn.Close() }()
+
+	var foreignKeysEnabled bool
+	if err := conn.QueryRowContext(ctx, "PRAGMA foreign_keys").Scan(&foreignKeysEnabled); err != nil {
+		return fmt.Errorf("read foreign_keys pragma: %w", err)
+	}
+	if foreignKeysEnabled {
+		if _, err := conn.ExecContext(ctx, "PRAGMA foreign_keys=OFF"); err != nil {
+			return fmt.Errorf("disable foreign keys: %w", err)
+		}
+		defer func() {
+			if _, err := conn.ExecContext(ctx, "PRAGMA foreign_keys=ON"); retErr == nil && err != nil {
+				retErr = fmt.Errorf("restore foreign keys: %w", err)
+			}
+		}()
+	}
+
+	tx, err := conn.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin p3m_change_calendar_entries rebuild: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	statements := []string{
+		`CREATE TABLE p3m_change_calendar_entries_migration (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			entity_type TEXT CHECK (entity_type IN ('portfolio', 'programme', 'project')),
+			entity_id INTEGER,
+			activity TEXT NOT NULL,
+			business_unit TEXT,
+			start_week TEXT,
+			end_week TEXT,
+			impact_level INTEGER NOT NULL DEFAULT 3 CHECK (impact_level BETWEEN 0 AND 5),
+			source TEXT NOT NULL DEFAULT 'local' CHECK (source IN ('corporate_project', 'corporate_activity', 'bau', 'local')),
+			category TEXT,
+			notes TEXT,
+			created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		)`,
+		`INSERT INTO p3m_change_calendar_entries_migration (
+			id, entity_type, entity_id, activity, business_unit, start_week, end_week, impact_level, source, notes, created_by, created_at, updated_at
+		)
+		SELECT id, entity_type, entity_id, activity, business_unit, start_week, end_week, impact_level, source, notes, created_by, created_at, updated_at
+		FROM p3m_change_calendar_entries`,
+		`DROP TABLE p3m_change_calendar_entries`,
+		`ALTER TABLE p3m_change_calendar_entries_migration RENAME TO p3m_change_calendar_entries`,
+		`CREATE INDEX idx_p3m_change_cal_weeks ON p3m_change_calendar_entries(start_week, end_week)`,
+		`CREATE INDEX idx_p3m_change_cal_bu ON p3m_change_calendar_entries(business_unit)`,
+	}
+	for _, statement := range statements {
+		if _, err := tx.ExecContext(ctx, statement); err != nil {
+			return fmt.Errorf("rebuild p3m_change_calendar_entries: %w", err)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit p3m_change_calendar_entries rebuild: %w", err)
 	}
 	return nil
 }

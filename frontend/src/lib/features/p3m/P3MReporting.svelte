@@ -40,7 +40,7 @@
     }
   }
 
-  const CATEGORIES = ['schedule', 'budget', 'scope', 'risk', 'benefits', 'change'];
+  const CATEGORIES = ['schedule', 'budget', 'scope', 'risk', 'benefits', 'change', 'resources'];
 
   function jparse(s) {
     try { return s ? JSON.parse(s) : null; } catch { return null; }

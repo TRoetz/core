@@ -38,6 +38,7 @@
     pagePrint: () => import('./lib/features/pages/PagePrintView.svelte'),
     timeReportPrint: () => import('./lib/features/time/TimeReportPrintView.svelte'),
     testRunSummaryPrint: () => import('./lib/features/testing/TestRunSummaryPrintView.svelte'),
+    p3mReportPrint: () => import('./lib/features/p3m/P3MPortfolioReportPrintView.svelte'),
   };
 
   let showLoginDialog = $state(false);
@@ -328,6 +329,7 @@
     'page-print',
     'time-report-print',
     'test-run-summary-print',
+    'p3m-report-print',
     'oauth-authorize',
     'cli-authorize',
     'zammad-resolve',
@@ -484,6 +486,15 @@
       componentProps={{
         workspaceId: Number($currentRoute.params.id),
         runId: Number($currentRoute.params.runId),
+      }}
+    />
+  {:else if $authStore.isAuthenticated && appInitialized && $currentRoute.view === 'p3m-report-print'}
+    <LazyRootView
+      loader={ROOT_VIEW_LOADERS.p3mReportPrint}
+      label="p3m report print view"
+      componentProps={{
+        portfolioId: Number($currentRoute.params.id),
+        asOf: $currentRoute.query?.as_of ?? '',
       }}
     />
   <!-- Mobile PWA surface (phone-focused shell, bypasses desktop MainApp chrome) -->

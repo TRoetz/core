@@ -22,6 +22,8 @@ CREATE TABLE IF NOT EXISTS p3m_programmes (
 	target_start_date DATE,
 	target_end_date DATE,
 	rag_status TEXT NOT NULL DEFAULT 'green' CHECK (rag_status IN ('red', 'amber', 'green')),
+	business_owner_group TEXT,
+	responsible_group TEXT,
 	created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
 	updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
@@ -52,6 +54,17 @@ CREATE TABLE IF NOT EXISTS p3m_projects (
 	start_date DATE,
 	target_completion_date DATE,
 	rag_status TEXT NOT NULL DEFAULT 'green' CHECK (rag_status IN ('red', 'amber', 'green')),
+	-- OHP portfolio report dimensions (RPT slides 17-18); enum domains are
+	-- validated in the handlers, not in the schema.
+	business_owner_group TEXT,
+	responsible_group TEXT,
+	delivery_complexity TEXT,
+	investment_type TEXT,
+	portfolio_value TEXT,
+	priority TEXT,
+	is_ce_kpi BOOLEAN NOT NULL DEFAULT FALSE,
+	on_hold BOOLEAN NOT NULL DEFAULT FALSE,
+	on_hold_reason TEXT,
 	created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
 	updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
@@ -61,7 +74,7 @@ CREATE TABLE IF NOT EXISTS p3m_benefits (
 	project_id INTEGER REFERENCES p3m_projects(id) ON DELETE CASCADE,
 	programme_id INTEGER REFERENCES p3m_programmes(id) ON DELETE CASCADE,
 	title TEXT NOT NULL,
-	benefit_type TEXT NOT NULL CHECK (benefit_type IN ('financial', 'non_financial', 'strategic', 'compliance')),
+	benefit_type TEXT NOT NULL CHECK (benefit_type IN ('financial', 'non_financial', 'strategic', 'compliance', 'unspecified')),
 	target_value REAL NOT NULL DEFAULT 0,
 	unit_of_measure TEXT NOT NULL DEFAULT '',
 	baseline_value REAL NOT NULL DEFAULT 0,
@@ -74,6 +87,12 @@ CREATE TABLE IF NOT EXISTS p3m_benefits (
 	finance_validator_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
 	validation_status TEXT NOT NULL DEFAULT 'not_required' CHECK (validation_status IN ('not_required', 'pending', 'validated')),
 	capability_ref TEXT,
+	-- OHP portfolio report dimensions (RPT slide 5-6): strategic objective,
+	-- benefit category and business owner group are free text drawn from the
+	-- reference values register.
+	strategic_objective TEXT,
+	benefit_category TEXT,
+	business_owner_group TEXT,
 	created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
 	CHECK ((project_id IS NOT NULL AND programme_id IS NULL) OR (project_id IS NULL AND programme_id IS NOT NULL))
 );
@@ -445,6 +464,7 @@ CREATE TABLE IF NOT EXISTS p3m_intakes (
 	risk_notes TEXT NOT NULL DEFAULT '',
 	change_impact_notes TEXT NOT NULL DEFAULT '',
 	business_group TEXT NOT NULL DEFAULT '',
+	responsible_group TEXT,
 	work_type TEXT,                             -- programme | project | continuous_improvement | digital_product | operational
 	complexity TEXT NOT NULL DEFAULT 'med' CHECK (complexity IN ('low', 'med', 'high')),
 	status TEXT NOT NULL DEFAULT 'captured' CHECK (status IN ('captured', 'assessing', 'decided')),
@@ -575,17 +595,21 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_p3m_fin_rejections ON p3m_finance_sync_reje
 -- ---------------------------------------------------------------------------
 
 -- Change calendar & cumulative change view (CHG-008/009). Weeks are ISO week
--- strings such as "2026-W45".
+-- strings such as "2026-W45"; both may be NULL for entries with approved
+-- timing to be determined. Category is a free-text bucket (corporate_project,
+-- approved_timing_tbd, approved_no_impact, to_be_assessed, improvement,
+-- corporate_activity, training); validated as non-empty-or-null in handlers.
 CREATE TABLE IF NOT EXISTS p3m_change_calendar_entries (
 	id SERIAL PRIMARY KEY,
 	entity_type TEXT CHECK (entity_type IN ('portfolio', 'programme', 'project')),
 	entity_id INTEGER,
 	activity TEXT NOT NULL,
 	business_unit TEXT,
-	start_week TEXT NOT NULL,
-	end_week TEXT NOT NULL,
-	impact_level INTEGER NOT NULL DEFAULT 3 CHECK (impact_level BETWEEN 1 AND 5),
+	start_week TEXT,
+	end_week TEXT,
+	impact_level INTEGER NOT NULL DEFAULT 3 CHECK (impact_level BETWEEN 0 AND 5),
 	source TEXT NOT NULL DEFAULT 'local' CHECK (source IN ('corporate_project', 'corporate_activity', 'bau', 'local')),
+	category TEXT,
 	notes TEXT,
 	created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
 	created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -732,4 +756,99 @@ CREATE TABLE IF NOT EXISTS p3m_closure_records (
 	status TEXT NOT NULL DEFAULT 'recommended' CHECK (status IN ('recommended', 'approved')),
 	created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
 	updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+-- OHP portfolio report registers (RPT-001..RPT-009).
+
+-- RAG status history for portfolios, programmes and projects: one row per
+-- change, used to render the trend arrows on the portfolio rollup.
+CREATE TABLE IF NOT EXISTS p3m_rag_history (
+	id SERIAL PRIMARY KEY,
+	entity_type TEXT NOT NULL CHECK (entity_type IN ('portfolio','programme','project')),
+	entity_id INTEGER NOT NULL,
+	rag_status TEXT NOT NULL CHECK (rag_status IN ('red','amber','green')),
+	changed_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	changed_by INTEGER REFERENCES users(id) ON DELETE SET NULL
+);
+CREATE INDEX IF NOT EXISTS idx_p3m_rag_history_entity ON p3m_rag_history(entity_type, entity_id, changed_at);
+
+-- Per-project monthly status reports (issue / impact / next steps).
+CREATE TABLE IF NOT EXISTS p3m_project_status_reports (
+	id SERIAL PRIMARY KEY,
+	project_id INTEGER NOT NULL REFERENCES p3m_projects(id) ON DELETE CASCADE,
+	period TEXT NOT NULL,
+	issue TEXT NOT NULL DEFAULT '',
+	impact TEXT NOT NULL DEFAULT '',
+	next_steps TEXT NOT NULL DEFAULT '',
+	reported_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+	reported_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	UNIQUE (project_id, period)
+);
+
+-- Per-entry impact per business group (replaces the single business_unit +
+-- impact_level pair for multi-group entries).
+CREATE TABLE IF NOT EXISTS p3m_change_calendar_group_impacts (
+	id SERIAL PRIMARY KEY,
+	entry_id INTEGER NOT NULL REFERENCES p3m_change_calendar_entries(id) ON DELETE CASCADE,
+	business_group TEXT NOT NULL,
+	impact_level INTEGER NOT NULL DEFAULT 3 CHECK (impact_level BETWEEN 0 AND 5),
+	UNIQUE (entry_id, business_group)
+);
+CREATE INDEX IF NOT EXISTS idx_p3m_cal_group_impacts_entry ON p3m_change_calendar_group_impacts(entry_id);
+
+-- Business group capacity by month (posture: proceed/caution/pause/reduce).
+CREATE TABLE IF NOT EXISTS p3m_change_capacity (
+	id SERIAL PRIMARY KEY,
+	business_group TEXT NOT NULL,
+	month TEXT NOT NULL,
+	posture TEXT NOT NULL DEFAULT 'proceed' CHECK (posture IN ('proceed','caution','pause','reduce')),
+	notes TEXT,
+	UNIQUE (business_group, month)
+);
+
+-- Exec/L&T decision requests (ELT-001/002/003).
+CREATE TABLE IF NOT EXISTS p3m_elt_decisions (
+	id SERIAL PRIMARY KEY,
+	portfolio_id INTEGER NOT NULL REFERENCES p3m_portfolios(id) ON DELETE CASCADE,
+	project_id INTEGER REFERENCES p3m_projects(id) ON DELETE SET NULL,
+	title TEXT NOT NULL,
+	why TEXT NOT NULL DEFAULT '',
+	decision_requested TEXT NOT NULL DEFAULT '',
+	conditions_until_approved TEXT NOT NULL DEFAULT '',
+	status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','approved','rejected','withdrawn')),
+	decided_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+	decided_at TIMESTAMPTZ,
+	created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+	updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_p3m_elt_decisions_portfolio ON p3m_elt_decisions(portfolio_id, status);
+
+-- Curated monthly portfolio report (exec commentary + confidence + highlights
+-- + change key messages). Key pressures and confidence lenses are JSON arrays
+-- of objects; programme highlights is a JSON object keyed by programme id.
+CREATE TABLE IF NOT EXISTS p3m_portfolio_reports (
+	id SERIAL PRIMARY KEY,
+	portfolio_id INTEGER NOT NULL REFERENCES p3m_portfolios(id) ON DELETE CASCADE,
+	period TEXT NOT NULL,
+	executive_commentary TEXT NOT NULL DEFAULT '',
+	key_pressures TEXT,
+	delivery_confidence_pct REAL,
+	confidence_lenses TEXT,
+	programme_highlights TEXT,
+	change_key_messages TEXT NOT NULL DEFAULT '',
+	published_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+	published_at TIMESTAMPTZ,
+	created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+	updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+	UNIQUE (portfolio_id, period)
+);
+
+-- Reference value register: the curated free-text pickers for the report
+-- dimensions (business owner group, responsible group, delivery complexity,
+-- investment type, portfolio value, priority, benefit category, ...).
+CREATE TABLE IF NOT EXISTS p3m_reference_values (
+	id SERIAL PRIMARY KEY,
+	category TEXT NOT NULL,
+	value TEXT NOT NULL,
+	UNIQUE (category, value)
 );

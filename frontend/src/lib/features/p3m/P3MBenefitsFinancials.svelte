@@ -139,7 +139,7 @@
   }
 
   // --- Benefit create / edit ---------------------------------------------------
-  const BENEFIT_TYPES = ['financial', 'non_financial', 'strategic', 'compliance'];
+  const BENEFIT_TYPES = ['financial', 'non_financial', 'strategic', 'compliance', 'unspecified'];
   const BENEFIT_STATUSES = ['planned', 'measuring', 'realised', 'shortfall', 'retired'];
   const MEASUREMENT_FREQUENCIES = ['monthly', 'quarterly', 'annual', 'one_off'];
   const EXPENDITURE_TYPES = ['capex', 'opex'];
@@ -165,13 +165,30 @@
     evidence: '',
     finance_validator_id: '',
     capability_ref: '',
+    // OHP portfolio report dimensions (RPT-003/004).
+    strategic_objective: '',
+    benefit_category: '',
+    business_owner_group: '',
   });
   let benefitForm = $state(emptyBenefitForm());
+  /** Curated reference values for the report-field datalists. */
+  let refValues = $state({ cso: [], benefit_category: [], business_group: [] });
+
+  function ensureBenefitRefValues() {
+    if (refValues.cso.length || refValues.benefit_category.length || refValues.business_group.length) return;
+    Promise.all(
+      ['cso', 'benefit_category', 'business_group'].map(async (cat) => [
+        cat,
+        (await p3mApi.getReferenceValues({ category: cat }).catch(() => [])).map((r) => r.value),
+      ])
+    ).then((pairs) => (refValues = Object.fromEntries(pairs)));
+  }
 
   function openBenefitCreate() {
     editingBenefit = null;
     benefitForm = emptyBenefitForm();
     error = '';
+    ensureBenefitRefValues();
     benefitFormOpen = true;
   }
 
@@ -194,8 +211,12 @@
       evidence: b.evidence ?? '',
       finance_validator_id: b.finance_validator_id != null ? String(b.finance_validator_id) : '',
       capability_ref: b.capability_ref ?? '',
+      strategic_objective: b.strategic_objective ?? '',
+      benefit_category: b.benefit_category ?? '',
+      business_owner_group: b.business_owner_group ?? '',
     };
     error = '';
+    ensureBenefitRefValues();
     benefitFormOpen = true;
   }
 
@@ -245,6 +266,9 @@
         evidence: benefitForm.evidence.trim() || null,
         finance_validator_id: benefitForm.finance_validator_id ? Number(benefitForm.finance_validator_id) : null,
         capability_ref: benefitForm.capability_ref.trim() || null,
+        strategic_objective: benefitForm.strategic_objective.trim() || null,
+        benefit_category: benefitForm.benefit_category.trim() || null,
+        business_owner_group: benefitForm.business_owner_group.trim() || null,
       };
       if (editingBenefit) await p3mApi.benefits.update(editingBenefit.id, payload);
       else await p3mApi.benefits.create(payload);
@@ -708,7 +732,57 @@
                 oninput={(e) => (benefitForm = { ...benefitForm, capability_ref: e.target.value })}
               />
             </label>
+
+            <!-- OHP portfolio report dimensions -->
+            <label class="block">
+              <span>{t('p3m.report.strategicObjective')}</span>
+              <input
+                list="ohpf-ref-cso"
+                class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+                value={benefitForm.strategic_objective}
+                disabled={savingBenefit}
+                oninput={(e) => (benefitForm = { ...benefitForm, strategic_objective: e.target.value })}
+              />
+            </label>
+
+            <label class="block">
+              <span>{t('p3m.report.benefitCategory')}</span>
+              <input
+                list="ohpf-ref-benefit-category"
+                class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+                value={benefitForm.benefit_category}
+                disabled={savingBenefit}
+                oninput={(e) => (benefitForm = { ...benefitForm, benefit_category: e.target.value })}
+              />
+            </label>
+
+            <label class="block">
+              <span>{t('p3m.report.businessGroup')}</span>
+              <input
+                list="ohpf-ref-business-group"
+                class="mt-0.5 w-full rounded-md border border-[var(--color-ds-border,#e5e7eb)] bg-ds-background-input px-2 py-1"
+                value={benefitForm.business_owner_group}
+                disabled={savingBenefit}
+                oninput={(e) => (benefitForm = { ...benefitForm, business_owner_group: e.target.value })}
+              />
+            </label>
           </div>
+
+          <datalist id="ohpf-ref-cso">
+            {#each refValues.cso as v (v)}
+              <option value={v} />
+            {/each}
+          </datalist>
+          <datalist id="ohpf-ref-benefit-category">
+            {#each refValues.benefit_category as v (v)}
+              <option value={v} />
+            {/each}
+          </datalist>
+          <datalist id="ohpf-ref-business-group">
+            {#each refValues.business_group as v (v)}
+              <option value={v} />
+            {/each}
+          </datalist>
 
           <div class="mt-3 flex items-center gap-2">
             <button type="button" class="rounded-md bg-[var(--color-ds-accent-blue,#2563eb)] px-3 py-1 font-medium text-white disabled:opacity-50" disabled={savingBenefit} onclick={submitBenefit}>
