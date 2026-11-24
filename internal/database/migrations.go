@@ -3362,6 +3362,9 @@ var Catalog = []Migration{
 			// shipped in any commit; accept and restamp forward.
 			"3c3d399f609212271bebf417722e6cf86ad5b52c4574c4125ec6dbb70efca5b9", // SQLite, uncommitted dev state
 			"1e1e99a4a2e3a18a1980f666f09c4da343e5693ba2f3c01ef3a7973193de4831", // Postgres, as of 31d0c5f1
+			// Body as of 73c366754 (fork integration onto v0.9.4); OHP portfolio
+			// report objects come from 20261124_p3m_portfolio_report.
+			"702549474caa614f468d0be51a1b0f4c07e9eaaca7d1fdc4a3f2e04f3c5a55c9", // SQLite, as of 73c366754
 		},
 		// Reuses the embedded fresh-install DDL (idempotent CREATE ... IF NOT
 		// EXISTS) plus the p3m.view permission seed for pre-existing databases.

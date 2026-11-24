@@ -6,9 +6,10 @@ set -euo pipefail
 #   Backend API : http://localhost:7777  (SQLite, curl-able)
 #   Browser UI  : http://localhost:5555  (Vite dev server, HMR; proxies /api -> 7777)
 #
-# Usage: ./local-dev.sh [--db <path>] [--fresh] [--open]
+# Usage: ./local-dev.sh [--db <path>] [--fresh] [--mcp] [--open]
 #   --db <path>  use a different SQLite DB file (default windshift.db)
 #   --fresh      wipe the DB and data/ before starting (clean slate + setup wizard)
+#   --mcp        enable the built-in MCP server at /mcp (PAT or OAuth auth)
 #   --open       open the browser UI automatically once ready
 #
 # API-only testing without the Vite server: use dev.sh instead.
@@ -25,10 +26,12 @@ ADMIN_EMAIL="admin@example.com"
 ADMIN_PASSWORD="admin123!"
 
 FRESH=0
+MCP=0
 OPEN_BROWSER=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --fresh) FRESH=1 ;;
+    --mcp) MCP=1 ;;
     --open) OPEN_BROWSER=1 ;;
     --db)
       shift
@@ -95,14 +98,20 @@ echo "Building windshift server..."
 go build -o .dev-windshift .
 
 # --- Start backend ---
-echo "Starting windshift backend on :$PORT (SQLite)..."
+EXTRA_ARGS=()
+if [ "$MCP" = "1" ]; then
+  EXTRA_ARGS+=(-mcp)
+  echo "Starting windshift backend on :$PORT (SQLite, MCP enabled at /mcp)..."
+else
+  echo "Starting windshift backend on :$PORT (SQLite)..."
+fi
 SSO_SECRET="$SSO_SECRET" LLM_ENDPOINT="$LLM_ENDPOINT" \
   setsid ./.dev-windshift \
     -port "$PORT" \
     -db "$DB_PATH" \
     -attachment-path "$ATTACHMENT_PATH" \
     -no-csrf \
-    -log-level debug > local-dev-server.log 2>&1 &
+    -log-level debug "${EXTRA_ARGS[@]}" > local-dev-server.log 2>&1 &
 BACKEND_PID=$!
 PIDS+=("$BACKEND_PID")
 
@@ -208,6 +217,9 @@ echo ""
 echo "=== Windshift local dev is running ==="
 echo "Browser UI : http://localhost:${UI_PORT}   (Vite, HMR)"
 echo "Backend API: http://localhost:${PORT}/api  (e.g. /api/setup/status)"
+if [ "$MCP" = "1" ]; then
+  echo "MCP server : http://localhost:${PORT}/mcp  (Bearer PAT or OAuth; mint a token in Settings → API tokens)"
+fi
 if echo "$STATUS" | grep -q '"setup_completed":false'; then
   echo "Login      : $ADMIN_USERNAME / $ADMIN_PASSWORD"
 fi
